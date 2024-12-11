@@ -1,0 +1,25 @@
+2024-12-05 12:57:34,920 [INFO] Starting application...
+2024-12-05 12:57:34,920 [INFO] Initializing database at: c:\Users\PC\Desktop\scr\orders.db
+2024-12-05 12:57:34,931 [INFO] Database initialized successfully
+2024-12-05 12:57:35,721 [INFO] Created main window
+2024-12-05 12:57:35,721 [DEBUG] Trying to load icon from: c:\Users\PC\Desktop\scr\assets\icon.ico
+2024-12-05 12:57:35,741 [DEBUG] Loaded .ico icon
+2024-12-05 12:57:35,758 [INFO] Showed splash screen
+2024-12-05 12:57:35,973 [ERROR] Critical error: 'ThongKeTab' object has no attribute 'chua_tat_toan_count'
+Traceback (most recent call last):
+  File "c:\Users\PC\Desktop\scr\main.py", line 74, in <module>
+    app = DonHangForm(root, db_session)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\PC\Desktop\scr\donhang_form.py", line 43, in __init__
+    self.thong_ke_tab = ThongKeTab(self.notebook, self)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\PC\Desktop\scr\thong_ke_window.py", line 20, in __init__
+    self.load_data()
+  File "c:\Users\PC\Desktop\scr\thong_ke_window.py", line 146, in load_data
+    self.process_order(order, "Băng keo in", today)
+  File "c:\Users\PC\Desktop\scr\thong_ke_window.py", line 168, in process_order
+    self.chua_tat_toan_count += 1
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ThongKeTab' object has no attribute 'chua_tat_toan_count'
+
+2024-12-05 12:57:41,184 [INFO] Application terminated

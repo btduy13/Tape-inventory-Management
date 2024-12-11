@@ -1,0 +1,10 @@
+2024-12-08 13:51:09,444 [INFO] Starting application...
+2024-12-08 13:51:09,444 [INFO] Initializing database at: C:\Users\AD\OneDrive\LAM VIEC 2\lam viec\Ver4\orders.db
+2024-12-08 13:51:09,454 [INFO] Database initialized successfully
+2024-12-08 13:51:09,869 [INFO] Created main window
+2024-12-08 13:51:09,869 [DEBUG] Đang thử tải icon từ: c:\Users\AD\OneDrive\Máy tính\scr\assets\icon.ico
+2024-12-08 13:51:09,885 [DEBUG] Đã tải icon .ico thành công
+2024-12-08 13:51:09,900 [INFO] Showed splash screen
+2024-12-08 13:51:10,081 [INFO] Created main form
+2024-12-08 13:51:10,082 [INFO] Starting main loop
+2024-12-08 13:52:35,016 [INFO] Application terminated

@@ -1,0 +1,13 @@
+2024-12-05 16:49:42,690 [INFO] Starting application...
+2024-12-05 16:49:42,690 [INFO] Initializing database at: c:\Users\PC\Desktop\scr\orders.db
+2024-12-05 16:49:42,700 [INFO] Database initialized successfully
+2024-12-05 16:49:43,511 [INFO] Created main window
+2024-12-05 16:49:43,511 [DEBUG] Trying to load icon from: c:\Users\PC\Desktop\scr\assets\icon.ico
+2024-12-05 16:49:43,535 [DEBUG] Loaded .ico icon
+2024-12-05 16:49:43,559 [INFO] Showed splash screen
+2024-12-05 16:49:43,823 [INFO] Created main form
+2024-12-05 16:49:43,823 [INFO] Starting main loop
+2024-12-05 16:51:55,266 [ERROR] Error exporting PDF: Không tìm thấy font DejaVuSans.ttf trong thư mục assets/fonts
+2024-12-05 16:51:55,996 [INFO] Application closing...
+2024-12-05 16:51:55,997 [INFO] Database session closed
+2024-12-05 16:51:55,997 [INFO] Application terminated

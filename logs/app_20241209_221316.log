@@ -1,0 +1,13 @@
+2024-12-09 22:13:16,029 [INFO] Starting application...
+2024-12-09 22:13:16,029 [INFO] Initializing database at: c:\Users\PC\Documents\scr\orders.db
+2024-12-09 22:13:16,041 [INFO] Database initialized successfully
+2024-12-09 22:13:17,015 [INFO] Created main window
+2024-12-09 22:13:17,015 [DEBUG] Attempting to load icon from: c:\Users\PC\Documents\scr\assets\icon.ico
+2024-12-09 22:13:17,040 [DEBUG] Successfully loaded .ico icon
+2024-12-09 22:13:17,061 [INFO] Showed splash screen
+2024-12-09 22:13:17,322 [INFO] Created main form
+2024-12-09 22:13:17,322 [INFO] Starting main loop
+2024-12-09 22:13:30,743 [INFO] Template exported successfully to: C:/Users/PC/Desktop/mẫu.xlsx
+2024-12-09 22:16:43,699 [INFO] Application closing...
+2024-12-09 22:16:43,699 [INFO] Database session closed
+2024-12-09 22:16:43,699 [INFO] Application terminated

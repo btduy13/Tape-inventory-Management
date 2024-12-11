@@ -1,0 +1,11 @@
+2024-12-08 10:35:52,042 [INFO] Starting application...
+2024-12-08 10:35:52,043 [INFO] Initializing database at: C:\Users\AD\OneDrive\LAM VIEC 2\lam viec\Ver4\orders.db
+2024-12-08 10:35:52,060 [INFO] Database initialized successfully
+2024-12-08 10:35:52,431 [INFO] Created main window
+2024-12-08 10:35:52,431 [WARNING] Failed to load icon: name 'script_dir' is not defined
+2024-12-08 10:35:52,447 [INFO] Showed splash screen
+2024-12-08 10:35:52,608 [INFO] Created main form
+2024-12-08 10:35:52,608 [INFO] Starting main loop
+2024-12-08 10:35:56,163 [INFO] Application closing...
+2024-12-08 10:35:56,164 [INFO] Database session closed
+2024-12-08 10:35:56,164 [INFO] Application terminated

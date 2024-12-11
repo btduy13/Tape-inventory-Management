@@ -1,0 +1,12 @@
+2024-12-09 21:55:49,789 [INFO] Starting application...
+2024-12-09 21:55:49,789 [INFO] Initializing database at: c:\Users\PC\Documents\scr\orders.db
+2024-12-09 21:55:49,801 [INFO] Database initialized successfully
+2024-12-09 21:55:50,699 [INFO] Created main window
+2024-12-09 21:55:50,699 [DEBUG] Đang thử tải icon từ: c:\Users\PC\Documents\scr\assets\icon.ico
+2024-12-09 21:55:50,723 [DEBUG] Đã tải icon .ico thành công
+2024-12-09 21:55:50,750 [INFO] Showed splash screen
+2024-12-09 21:55:51,002 [INFO] Created main form
+2024-12-09 21:55:51,003 [INFO] Starting main loop
+2024-12-09 21:56:19,390 [INFO] Application closing...
+2024-12-09 21:56:19,390 [INFO] Database session closed
+2024-12-09 21:56:19,390 [INFO] Application terminated

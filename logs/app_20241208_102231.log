@@ -1,0 +1,12 @@
+2024-12-08 10:22:31,108 [INFO] Starting application...
+2024-12-08 10:22:31,108 [INFO] Initializing database at: c:\Users\AD\OneDrive\Máy tính\scr\orders.db
+2024-12-08 10:22:31,118 [INFO] Database initialized successfully
+2024-12-08 10:22:31,476 [INFO] Created main window
+2024-12-08 10:22:31,477 [DEBUG] Trying to load icon from: c:\Users\AD\OneDrive\Máy tính\scr\assets\icon.ico
+2024-12-08 10:22:31,494 [DEBUG] Loaded .ico icon
+2024-12-08 10:22:31,509 [INFO] Showed splash screen
+2024-12-08 10:22:31,694 [INFO] Created main form
+2024-12-08 10:22:31,695 [INFO] Starting main loop
+2024-12-08 10:24:07,386 [INFO] Application closing...
+2024-12-08 10:24:07,387 [INFO] Database session closed
+2024-12-08 10:24:07,388 [INFO] Application terminated

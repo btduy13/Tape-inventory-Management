@@ -1,0 +1,20 @@
+2024-12-05 12:52:46,557 [INFO] Starting application...
+2024-12-05 12:52:46,557 [INFO] Initializing database at: c:\Users\PC\Desktop\scr\orders.db
+2024-12-05 12:52:46,569 [INFO] Database initialized successfully
+2024-12-05 12:52:47,352 [INFO] Created main window
+2024-12-05 12:52:47,352 [DEBUG] Trying to load icon from: c:\Users\PC\Desktop\scr\assets\icon.ico
+2024-12-05 12:52:47,373 [DEBUG] Loaded .ico icon
+2024-12-05 12:52:47,390 [INFO] Showed splash screen
+2024-12-05 12:52:47,600 [ERROR] Critical error: TabBase.__init__() takes 2 positional arguments but 4 were given
+Traceback (most recent call last):
+  File "c:\Users\PC\Desktop\scr\main.py", line 74, in <module>
+    app = DonHangForm(root, db_session)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\PC\Desktop\scr\donhang_form.py", line 43, in __init__
+    self.thong_ke_tab = ThongKeTab(self.notebook, self)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\PC\Desktop\scr\thong_ke_window.py", line 9, in __init__
+    super().__init__(notebook, "Thống kê", parent)
+TypeError: TabBase.__init__() takes 2 positional arguments but 4 were given
+
+2024-12-05 12:54:07,981 [INFO] Application terminated

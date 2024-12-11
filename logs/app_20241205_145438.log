@@ -1,0 +1,12 @@
+2024-12-05 14:54:38,914 [INFO] Starting application...
+2024-12-05 14:54:38,914 [INFO] Initializing database at: c:\Users\PC\Desktop\scr\orders.db
+2024-12-05 14:54:38,924 [INFO] Database initialized successfully
+2024-12-05 14:54:39,740 [INFO] Created main window
+2024-12-05 14:54:39,740 [DEBUG] Trying to load icon from: c:\Users\PC\Desktop\scr\assets\icon.ico
+2024-12-05 14:54:39,761 [DEBUG] Loaded .ico icon
+2024-12-05 14:54:39,781 [INFO] Showed splash screen
+2024-12-05 14:54:40,009 [INFO] Created main form
+2024-12-05 14:54:40,009 [INFO] Starting main loop
+2024-12-05 16:32:40,957 [INFO] Application closing...
+2024-12-05 16:32:40,969 [INFO] Database session closed
+2024-12-05 16:32:40,969 [INFO] Application terminated

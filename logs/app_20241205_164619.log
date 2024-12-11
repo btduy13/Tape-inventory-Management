@@ -1,0 +1,14 @@
+2024-12-05 16:46:19,036 [INFO] Starting application...
+2024-12-05 16:46:19,036 [INFO] Initializing database at: c:\Users\PC\Desktop\scr\orders.db
+2024-12-05 16:46:19,047 [INFO] Database initialized successfully
+2024-12-05 16:46:19,852 [INFO] Created main window
+2024-12-05 16:46:19,852 [DEBUG] Trying to load icon from: c:\Users\PC\Desktop\scr\assets\icon.ico
+2024-12-05 16:46:19,875 [DEBUG] Loaded .ico icon
+2024-12-05 16:46:19,897 [INFO] Showed splash screen
+2024-12-05 16:46:20,146 [INFO] Created main form
+2024-12-05 16:46:20,147 [INFO] Starting main loop
+2024-12-05 16:46:40,776 [ERROR] Error exporting PDF: 'ArialBold'
+2024-12-05 16:46:54,482 [ERROR] Error exporting PDF: 'ArialBold'
+2024-12-05 16:47:25,064 [INFO] Application closing...
+2024-12-05 16:47:25,064 [INFO] Database session closed
+2024-12-05 16:47:25,064 [INFO] Application terminated

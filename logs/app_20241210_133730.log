@@ -1,0 +1,10 @@
+2024-12-10 13:37:30,082 [INFO] Starting application...
+2024-12-10 13:37:30,082 [INFO] Initializing database at: c:\Users\PC\Documents\scr\orders.db
+2024-12-10 13:37:30,166 [INFO] Database initialized successfully
+2024-12-10 13:37:31,162 [INFO] Created main window
+2024-12-10 13:37:31,162 [DEBUG] Attempting to load icon from: c:\Users\PC\Documents\scr\assets\icon.ico
+2024-12-10 13:37:31,178 [DEBUG] Successfully loaded .ico icon
+2024-12-10 13:37:31,186 [INFO] Showed splash screen
+2024-12-10 13:37:31,359 [INFO] Created main form
+2024-12-10 13:37:31,359 [INFO] Starting main loop
+2024-12-10 13:37:52,519 [INFO] Template exported successfully to: C:/Users/PC/Desktop/mau 2.xlsx

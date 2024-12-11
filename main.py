@@ -1,0 +1,120 @@
+# main.py
+from ttkthemes import ThemedTk
+from tkinter import messagebox
+from donhang_form import DonHangForm
+from splash_screen import show_splash
+from database import init_db, get_session
+import os
+import sys
+import traceback
+import logging
+from datetime import datetime
+from PIL import Image, ImageTk
+from openpyxl import Workbook, load_workbook
+import codecs
+import io
+
+# Set UTF-8 encoding for stdout if it's not None
+if sys.stdout is not None:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+# Set up logging
+def setup_logging():
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
+    log_file = os.path.join(log_dir, f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    
+    # Configure root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    
+    # File handler with UTF-8 encoding
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    logger.addHandler(file_handler)
+    
+    # Console handler with UTF-8 encoding
+    console_handler = logging.StreamHandler(codecs.getwriter('utf-8')(sys.stdout.buffer))
+    console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    logger.addHandler(console_handler)
+    
+    return log_file
+
+if __name__ == "__main__":
+    # log_file = setup_logging()
+    # logging.info("Starting application...")
+    
+    try:
+        # Initialize database
+        if getattr(sys, 'frozen', False):
+            # If running from exe
+            db_dir = os.path.dirname(sys.executable)
+        else:
+            # If running from script
+            db_dir = os.path.dirname(os.path.abspath(__file__))
+            
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+            
+        db_path = os.path.join(db_dir, "orders.db")
+        # logging.info(f"Initializing database at: {db_path}")
+        
+        engine = init_db(db_path)
+        db_session = get_session(engine)
+        # logging.info("Database initialized successfully")
+        
+        root = ThemedTk(theme="none")
+        root.title("Phần Mềm Quản Lý Đơn Hàng")
+        # logging.info("Created main window")
+        
+        # Set window icon
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(sys._MEIPASS, "assets", "icon.ico")
+            # logging.debug(f"Attempting to load icon from: {icon_path}")
+            
+            if os.path.exists(icon_path):
+                root.iconbitmap(icon_path)
+                # logging.debug("Successfully loaded .ico icon")
+            else:
+                png_path = os.path.join(script_dir, "assets", "icon.png")
+                if os.path.exists(png_path):
+                    icon_image = ImageTk.PhotoImage(file=png_path)
+                    root.iconphoto(True, icon_image)
+                    # logging.debug("Successfully loaded .png icon") 
+                else:
+                    # logging.warning("No icon file found")
+                    pass
+        except Exception as e:
+            # logging.warning(f"Failed to load icon: {str(e)}")
+            pass
+            
+        show_splash(root)
+        # logging.info("Showed splash screen")
+        
+        app = DonHangForm(root, db_session)
+        # logging.info("Created main form")
+        
+        def on_closing():
+            try:
+                # logging.info("Application closing...")
+                db_session.close()
+                # logging.info("Database session closed")
+                root.quit()
+            except Exception as e:
+                # logging.error(f"Error during shutdown: {str(e)}")
+                root.quit()
+            
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        
+        # logging.info("Starting main loop")
+        root.mainloop()
+        
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}\n\nStack trace:\n{traceback.format_exc()}\n\nLog file: {log_file}"
+        # logging.error(f"Critical error: {str(e)}\n{traceback.format_exc()}")
+        messagebox.showerror("Lỗi", error_msg)
+        
+

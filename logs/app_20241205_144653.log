@@ -1,0 +1,23 @@
+2024-12-05 14:46:53,511 [INFO] Starting application...
+2024-12-05 14:46:53,511 [INFO] Initializing database at: c:\Users\PC\Desktop\scr\orders.db
+2024-12-05 14:46:53,521 [INFO] Database initialized successfully
+2024-12-05 14:46:54,311 [INFO] Created main window
+2024-12-05 14:46:54,311 [DEBUG] Trying to load icon from: c:\Users\PC\Desktop\scr\assets\icon.ico
+2024-12-05 14:46:54,332 [DEBUG] Loaded .ico icon
+2024-12-05 14:46:54,352 [INFO] Showed splash screen
+2024-12-05 14:46:54,600 [ERROR] Critical error: 'HistoryTab' object has no attribute 'frame'
+Traceback (most recent call last):
+  File "c:\Users\PC\Desktop\scr\main.py", line 74, in <module>
+    app = DonHangForm(root, db_session)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\PC\Desktop\scr\donhang_form.py", line 44, in __init__
+    self.history_tab = HistoryTab(self.notebook, self)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\PC\Desktop\scr\history_tab.py", line 45, in __init__
+    self.create_import_export_buttons()
+  File "c:\Users\PC\Desktop\scr\history_tab.py", line 1410, in create_import_export_buttons
+    button_frame = ttk.Frame(self.frame)
+                             ^^^^^^^^^^
+AttributeError: 'HistoryTab' object has no attribute 'frame'
+
+2024-12-05 14:46:58,517 [INFO] Application terminated
