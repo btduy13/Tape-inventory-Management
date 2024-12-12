@@ -218,9 +218,9 @@ class ThongKeTab(TabBase):
             # Insert data with proper order and formatting
             tree.insert("", "end", values=(
                 order.id,  # ID đơn hàng
-                order.thoi_gian.strftime("%d-%m-%Y %H:%M"),  # Ngày tạo đơn
+                order.thoi_gian.strftime("%d/%m/%Y"),  # Ngày tạo đơn
                 order.ten_hang,  # Tên đơn
-                order.ngay_du_kien.strftime("%d-%m-%Y"),  # Ngày giao
+                order.ngay_du_kien.strftime("%d/%m/%Y"),  # Ngày giao
                 cong_no,  # Công nợ khách
                 "✓" if order.da_giao else "",  # Đã giao
                 "✓" if order.da_tat_toan else ""  # Đã tất toán

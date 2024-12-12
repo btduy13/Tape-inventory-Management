@@ -283,13 +283,13 @@ class TrucInTab(TabBase):
                 return
 
             # Tạo dữ liệu với ngày là trường đầu tiên
-            current_date = datetime.now().strftime('%d-%m-%Y')
+            current_date = datetime.now().strftime('%m/%d/%Y')
 
             data = {
                 'ID': self.id_don_hang.get(),
                 'Ngày': current_date,
                 'Tên Hàng': self.truc_in_ten_hang.get(),
-                'Ngày dự kiến': self.truc_in_ngay_du_kien.get_date().strftime('%d-%m-%Y'),
+                'Ngày dự kiến': self.truc_in_ngay_du_kien.get_date().strftime('%m/%d/%Y'),
                 'Quy Cách': f"{self.truc_in_quy_cach.get()} mm",
                 'Số Lượng': self.truc_in_so_luong.get(),
                 'Màu Sắc': self.truc_in_mau_sac.get(),

@@ -13,6 +13,7 @@ from PIL import Image, ImageTk
 from openpyxl import Workbook, load_workbook
 import codecs
 import io
+from urllib.parse import urlparse
 
 # Set UTF-8 encoding for stdout if it's not None
 if sys.stdout is not None:
@@ -47,23 +48,14 @@ if __name__ == "__main__":
     # logging.info("Starting application...")
     
     try:
-        # Initialize database
-        if getattr(sys, 'frozen', False):
-            # If running from exe
-            db_dir = os.path.dirname(sys.executable)
-        else:
-            # If running from script
-            db_dir = os.path.dirname(os.path.abspath(__file__))
-            
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-            
-        db_path = os.path.join(db_dir, "orders.db")
-        # logging.info(f"Initializing database at: {db_path}")
+        # Database connection string (using connection pooling)
+        database_url = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
         
-        engine = init_db(db_path)
+        print("Connecting to online PostgreSQL database (via connection pool)...")
+        engine = init_db(database_url)
+        print("Successfully connected to PostgreSQL!")
+            
         db_session = get_session(engine)
-        # logging.info("Database initialized successfully")
         
         root = ThemedTk(theme="none")
         root.title("Phần Mềm Quản Lý Đơn Hàng")
@@ -113,7 +105,7 @@ if __name__ == "__main__":
         root.mainloop()
         
     except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}\n\nStack trace:\n{traceback.format_exc()}\n\nLog file: {log_file}"
+        error_msg = f"Unexpected error: {str(e)}\n\nStack trace:\n{traceback.format_exc()}"
         # logging.error(f"Critical error: {str(e)}\n{traceback.format_exc()}")
         messagebox.showerror("Lỗi", error_msg)
         

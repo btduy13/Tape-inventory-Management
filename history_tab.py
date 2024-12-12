@@ -19,8 +19,8 @@ class HistoryTab(TabBase):
         self.db_session = parent_form.db_session
         
         # Define standard date formats
-        self.DATE_FORMAT = '%d-%m-%Y'
-        self.DATETIME_FORMAT = '%d-%m-%Y %H:%M:%S'
+        self.DATE_FORMAT = '%d/%m/%Y'
+        self.DATETIME_FORMAT = '%d/%m/%Y %H:%M:%S'
         
         # Create main frame with padding
         main_frame = ttk.Frame(self.tab, padding="15 15 15 15")
@@ -48,18 +48,6 @@ class HistoryTab(TabBase):
 
         # Add import/export buttons
         self.create_import_export_buttons()
-
-    def format_date_for_display(self, date_obj):
-        """Format a date object for display"""
-        if isinstance(date_obj, str):
-            try:
-                if ' ' in date_obj:
-                    date_obj = datetime.strptime(date_obj, self.DATETIME_FORMAT)
-                else:
-                    date_obj = datetime.strptime(date_obj, self.DATE_FORMAT)
-            except ValueError:
-                return date_obj
-        return date_obj.strftime(self.DATE_FORMAT)
 
     def parse_date_string(self, date_string):
         """Parse a date string to datetime object"""
@@ -106,7 +94,9 @@ class HistoryTab(TabBase):
                     'tien_hoa_hong': order.tien_hoa_hong,
                     'loi_giay': order.loi_giay,
                     'thung_bao': order.thung_bao,
-                    'loi_nhuan': order.loi_nhuan
+                    'loi_nhuan': order.loi_nhuan,
+                    'da_giao': order.da_giao,
+                    'da_tat_toan': order.da_tat_toan
                 }
                 self.add_order('Băng keo in', order_data)
             
@@ -130,7 +120,9 @@ class HistoryTab(TabBase):
                     'ctv': order.ctv,
                     'hoa_hong': order.hoa_hong,
                     'tien_hoa_hong': order.tien_hoa_hong,
-                    'loi_nhuan': order.loi_nhuan
+                    'loi_nhuan': order.loi_nhuan,
+                    'da_giao': order.da_giao,
+                    'da_tat_toan': order.da_tat_toan
                 }
                 self.add_order('Trục in', order_data)
         except Exception as e:
@@ -400,7 +392,7 @@ class HistoryTab(TabBase):
                   'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 
                   'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 
                   'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong',
-                  'loi_giay', 'thung_bao', 'loi_nhuan')
+                  'loi_giay', 'thung_bao', 'loi_nhuan', 'da_giao', 'da_tat_toan')
         
         # Create container frame
         container = ttk.Frame(self.bang_keo_frame)
@@ -440,7 +432,9 @@ class HistoryTab(TabBase):
             'cong_no_khach': 'Công nợ khách', 'ctv': 'CTV',
             'hoa_hong': 'Hoa hồng', 'tien_hoa_hong': 'Tiền hoa hồng',
             'loi_giay': 'Li giấy', 'thung_bao': 'Thùng/Bao',
-            'loi_nhuan': 'Lợi nhuận'
+            'loi_nhuan': 'Lợi nhuận',
+            'da_giao': 'Đã giao',
+            'da_tat_toan': 'Đã tất toán'
         }
         
         for col in columns:
@@ -452,7 +446,7 @@ class HistoryTab(TabBase):
             else:
                 # Adjust column widths based on content
                 width = max(len(headings[col])*10, 100)
-                self.bang_keo_tree.column(col, width=width, minwidth=50)
+                self.bang_keo_tree.column(col, width=width, stretch=False)
         
         # Add scrollbars with modern styling
         y_scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self.bang_keo_tree.yview)
@@ -505,7 +499,7 @@ class HistoryTab(TabBase):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
                   'mau_keo', 'don_gia_goc', 'thanh_tien', 'don_gia_ban',
                   'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
-                  'tien_hoa_hong', 'loi_nhuan')
+                  'tien_hoa_hong', 'loi_nhuan', 'da_giao', 'da_tat_toan')
         
         # Create container frame for better performance
         container = ttk.Frame(self.truc_in_frame)
@@ -529,7 +523,9 @@ class HistoryTab(TabBase):
             'don_gia_ban': 'Đơn giá bán', 'thanh_tien_ban': 'Thành tiền bán',
             'cong_no_khach': 'Công nợ khách', 'ctv': 'CTV',
             'hoa_hong': 'Hoa hồng', 'tien_hoa_hong': 'Tiền hoa hồng',
-            'loi_nhuan': 'Lợi nhuận'
+            'loi_nhuan': 'Lợi nhuận',
+            'da_giao': 'Đã giao',
+            'da_tat_toan': 'Đã tất toán'
         }
         
         for col in columns:
@@ -579,10 +575,8 @@ class HistoryTab(TabBase):
             ]
             # Fields that trigger recalculation
             calculation_trigger_fields = [
-                'so_luong', 'phi_sl', 'phi_keo', 'phi_size',
-                'phi_cat', 'don_gia_von', 'don_gia_ban', 'tien_coc',
-                'hoa_hong', 'phi_mau', 'quy_cach_mm',
-                'quy_cach_m', 'quy_cach_mic', 'cuon_cay'
+                'so_luong', 'phi_sl', 'phi_keo', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_ban', 'tien_coc',
+                'hoa_hong', 'phi_mau', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay'
             ]
             window_title = "Chỉnh sửa đơn hàng băng keo"
         else:
@@ -661,7 +655,7 @@ class HistoryTab(TabBase):
             self._create_field(price_frame, 'mau_keo', 'Màu keo:', values, 0, 2, readonly_fields)
             self._create_field(price_frame, 'phi_keo', 'Phí keo:', values, 0, 4, readonly_fields)
             
-            self._create_field(price_frame, 'mau_sac', 'M��u sắc:', values, 1, 0, readonly_fields)
+            self._create_field(price_frame, 'mau_sac', 'Màu sắc:', values, 1, 0, readonly_fields)
             self._create_field(price_frame, 'phi_mau', 'Phí màu:', values, 1, 2, readonly_fields)
             self._create_field(price_frame, 'phi_size', 'Phí size:', values, 1, 4, readonly_fields)
             
@@ -683,7 +677,7 @@ class HistoryTab(TabBase):
             self._create_field(price_frame, 'loi_giay', 'Lõi giấy:', values, 6, 0, readonly_fields)
             self._create_field(price_frame, 'thung_bao', 'Thùng/Bao:', values, 6, 2, readonly_fields)
             self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 6, 4, readonly_fields)
-            
+
         else:  # truc_in
             # Create frames for different sections
             info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
@@ -874,14 +868,15 @@ class HistoryTab(TabBase):
             
             # Get all values from edit entries
             for column in tree['columns']:
-                if column == 'id':  # Skip ID column
+                if column in ['id', 'da_giao', 'da_tat_toan']:  # Skip these fields
                     continue
                 if column == 'ngay_du_kien':
                     # Get date from DateEntry widget
                     date_value = self.edit_entries[column].get_date()
                     values[column] = date_value
                 else:
-                    values[column] = self.edit_entries[column].get()
+                    if column in self.edit_entries:  # Only get values for fields that exist in edit form
+                        values[column] = self.edit_entries[column].get()
             
             # Update database
             try:
@@ -890,55 +885,29 @@ class HistoryTab(TabBase):
                     order = self.db_session.query(BangKeoInOrder).filter_by(id=record_id).first()
                     
                     if order:
-                        # Update all fields except ID
-                        order.ten_hang = values['ten_hang']
-                        order.ngay_du_kien = values['ngay_du_kien']
-                        order.quy_cach_mm = self.validate_float_input(values['quy_cach_mm'])
-                        order.quy_cach_m = self.validate_float_input(values['quy_cach_m'])
-                        order.quy_cach_mic = self.validate_float_input(values['quy_cach_mic'])
-                        order.cuon_cay = self.validate_float_input(values['cuon_cay'])
-                        order.so_luong = self.validate_float_input(values['so_luong'])
-                        order.phi_sl = self.validate_float_input(values['phi_sl'])
-                        order.mau_keo = values['mau_keo']
-                        order.phi_keo = self.validate_float_input(values['phi_keo'])
-                        order.mau_sac = values['mau_sac']
-                        order.phi_mau = self.validate_float_input(values['phi_mau'])
-                        order.phi_size = self.validate_float_input(values['phi_size'])
-                        order.phi_cat = self.validate_float_input(values['phi_cat'])
-                        order.don_gia_von = self.validate_float_input(values['don_gia_von'])
-                        order.don_gia_goc = self.validate_float_input(values['don_gia_goc'])
-                        order.thanh_tien_goc = self.validate_float_input(values['thanh_tien_goc'])
-                        order.don_gia_ban = self.validate_float_input(values['don_gia_ban'])
-                        order.thanh_tien_ban = self.validate_float_input(values['thanh_tien_ban'])
-                        order.tien_coc = self.validate_float_input(values['tien_coc'])
-                        order.cong_no_khach = self.validate_float_input(values['cong_no_khach'])
-                        order.ctv = values['ctv']
-                        order.hoa_hong = self.validate_float_input(values['hoa_hong'])
-                        order.tien_hoa_hong = self.validate_float_input(values['tien_hoa_hong'])
-                        order.loi_giay = values['loi_giay']
-                        order.thung_bao = values['thung_bao']
-                        order.loi_nhuan = self.validate_float_input(values['loi_nhuan'])
+                        # Update all fields except ID, da_giao, and da_tat_toan
+                        for field, value in values.items():
+                            if field not in ['id', 'da_giao', 'da_tat_toan']:
+                                if field in ['quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 
+                                          'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 
+                                          'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 
+                                          'tien_coc', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan']:
+                                    setattr(order, field, self.validate_float_input(value))
+                                else:
+                                    setattr(order, field, value)
                 else:
                     # Find the order with matching ID
                     order = self.db_session.query(TrucInOrder).filter_by(id=record_id).first()
                     
                     if order:
-                        # Update all fields except ID
-                        order.ten_hang = values['ten_hang']
-                        order.ngay_du_kien = values['ngay_du_kien']
-                        order.quy_cach = values['quy_cach']
-                        order.so_luong = self.validate_float_input(values['so_luong'])
-                        order.mau_sac = values['mau_sac']
-                        order.mau_keo = values['mau_keo']
-                        order.don_gia_goc = self.validate_float_input(values['don_gia_goc'])
-                        order.thanh_tien = self.validate_float_input(values['thanh_tien'])
-                        order.don_gia_ban = self.validate_float_input(values['don_gia_ban'])
-                        order.thanh_tien_ban = self.validate_float_input(values['thanh_tien_ban'])
-                        order.cong_no_khach = self.validate_float_input(values['cong_no_khach'])
-                        order.ctv = values['ctv']
-                        order.hoa_hong = self.validate_float_input(values['hoa_hong'])
-                        order.tien_hoa_hong = self.validate_float_input(values['tien_hoa_hong'])
-                        order.loi_nhuan = self.validate_float_input(values['loi_nhuan'])
+                        # Update all fields except ID, da_giao, and da_tat_toan
+                        for field, value in values.items():
+                            if field not in ['id', 'da_giao', 'da_tat_toan']:
+                                if field in ['so_luong', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 
+                                          'thanh_tien_ban', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan']:
+                                    setattr(order, field, self.validate_float_input(value))
+                                else:
+                                    setattr(order, field, value)
                 
                 if not order:
                     raise Exception("Không tìm thấy đơn hàng trong database")
@@ -951,8 +920,11 @@ class HistoryTab(TabBase):
                 for column in tree['columns'][1:]:  # Skip the ID column
                     if column == 'ngay_du_kien':
                         tree_values.append(values[column].strftime(self.DATE_FORMAT))
+                    elif column in ['da_giao', 'da_tat_toan']:
+                        # Keep existing values for these fields
+                        tree_values.append(item_values[tree['columns'].index(column)])
                     else:
-                        tree_values.append(values[column])
+                        tree_values.append(values.get(column, ''))
                 
                 # Update tree
                 tree.item(self.current_edit_item, values=tree_values)
@@ -1012,7 +984,9 @@ class HistoryTab(TabBase):
                 order_data.get('tien_hoa_hong', ''),
                 order_data.get('loi_giay', ''),
                 order_data.get('thung_bao', ''),
-                order_data.get('loi_nhuan', '')
+                order_data.get('loi_nhuan', ''),
+                order_data.get('da_giao', ''),
+                order_data.get('da_tat_toan', '')
             ]
             item = self.bang_keo_tree.insert('', 0, values=values)
             self.bang_keo_data.append(item)
@@ -1035,7 +1009,9 @@ class HistoryTab(TabBase):
                 order_data.get('ctv', ''),
                 order_data.get('hoa_hong', ''),
                 order_data.get('tien_hoa_hong', ''),
-                order_data.get('loi_nhuan', '')
+                order_data.get('loi_nhuan', ''),
+                order_data.get('da_giao', ''),
+                order_data.get('da_tat_toan', '')
             ]
             item = self.truc_in_tree.insert('', 0, values=values)
             self.truc_in_data.append(item)
@@ -1061,10 +1037,40 @@ class HistoryTab(TabBase):
             # Get column headers
             headers = [tree.heading(col)['text'] for col in tree['columns']]
             
-            # Get data from selected items
+            # Get data from selected items and convert dates
             data = []
             for item in selected_items:
-                values = tree.item(item)['values']
+                values = list(tree.item(item)['values'])
+                # Convert date formats for relevant columns
+                if current_tab == str(self.bang_keo_frame):
+                    # For bang_keo_tree: thoi_gian is index 1, ngay_du_kien is index 3
+                    if values[1]:  # thoi_gian
+                        try:
+                            # Parse the original date string and convert to MM/DD/YYYY
+                            date_obj = datetime.strptime(values[1], self.DATE_FORMAT)
+                            values[1] = date_obj.strftime('%m/%d/%Y')
+                        except ValueError:
+                            pass
+                    if values[3]:  # ngay_du_kien
+                        try:
+                            date_obj = datetime.strptime(values[3], self.DATE_FORMAT)
+                            values[3] = date_obj.strftime('%m/%d/%Y')
+                        except ValueError:
+                            pass
+                else:
+                    # For truc_in_tree: thoi_gian is index 1, ngay_du_kien is index 3
+                    if values[1]:  # thoi_gian
+                        try:
+                            date_obj = datetime.strptime(values[1], self.DATE_FORMAT)
+                            values[1] = date_obj.strftime('%m/%d/%Y')
+                        except ValueError:
+                            pass
+                    if values[3]:  # ngay_du_kien
+                        try:
+                            date_obj = datetime.strptime(values[3], self.DATE_FORMAT)
+                            values[3] = date_obj.strftime('%m/%d/%Y')
+                        except ValueError:
+                            pass
                 data.append(values)
             
             # Get save file location
@@ -1079,36 +1085,34 @@ class HistoryTab(TabBase):
             if not file_path:
                 return
 
-            # Kiểm tra file có tồn tại không
+            # Create or load workbook
             if os.path.exists(file_path):
-                # Nếu file đã tồn tại, mở file và thêm dữ liệu mới
                 wb = load_workbook(file_path)
                 if sheet_name in wb.sheetnames:
                     ws = wb[sheet_name]
                     next_row = ws.max_row + 1
                 else:
                     ws = wb.create_sheet(sheet_name)
-                    # Ghi headers cho sheet mới
+                    # Write headers for new sheet
                     for col, header in enumerate(headers, 1):
                         ws.cell(row=1, column=col, value=header)
                     next_row = 2
             else:
-                # Tạo file mới nếu chưa tồn tại
                 wb = Workbook()
                 ws = wb.active
                 ws.title = sheet_name
-                # Ghi headers
+                # Write headers
                 for col, header in enumerate(headers, 1):
                     ws.cell(row=1, column=col, value=header)
                 next_row = 2
 
-            # Ghi data vào các dòng tiếp theo
+            # Write data to rows
             for row_data in data:
                 for col, value in enumerate(row_data, 1):
                     ws.cell(row=next_row, column=col, value=value)
                 next_row += 1
 
-            # Lưu file
+            # Save file
             wb.save(file_path)
             
             messagebox.showinfo("Thành công", f"Đã xuất dữ liệu ra file Excel:\n{file_path}")
@@ -1163,6 +1167,7 @@ class HistoryTab(TabBase):
         try:
             from_date = self.from_date.get_date()
             to_date = self.to_date.get_date()
+            search_text = self.search_var.get().lower()
             
             # Get current tab and tree
             current_tab = self.category_notebook.select()
@@ -1178,40 +1183,51 @@ class HistoryTab(TabBase):
                 tree.delete(item)
             
             # Reinsert items that match the filter
-            for _, values in all_items:
-                if not values:
-                    continue
-                
+            for item_id, values in all_items:
                 try:
-                    # Parse the order date
-                    order_date = self.parse_date_string(values[1])  # Thay đổi chỉ số nếu cần
-                    if not order_date:
-                        continue
-                    order_date = order_date.date()
+                    # Parse the order date (thoi_gian - index 1)
+                    order_date_str = values[1]
+                    order_date = datetime.strptime(order_date_str, self.DATE_FORMAT).date()
                     
-                    # Parse the expected date
-                    expected_date = self.parse_date_string(values[3])  # Thay đổi chỉ số nếu cần
-                    if not expected_date:
-                        continue
-                    expected_date = expected_date.date()
+                    # Parse the expected date (ngay_du_kien - index 3)
+                    expected_date_str = values[3]
+                    expected_date = datetime.strptime(expected_date_str, self.DATE_FORMAT).date()
                     
-                    # Check if dates are within range
-                    if (from_date <= order_date <= to_date or 
-                        from_date <= expected_date <= to_date):
-                        # Check search text if present
-                        search_text = self.search_var.get().lower()
-                        if search_text:
-                            # Check if search text matches any value
-                            if any(search_text in str(value).lower() for value in values):
-                                tree.insert('', 'end', values=values)
-                        else:
-                            tree.insert('', 'end', values=values)
+                    # Check if either date is within range
+                    date_match = (from_date <= order_date <= to_date or 
+                                from_date <= expected_date <= to_date)
+                    
+                    # Check search text if present
+                    text_match = True
+                    if search_text:
+                        text_match = False
+                        for value in values:
+                            if str(value).lower().find(search_text) != -1:
+                                text_match = True
+                                break
+                    
+                    # Insert if both conditions are met
+                    if date_match and text_match:
+                        tree.insert('', 'end', values=values)
+                        
+                        # Apply alternating row colors
+                        items = tree.get_children()
+                        for i, item in enumerate(items):
+                            if i % 2 == 0:
+                                tree.tag_configure('evenrow', background='#FFFFFF')
+                                tree.item(item, tags=('evenrow',))
+                            else:
+                                tree.tag_configure('oddrow', background='#F0F0F0')
+                                tree.item(item, tags=('oddrow',))
+                
                 except (ValueError, IndexError) as e:
                     logging.error(f"Error processing item in apply_filters: {str(e)}")
                     continue
             
-            messagebox.showinfo("Thông báo", "Đã áp dụng bộ lọc")
+            self.update_status("Đã áp dụng bộ lọc")
+            
         except Exception as e:
+            logging.error(f"Error in apply_filters: {str(e)}")
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi lọc dữ liệu: {str(e)}")
 
     def reset_filters(self):
@@ -1313,11 +1329,11 @@ class HistoryTab(TabBase):
             try:
                 if item_type == 'bang_keo':
                     order = self.db_session.query(BangKeoInOrder).filter_by(
-                        thoi_gian=datetime.strptime(values['thoi_gian'], '%d-%m-%Y %H:%M:%S')
+                        thoi_gian=datetime.strptime(values['thoi_gian'], '%d/%m/%Y %H:%M:%S')
                     ).first()
                 else:
                     order = self.db_session.query(TrucInOrder).filter_by(
-                        thoi_gian=datetime.strptime(values['thoi_gian'], '%d-%m-%Y %H:%M:%S')
+                        thoi_gian=datetime.strptime(values['thoi_gian'], '%d/%m/%Y %H:%M:%S')
                     ).first()
 
                 if order:
@@ -1378,30 +1394,3 @@ class HistoryTab(TabBase):
             import_data(file_path, order_type, self.db_session)
             self.refresh_data()  # Refresh data to show imported entries
             
-    def create_order_list(self, parent, order_type):
-        """Create the section displaying the list of orders for a specific type."""
-        list_frame = ttk.LabelFrame(parent, text=f"Danh sách đơn hàng - {order_type}")
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Control Frame containing filter options and buttons
-        control_frame = ttk.Frame(list_frame)
-        control_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Filter by status
-        ttk.Label(control_frame, text="Lọc theo:").pack(side=tk.LEFT, padx=5)
-        filter_var = tk.StringVar(value="Tất cả")
-        filter_cb = ttk.Combobox(control_frame, textvariable=filter_var, values=[
-            "Tất cả",
-            "Sớp đến hạn",
-            "Quá hạn",
-            "Chưa tất toán",
-            "Đã hoàn thành"
-        ], state="readonly", width=15)
-        filter_cb.pack(side=tk.LEFT, padx=5)
-        filter_cb.bind("<<ComboboxSelected>>", lambda e, ot=order_type: self.load_data(order_type=ot))
-        
-        # Refresh Button
-        ttk.Button(control_frame, text="Làm mới", command=lambda ot=order_type: self.load_data(order_type=ot)).pack(side=tk.LEFT, padx=5)
-        
-        # Export PDF Button
-        ttk.Button(control_frame, text="Xuất PDF", command=lambda ot=order_type: self.export_to_pdf(ot)).pack(side=tk.LEFT, padx=5)
