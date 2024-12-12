@@ -48,11 +48,13 @@ def setup_logging():
 # Initialize logger
 logger = setup_logging()
 
-# Set UTF-8 encoding for stdout and stderr
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
-if sys.stderr.encoding != 'utf-8':
-    sys.stderr.reconfigure(encoding='utf-8')
+# Safely set UTF-8 encoding for stdout and stderr
+if sys.stdout is not None and hasattr(sys.stdout, 'encoding'):
+    if sys.stdout.encoding != 'utf-8':
+        sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr is not None and hasattr(sys.stderr, 'encoding'):
+    if sys.stderr.encoding != 'utf-8':
+        sys.stderr.reconfigure(encoding='utf-8')
 
 # Database connection string
 DATABASE_URL = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"

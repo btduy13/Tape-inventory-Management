@@ -6,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 import ctypes
+import locale
 
 def is_admin():
     try:
@@ -32,25 +33,48 @@ def remove_dir(path):
             if os.path.isdir(path):
                 for root, dirs, files in os.walk(path):
                     for dir in dirs:
-                        os.chmod(os.path.join(root, dir), 0o777)
+                        try:
+                            os.chmod(os.path.join(root, dir), 0o777)
+                        except:
+                            pass
                     for file in files:
-                        os.chmod(os.path.join(root, file), 0o777)
+                        try:
+                            os.chmod(os.path.join(root, file), 0o777)
+                        except:
+                            pass
                 shutil.rmtree(path, ignore_errors=True)
             elif os.path.isfile(path):
-                os.chmod(path, 0o777)
-                os.remove(path)
+                try:
+                    os.chmod(path, 0o777)
+                    os.remove(path)
+                except:
+                    pass
             if not os.path.exists(path):
                 return
         except Exception as e:
             if retry == max_retries - 1:
-                print(f"Cannot delete {path}: {str(e)}")
-                print("Please close all applications using this directory and try again")
-                sys.exit(1)
+                print(f"Warning: Cannot delete {path}: {str(e)}")
             time.sleep(retry_delay)
+
+def setup_environment():
+    """Setup environment variables and encoding"""
+    # Set default encoding
+    if sys.platform.startswith('win'):
+        if locale.getpreferredencoding().upper() != 'UTF-8':
+            os.environ['PYTHONIOENCODING'] = 'utf-8'
+    
+    # Set environment variables
+    os.environ['PYTHONLEGACYWINDOWSFSENCODING'] = '0'
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['PYTHONOPTIMIZE'] = '0'  # Disable optimization
+    os.environ['PYTHONDONTWRITEBYTECODE'] = '1'  # Don't write .pyc files
 
 def build_app():
     try:
         print("Starting build process...")
+        
+        # Setup environment
+        setup_environment()
         
         # Request admin privileges if not already granted
         run_as_admin()
@@ -81,42 +105,15 @@ def build_app():
         
         # PyInstaller options
         opts = [
-            'main.py',
-            '--name=QuanLyDonHang',
-            '--windowed',
-            '--noconfirm',
+            'build_app.spec',  # Use spec file instead of main.py
+            '--distpath=dist',
+            '--workpath=build',
             '--clean',
-            f'--add-data={assets_dir};assets',
-            f'--add-data={logs_dir};logs',
-            '--icon=assets/icon.ico',
-            '--hidden-import=PIL._tkinter_finder',
-            '--hidden-import=ttkthemes',
-            '--hidden-import=sqlalchemy.sql.default_comparator',
-            '--hidden-import=pandas',
-            '--hidden-import=numpy',
-            '--hidden-import=openpyxl',
-            '--hidden-import=tkinter',
-            '--hidden-import=sqlite3',
-            '--collect-all=ttkthemes',
-            '--collect-all=PIL',
-            '--collect-all=pandas',
-            '--collect-all=numpy',
-            '--collect-all=openpyxl',
-            f'--workpath={temp_dir}/build',
-            f'--distpath={temp_dir}/dist',
-            '--specpath=.',
-            '--uac-admin',  # Request admin privileges
+            '--noconfirm',
         ]
         
         print("Building application...")
         PyInstaller.__main__.run(opts)
-        
-        # Move results from temp directory
-        temp_dist = Path(temp_dir) / 'dist' / 'QuanLyDonHang'
-        if temp_dist.exists():
-            if dist_dir.exists():
-                shutil.rmtree(dist_dir)
-            shutil.copytree(temp_dist, dist_dir / 'QuanLyDonHang')
         
         # Create README file
         readme_content = """QuanLyDonHang - Phần mềm Quản lý đơn hàng
@@ -133,18 +130,15 @@ Lưu ý:
         
         with open(dist_dir / 'QuanLyDonHang' / 'README.txt', 'w', encoding='utf-8') as f:
             f.write(readme_content)
-        
-        # Cleanup
-        try:
-            shutil.rmtree(temp_dir)
-        except:
-            pass
             
         print("Build completed successfully!")
         print(f"Executable is located in: {dist_dir.absolute() / 'QuanLyDonHang'}")
         
     except Exception as e:
         print(f"Error during build process: {str(e)}")
+        print("Full error details:", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":

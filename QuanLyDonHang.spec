@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('C:\\Users\\PC\\Documents\\scr\\assets', 'assets'), ('logs', 'logs')]
 binaries = []
-hiddenimports = ['PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.sql.default_comparator', 'pandas', 'numpy', 'openpyxl', 'tkinter', 'sqlite3']
+hiddenimports = ['PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.sql.default_comparator', 'pandas', 'numpy', 'openpyxl', 'tkinter', 'sqlite3', 'encodings', 'encodings.aliases', 'encodings.utf_8', 'encodings.ascii']
 tmp_ret = collect_all('ttkthemes')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('PIL')
@@ -26,7 +26,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    noarchive=False,
+    noarchive=True,
     optimize=0,
 )
 pyz = PYZ(a.pure)
@@ -34,10 +34,10 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    [],
+    [('v', None, 'OPTION')],
     exclude_binaries=True,
     name='QuanLyDonHang',
-    debug=False,
+    debug=True,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
