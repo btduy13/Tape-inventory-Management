@@ -14,6 +14,7 @@ from openpyxl import Workbook, load_workbook
 import codecs
 import io
 from urllib.parse import urlparse
+from report_gen import generate_order_form, OrderSelectionDialog
 
 # Set UTF-8 encoding for stdout if it's not None
 if sys.stdout is not None:
@@ -88,6 +89,18 @@ if __name__ == "__main__":
         
         app = DonHangForm(root, db_session)
         # logging.info("Created main form")
+        
+        # Add report generation to the main window
+        def open_report():
+            try:
+                dialog = OrderSelectionDialog(parent=root)
+                root.wait_window(dialog)
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Không thể mở cửa sổ xuất đơn: {str(e)}")
+        
+        # Add report button to the main menu if it exists
+        if hasattr(app, 'menu_bar'):
+            app.menu_bar.add_command(label="Xuất đơn đặt hàng", command=open_report)
         
         def on_closing():
             try:

@@ -30,7 +30,6 @@ def remove_dir(path):
     for retry in range(max_retries):
         try:
             if os.path.isdir(path):
-                # Set access rights for all files
                 for root, dirs, files in os.walk(path):
                     for dir in dirs:
                         os.chmod(os.path.join(root, dir), 0o777)
@@ -56,9 +55,11 @@ def build_app():
         # Request admin privileges if not already granted
         run_as_admin()
         
-        # Create dist directory if it doesn't exist
+        # Create necessary directories
         dist_dir = Path('dist')
+        logs_dir = Path('logs')
         dist_dir.mkdir(exist_ok=True, parents=True)
+        logs_dir.mkdir(exist_ok=True, parents=True)
         
         # Remove old directories
         print("Cleaning up old directories...")
@@ -70,29 +71,41 @@ def build_app():
         os.environ['TEMP'] = temp_dir
         os.environ['TMP'] = temp_dir
         
-        # Path to assets directory
+        # Check required directories
         assets_dir = Path(__file__).parent / 'assets'
         if not assets_dir.exists():
-            print("WARNING: Assets directory not found!")
+            print("ERROR: Assets directory not found!")
+            sys.exit(1)
             
         print("Preparing build...")
         
         # PyInstaller options
         opts = [
-            'main.py',  # Main script
-            '--name=QuanLyDonHang',  # Executable name
-            '--windowed',  # No console window
-            '--noconfirm',  # Don't ask when overwriting
-            '--clean',  # Clean cache
-            f'--add-data={assets_dir};assets',  # Copy assets directory
-            '--icon=assets/icon.ico',  # Executable icon
-            '--hidden-import=PIL._tkinter_finder',  # Required hidden import
+            'main.py',
+            '--name=QuanLyDonHang',
+            '--windowed',
+            '--noconfirm',
+            '--clean',
+            f'--add-data={assets_dir};assets',
+            f'--add-data={logs_dir};logs',
+            '--icon=assets/icon.ico',
+            '--hidden-import=PIL._tkinter_finder',
             '--hidden-import=ttkthemes',
             '--hidden-import=sqlalchemy.sql.default_comparator',
-            '--collect-all=ttkthemes',  # Collect all ttkthemes files
-            f'--workpath={temp_dir}/build',  # Use temp dir for build
-            f'--distpath={temp_dir}/dist',  # Use temp dir for dist
-            '--specpath=.',  # Spec file in current directory
+            '--hidden-import=pandas',
+            '--hidden-import=numpy',
+            '--hidden-import=openpyxl',
+            '--hidden-import=tkinter',
+            '--hidden-import=sqlite3',
+            '--collect-all=ttkthemes',
+            '--collect-all=PIL',
+            '--collect-all=pandas',
+            '--collect-all=numpy',
+            '--collect-all=openpyxl',
+            f'--workpath={temp_dir}/build',
+            f'--distpath={temp_dir}/dist',
+            '--specpath=.',
+            '--uac-admin',  # Request admin privileges
         ]
         
         print("Building application...")
@@ -105,13 +118,29 @@ def build_app():
                 shutil.rmtree(dist_dir)
             shutil.copytree(temp_dist, dist_dir / 'QuanLyDonHang')
         
+        # Create README file
+        readme_content = """QuanLyDonHang - Phần mềm Quản lý đơn hàng
+
+Hướng dẫn cài đặt:
+1. Chạy file QuanLyDonHang.exe với quyền Administrator
+2. Chờ chương trình khởi động lần đầu tiên
+3. Sử dụng bình thường
+
+Lưu ý:
+- Cần quyền Administrator để chạy chương trình
+- Không xóa các thư mục assets và logs
+- Nếu có lỗi, vui lòng kiểm tra file logs"""
+        
+        with open(dist_dir / 'QuanLyDonHang' / 'README.txt', 'w', encoding='utf-8') as f:
+            f.write(readme_content)
+        
         # Cleanup
         try:
             shutil.rmtree(temp_dir)
         except:
             pass
             
-        print("Build completed!")
+        print("Build completed successfully!")
         print(f"Executable is located in: {dist_dir.absolute() / 'QuanLyDonHang'}")
         
     except Exception as e:

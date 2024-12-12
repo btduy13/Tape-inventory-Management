@@ -326,24 +326,60 @@ class HistoryTab(TabBase):
         
         if current_tab == str(self.bang_keo_frame):
             tree = self.bang_keo_tree
+            all_items = self.all_bang_keo_items
         else:
             tree = self.truc_in_tree
+            all_items = self.all_truc_in_items
+
+        # Clear current tree
+        for item in tree.get_children():
+            tree.delete(item)
         
-        # Only search through visible items (respecting date filter)
-        visible_items = tree.get_children()
-        
-        if not search_text:
-            return
-        
-        # Hide non-matching items
-        for item in visible_items:
-            match = False
-            for value in tree.item(item)['values']:
-                if str(value).lower().find(search_text) != -1:
-                    match = True
-                    break
-            if not match:
-                tree.detach(item)
+        # Get date range if set
+        from_date = self.from_date.get_date()
+        to_date = self.to_date.get_date()
+
+        # Reinsert matching items
+        for _, values in all_items:
+            try:
+                # Check date range if dates are set
+                date_match = True
+                if from_date and to_date:
+                    order_date = datetime.strptime(values[1], self.DATE_FORMAT).date()
+                    expected_date = datetime.strptime(values[3], self.DATE_FORMAT).date()
+                    date_match = (from_date <= order_date <= to_date or 
+                                from_date <= expected_date <= to_date)
+
+                # Check if any value contains search text
+                text_match = True
+                if search_text:
+                    text_match = False
+                    for value in values:
+                        if str(value).lower().find(search_text) != -1:
+                            text_match = True
+                            break
+
+                # Insert if both conditions are met
+                if date_match and text_match:
+                    tree.insert('', 'end', values=values)
+
+            except (ValueError, IndexError) as e:
+                logging.error(f"Error processing item in on_search: {str(e)}")
+                continue
+
+        # Apply alternating row colors
+        self._apply_row_colors(tree)
+
+    def _apply_row_colors(self, tree):
+        """Apply alternating row colors to tree"""
+        items = tree.get_children()
+        for i, item in enumerate(items):
+            if i % 2 == 0:
+                tree.tag_configure('evenrow', background='#FFFFFF')
+                tree.item(item, tags=('evenrow',))
+            else:
+                tree.tag_configure('oddrow', background='#F0F0F0')
+                tree.item(item, tags=('oddrow',))
 
     def refresh_data(self):
         """Refresh data from database"""
@@ -740,16 +776,21 @@ class HistoryTab(TabBase):
         # Get the correct index for the value based on the field name
         field_index = list(self.bang_keo_tree['columns'] if self.current_edit_type == 'bang_keo' else self.truc_in_tree['columns']).index(field_name)
         
-        # Special handling for delivery date field
-        if field_name == 'ngay_du_kien':
+        # Special handling for date fields
+        if field_name in ['thoi_gian', 'ngay_du_kien']:
             date_value = values[field_index] if values[field_index] else datetime.now().strftime(self.DATE_FORMAT)
             entry = DateEntry(parent, width=15, background='darkblue',
-                            foreground='white', borderwidth=2, date_pattern='dd-mm-yyyy',
-                            locale='vi_VN')
+                             foreground='white', borderwidth=2,
+                             date_pattern='dd/mm/yyyy',
+                             locale='vi_VN')
             try:
                 entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
-            except:
-                entry.set_date(datetime.now().date())
+            except ValueError:
+                try:
+                    # Try parsing with datetime format if date format fails
+                    entry.set_date(datetime.strptime(date_value, self.DATETIME_FORMAT).date())
+                except ValueError:
+                    entry.set_date(datetime.now().date())
         else:
             entry = ttk.Entry(parent, width=15)
             entry.insert(0, values[field_index] if values[field_index] is not None else '')
@@ -870,10 +911,10 @@ class HistoryTab(TabBase):
             for column in tree['columns']:
                 if column in ['id', 'da_giao', 'da_tat_toan']:  # Skip these fields
                     continue
-                if column == 'ngay_du_kien':
-                    # Get date from DateEntry widget
+                if column in ['thoi_gian', 'ngay_du_kien']:
+                    # Get date from DateEntry widget and format it
                     date_value = self.edit_entries[column].get_date()
-                    values[column] = date_value
+                    values[column] = date_value.strftime(self.DATE_FORMAT)
                 else:
                     if column in self.edit_entries:  # Only get values for fields that exist in edit form
                         values[column] = self.edit_entries[column].get()
@@ -881,14 +922,15 @@ class HistoryTab(TabBase):
             # Update database
             try:
                 if self.current_edit_type == 'bang_keo':
-                    # Find the order with matching ID
                     order = self.db_session.query(BangKeoInOrder).filter_by(id=record_id).first()
                     
                     if order:
-                        # Update all fields except ID, da_giao, and da_tat_toan
                         for field, value in values.items():
                             if field not in ['id', 'da_giao', 'da_tat_toan']:
-                                if field in ['quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 
+                                if field in ['thoi_gian', 'ngay_du_kien']:
+                                    # Convert string date to datetime for database
+                                    setattr(order, field, datetime.strptime(value, self.DATE_FORMAT))
+                                elif field in ['quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 
                                           'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 
                                           'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 
                                           'tien_coc', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan']:
@@ -896,14 +938,14 @@ class HistoryTab(TabBase):
                                 else:
                                     setattr(order, field, value)
                 else:
-                    # Find the order with matching ID
                     order = self.db_session.query(TrucInOrder).filter_by(id=record_id).first()
                     
                     if order:
-                        # Update all fields except ID, da_giao, and da_tat_toan
                         for field, value in values.items():
                             if field not in ['id', 'da_giao', 'da_tat_toan']:
-                                if field in ['so_luong', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 
+                                if field in ['thoi_gian', 'ngay_du_kien']:
+                                    setattr(order, field, datetime.strptime(value, self.DATE_FORMAT))
+                                elif field in ['so_luong', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 
                                           'thanh_tien_ban', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan']:
                                     setattr(order, field, self.validate_float_input(value))
                                 else:
@@ -915,27 +957,18 @@ class HistoryTab(TabBase):
                 # Commit changes to database
                 self.db_session.commit()
                 
-                # Convert values back to list format for treeview
+                # Update tree with new values
                 tree_values = [record_id]  # Start with the ID
                 for column in tree['columns'][1:]:  # Skip the ID column
-                    if column == 'ngay_du_kien':
-                        tree_values.append(values[column].strftime(self.DATE_FORMAT))
+                    if column in ['thoi_gian', 'ngay_du_kien']:
+                        tree_values.append(values[column])
                     elif column in ['da_giao', 'da_tat_toan']:
-                        # Keep existing values for these fields
                         tree_values.append(item_values[tree['columns'].index(column)])
                     else:
                         tree_values.append(values.get(column, ''))
                 
                 # Update tree
                 tree.item(self.current_edit_item, values=tree_values)
-                
-                # Store in data list
-                if self.current_edit_type == 'bang_keo':
-                    if self.current_edit_item not in self.bang_keo_data:
-                        self.bang_keo_data.append(self.current_edit_item)
-                else:
-                    if self.current_edit_item not in self.truc_in_data:
-                        self.truc_in_data.append(self.current_edit_item)
                 
                 messagebox.showinfo("Thành công", "Đã cập nhật thông tin")
                 
@@ -1185,18 +1218,6 @@ class HistoryTab(TabBase):
             # Reinsert items that match the filter
             for item_id, values in all_items:
                 try:
-                    # Parse the order date (thoi_gian - index 1)
-                    order_date_str = values[1]
-                    order_date = datetime.strptime(order_date_str, self.DATE_FORMAT).date()
-                    
-                    # Parse the expected date (ngay_du_kien - index 3)
-                    expected_date_str = values[3]
-                    expected_date = datetime.strptime(expected_date_str, self.DATE_FORMAT).date()
-                    
-                    # Check if either date is within range
-                    date_match = (from_date <= order_date <= to_date or 
-                                from_date <= expected_date <= to_date)
-                    
                     # Check search text if present
                     text_match = True
                     if search_text:
@@ -1206,8 +1227,18 @@ class HistoryTab(TabBase):
                                 text_match = True
                                 break
                     
-                    # Insert if both conditions are met
-                    if date_match and text_match:
+                    # Only check dates if text matches and dates are selected
+                    if text_match and from_date and to_date:
+                        # Parse the order date (thoi_gian - index 1)
+                        order_date_str = values[1]
+                        order_date = datetime.strptime(order_date_str, self.DATE_FORMAT).date()
+                        
+                        # Check if order date is within range
+                        date_match = from_date <= order_date <= to_date
+                        text_match = text_match and date_match
+                    
+                    # Insert if conditions are met
+                    if text_match:
                         tree.insert('', 'end', values=values)
                         
                         # Apply alternating row colors

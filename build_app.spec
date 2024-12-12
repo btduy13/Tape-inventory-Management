@@ -7,16 +7,23 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('assets', 'assets'),  # Copy thư mục assets
-        ('logs', 'logs'),      # Copy thư mục logs
+        ('assets', 'assets'),
+        ('logs', 'logs'),
     ],
     hiddenimports=[
         'ttkthemes',
         'PIL',
+        'PIL._tkinter_finder',
         'sqlalchemy',
+        'sqlalchemy.sql.default_comparator',
         'pandas',
         'numpy',
         'openpyxl',
+        'tkinter',
+        'sqlite3',
+        'datetime',
+        'json',
+        'logging',
     ],
     hookspath=[],
     hooksconfig={},
@@ -50,5 +57,6 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon='assets/icon.ico',
-    uac_admin=True  # Yêu cầu quyền admin khi chạy
+    uac_admin=True,
+    version='file_version_info.txt'
 ) 

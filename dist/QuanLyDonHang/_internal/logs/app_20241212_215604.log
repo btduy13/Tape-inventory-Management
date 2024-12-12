@@ -1,0 +1,12 @@
+2024-12-12 21:56:04,850 - OrderSystem - INFO - Logging system initialized
+2024-12-12 21:56:04,855 - OrderSystem - INFO - Starting generate_order_form
+2024-12-12 21:56:04,903 - OrderSystem - INFO - Creating order selection dialog
+2024-12-12 21:56:04,903 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-12 21:56:04,903 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-12 21:56:05,470 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-12 21:56:05,475 - OrderSystem - INFO - Loading orders from database
+2024-12-12 21:56:05,590 - OrderSystem - INFO - Found 81 băng keo orders and 0 trục in orders
+2024-12-12 21:56:05,591 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 21:56:05,644 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-12 21:56:13,081 - OrderSystem - INFO - Canceling order selection
+2024-12-12 21:56:13,117 - OrderSystem - INFO - Operation cancelled or no orders selected

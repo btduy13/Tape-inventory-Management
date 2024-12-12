@@ -1,0 +1,27 @@
+2024-12-12 23:05:27,247 - OrderSystem - INFO - Logging system initialized
+2024-12-12 23:05:27,252 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-12 23:05:27,289 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-12 23:05:27,770 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-12 23:05:27,774 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:27,918 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:27,919 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:27,960 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-12 23:05:35,851 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:35,930 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:35,932 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:38,193 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:38,270 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:38,272 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:39,356 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:39,433 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:39,435 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:40,891 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:40,966 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:40,969 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:41,319 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:41,398 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:41,399 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:41,834 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:05:41,913 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
+2024-12-12 23:05:41,914 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:05:43,204 - OrderSystem - INFO - Canceling order selection

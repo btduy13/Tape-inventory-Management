@@ -1,0 +1,204 @@
+2024-12-12 23:58:53,334 - OrderSystem - INFO - Logging system initialized
+2024-12-12 23:58:53,339 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-12 23:58:53,385 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-12 23:58:54,009 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-12 23:58:54,014 - OrderSystem - INFO - Loading orders from database
+2024-12-12 23:58:54,152 - OrderSystem - INFO - Found 81 băng keo orders and 0 trục in orders
+2024-12-12 23:58:54,153 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 23:58:54,206 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-12 23:58:56,223 - OrderSystem - INFO - Confirming order selection
+2024-12-12 23:58:56,223 - OrderSystem - INFO - Selected orders: ['BK-12-24-006', 'BK-12-24-018']
+2024-12-12 23:58:56,223 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-12 23:58:56,913 - OrderSystem - INFO - Showing preview dialog
+2024-12-12 23:58:59,724 - OrderSystem - INFO - Order form generation completed
+2024-12-12 23:59:00,324 - OrderSystem - INFO - Canceling order selection
+2024-12-13 00:11:40,819 - root - ERROR - Error deleting item: (psycopg2.OperationalError) server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+[SQL: SELECT bang_keo_in_orders.id AS bang_keo_in_orders_id, bang_keo_in_orders.thoi_gian AS bang_keo_in_orders_thoi_gian, bang_keo_in_orders.ten_hang AS bang_keo_in_orders_ten_hang, bang_keo_in_orders.ngay_du_kien AS bang_keo_in_orders_ngay_du_kien, bang_keo_in_orders.quy_cach_mm AS bang_keo_in_orders_quy_cach_mm, bang_keo_in_orders.quy_cach_m AS bang_keo_in_orders_quy_cach_m, bang_keo_in_orders.quy_cach_mic AS bang_keo_in_orders_quy_cach_mic, bang_keo_in_orders.cuon_cay AS bang_keo_in_orders_cuon_cay, bang_keo_in_orders.so_luong AS bang_keo_in_orders_so_luong, bang_keo_in_orders.phi_sl AS bang_keo_in_orders_phi_sl, bang_keo_in_orders.mau_keo AS bang_keo_in_orders_mau_keo, bang_keo_in_orders.phi_keo AS bang_keo_in_orders_phi_keo, bang_keo_in_orders.mau_sac AS bang_keo_in_orders_mau_sac, bang_keo_in_orders.phi_mau AS bang_keo_in_orders_phi_mau, bang_keo_in_orders.phi_size AS bang_keo_in_orders_phi_size, bang_keo_in_orders.phi_cat AS bang_keo_in_orders_phi_cat, bang_keo_in_orders.don_gia_von AS bang_keo_in_orders_don_gia_von, bang_keo_in_orders.don_gia_goc AS bang_keo_in_orders_don_gia_goc, bang_keo_in_orders.thanh_tien_goc AS bang_keo_in_orders_thanh_tien_goc, bang_keo_in_orders.don_gia_ban AS bang_keo_in_orders_don_gia_ban, bang_keo_in_orders.thanh_tien_ban AS bang_keo_in_orders_thanh_tien_ban, bang_keo_in_orders.tien_coc AS bang_keo_in_orders_tien_coc, bang_keo_in_orders.cong_no_khach AS bang_keo_in_orders_cong_no_khach, bang_keo_in_orders.ctv AS bang_keo_in_orders_ctv, bang_keo_in_orders.hoa_hong AS bang_keo_in_orders_hoa_hong, bang_keo_in_orders.tien_hoa_hong AS bang_keo_in_orders_tien_hoa_hong, bang_keo_in_orders.loi_giay AS bang_keo_in_orders_loi_giay, bang_keo_in_orders.thung_bao AS bang_keo_in_orders_thung_bao, bang_keo_in_orders.loi_nhuan AS bang_keo_in_orders_loi_nhuan, bang_keo_in_orders.da_giao AS bang_keo_in_orders_da_giao, bang_keo_in_orders.da_tat_toan AS bang_keo_in_orders_da_tat_toan 
+FROM bang_keo_in_orders 
+WHERE bang_keo_in_orders.id = %(id_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'id_1': 'BK-12-24-019', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2024-12-13 00:11:41,238 - root - INFO - Successfully deleted record BK-12-24-081 from database
+2024-12-13 00:11:41,239 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:41,350 - root - INFO - Successfully deleted record BK-12-24-080 from database
+2024-12-13 00:11:41,350 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:41,484 - root - INFO - Successfully deleted record BK-12-24-079 from database
+2024-12-13 00:11:41,485 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:41,588 - root - INFO - Successfully deleted record BK-12-24-078 from database
+2024-12-13 00:11:41,588 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:41,690 - root - INFO - Successfully deleted record BK-12-24-077 from database
+2024-12-13 00:11:41,699 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:41,798 - root - INFO - Successfully deleted record BK-12-24-076 from database
+2024-12-13 00:11:41,798 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:41,901 - root - INFO - Successfully deleted record BK-12-24-075 from database
+2024-12-13 00:11:41,901 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,002 - root - INFO - Successfully deleted record BK-12-24-074 from database
+2024-12-13 00:11:42,002 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,103 - root - INFO - Successfully deleted record BK-12-24-073 from database
+2024-12-13 00:11:42,103 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,204 - root - INFO - Successfully deleted record BK-12-24-072 from database
+2024-12-13 00:11:42,205 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,304 - root - INFO - Successfully deleted record BK-12-24-071 from database
+2024-12-13 00:11:42,304 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,405 - root - INFO - Successfully deleted record BK-12-24-070 from database
+2024-12-13 00:11:42,407 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,511 - root - INFO - Successfully deleted record BK-12-24-069 from database
+2024-12-13 00:11:42,511 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,612 - root - INFO - Successfully deleted record BK-12-24-068 from database
+2024-12-13 00:11:42,612 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,713 - root - INFO - Successfully deleted record BK-12-24-067 from database
+2024-12-13 00:11:42,713 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,814 - root - INFO - Successfully deleted record BK-12-24-066 from database
+2024-12-13 00:11:42,814 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:42,916 - root - INFO - Successfully deleted record BK-12-24-065 from database
+2024-12-13 00:11:42,916 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,020 - root - INFO - Successfully deleted record BK-12-24-064 from database
+2024-12-13 00:11:43,020 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,119 - root - INFO - Successfully deleted record BK-12-24-063 from database
+2024-12-13 00:11:43,119 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,224 - root - INFO - Successfully deleted record BK-12-24-062 from database
+2024-12-13 00:11:43,225 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,327 - root - INFO - Successfully deleted record BK-12-24-061 from database
+2024-12-13 00:11:43,327 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,531 - root - INFO - Successfully deleted record BK-12-24-060 from database
+2024-12-13 00:11:43,531 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,632 - root - INFO - Successfully deleted record BK-12-24-059 from database
+2024-12-13 00:11:43,632 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,732 - root - INFO - Successfully deleted record BK-12-24-058 from database
+2024-12-13 00:11:43,732 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,833 - root - INFO - Successfully deleted record BK-12-24-057 from database
+2024-12-13 00:11:43,833 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:43,934 - root - INFO - Successfully deleted record BK-12-24-056 from database
+2024-12-13 00:11:43,934 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,034 - root - INFO - Successfully deleted record BK-12-24-055 from database
+2024-12-13 00:11:44,034 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,136 - root - INFO - Successfully deleted record BK-12-24-054 from database
+2024-12-13 00:11:44,136 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,236 - root - INFO - Successfully deleted record BK-12-24-053 from database
+2024-12-13 00:11:44,236 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,339 - root - INFO - Successfully deleted record BK-12-24-052 from database
+2024-12-13 00:11:44,339 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,441 - root - INFO - Successfully deleted record BK-12-24-051 from database
+2024-12-13 00:11:44,441 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,541 - root - INFO - Successfully deleted record BK-12-24-050 from database
+2024-12-13 00:11:44,541 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,642 - root - INFO - Successfully deleted record BK-12-24-049 from database
+2024-12-13 00:11:44,642 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,744 - root - INFO - Successfully deleted record BK-12-24-048 from database
+2024-12-13 00:11:44,744 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,845 - root - INFO - Successfully deleted record BK-12-24-047 from database
+2024-12-13 00:11:44,845 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:44,947 - root - INFO - Successfully deleted record BK-12-24-046 from database
+2024-12-13 00:11:44,947 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,049 - root - INFO - Successfully deleted record BK-12-24-045 from database
+2024-12-13 00:11:45,049 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,150 - root - INFO - Successfully deleted record BK-12-24-044 from database
+2024-12-13 00:11:45,150 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,251 - root - INFO - Successfully deleted record BK-12-24-043 from database
+2024-12-13 00:11:45,251 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,353 - root - INFO - Successfully deleted record BK-12-24-042 from database
+2024-12-13 00:11:45,353 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,467 - root - INFO - Successfully deleted record BK-12-24-041 from database
+2024-12-13 00:11:45,467 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,574 - root - INFO - Successfully deleted record BK-12-24-040 from database
+2024-12-13 00:11:45,574 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,688 - root - INFO - Successfully deleted record BK-12-24-039 from database
+2024-12-13 00:11:45,688 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,791 - root - INFO - Successfully deleted record BK-12-24-038 from database
+2024-12-13 00:11:45,791 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:45,912 - root - INFO - Successfully deleted record BK-12-24-037 from database
+2024-12-13 00:11:45,912 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,016 - root - INFO - Successfully deleted record BK-12-24-036 from database
+2024-12-13 00:11:46,016 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,118 - root - INFO - Successfully deleted record BK-12-24-035 from database
+2024-12-13 00:11:46,119 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,220 - root - INFO - Successfully deleted record BK-12-24-034 from database
+2024-12-13 00:11:46,220 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,323 - root - INFO - Successfully deleted record BK-12-24-033 from database
+2024-12-13 00:11:46,323 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,424 - root - INFO - Successfully deleted record BK-12-24-032 from database
+2024-12-13 00:11:46,424 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,528 - root - INFO - Successfully deleted record BK-12-24-031 from database
+2024-12-13 00:11:46,528 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,634 - root - INFO - Successfully deleted record BK-12-24-030 from database
+2024-12-13 00:11:46,634 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,734 - root - INFO - Successfully deleted record BK-12-24-029 from database
+2024-12-13 00:11:46,734 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,836 - root - INFO - Successfully deleted record BK-12-24-028 from database
+2024-12-13 00:11:46,836 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:46,942 - root - INFO - Successfully deleted record BK-12-24-027 from database
+2024-12-13 00:11:46,942 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,042 - root - INFO - Successfully deleted record BK-12-24-026 from database
+2024-12-13 00:11:47,042 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,144 - root - INFO - Successfully deleted record BK-12-24-025 from database
+2024-12-13 00:11:47,144 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,246 - root - INFO - Successfully deleted record BK-12-24-024 from database
+2024-12-13 00:11:47,246 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,348 - root - INFO - Successfully deleted record BK-12-24-023 from database
+2024-12-13 00:11:47,348 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,450 - root - INFO - Successfully deleted record BK-12-24-022 from database
+2024-12-13 00:11:47,450 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,553 - root - INFO - Successfully deleted record BK-12-24-021 from database
+2024-12-13 00:11:47,553 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,652 - root - INFO - Successfully deleted record BK-12-24-020 from database
+2024-12-13 00:11:47,652 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,755 - root - INFO - Successfully deleted record BK-12-24-018 from database
+2024-12-13 00:11:47,755 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,874 - root - INFO - Successfully deleted record BK-12-24-017 from database
+2024-12-13 00:11:47,874 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:47,973 - root - INFO - Successfully deleted record BK-12-24-016 from database
+2024-12-13 00:11:47,973 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,076 - root - INFO - Successfully deleted record BK-12-24-015 from database
+2024-12-13 00:11:48,076 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,179 - root - INFO - Successfully deleted record BK-12-24-014 from database
+2024-12-13 00:11:48,179 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,282 - root - INFO - Successfully deleted record BK-12-24-013 from database
+2024-12-13 00:11:48,282 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,388 - root - INFO - Successfully deleted record BK-12-24-012 from database
+2024-12-13 00:11:48,389 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,491 - root - INFO - Successfully deleted record BK-12-24-011 from database
+2024-12-13 00:11:48,491 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,592 - root - INFO - Successfully deleted record BK-12-24-010 from database
+2024-12-13 00:11:48,592 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,700 - root - INFO - Successfully deleted record BK-12-24-009 from database
+2024-12-13 00:11:48,700 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,799 - root - INFO - Successfully deleted record BK-12-24-008 from database
+2024-12-13 00:11:48,799 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,900 - root - INFO - Successfully deleted record BK-12-24-007 from database
+2024-12-13 00:11:48,900 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:48,999 - root - INFO - Successfully deleted record BK-12-24-006 from database
+2024-12-13 00:11:49,000 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:49,110 - root - INFO - Successfully deleted record BK-12-24-005 from database
+2024-12-13 00:11:49,110 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:49,212 - root - INFO - Successfully deleted record BK-12-24-004 from database
+2024-12-13 00:11:49,212 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:49,313 - root - INFO - Successfully deleted record BK-12-24-003 from database
+2024-12-13 00:11:49,313 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:49,417 - root - INFO - Successfully deleted record BK-12-24-002 from database
+2024-12-13 00:11:49,417 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:11:49,525 - root - INFO - Successfully deleted record BK-12-24-001 from database
+2024-12-13 00:11:49,525 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:12:45,060 - root - INFO - Successfully deleted record BK-12-24-019 from database
+2024-12-13 00:12:45,060 - root - INFO - Successfully deleted item from tree
+2024-12-13 00:13:24,701 - sqlalchemy.pool.impl.QueuePool - ERROR - Exception during reset or similar
+Traceback (most recent call last):
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\pool\base.py", line 988, in _finalize_fairy
+    fairy._reset(
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\pool\base.py", line 1438, in _reset
+    pool._dialect.do_rollback(self)
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 692, in do_rollback
+    dbapi_connection.rollback()
+psycopg2.OperationalError: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+

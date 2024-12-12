@@ -1,0 +1,8 @@
+2024-12-13 00:35:46,853 - OrderSystem - INFO - Logging system initialized
+2024-12-13 00:35:55,476 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 00:35:55,977 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 00:35:55,986 - OrderSystem - INFO - Loading orders from database
+2024-12-13 00:35:56,117 - OrderSystem - INFO - Found 83 băng keo orders and 0 trục in orders
+2024-12-13 00:35:56,118 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 00:36:05,683 - OrderSystem - INFO - Canceling order selection
+2024-12-13 00:38:45,980 - root - INFO - Template exported successfully to: C:/Users/PC/Documents/Zalo Received Files/TI-template.xlsx

@@ -1,0 +1,40 @@
+2024-12-12 22:27:51,306 - OrderSystem - INFO - Logging system initialized
+2024-12-12 22:27:51,311 - OrderSystem - INFO - Starting generate_order_form
+2024-12-12 22:27:51,311 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-12 22:27:51,361 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-12 22:27:52,004 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-12 22:27:52,010 - OrderSystem - INFO - Loading orders from database
+2024-12-12 22:27:52,125 - OrderSystem - INFO - Found 81 băng keo orders and 0 trục in orders
+2024-12-12 22:27:52,126 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 22:27:52,148 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-12 22:27:56,590 - OrderSystem - INFO - Confirming order selection
+2024-12-12 22:27:56,590 - OrderSystem - INFO - Selected orders: ['BK-12-24-063', 'BK-12-24-054', 'BK-12-24-049']
+2024-12-12 22:27:56,590 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-12 22:27:57,343 - OrderSystem - INFO - Showing preview dialog
+2024-12-12 22:28:08,741 - OrderSystem - INFO - Generating PDF
+2024-12-12 22:28:08,747 - OrderSystem - ERROR - Error processing orders: [Errno 13] Permission denied: 'order.pdf'
+Traceback (most recent call last):
+  File "c:\Users\PC\Documents\scr\report_gen.py", line 539, in process_selected_orders
+    create_order_pdf('order.pdf', preview.result)
+  File "c:\Users\PC\Documents\scr\report_gen.py", line 288, in create_order_pdf
+    doc.build(story)
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\reportlab\platypus\doctemplate.py", line 1317, in build
+    BaseDocTemplate.build(self,flowables, canvasmaker=canvasmaker)
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\reportlab\platypus\doctemplate.py", line 1108, in build
+    self._endBuild()
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\reportlab\platypus\doctemplate.py", line 1043, in _endBuild
+    if getattr(self,'_doSave',1): self.canv.save()
+                                  ^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\reportlab\pdfgen\canvas.py", line 1286, in save
+    self._doc.SaveToFile(self._filename, self)
+  File "C:\Users\PC\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\reportlab\pdfbase\pdfdoc.py", line 208, in SaveToFile
+    f = open(filename, "wb")
+        ^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: 'order.pdf'
+2024-12-12 22:28:35,598 - OrderSystem - INFO - Confirming order selection
+2024-12-12 22:28:35,598 - OrderSystem - INFO - Selected orders: ['BK-12-24-063', 'BK-12-24-060', 'BK-12-24-058', 'BK-12-24-054', 'BK-12-24-049']
+2024-12-12 22:28:35,598 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-12 22:28:36,417 - OrderSystem - INFO - Showing preview dialog
+2024-12-12 22:28:47,257 - OrderSystem - INFO - Generating PDF
+2024-12-12 22:28:48,367 - OrderSystem - INFO - PDF generated successfully
+2024-12-12 22:28:48,433 - OrderSystem - INFO - Order form generation completed

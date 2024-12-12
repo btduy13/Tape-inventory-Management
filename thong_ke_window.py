@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 from database import BangKeoInOrder, TrucInOrder
 from tab_base import TabBase
+import logging
 
 class ThongKeTab(TabBase):
     def __init__(self, notebook, parent):
@@ -10,6 +11,10 @@ class ThongKeTab(TabBase):
         self.parent_form = parent  # Assuming parent is the main form with db_session
         self.tab = ttk.Frame(notebook)
         notebook.add(self.tab, text="Thống kê")
+        
+        # Add sort tracking variables
+        self.bang_keo_sort = {'column': None, 'reverse': False}
+        self.truc_in_sort = {'column': None, 'reverse': False}
         
         # Initialize counters
         self.reset_counters()
@@ -77,6 +82,25 @@ class ThongKeTab(TabBase):
         self.tong_doanh_thu_label = ttk.Label(finance_frame, text="Tổng doanh thu: 0")
         self.tong_doanh_thu_label.pack(anchor=tk.W, padx=5, pady=2)
         
+        # Add Actions Frame
+        actions_frame = ttk.LabelFrame(dashboard_frame, text="Thao tác")
+        actions_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Style for large button
+        style = ttk.Style()
+        style.configure('Action.TButton', 
+                       padding=(20, 10),
+                       font=('TkDefaultFont', 11))
+        
+        # Add Export Order button
+        export_btn = ttk.Button(
+            actions_frame, 
+            text="Xuất đơn đặt hàng", 
+            style='Action.TButton',
+            command=self.open_order_export
+        )
+        export_btn.pack(pady=5)
+        
     def create_order_tabs(self):
         """Create a nested notebook with separate tabs for each order type."""
         order_notebook = ttk.Notebook(self.tab)
@@ -101,8 +125,24 @@ class ThongKeTab(TabBase):
         control_frame = ttk.Frame(list_frame)
         control_frame.pack(fill=tk.X, padx=5, pady=5)
         
+        # Search by order name
+        ttk.Label(control_frame, text="Tìm theo tên:").pack(side=tk.LEFT, padx=5)
+        search_var = tk.StringVar()
+        search_entry = ttk.Entry(control_frame, textvariable=search_var, width=20)
+        search_entry.pack(side=tk.LEFT, padx=5)
+        search_var.trace_add("write", lambda *args, ot=order_type: self.load_data(order_type=ot))
+        
+        # Month filter
+        ttk.Label(control_frame, text="Tháng:").pack(side=tk.LEFT, padx=5)
+        month_var = tk.StringVar(value="Tất cả")
+        months = ["Tất cả"] + [f"Tháng {i}" for i in range(1, 13)]
+        month_cb = ttk.Combobox(control_frame, textvariable=month_var,
+                               values=months, state="readonly", width=15)
+        month_cb.pack(side=tk.LEFT, padx=5)
+        month_var.trace_add("write", lambda *args, ot=order_type: self.load_data(order_type=ot))
+        
         # Filter by status
-        ttk.Label(control_frame, text="Lọc theo:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(control_frame, text="Trạng thái:").pack(side=tk.LEFT, padx=5)
         filter_var = tk.StringVar(value="Tất cả")
         filter_cb = ttk.Combobox(control_frame, textvariable=filter_var, values=[
             "Tất cả",
@@ -117,48 +157,54 @@ class ThongKeTab(TabBase):
         # Refresh Button
         ttk.Button(control_frame, text="Làm mới", command=lambda ot=order_type: self.load_data(order_type=ot)).pack(side=tk.LEFT, padx=5)
         
+        # Create frame for treeview and scrollbar
+        tree_frame = ttk.Frame(list_frame)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
         # Treeview to display order data
-        tree = ttk.Treeview(list_frame, columns=(
+        tree = ttk.Treeview(tree_frame, columns=(
             "id", "thoi_gian", "ten_hang", "ngay_du_kien", 
             "cong_no_khach", "da_giao", "da_tat_toan"
         ), show="headings")
         
-        # Define columns
-        tree.heading("id", text="ID đơn hàng")
-        tree.heading("thoi_gian", text="Ngày tạo đơn")
-        tree.heading("ten_hang", text="Tên đơn")
-        tree.heading("ngay_du_kien", text="Ngày giao")
-        tree.heading("cong_no_khach", text="Công nợ khách")
-        tree.heading("da_giao", text="Đã giao")
-        tree.heading("da_tat_toan", text="Đã tất toán")
+        # Define columns with sort commands
+        columns_config = {
+            "id": ("ID đơn hàng", 100),
+            "thoi_gian": ("Ngày tạo đơn", 150),
+            "ten_hang": ("Tên đơn", 200),
+            "ngay_du_kien": ("Ngày giao", 150),
+            "cong_no_khach": ("Công nợ khách", 150),
+            "da_giao": ("Đã giao", 100),
+            "da_tat_toan": ("Đã tất toán", 100)
+        }
         
-        # Set column widths and alignment
-        tree.column("id", width=100, anchor=tk.CENTER)
-        tree.column("thoi_gian", width=150, anchor=tk.CENTER)
-        tree.column("ten_hang", width=200)
-        tree.column("ngay_du_kien", width=150, anchor=tk.CENTER)
-        tree.column("cong_no_khach", width=150, anchor=tk.E)
-        tree.column("da_giao", width=100, anchor=tk.CENTER)
-        tree.column("da_tat_toan", width=100, anchor=tk.CENTER)
+        for col, (heading, width) in columns_config.items():
+            tree.heading(col, text=heading,
+                        command=lambda c=col, t=order_type: self.sort_treeview(c, t))
+            tree.column(col, width=width, 
+                       anchor=tk.CENTER if col not in ["ten_hang"] else tk.W)
+            if col == "cong_no_khach":
+                tree.column(col, anchor=tk.E)
         
         # Add scrollbar to Treeview
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=tree.yview)
+        scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
         
-        # Pack Treeview and scrollbar
-        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Pack scrollbar and treeview
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Bind double-click event to Treeview items
-        tree.bind("<Double-1>", lambda e, ot=order_type, tr=tree: self.on_double_click(e, ot, tr))
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Store references for later use
         if order_type == "Băng keo in":
             self.bang_keo_tree = tree
             self.bang_keo_filter_var = filter_var
+            self.bang_keo_search_var = search_var
+            self.bang_keo_month_var = month_var
         else:
             self.truc_in_tree = tree
             self.truc_in_filter_var = filter_var
+            self.truc_in_search_var = search_var
+            self.truc_in_month_var = month_var
         
     def load_data(self, order_type=None):
         """Load data from the database and populate the Treeviews."""
@@ -226,13 +272,35 @@ class ThongKeTab(TabBase):
                 "✓" if order.da_tat_toan else ""  # Đã tất toán
             ), tags=(tag, str(order.id)))
         
+        # After inserting data, apply sort if a column is selected
+        sort_state = self.bang_keo_sort if order_type == "Băng keo in" else self.truc_in_sort
+        if sort_state['column']:
+            self.sort_treeview(sort_state['column'], order_type)
+        else:
+            self._apply_row_colors(tree)
+        
     def should_show_order(self, order, days_until_due, order_type):
         """Determine whether an order should be displayed based on the current filter."""
         if order_type == "Băng keo in":
             filter_value = self.bang_keo_filter_var.get()
+            search_text = self.bang_keo_search_var.get().lower().strip()
+            selected_month = self.bang_keo_month_var.get()
         else:
             filter_value = self.truc_in_filter_var.get()
+            search_text = self.truc_in_search_var.get().lower().strip()
+            selected_month = self.truc_in_month_var.get()
         
+        # Check search text first
+        if search_text and search_text not in order.ten_hang.lower():
+            return False
+        
+        # Check month filter
+        if selected_month != "Tất cả":
+            month_num = int(selected_month.split()[1])
+            if order.thoi_gian.month != month_num:
+                return False
+        
+        # Then check status filter
         if filter_value == "Tất cả":
             return True
         elif filter_value == "Sắp đến hạn":
@@ -425,7 +493,7 @@ class ThongKeTab(TabBase):
             'id': 'ID đơn hàng',
             'thoi_gian': 'Thời gian',
             'ten_hang': 'Tên hàng',
-            'ngay_du_kien': 'Ngày dự kiến',
+            'ngay_du_kien': 'Ng��y dự kiến',
             'quy_cach': 'Quy cách',
             # ... các heading khác giữ nguyên
         }
@@ -442,3 +510,73 @@ class ThongKeTab(TabBase):
                 self.truc_in_tree.column(col, width=200, minwidth=150)
             else:
                 self.truc_in_tree.column(col, width=100, minwidth=80)
+
+    def open_order_export(self):
+        """Open the order export dialog"""
+        try:
+            from report_gen import OrderSelectionDialog
+            export_dialog = OrderSelectionDialog(parent=self.tab)
+            self.tab.wait_window(export_dialog)
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể mở cửa sổ xuất đơn: {str(e)}")
+
+    def sort_treeview(self, col, order_type):
+        """Sort treeview content when a column header is clicked"""
+        try:
+            # Get the correct tree and sort state
+            if order_type == "Băng keo in":
+                tree = self.bang_keo_tree
+                sort_state = self.bang_keo_sort
+            else:
+                tree = self.truc_in_tree
+                sort_state = self.truc_in_sort
+
+            # Get all items from treeview
+            items = [(tree.set(item, col), item) for item in tree.get_children('')]
+            
+            # If clicking the same column, reverse the sort order
+            if sort_state['column'] == col:
+                sort_state['reverse'] = not sort_state['reverse']
+            else:
+                sort_state['column'] = col
+                sort_state['reverse'] = False
+            
+            # Sort based on column type
+            if col == "cong_no_khach":
+                # Convert string numbers with commas to float for sorting
+                items.sort(key=lambda x: float(x[0].replace(',', '')) if x[0] else 0, 
+                         reverse=sort_state['reverse'])
+            elif col in ["thoi_gian", "ngay_du_kien"]:
+                # Convert date strings to datetime objects for sorting
+                items.sort(key=lambda x: datetime.strptime(x[0], '%d/%m/%Y') if x[0] else datetime.min, 
+                         reverse=sort_state['reverse'])
+            elif col in ["da_giao", "da_tat_toan"]:
+                # Sort checkmarks
+                items.sort(key=lambda x: x[0] == "✓", 
+                         reverse=sort_state['reverse'])
+            else:
+                # Regular string sorting for other columns
+                items.sort(key=lambda x: str(x[0]).lower(), 
+                         reverse=sort_state['reverse'])
+            
+            # Rearrange items in treeview
+            for index, (val, item) in enumerate(items):
+                tree.move(item, '', index)
+            
+            # Apply alternating row colors
+            self._apply_row_colors(tree)
+            
+        except Exception as e:
+            logging.error(f"Error sorting treeview: {str(e)}")
+            messagebox.showerror("Lỗi", f"Lỗi khi sắp xếp dữ liệu: {str(e)}")
+
+    def _apply_row_colors(self, tree):
+        """Apply alternating row colors to tree"""
+        items = tree.get_children()
+        for i, item in enumerate(items):
+            if i % 2 == 0:
+                tree.tag_configure('evenrow', background='#FFFFFF')
+                tree.item(item, tags=('evenrow',))
+            else:
+                tree.tag_configure('oddrow', background='#F0F0F0')
+                tree.item(item, tags=('oddrow',))

@@ -1,0 +1,20 @@
+2024-12-12 22:08:12,670 - OrderSystem - INFO - Logging system initialized
+2024-12-12 22:08:12,674 - OrderSystem - INFO - Starting generate_order_form
+2024-12-12 22:08:12,674 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-12 22:08:12,723 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-12 22:08:13,424 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-12 22:08:13,431 - OrderSystem - INFO - Loading orders from database
+2024-12-12 22:08:13,570 - OrderSystem - INFO - Found 81 băng keo orders and 0 trục in orders
+2024-12-12 22:08:13,584 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 22:08:13,605 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-12 22:08:15,906 - OrderSystem - INFO - Confirming order selection
+2024-12-12 22:08:15,906 - OrderSystem - INFO - Selected orders: ['BK-12-24-064', 'BK-12-24-060']
+2024-12-12 22:08:15,948 - OrderSystem - INFO - Selected order IDs: ['BK-12-24-064', 'BK-12-24-060']
+2024-12-12 22:08:15,948 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-12 22:08:16,712 - OrderSystem - INFO - Showing preview dialog
+2024-12-12 22:08:16,712 - OrderSystem - ERROR - Error in generate_order_form: PreviewDialog.__init__() missing 1 required positional argument: 'order_data'
+Traceback (most recent call last):
+  File "c:\Users\PC\Documents\scr\report_gen.py", line 559, in generate_order_form
+    preview = PreviewDialog(preview_data)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: PreviewDialog.__init__() missing 1 required positional argument: 'order_data'

@@ -1,0 +1,17 @@
+2024-12-12 22:07:02,908 - OrderSystem - INFO - Logging system initialized
+2024-12-12 22:07:02,911 - OrderSystem - INFO - Starting generate_order_form
+2024-12-12 22:07:02,911 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-12 22:07:02,959 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-12 22:07:03,533 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-12 22:07:03,539 - OrderSystem - INFO - Loading orders from database
+2024-12-12 22:07:03,655 - OrderSystem - INFO - Found 81 băng keo orders and 0 trục in orders
+2024-12-12 22:07:03,669 - OrderSystem - INFO - Orders loaded successfully
+2024-12-12 22:07:03,689 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-12 22:07:08,531 - OrderSystem - INFO - Confirming order selection
+2024-12-12 22:07:08,531 - OrderSystem - INFO - Selected orders: ['BK-12-24-057', 'BK-12-24-054']
+2024-12-12 22:07:08,573 - OrderSystem - ERROR - Error confirming selection: 'NoneType' object has no attribute 'quit'
+Traceback (most recent call last):
+  File "c:\Users\PC\Documents\scr\report_gen.py", line 501, in confirm
+    self.master.quit()  # Stop the mainloop
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'quit'
