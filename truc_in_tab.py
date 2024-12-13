@@ -34,7 +34,7 @@ class TrucInTab(TabBase):
         self.bind_shortcuts()
 
         # Checkbox for status
-        self.da_giao_var = tk.BooleanVar(value=False)
+        self.da_giao = tk.BooleanVar(value=False)
         self.da_tat_toan_var = tk.BooleanVar(value=False)
 
     def build_ui(self, main_frame):
@@ -265,7 +265,7 @@ class TrucInTab(TabBase):
                 'hoa_hong': self.parse_float(self.truc_in_hoa_hong.get()),
                 'tien_hoa_hong': self.parse_float(self.truc_in_tien_hoa_hong.get()),
                 'loi_nhuan': self.parse_float(self.truc_in_loi_nhuan.get()),
-                'da_giao': self.da_giao_var.get(),
+                'da_giao': self.da_giao.get(),
                 'da_tat_toan': self.da_tat_toan_var.get()
             }
             

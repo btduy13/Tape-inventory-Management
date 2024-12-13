@@ -1,6 +1,5 @@
 import sys
 import os
-import logging
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -14,50 +13,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.units import mm
-
-# Set up logging
-def setup_logging():
-    try:
-        # Sử dụng thư mục người dùng thay vì thư mục cài đặt
-        app_data = os.getenv('APPDATA')
-        log_dir = os.path.join(app_data, "QuanLyDonHang", "logs")
-        
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
-        
-        log_file = os.path.join(log_dir, f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-        
-        # Configure logging
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s [%(levelname)s] %(message)s',
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
-        )
-        
-        return log_file
-    except Exception as e:
-        print(f"Error setting up logging: {str(e)}")
-        # Fallback to console logging only if file logging fails
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s [%(levelname)s] %(message)s',
-            handlers=[logging.StreamHandler()]
-        )
-        return None
-
-# Initialize logger
-logger = setup_logging()
-
-# Safely set UTF-8 encoding for stdout and stderr
-if sys.stdout is not None and hasattr(sys.stdout, 'encoding'):
-    if sys.stdout.encoding != 'utf-8':
-        sys.stdout.reconfigure(encoding='utf-8')
-if sys.stderr is not None and hasattr(sys.stderr, 'encoding'):
-    if sys.stderr.encoding != 'utf-8':
-        sys.stderr.reconfigure(encoding='utf-8')
 
 # Database connection string
 DATABASE_URL = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -323,10 +278,8 @@ class OrderSelectionDialog(tk.Toplevel):
         self.sort_reverse = False
         
         # Initialize database connection
-        logger.info("Initializing database connection in dialog...")
         self.engine = init_db(DATABASE_URL)
         self.session = get_session(self.engine)
-        logger.info("Database session created successfully in dialog")
         
         self.selected_orders = []
         self.result = False
@@ -432,7 +385,7 @@ class OrderSelectionDialog(tk.Toplevel):
             scrollbar = ttk.Scrollbar(orders_frame, orient='vertical', command=self.tree.yview)
             self.tree.configure(yscrollcommand=scrollbar.set)
             
-            # Pack the treeview and scrollbar
+            # Pack scrollbar and treeview
             self.tree.pack(side='left', fill='both', expand=True, padx=5, pady=5)
             scrollbar.pack(side='right', fill='y', pady=5)
             
@@ -463,7 +416,6 @@ class OrderSelectionDialog(tk.Toplevel):
     
     def load_orders(self):
         try:
-            logger.info("Loading orders from database")
             # Clear existing items
             for item in self.tree.get_children():
                 self.tree.delete(item)
@@ -471,7 +423,6 @@ class OrderSelectionDialog(tk.Toplevel):
             # Get orders from both tables
             bang_keo_orders = self.session.query(BangKeoInOrder).order_by(desc(BangKeoInOrder.thoi_gian)).all()
             truc_in_orders = self.session.query(TrucInOrder).order_by(desc(TrucInOrder.thoi_gian)).all()
-            logger.info(f"Found {len(bang_keo_orders)} băng keo orders and {len(truc_in_orders)} trục in orders")
             
             # Add orders to treeview
             for order in bang_keo_orders:
@@ -491,7 +442,6 @@ class OrderSelectionDialog(tk.Toplevel):
                     f"{order.so_luong:,.0f}",
                     f"{order.don_gia_ban:,.0f}"
                 ))
-            logger.info("Orders loaded successfully")
                 
         except Exception as e:
             print(f"Error loading orders: {str(e)}")
@@ -598,15 +548,12 @@ class OrderSelectionDialog(tk.Toplevel):
     
     def confirm(self):
         try:
-            logger.info("Confirming order selection")
             selected_items = self.tree.selection()
             if not selected_items:
-                logger.warning("No items selected")
                 messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một đơn hàng")
                 return
             
             self.selected_orders = [self.tree.item(item)['values'][0] for item in selected_items]
-            logger.info(f"Selected orders: {self.selected_orders}")
             self.result = True
             
             # Process the selected orders here instead of destroying the window
@@ -619,14 +566,12 @@ class OrderSelectionDialog(tk.Toplevel):
     def process_selected_orders(self):
         try:
             # Initialize database connection for preview
-            logger.info("Initializing database connection for preview")
             engine = init_db(DATABASE_URL)
             session = get_session(engine)
             
             # Get orders from database
             orders = get_orders_from_database(session, self.selected_orders)
             if not orders:
-                logger.error("No orders found in database")
                 messagebox.showerror("Lỗi", "Không tìm thấy đơn hàng trong cơ sở dữ liệu")
                 session.close()
                 return
@@ -639,7 +584,6 @@ class OrderSelectionDialog(tk.Toplevel):
             }
             
             # Show preview dialog and make it modal
-            logger.info("Showing preview dialog")
             preview = PreviewDialog(self, preview_data)
             preview.transient(self)  # Make it modal
             preview.grab_set()       # Make it modal
@@ -647,7 +591,6 @@ class OrderSelectionDialog(tk.Toplevel):
             
             # If user confirms, show save dialog and generate PDF
             if preview.result:
-                logger.info("Opening save file dialog")
                 # Show save file dialog
                 filename = filedialog.asksaveasfilename(
                     defaultextension=".pdf",
@@ -657,12 +600,8 @@ class OrderSelectionDialog(tk.Toplevel):
                 )
                 
                 if filename:  # If user didn't cancel the save dialog
-                    logger.info(f"Generating PDF at {filename}")
                     create_order_pdf(filename, preview.result)
                     messagebox.showinfo("Thành công", f"Đã xuất PDF thành công!\nFile được lưu tại: {filename}")
-                    logger.info("PDF generated successfully")
-            
-            logger.info("Order form generation completed")
             
         except Exception as e:
             print(f"Error processing orders: {str(e)}")
@@ -676,7 +615,6 @@ class OrderSelectionDialog(tk.Toplevel):
     
     def cancel(self):
         try:
-            logger.info("Canceling order selection")
             self.selected_orders = []
             self.result = False
             if hasattr(self, 'session'):
@@ -722,10 +660,11 @@ class OrderSelectionDialog(tk.Toplevel):
         except Exception as e:
             print(f"Error sorting treeview: {str(e)}")
             messagebox.showerror("Lỗi", f"Lỗi khi sắp xếp dữ liệu: {str(e)}")
+            
 
 def generate_order_form():
     try:
-        logger.info("Starting generate_order_form")
+        # logger.info("Starting generate_order_form")
         main_window = OrderSelectionDialog()
         main_window.mainloop()
         

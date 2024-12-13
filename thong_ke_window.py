@@ -376,49 +376,53 @@ class ThongKeTab(TabBase):
                 update_window.destroy()
                 return
                 
-            # Main frame với padding lớn hơn
+            # Main frame với padding lớn hơn và cấu hình grid
             main_frame = ttk.Frame(update_window, padding="20")
             main_frame.pack(fill=tk.BOTH, expand=True)
             
-            # Tiêu đề với font lớn hơn và đậm hơn
-            title_label = ttk.Label(main_frame, 
-                                  text=f"{order.ten_hang}", 
-                                  font=("Arial", 14, "bold"))
-            title_label.pack(pady=(0, 20))
-            
-            # Frame cho checkboxes với khoảng cách lớn hơn
-            checkbox_frame = ttk.Frame(main_frame)
-            checkbox_frame.pack(fill=tk.X, pady=20)
-            
-            # Style cho checkboxes
+            # Style cho checkboxes và buttons
             style = ttk.Style()
             style.configure("Large.TCheckbutton", 
                            font=("Arial", 12),
                            padding=10)
+            style.configure("Action.TButton", 
+                           font=("Arial", 11),
+                           padding=(20, 10))
+            
+            # Chia layout thành 3 phần bằng nhau theo chiều dọc
+            main_frame.grid_rowconfigure(0, weight=1)  # Phần trên
+            main_frame.grid_rowconfigure(1, weight=1)  # Phần giữa (cho buttons)
+            main_frame.grid_rowconfigure(2, weight=1)  # Phần dưới
+            main_frame.grid_columnconfigure(0, weight=1)
+            
+            # Frame chứa tiêu đề và checkboxes
+            top_frame = ttk.Frame(main_frame)
+            top_frame.grid(row=0, column=0, sticky="n")
+            
+            # Tiêu đề với font lớn hơn và đậm hơn
+            title_label = ttk.Label(top_frame, 
+                                  text=f"{order.ten_hang}", 
+                                  font=("Arial", 14, "bold"))
+            title_label.pack(pady=(0, 20))
             
             # Variables cho checkboxes
             da_giao_var = tk.BooleanVar(value=order.da_giao)
             da_tat_toan_var = tk.BooleanVar(value=order.da_tat_toan)
             
             # Checkboxes với font lớn hơn
-            ttk.Checkbutton(checkbox_frame, 
+            ttk.Checkbutton(top_frame, 
                            text="Đã giao", 
                            variable=da_giao_var,
                            style="Large.TCheckbutton").pack(anchor=tk.W, pady=10)
             
-            ttk.Checkbutton(checkbox_frame, 
+            ttk.Checkbutton(top_frame, 
                            text="Đã tất toán", 
                            variable=da_tat_toan_var,
                            style="Large.TCheckbutton").pack(anchor=tk.W, pady=10)
             
-            # Frame cho buttons
+            # Frame cho buttons ở chính giữa cửa sổ
             button_frame = ttk.Frame(main_frame)
-            button_frame.pack(side=tk.BOTTOM, pady=(20, 0))
-            
-            # Style cho buttons
-            style.configure("Action.TButton", 
-                           font=("Arial", 11),
-                           padding=(20, 10))
+            button_frame.grid(row=1, column=0)
             
             def save_changes():
                 try:
