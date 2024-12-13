@@ -19,6 +19,14 @@ class BangKeoInTab(TabBase):
         main_frame = ttk.Frame(self.tab, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Configure the grid to expand properly
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=1)
+        main_frame.rowconfigure(2, weight=1)
+        main_frame.rowconfigure(3, weight=1)
+        main_frame.rowconfigure(4, weight=0)  # Buttons row should not expand
+
         # Build the UI components
         self.build_ui(main_frame)
         self.bind_events()
@@ -27,12 +35,14 @@ class BangKeoInTab(TabBase):
 
     def build_ui(self, main_frame):
         # Configure grid columns
+        main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(2, weight=1)
         main_frame.columnconfigure(3, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="ĐƠN HÀNG", font=('Arial', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20))
+        title_label = ttk.Label(main_frame, text="BĂNG KEO IN", font=('Segoe UI', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='ew')
 
         # Basic Information Frame
         basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin cơ bản", padding=10)
@@ -181,14 +191,29 @@ class BangKeoInTab(TabBase):
 
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=4, column=0, columnspan=4, pady=20)
+        button_frame.grid(row=4, column=0, columnspan=4, pady=20, sticky='e')  # Align to the right
 
-        self.create_button(button_frame, "Tính toán", self.tinh_toan).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Lưu", self.luu_don_hang).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Xuất Excel", self.export_to_excel).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Xuất Email", self.export_email).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Xóa", self.xoa_form).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Thoát", self.thoat).pack(side=tk.LEFT, padx=5)
+        # Define a consistent style for all buttons
+        style = ttk.Style()
+        style.configure('CustomButton.TButton',
+                        font=('Segoe UI', 10),
+                        padding=6)
+
+        # Create buttons with the custom style
+        btn_tinh_toan = ttk.Button(button_frame, text="Tính toán", command=self.tinh_toan, style='CustomButton.TButton', width=12)
+        btn_luu = ttk.Button(button_frame, text="Lưu", command=self.luu_don_hang, style='CustomButton.TButton', width=12)
+        btn_xuat_excel = ttk.Button(button_frame, text="Xuất Excel", command=self.export_to_excel, style='CustomButton.TButton', width=12)
+        btn_xuat_email = ttk.Button(button_frame, text="Xuất Email", command=self.export_email, style='CustomButton.TButton', width=12)
+        btn_xoa = ttk.Button(button_frame, text="Xóa", command=self.xoa_form, style='CustomButton.TButton', width=12)
+        btn_thoat = ttk.Button(button_frame, text="Thoát", command=self.thoat, style='CustomButton.TButton', width=12)
+
+        # Pack buttons to the right with consistent padding
+        btn_thoat.pack(side='right', padx=5)
+        btn_xoa.pack(side='right', padx=5)
+        btn_xuat_email.pack(side='right', padx=5)
+        btn_xuat_excel.pack(side='right', padx=5)
+        btn_luu.pack(side='right', padx=5)
+        btn_tinh_toan.pack(side='right', padx=5)
 
         # Set focus to the first entry
         self.ten_hang.focus_set()

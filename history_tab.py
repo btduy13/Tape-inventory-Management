@@ -27,11 +27,11 @@ class HistoryTab(TabBase):
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Initialize data storage
-        self.bang_keo_data = []
+        self.bang_keo_in_data = []
         self.truc_in_data = []
         
         # Add these lines
-        self.all_bang_keo_items = []  # Store all bang keo items
+        self.all_bang_keo_in_items = []  # Store all bang keo items
         self.all_truc_in_items = []   # Store all truc in items
         
         # Create edit frame (initially hidden)
@@ -45,9 +45,6 @@ class HistoryTab(TabBase):
         
         # Load data from database
         self.load_data_from_db()
-
-        # Add import/export buttons
-        self.create_import_export_buttons()
 
     def parse_date_string(self, date_string):
         """Parse a date string to datetime object"""
@@ -63,8 +60,8 @@ class HistoryTab(TabBase):
         """Load data from database"""
         try:
             # Load bang keo orders
-            bang_keo_orders = self.db_session.query(BangKeoInOrder).all()
-            for order in bang_keo_orders:
+            bang_keo_in_orders = self.db_session.query(BangKeoInOrder).all()
+            for order in bang_keo_in_orders:
                 order_data = {
                     'id': order.id,
                     'thoi_gian': order.thoi_gian.strftime(self.DATE_FORMAT),
@@ -133,8 +130,8 @@ class HistoryTab(TabBase):
         """Delete selected items from treeview and database"""
         try:
             current_tab = self.category_notebook.select()
-            if current_tab == str(self.bang_keo_frame):
-                tree = self.bang_keo_tree
+            if current_tab == str(self.bang_keo_in_frame):
+                tree = self.bang_keo_in_tree
                 model = BangKeoInOrder
             else:
                 tree = self.truc_in_tree
@@ -171,10 +168,10 @@ class HistoryTab(TabBase):
                     self.update_status("Đã xóa các dòng đã chọn")
                     
                     # Update the stored items lists
-                    if current_tab == str(self.bang_keo_frame):
-                        self.all_bang_keo_items = [
-                            (item, self.bang_keo_tree.item(item)['values'])
-                            for item in self.bang_keo_tree.get_children()
+                    if current_tab == str(self.bang_keo_in_frame):
+                        self.all_bang_keo_in_items = [
+                            (item, self.bang_keo_in_tree.item(item)['values'])
+                            for item in self.bang_keo_in_tree.get_children()
                         ]
                     else:
                         self.all_truc_in_items = [
@@ -263,31 +260,38 @@ class HistoryTab(TabBase):
         self.category_notebook.pack(fill=tk.BOTH, expand=True, pady=5)
         
         # Create frames for each category
-        self.bang_keo_frame = ttk.Frame(self.category_notebook, padding="5 5 5 5")
+        self.bang_keo_in_frame = ttk.Frame(self.category_notebook, padding="5 5 5 5")
         self.truc_in_frame = ttk.Frame(self.category_notebook, padding="5 5 5 5")
         
-        self.category_notebook.add(self.bang_keo_frame, text="Băng keo in")
+        self.category_notebook.add(self.bang_keo_in_frame, text="Băng keo in")
         self.category_notebook.add(self.truc_in_frame, text="Trục in")
         
         # Create treeviews
-        self.create_bang_keo_tree()
+        self.create_bang_keo_in_tree()
         self.create_truc_in_tree()
         
         # Create button frame
         button_frame = ttk.Frame(main_frame)
-        button_frame.pack(pady=10, padx=5)
+        button_frame.pack(fill=tk.X, padx=5, pady=10, side=tk.BOTTOM)
+        
+        # Configure grid to make buttons stick during resizing
+        button_frame.columnconfigure((0, 1, 2, 3), weight=1)
         
         # Add buttons with tooltips
         export_excel_btn = ttk.Button(button_frame, text="Xuất Excel", command=self.export_selected_to_excel, width=15)
-        export_excel_btn.pack(side=tk.LEFT, padx=5)
+        export_excel_btn.grid(row=0, column=0, padx=5, sticky='ew')
         self.create_tooltip(export_excel_btn, "Xuất dữ liệu đã chọn ra file Excel (Ctrl+E)")
         
+        export_email_btn = ttk.Button(button_frame, text="Xuất Email", command=self.export_selected_to_email, width=15)
+        export_email_btn.grid(row=0, column=1, padx=5, sticky='ew')
+        self.create_tooltip(export_email_btn, "Xuất dữ liệu đã chọn thành email (Ctrl+M)")
+        
         delete_btn = ttk.Button(button_frame, text="Xóa", command=self.delete_selected, width=15)
-        delete_btn.pack(side=tk.LEFT, padx=5)
+        delete_btn.grid(row=0, column=2, padx=5, sticky='ew')
         self.create_tooltip(delete_btn, "Xóa các dòng đã chọn (Delete)")
         
         refresh_btn = ttk.Button(button_frame, text="Làm mới", command=self.refresh_data, width=15)
-        refresh_btn.pack(side=tk.LEFT, padx=5)
+        refresh_btn.grid(row=0, column=3, padx=5, sticky='ew')
         self.create_tooltip(refresh_btn, "Làm mới dữ liệu (F5)")
         
         # Status bar
@@ -324,9 +328,9 @@ class HistoryTab(TabBase):
         search_text = self.search_var.get().lower()
         current_tab = self.category_notebook.select()
         
-        if current_tab == str(self.bang_keo_frame):
-            tree = self.bang_keo_tree
-            all_items = self.all_bang_keo_items
+        if current_tab == str(self.bang_keo_in_frame):
+            tree = self.bang_keo_in_tree
+            all_items = self.all_bang_keo_in_items
         else:
             tree = self.truc_in_tree
             all_items = self.all_truc_in_items
@@ -385,11 +389,11 @@ class HistoryTab(TabBase):
         """Refresh data from database"""
         try:
             # Clear existing data
-            self.bang_keo_tree.delete(*self.bang_keo_tree.get_children())
+            self.bang_keo_in_tree.delete(*self.bang_keo_in_tree.get_children())
             self.truc_in_tree.delete(*self.truc_in_tree.get_children())
-            self.bang_keo_data.clear()
+            self.bang_keo_in_data.clear()
             self.truc_in_data.clear()
-            self.all_bang_keo_items.clear()
+            self.all_bang_keo_in_items.clear()
             self.all_truc_in_items.clear()
             
             # Reload data from database
@@ -408,6 +412,7 @@ class HistoryTab(TabBase):
         self.root.bind('<F5>', lambda e: self.refresh_data())
         self.root.bind('<Delete>', lambda e: self.delete_selected())
         self.root.bind('<Control-e>', lambda e: self.export_selected_to_excel())
+        self.root.bind('<Control-m>', lambda e: self.export_selected_to_email())
 
     def focus_search(self):
         """Focus the search entry"""
@@ -422,7 +427,7 @@ class HistoryTab(TabBase):
         self.status_bar.config(text=message)
         self.root.after(3000, lambda: self.status_bar.config(text=""))  # Clear after 3 seconds
 
-    def create_bang_keo_tree(self):
+    def create_bang_keo_in_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
                   'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 
                   'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 
@@ -431,7 +436,7 @@ class HistoryTab(TabBase):
                   'loi_giay', 'thung_bao', 'loi_nhuan', 'da_giao', 'da_tat_toan')
         
         # Create container frame
-        container = ttk.Frame(self.bang_keo_frame)
+        container = ttk.Frame(self.bang_keo_in_frame)
         container.pack(fill=tk.BOTH, expand=True)
         
         # Configure grid weights
@@ -449,7 +454,7 @@ class HistoryTab(TabBase):
                  background=[("selected", "#0078D7")],
                  foreground=[("selected", "#ffffff")])
         
-        self.bang_keo_tree = ttk.Treeview(container, columns=columns, show='headings',
+        self.bang_keo_in_tree = ttk.Treeview(container, columns=columns, show='headings',
                                          selectmode='extended', style="Custom.Treeview")
         
         # Define headings and column widths
@@ -474,33 +479,33 @@ class HistoryTab(TabBase):
         }
         
         for col in columns:
-            self.bang_keo_tree.heading(col, text=headings[col],
-                                     command=lambda c=col: self.sort_treeview(self.bang_keo_tree, c, False))
+            self.bang_keo_in_tree.heading(col, text=headings[col],
+                                     command=lambda c=col: self.sort_treeview(self.bang_keo_in_tree, c, False))
             # Hide ID column
             if col == 'id':
-                self.bang_keo_tree.column(col, width=50, stretch=False)
+                self.bang_keo_in_tree.column(col, width=50, stretch=False)
             else:
                 # Adjust column widths based on content
                 width = max(len(headings[col])*10, 100)
-                self.bang_keo_tree.column(col, width=width, stretch=False)
+                self.bang_keo_in_tree.column(col, width=width, stretch=False)
         
         # Add scrollbars with modern styling
-        y_scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self.bang_keo_tree.yview)
-        x_scrollbar = ttk.Scrollbar(container, orient=tk.HORIZONTAL, command=self.bang_keo_tree.xview)
-        self.bang_keo_tree.configure(yscrollcommand=y_scrollbar.set, xscrollcommand=x_scrollbar.set)
+        y_scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self.bang_keo_in_tree.yview)
+        x_scrollbar = ttk.Scrollbar(container, orient=tk.HORIZONTAL, command=self.bang_keo_in_tree.xview)
+        self.bang_keo_in_tree.configure(yscrollcommand=y_scrollbar.set, xscrollcommand=x_scrollbar.set)
         
         # Grid layout
-        self.bang_keo_tree.grid(row=0, column=0, sticky='nsew')
+        self.bang_keo_in_tree.grid(row=0, column=0, sticky='nsew')
         y_scrollbar.grid(row=0, column=1, sticky='ns')
         x_scrollbar.grid(row=1, column=0, sticky='ew')
         
         # Bind events
-        self.bang_keo_tree.bind('<Double-1>', lambda e: self.root.after(100, lambda: self.show_edit_form('bang_keo')))
-        self.bang_keo_tree.bind('<Control-a>', lambda e: self.select_all(self.bang_keo_tree))
+        self.bang_keo_in_tree.bind('<Double-1>', lambda e: self.root.after(100, lambda: self.show_edit_form('bang_keo_in')))
+        self.bang_keo_in_tree.bind('<Control-a>', lambda e: self.select_all(self.bang_keo_in_tree))
         
         # Add alternating row colors
-        self.bang_keo_tree.tag_configure('oddrow', background='#F0F0F0')
-        self.bang_keo_tree.tag_configure('evenrow', background='#FFFFFF')
+        self.bang_keo_in_tree.tag_configure('oddrow', background='#F0F0F0')
+        self.bang_keo_in_tree.tag_configure('evenrow', background='#FFFFFF')
 
     def sort_treeview(self, tree, col, reverse):
         """Sort treeview content when clicking on headers"""
@@ -601,9 +606,9 @@ class HistoryTab(TabBase):
         
     def show_edit_form(self, order_type):
         # Get selected item
-        if order_type == 'bang_keo':
-            tree = self.bang_keo_tree
-            # Define read-only fields for bang_keo
+        if order_type == 'bang_keo_in':
+            tree = self.bang_keo_in_tree
+            # Define read-only fields for bang_keo_in
             readonly_fields = [
                 'id',  # Add ID to readonly fields
                 'don_gia_goc', 'thanh_tien_goc', 'thanh_tien_ban',
@@ -663,7 +668,7 @@ class HistoryTab(TabBase):
         
         self.edit_entries = {}
         
-        if order_type == 'bang_keo':
+        if order_type == 'bang_keo_in':
             # Create frames for different sections
             info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
             info_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -774,7 +779,7 @@ class HistoryTab(TabBase):
         ttk.Label(parent, text=label_text).grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
         
         # Get the correct index for the value based on the field name
-        field_index = list(self.bang_keo_tree['columns'] if self.current_edit_type == 'bang_keo' else self.truc_in_tree['columns']).index(field_name)
+        field_index = list(self.bang_keo_in_tree['columns'] if self.current_edit_type == 'bang_keo_in' else self.truc_in_tree['columns']).index(field_name)
         
         # Special handling for date fields
         if field_name in ['thoi_gian', 'ngay_du_kien']:
@@ -801,7 +806,7 @@ class HistoryTab(TabBase):
             
             # Bind calculation event if field triggers calculation
             calculation_trigger_fields = {
-                'bang_keo': [
+                'bang_keo_in': [
                     'so_luong', 'phi_sl', 'phi_keo', 'phi_size', 'phi_cat', 'don_gia_von',
                     'don_gia_ban', 'tien_coc', 'hoa_hong', 'phi_mau', 'quy_cach_mm',
                     'quy_cach_m', 'quy_cach_mic', 'cuon_cay'
@@ -834,7 +839,7 @@ class HistoryTab(TabBase):
     def recalculate_edit_form(self, order_type):
         """Recalculate values in the edit form based on the order type"""
         try:
-            if order_type == 'bang_keo':
+            if order_type == 'bang_keo_in':
                 # Get values from edit entries
                 don_gia_von = self.validate_float_input(self.edit_entries['don_gia_von'].get())
                 phi_sl = self.validate_float_input(self.edit_entries['phi_sl'].get())
@@ -901,7 +906,7 @@ class HistoryTab(TabBase):
         try:
             # Get values from entries
             values = {}
-            tree = self.bang_keo_tree if self.current_edit_type == 'bang_keo' else self.truc_in_tree
+            tree = self.bang_keo_in_tree if self.current_edit_type == 'bang_keo_in' else self.truc_in_tree
             
             # Get the record ID from the hidden first column
             item_values = tree.item(self.current_edit_item)['values']
@@ -921,7 +926,7 @@ class HistoryTab(TabBase):
             
             # Update database
             try:
-                if self.current_edit_type == 'bang_keo':
+                if self.current_edit_type == 'bang_keo_in':
                     order = self.db_session.query(BangKeoInOrder).filter_by(id=record_id).first()
                     
                     if order:
@@ -970,11 +975,19 @@ class HistoryTab(TabBase):
                 # Update tree
                 tree.item(self.current_edit_item, values=tree_values)
                 
-                messagebox.showinfo("Thành công", "Đã cập nhật thông tin")
+                # Update stored items list
+                if self.current_edit_type == 'bang_keo_in':
+                    for i, (item_id, _) in enumerate(self.all_bang_keo_in_items):
+                        if item_id == self.current_edit_item:
+                            self.all_bang_keo_in_items[i] = (item_id, tree_values)
+                            break
+                else:
+                    for i, (item_id, _) in enumerate(self.all_truc_in_items):
+                        if item_id == self.current_edit_item:
+                            self.all_truc_in_items[i] = (item_id, tree_values)
+                            break
                 
-                # Update other tabs if they exist
-                if hasattr(self.parent_form, 'thong_ke_tab'):
-                    self.parent_form.thong_ke_tab.load_data()
+                messagebox.showinfo("Thành công", "Đã cập nhật thông tin")
                 
             except Exception as e:
                 self.db_session.rollback()
@@ -987,6 +1000,16 @@ class HistoryTab(TabBase):
         """Add a new order to the history"""
         current_time = datetime.now().strftime(self.DATE_FORMAT)
         
+        # Helper function to format currency fields
+        def format_value(key, value):
+            currency_fields = [
+                'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat',
+                'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban',
+                'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'tien_hoa_hong',
+                'loi_nhuan', 'thanh_tien'
+            ]
+            return self.format_currency(value) if key in currency_fields else value
+        
         if order_type == 'Băng keo in':
             values = [
                 order_data.get('id', ''),
@@ -998,32 +1021,32 @@ class HistoryTab(TabBase):
                 order_data.get('quy_cach_mic', ''),
                 order_data.get('cuon_cay', ''),
                 order_data.get('so_luong', ''),
-                order_data.get('phi_sl', ''),
+                format_value('phi_sl', order_data.get('phi_sl', '')),
                 order_data.get('mau_keo', ''),
-                order_data.get('phi_keo', ''),
+                format_value('phi_keo', order_data.get('phi_keo', '')),
                 order_data.get('mau_sac', ''),
-                order_data.get('phi_mau', ''),
-                order_data.get('phi_size', ''),
-                order_data.get('phi_cat', ''),
-                order_data.get('don_gia_von', ''),
-                order_data.get('don_gia_goc', ''),
-                order_data.get('thanh_tien_goc', ''),
-                order_data.get('don_gia_ban', ''),
-                order_data.get('thanh_tien_ban', ''),
-                order_data.get('tien_coc', ''),
-                order_data.get('cong_no_khach', ''),
+                format_value('phi_mau', order_data.get('phi_mau', '')),
+                format_value('phi_size', order_data.get('phi_size', '')),
+                format_value('phi_cat', order_data.get('phi_cat', '')),
+                format_value('don_gia_von', order_data.get('don_gia_von', '')),
+                format_value('don_gia_goc', order_data.get('don_gia_goc', '')),
+                format_value('thanh_tien_goc', order_data.get('thanh_tien_goc', '')),
+                format_value('don_gia_ban', order_data.get('don_gia_ban', '')),
+                format_value('thanh_tien_ban', order_data.get('thanh_tien_ban', '')),
+                format_value('tien_coc', order_data.get('tien_coc', '')),
+                format_value('cong_no_khach', order_data.get('cong_no_khach', '')),
                 order_data.get('ctv', ''),
                 order_data.get('hoa_hong', ''),
-                order_data.get('tien_hoa_hong', ''),
+                format_value('tien_hoa_hong', order_data.get('tien_hoa_hong', '')),
                 order_data.get('loi_giay', ''),
                 order_data.get('thung_bao', ''),
-                order_data.get('loi_nhuan', ''),
+                format_value('loi_nhuan', order_data.get('loi_nhuan', '')),
                 order_data.get('da_giao', ''),
                 order_data.get('da_tat_toan', '')
             ]
-            item = self.bang_keo_tree.insert('', 0, values=values)
-            self.bang_keo_data.append(item)
-            self.all_bang_keo_items.append((item, values))
+            item = self.bang_keo_in_tree.insert('', 0, values=values)
+            self.bang_keo_in_data.append(item)
+            self.all_bang_keo_in_items.append((item, values))
         else:  # Trục in
             values = [
                 order_data.get('id', ''),
@@ -1034,15 +1057,15 @@ class HistoryTab(TabBase):
                 order_data.get('so_luong', ''),
                 order_data.get('mau_sac', ''),
                 order_data.get('mau_keo', ''),
-                order_data.get('don_gia_goc', ''),
-                order_data.get('thanh_tien', ''),
-                order_data.get('don_gia_ban', ''),
-                order_data.get('thanh_tien_ban', ''),
-                order_data.get('cong_no_khach', ''),
+                format_value('don_gia_goc', order_data.get('don_gia_goc', '')),
+                format_value('thanh_tien', order_data.get('thanh_tien', '')),
+                format_value('don_gia_ban', order_data.get('don_gia_ban', '')),
+                format_value('thanh_tien_ban', order_data.get('thanh_tien_ban', '')),
+                format_value('cong_no_khach', order_data.get('cong_no_khach', '')),
                 order_data.get('ctv', ''),
                 order_data.get('hoa_hong', ''),
-                order_data.get('tien_hoa_hong', ''),
-                order_data.get('loi_nhuan', ''),
+                format_value('tien_hoa_hong', order_data.get('tien_hoa_hong', '')),
+                format_value('loi_nhuan', order_data.get('loi_nhuan', '')),
                 order_data.get('da_giao', ''),
                 order_data.get('da_tat_toan', '')
             ]
@@ -1054,8 +1077,8 @@ class HistoryTab(TabBase):
         try:
             # Get current tab and tree
             current_tab = self.category_notebook.select()
-            if current_tab == str(self.bang_keo_frame):
-                tree = self.bang_keo_tree
+            if current_tab == str(self.bang_keo_in_frame):
+                tree = self.bang_keo_in_tree
                 sheet_name = "Bang keo in"
             else:
                 tree = self.truc_in_tree
@@ -1075,8 +1098,8 @@ class HistoryTab(TabBase):
             for item in selected_items:
                 values = list(tree.item(item)['values'])
                 # Convert date formats for relevant columns
-                if current_tab == str(self.bang_keo_frame):
-                    # For bang_keo_tree: thoi_gian is index 1, ngay_du_kien is index 3
+                if current_tab == str(self.bang_keo_in_frame):
+                    # For bang_keo_in_tree: thoi_gian is index 1, ngay_du_kien is index 3
                     if values[1]:  # thoi_gian
                         try:
                             # Parse the original date string and convert to MM/DD/YYYY
@@ -1155,22 +1178,22 @@ class HistoryTab(TabBase):
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất Excel: {str(e)}")
             self.update_status("Lỗi khi xuất Excel")
 
-    def load_bang_keo_data(self):
+    def load_bang_keo_in_data(self):
         """Load data for bang keo treeview"""
         try:
             # Store current items before clearing
             current_items = []
-            for item in self.bang_keo_tree.get_children():
-                values = self.bang_keo_tree.item(item)['values']
+            for item in self.bang_keo_in_tree.get_children():
+                values = self.bang_keo_in_tree.item(item)['values']
                 current_items.append(values)
                 
             # Clear existing items
-            for item in self.bang_keo_tree.get_children():
-                self.bang_keo_tree.delete(item)
+            for item in self.bang_keo_in_tree.get_children():
+                self.bang_keo_in_tree.delete(item)
                 
             # Restore the items
             for values in current_items:
-                self.bang_keo_tree.insert('', 'end', values=values)
+                self.bang_keo_in_tree.insert('', 'end', values=values)
                 
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi làm mới dữ liệu: {str(e)}")
@@ -1204,9 +1227,9 @@ class HistoryTab(TabBase):
             
             # Get current tab and tree
             current_tab = self.category_notebook.select()
-            if current_tab == str(self.bang_keo_frame):
-                tree = self.bang_keo_tree
-                all_items = self.all_bang_keo_items
+            if current_tab == str(self.bang_keo_in_frame):
+                tree = self.bang_keo_in_tree
+                all_items = self.all_bang_keo_in_items
             else:
                 tree = self.truc_in_tree
                 all_items = self.all_truc_in_items
@@ -1274,9 +1297,9 @@ class HistoryTab(TabBase):
             
             # Get current tab and tree
             current_tab = self.category_notebook.select()
-            if current_tab == str(self.bang_keo_frame):
-                tree = self.bang_keo_tree
-                all_items = self.all_bang_keo_items
+            if current_tab == str(self.bang_keo_in_frame):
+                tree = self.bang_keo_in_tree
+                all_items = self.all_bang_keo_in_items
             else:
                 tree = self.truc_in_tree
                 all_items = self.all_truc_in_items
@@ -1296,9 +1319,9 @@ class HistoryTab(TabBase):
     def edit_item(self, event=None):
         """Handle double-click to edit item"""
         current_tab = self.category_notebook.select()
-        if current_tab == str(self.bang_keo_frame):
-            tree = self.bang_keo_tree
-            item_type = 'bang_keo'
+        if current_tab == str(self.bang_keo_in_frame):
+            tree = self.bang_keo_in_tree
+            item_type = 'bang_keo_in'
         else:
             tree = self.truc_in_tree
             item_type = 'truc_in'
@@ -1331,7 +1354,7 @@ class HistoryTab(TabBase):
         # Create entry fields based on item type
         entries = {}
         row = 0
-        if item_type == 'bang_keo':
+        if item_type == 'bang_keo_in':
             fields = ['ten_hang', 'so_luong', 'don_gia_ban', 'tien_coc']
             labels = ['Tên hàng:', 'Số lượng:', 'Đơn giá bán:', 'Tiền cọc:']
         else:  # truc_in
@@ -1358,7 +1381,7 @@ class HistoryTab(TabBase):
 
             # Update database
             try:
-                if item_type == 'bang_keo':
+                if item_type == 'bang_keo_in':
                     order = self.db_session.query(BangKeoInOrder).filter_by(
                         thoi_gian=datetime.strptime(values['thoi_gian'], '%d/%m/%Y %H:%M:%S')
                     ).first()
@@ -1373,7 +1396,7 @@ class HistoryTab(TabBase):
                     self.db_session.commit()
 
                     # Update treeview
-                    tree = self.bang_keo_tree if item_type == 'bang_keo' else self.truc_in_tree
+                    tree = self.bang_keo_in_tree if item_type == 'bang_keo_in' else self.truc_in_tree
                     new_values_list = list(values)
                     for i, field in enumerate(fields):
                         new_values_list[i + 1] = new_values[field]
@@ -1392,27 +1415,30 @@ class HistoryTab(TabBase):
         ttk.Button(button_frame, text="Hủy", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
 
         # Bind double-click event
-        self.bang_keo_tree.bind('<Double-1>', self.edit_item)
+        self.bang_keo_in_tree.bind('<Double-1>', self.edit_item)
         self.truc_in_tree.bind('<Double-1>', self.edit_item)
 
     def create_import_export_buttons(self):
         # Create a frame for buttons
         button_frame = ttk.Frame(self.tab)
         button_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-
+        
+        # Configure grid to make buttons stick during resizing
+        button_frame.columnconfigure((0, 1, 2, 3), weight=1)
+    
         # Export Template Buttons
-        export_bang_keo_button = ttk.Button(button_frame, text="Export Băng Keo Template", command=lambda: self.export_template('bang_keo'))
-        export_bang_keo_button.pack(side=tk.LEFT, padx=5)
-
+        export_bang_keo_in_button = ttk.Button(button_frame, text="Export Băng Keo Template", command=lambda: self.export_template('bang_keo_in'))
+        export_bang_keo_in_button.grid(row=0, column=0, padx=5, sticky='ew')
+    
         export_truc_in_button = ttk.Button(button_frame, text="Export Trục In Template", command=lambda: self.export_template('truc_in'))
-        export_truc_in_button.pack(side=tk.LEFT, padx=5)
-
+        export_truc_in_button.grid(row=0, column=1, padx=5, sticky='ew')
+    
         # Import Data Buttons
-        import_bang_keo_button = ttk.Button(button_frame, text="Import Băng Keo Data", command=lambda: self.import_data('bang_keo'))
-        import_bang_keo_button.pack(side=tk.LEFT, padx=5)
-
+        import_bang_keo_in_button = ttk.Button(button_frame, text="Import Băng Keo Data", command=lambda: self.import_data('bang_keo_in'))
+        import_bang_keo_in_button.grid(row=0, column=2, padx=5, sticky='ew')
+    
         import_truc_in_button = ttk.Button(button_frame, text="Import Trục In Data", command=lambda: self.import_data('truc_in'))
-        import_truc_in_button.pack(side=tk.LEFT, padx=5)
+        import_truc_in_button.grid(row=0, column=3, padx=5, sticky='ew')
 
     def export_template(self, order_type):
         file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
@@ -1425,3 +1451,84 @@ class HistoryTab(TabBase):
             import_data(file_path, order_type, self.db_session)
             self.refresh_data()  # Refresh data to show imported entries
             
+    def export_selected_to_email(self):
+        """Export selected order details to a text file and open it."""
+        try:
+            current_tab = self.category_notebook.select()
+            if current_tab == str(self.bang_keo_in_frame):
+                tree = self.bang_keo_in_tree
+            else:
+                tree = self.truc_in_tree
+
+            selected_items = tree.selection()
+            if not selected_items:
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một dòng để xuất email")
+                return
+
+            # Get the first selected item's values
+            values = tree.item(selected_items[0])['values']
+            
+            # Create email content based on the order type
+            if current_tab == str(self.bang_keo_in_frame):
+                # Format for bang keo in
+                email_content = (
+                    f"Chào bác,\n\n"
+                    f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"  # ten_hang
+                    f"Màu sắc: {values[12]} / Màu keo: {values[10]}\n"  # mau_sac, mau_keo
+                    f"Số lượng: {values[8]} cuộn\n"  # so_luong
+                    f"Quy cách: {values[4]}mm * {values[5]}m * {values[6]}mic\n"  # quy_cach
+                    f"Lõi giấy: {values[26]} - Thùng bao: {values[27]}\n\n"  # loi_giay, thung_bao
+                    f"Cám ơn bác\n"
+                    f"Quế"
+                )
+            else:
+                # Format for truc in
+                email_content = (
+                    f"Chào bác,\n\n"
+                    f"Bác làm giúp con đơn hàng trục in \"{values[2]}\" này nhé\n"  # ten_hang
+                    f"Màu sắc: {values[6]} / Màu keo: {values[7]}\n"  # mau_sac, mau_keo
+                    f"Số lượng: {values[5]} cái\n"  # so_luong
+                    f"Quy cách: {values[4]}mm\n\n"  # quy_cach
+                    f"Cám ơn bác\n"
+                    f"Quế"
+                )
+
+            # Ask user for file location to save the text file
+            file_path = filedialog.asksaveasfilename(
+                defaultextension='.txt',
+                filetypes=[("Text files", "*.txt")],
+                title="Chọn vị trí lưu file văn bản"
+            )
+
+            if file_path:  # If user selects a file path
+                with open(file_path, 'w', encoding='utf-8') as file:
+                    file.write(email_content)
+                messagebox.showinfo("Thành công", "Đã xuất nội dung email ra file văn bản thành công!")
+                self.update_status("Đã xuất email thành công")
+
+                # Open the saved text file using default text editor
+                os.startfile(file_path)
+            else:
+                self.update_status("Xuất email bị hủy")
+
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email: {str(e)}")
+            self.update_status("Lỗi khi xuất email")
+
+    def format_currency(self, value):
+        """Format currency value without decimal places"""
+        try:
+            if value is None or value == '':
+                return ''
+            # Convert to float and format with thousand separator, no decimal places
+            return f"{float(value):,.0f}"
+        except (ValueError, TypeError):
+            return str(value)
+
+    def update_readonly_field(self, entry, value):
+        """Update readonly field with formatted value"""
+        entry.configure(state='normal')
+        entry.delete(0, tk.END)
+        entry.insert(0, self.format_currency(value))
+        entry.configure(state='readonly')
+

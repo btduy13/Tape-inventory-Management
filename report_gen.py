@@ -163,7 +163,7 @@ def create_order_pdf(filename, order_data):
     title_style = ParagraphStyle(
         'TitleStyle',
         fontName='VuArial',
-        fontSize=16,
+        fontSize=20,
         alignment=1,
         spaceAfter=10 * mm,
         bold=True

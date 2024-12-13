@@ -1,0 +1,32 @@
+2024-12-13 12:41:37,940 - OrderSystem - INFO - Logging system initialized
+2024-12-13 12:42:39,565 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 12:42:40,796 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 12:42:40,806 - OrderSystem - INFO - Loading orders from database
+2024-12-13 12:42:40,998 - OrderSystem - INFO - Found 85 băng keo orders and 10 trục in orders
+2024-12-13 12:42:41,000 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 12:42:42,851 - OrderSystem - INFO - Confirming order selection
+2024-12-13 12:42:42,851 - OrderSystem - INFO - Selected orders: ['BK-12-24-075', 'BK-12-24-069']
+2024-12-13 12:42:42,851 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 12:42:45,277 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 12:43:38,667 - OrderSystem - INFO - Order form generation completed
+2024-12-13 12:43:39,766 - OrderSystem - INFO - Canceling order selection
+2024-12-13 12:45:30,367 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 12:45:31,617 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 12:45:31,627 - OrderSystem - INFO - Loading orders from database
+2024-12-13 12:45:31,820 - OrderSystem - INFO - Found 85 băng keo orders and 10 trục in orders
+2024-12-13 12:45:31,827 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 12:45:38,247 - OrderSystem - INFO - Confirming order selection
+2024-12-13 12:45:38,247 - OrderSystem - INFO - Selected orders: ['TI-12-24-010']
+2024-12-13 12:45:38,247 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 12:45:39,371 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 12:45:41,528 - OrderSystem - INFO - Opening save file dialog
+2024-12-13 12:45:45,600 - OrderSystem - INFO - Generating PDF at C:/Users/USER/Documents/Zalo Received Files/don_dat_hang.pdf
+2024-12-13 12:45:46,629 - OrderSystem - INFO - PDF generated successfully
+2024-12-13 12:45:46,630 - OrderSystem - INFO - Order form generation completed
+2024-12-13 12:45:58,077 - OrderSystem - INFO - Confirming order selection
+2024-12-13 12:45:58,077 - OrderSystem - INFO - Selected orders: ['TI-12-24-010']
+2024-12-13 12:45:58,077 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 12:45:59,202 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 12:46:00,974 - OrderSystem - INFO - Opening save file dialog
+2024-12-13 12:46:23,195 - OrderSystem - INFO - Order form generation completed
+2024-12-13 12:46:23,326 - OrderSystem - INFO - Canceling order selection

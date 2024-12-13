@@ -1,0 +1,15 @@
+2024-12-13 13:44:15,492 - OrderSystem - INFO - Logging system initialized
+2024-12-13 13:44:37,475 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 13:44:38,626 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 13:44:38,641 - OrderSystem - INFO - Loading orders from database
+2024-12-13 13:44:38,840 - OrderSystem - INFO - Found 86 băng keo orders and 10 trục in orders
+2024-12-13 13:44:38,842 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 13:44:43,196 - OrderSystem - INFO - Confirming order selection
+2024-12-13 13:44:43,197 - OrderSystem - INFO - Selected orders: ['BK-12-24-082', 'BK-12-24-081', 'BK-12-24-071']
+2024-12-13 13:44:43,197 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 13:44:44,432 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 13:44:47,586 - OrderSystem - INFO - Opening save file dialog
+2024-12-13 13:44:51,038 - OrderSystem - INFO - Generating PDF at E:/OneDrive/Desktop/Tape-inventory-Management/don_dat_hang.pdf
+2024-12-13 13:44:52,581 - OrderSystem - INFO - PDF generated successfully
+2024-12-13 13:44:52,581 - OrderSystem - INFO - Order form generation completed
+2024-12-13 13:45:19,484 - OrderSystem - INFO - Canceling order selection

@@ -7,7 +7,7 @@ import logging
 
 def export_template(file_path, order_type):
     """Export an Excel template for data entry."""
-    if order_type == 'bang_keo':
+    if order_type == 'bang_keo_in':
         columns = [
             'Thời gian', 'Tên hàng', 'Ngày dự kiến', 'Quy cách (mm)', 'Quy cách (m)', 'Quy cách (mic)',
             'Cuộn/1 cây', 'Số lượng', 'Phí số lượng', 'Màu keo', 'Phí keo', 'Màu sắc', 'Phí màu', 'Phí size',
@@ -75,7 +75,7 @@ def import_data(file_path, order_type, db_session):
     errors = []
 
     try:
-        if order_type == 'bang_keo':
+        if order_type == 'bang_keo_in':
             # Get current date for ID generation
             current_date = datetime.now()
             # Get the highest ID number for today

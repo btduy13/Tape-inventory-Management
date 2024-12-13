@@ -13,7 +13,7 @@ class ThongKeTab(TabBase):
         notebook.add(self.tab, text="Thống kê")
         
         # Add sort tracking variables
-        self.bang_keo_sort = {'column': None, 'reverse': False}
+        self.bang_keo_in_sort = {'column': None, 'reverse': False}
         self.truc_in_sort = {'column': None, 'reverse': False}
         
         # Initialize counters
@@ -107,9 +107,9 @@ class ThongKeTab(TabBase):
         order_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Tab for "Băng keo in"
-        self.bang_keo_tab = ttk.Frame(order_notebook)
-        order_notebook.add(self.bang_keo_tab, text="Băng keo in")
-        self.create_order_list(self.bang_keo_tab, "Băng keo in")
+        self.bang_keo_in_tab = ttk.Frame(order_notebook)
+        order_notebook.add(self.bang_keo_in_tab, text="Băng keo in")
+        self.create_order_list(self.bang_keo_in_tab, "Băng keo in")
         
         # Tab for "Trục in"
         self.truc_in_tab = ttk.Frame(order_notebook)
@@ -199,10 +199,10 @@ class ThongKeTab(TabBase):
         
         # Store references for later use
         if order_type == "Băng keo in":
-            self.bang_keo_tree = tree
-            self.bang_keo_filter_var = filter_var
-            self.bang_keo_search_var = search_var
-            self.bang_keo_month_var = month_var
+            self.bang_keo_in_tree = tree
+            self.bang_keo_in_filter_var = filter_var
+            self.bang_keo_in_search_var = search_var
+            self.bang_keo_in_month_var = month_var
         else:
             self.truc_in_tree = tree
             self.truc_in_filter_var = filter_var
@@ -215,7 +215,7 @@ class ThongKeTab(TabBase):
         self.reset_counters()
         
         # Clear existing data in both Treeviews
-        for tree in [self.bang_keo_tree, self.truc_in_tree]:
+        for tree in [self.bang_keo_in_tree, self.truc_in_tree]:
             for item in tree.get_children():
                 tree.delete(item)
         
@@ -223,9 +223,9 @@ class ThongKeTab(TabBase):
         today = datetime.now().date()
         
         # Load Băng keo in orders
-        bang_keo_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
-        for order in bang_keo_orders:
-            self.process_order(order, "Băng keo in", today, self.bang_keo_tree)
+        bang_keo_in_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
+        for order in bang_keo_in_orders:
+            self.process_order(order, "Băng keo in", today, self.bang_keo_in_tree)
         
         # Load Trục in orders
         truc_in_orders = self.parent_form.db_session.query(TrucInOrder).all()
@@ -262,7 +262,7 @@ class ThongKeTab(TabBase):
             cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
             
             # Assign tag based on order type for identification
-            tag = "bang_keo" if order_type == "Băng keo in" else "truc_in"
+            tag = "bang_keo_in" if order_type == "Băng keo in" else "truc_in"
             
             # Insert data with proper order and formatting
             tree.insert("", "end", values=(
@@ -276,7 +276,7 @@ class ThongKeTab(TabBase):
             ), tags=(tag, str(order.id)))
         
         # After inserting data, apply sort if a column is selected
-        sort_state = self.bang_keo_sort if order_type == "Băng keo in" else self.truc_in_sort
+        sort_state = self.bang_keo_in_sort if order_type == "Băng keo in" else self.truc_in_sort
         if sort_state['column']:
             self.sort_treeview(sort_state['column'], order_type)
         else:
@@ -285,9 +285,9 @@ class ThongKeTab(TabBase):
     def should_show_order(self, order, days_until_due, order_type):
         """Determine whether an order should be displayed based on the current filter."""
         if order_type == "Băng keo in":
-            filter_value = self.bang_keo_filter_var.get()
-            search_text = self.bang_keo_search_var.get().lower().strip()
-            selected_month = self.bang_keo_month_var.get()
+            filter_value = self.bang_keo_in_filter_var.get()
+            search_text = self.bang_keo_in_search_var.get().lower().strip()
+            selected_month = self.bang_keo_in_month_var.get()
         else:
             filter_value = self.truc_in_filter_var.get()
             search_text = self.truc_in_search_var.get().lower().strip()
@@ -419,7 +419,7 @@ class ThongKeTab(TabBase):
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {str(e)}")
             update_window.destroy()
         
-    def create_bang_keo_tree(self):
+    def create_bang_keo_in_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
                   'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 
                   'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 
@@ -428,7 +428,7 @@ class ThongKeTab(TabBase):
                   'loi_giay', 'thung_bao', 'loi_nhuan')
         
         # Create container frame
-        container = ttk.Frame(self.bang_keo_frame)
+        container = ttk.Frame(self.bang_keo_in_frame)
         container.pack(fill=tk.BOTH, expand=True)
         
         # Configure grid weights
@@ -446,7 +446,7 @@ class ThongKeTab(TabBase):
                  background=[("selected", "#0078D7")],
                  foreground=[("selected", "#ffffff")])
         
-        self.bang_keo_tree = ttk.Treeview(container, columns=columns, show='headings',
+        self.bang_keo_in_tree = ttk.Treeview(container, columns=columns, show='headings',
                                          selectmode='extended', style="Custom.Treeview")
         
         # Define headings and column widths
@@ -463,17 +463,17 @@ class ThongKeTab(TabBase):
         
         # Cấu hình cột
         for col in columns:
-            self.bang_keo_tree.heading(col, text=headings[col],
-                                     command=lambda c=col: self.sort_treeview(self.bang_keo_tree, c, False))
+            self.bang_keo_in_tree.heading(col, text=headings[col],
+                                     command=lambda c=col: self.sort_treeview(self.bang_keo_in_tree, c, False))
             # Đặt độ rộng cho từng cột
             if col == 'id':
-                self.bang_keo_tree.column(col, width=100, stretch=False)
+                self.bang_keo_in_tree.column(col, width=100, stretch=False)
             elif col in ['thoi_gian', 'ngay_du_kien']:
-                self.bang_keo_tree.column(col, width=120, minwidth=120)
+                self.bang_keo_in_tree.column(col, width=120, minwidth=120)
             elif col == 'ten_hang':
-                self.bang_keo_tree.column(col, width=200, minwidth=150)
+                self.bang_keo_in_tree.column(col, width=200, minwidth=150)
             else:
-                self.bang_keo_tree.column(col, width=100, minwidth=80)
+                self.bang_keo_in_tree.column(col, width=100, minwidth=80)
 
     def create_truc_in_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
@@ -528,8 +528,8 @@ class ThongKeTab(TabBase):
         try:
             # Get the correct tree and sort state
             if order_type == "Băng keo in":
-                tree = self.bang_keo_tree
-                sort_state = self.bang_keo_sort
+                tree = self.bang_keo_in_tree
+                sort_state = self.bang_keo_in_sort
             else:
                 tree = self.truc_in_tree
                 sort_state = self.truc_in_sort

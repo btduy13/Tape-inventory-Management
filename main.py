@@ -84,7 +84,7 @@ if __name__ == "__main__":
             # logging.warning(f"Failed to load icon: {str(e)}")
             pass
             
-        show_splash(root)
+        # show_splash(root)
         # logging.info("Showed splash screen")
         
         app = DonHangForm(root, db_session)

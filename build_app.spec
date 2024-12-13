@@ -34,7 +34,19 @@ hidden_imports = [
     'pkg_resources.py2_warn',
     'win32api',
     'win32con',
-] + collect_submodules('pandas')
+    'babel',
+    'babel.numbers',
+    'babel.dates',
+    'babel.localedata',
+    'pkg_resources._vendor.packaging.version',
+    'pkg_resources._vendor.packaging.specifiers',
+    'pkg_resources._vendor.packaging.requirements',
+    'pkg_resources._vendor.pyparsing',
+    'tkinter.ttk',
+    '_tkinter',
+    'zlib',
+    'decimal',
+] + collect_submodules('pandas') + collect_submodules('babel')
 
 # Collect all font files
 font_datas = []
@@ -53,7 +65,9 @@ a = Analysis(
     datas=[
         ('assets', 'assets'),
         ('logs', 'logs'),
-    ] + collect_data_files('pandas') + font_datas,
+        ((os.path.join(sys.prefix, 'tcl', 'tcl8.6'), os.path.join('tcl', 'tcl8.6'))),
+        ((os.path.join(sys.prefix, 'tcl', 'tk8.6'), os.path.join('tcl', 'tk8.6'))),
+    ] + collect_data_files('pandas') + font_datas + collect_data_files('babel'),
     hiddenimports=hidden_imports,
     hookspath=[],
     hooksconfig={},

@@ -111,7 +111,7 @@ class TrucInOrder(Base):
 
 # Thêm event listeners để tự động tạo ID
 @event.listens_for(BangKeoInOrder, 'before_insert')
-def set_bang_keo_id(mapper, connection, target):
+def set_bang_keo_in_id(mapper, connection, target):
     if not target.id:
         session = object_session(target)
         target.id = generate_order_id("BK", session, BangKeoInOrder)
@@ -204,7 +204,7 @@ def init_db(database_url):
     # Thêm event listeners cho việc đồng bộ
     @event.listens_for(BangKeoInOrder, 'after_insert')
     @event.listens_for(BangKeoInOrder, 'after_update')
-    def sync_bang_keo(mapper, connection, target):
+    def sync_bang_keo_in(mapper, connection, target):
         sync_to_backup(target, backup_session, BangKeoInOrder)
         
     @event.listens_for(TrucInOrder, 'after_insert')

@@ -19,24 +19,34 @@ class TrucInTab(TabBase):
         main_frame = ttk.Frame(self.tab, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Configure the grid to expand properly
+        main_frame.columnconfigure(0, weight=1)
+        for row_index in range(4):  # Assuming 4 rows including buttons
+            if row_index == 3:
+                main_frame.rowconfigure(row_index, weight=0)  # Buttons row should not expand
+            else:
+                main_frame.rowconfigure(row_index, weight=1)
+
         # Build the UI components
         self.build_ui(main_frame)
         self.bind_events()
         self.bind_currency_format()
         self.bind_shortcuts()
-        
-        # Checkbox cho trạng thái
+
+        # Checkbox for status
         self.da_giao_var = tk.BooleanVar(value=False)
         self.da_tat_toan_var = tk.BooleanVar(value=False)
 
     def build_ui(self, main_frame):
         # Configure grid columns
+        main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(2, weight=1)
         main_frame.columnconfigure(3, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="TRỤC IN", font=('Arial', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20))
+        title_label = ttk.Label(main_frame, text="TRỤC IN", font=('Segoe UI', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='ew')
 
         # Basic Information Frame
         basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin trục in", padding=10)
@@ -134,13 +144,27 @@ class TrucInTab(TabBase):
 
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=3, column=0, columnspan=4, pady=20)
+        button_frame.grid(row=3, column=0, columnspan=4, pady=20, sticky='e')  # Align to the right
 
-        self.create_button(button_frame, "Tính toán", self.tinh_toan_truc_in).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Lưu", self.luu_truc_in).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Xuất Excel", self.export_to_excel).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Xuất Email", self.export_truc_in_email).pack(side=tk.LEFT, padx=5)
-        self.create_button(button_frame, "Xóa", self.xoa_form_truc_in).pack(side=tk.LEFT, padx=5)
+        # Define a consistent style for all buttons
+        style = ttk.Style()
+        style.configure('CustomButton.TButton',
+                        font=('Segoe UI', 10),
+                        padding=6)
+
+        # Create buttons with the custom style
+        btn_tinh_toan = ttk.Button(button_frame, text="Tính toán", command=self.tinh_toan_truc_in, style='CustomButton.TButton', width=12)
+        btn_luu = ttk.Button(button_frame, text="Lưu", command=self.luu_truc_in, style='CustomButton.TButton', width=12)
+        btn_xuat_excel = ttk.Button(button_frame, text="Xuất Excel", command=self.export_to_excel, style='CustomButton.TButton', width=12)
+        btn_xuat_email = ttk.Button(button_frame, text="Xuất Email", command=self.export_truc_in_email, style='CustomButton.TButton', width=12)
+        btn_xoa = ttk.Button(button_frame, text="Xóa", command=self.xoa_form_truc_in, style='CustomButton.TButton', width=12)
+
+        # Pack buttons to the right with consistent padding
+        btn_xoa.pack(side='right', padx=5)
+        btn_xuat_email.pack(side='right', padx=5)
+        btn_xuat_excel.pack(side='right', padx=5)
+        btn_luu.pack(side='right', padx=5)
+        btn_tinh_toan.pack(side='right', padx=5)
 
         # Set focus to the first entry
         self.truc_in_ten_hang.focus_set()
@@ -283,13 +307,13 @@ class TrucInTab(TabBase):
                 return
 
             # Tạo dữ liệu với ngày là trường đầu tiên
-            current_date = datetime.now().strftime('%m/%d/%Y')
+            current_date = datetime.now().strftime('%d-%m-%Y')
 
             data = {
                 'ID': self.id_don_hang.get(),
                 'Ngày': current_date,
                 'Tên Hàng': self.truc_in_ten_hang.get(),
-                'Ngày dự kiến': self.truc_in_ngay_du_kien.get_date().strftime('%m/%d/%Y'),
+                'Ngày dự kiến': self.truc_in_ngay_du_kien.get_date().strftime('%d-%m-%Y'),
                 'Quy Cách': f"{self.truc_in_quy_cach.get()} mm",
                 'Số Lượng': self.truc_in_so_luong.get(),
                 'Màu Sắc': self.truc_in_mau_sac.get(),
@@ -308,11 +332,19 @@ class TrucInTab(TabBase):
             # Tạo hoặc tải workbook
             if os.path.exists(file_path):
                 wb = load_workbook(file_path)
-                ws = wb.active
-                next_row = ws.max_row + 1
+                if "Truc In" in wb.sheetnames:
+                    ws = wb["Truc In"]
+                    next_row = ws.max_row + 1
+                else:
+                    ws = wb.create_sheet("Truc In")
+                    # Thêm headers cho sheet mới
+                    for col, header in enumerate(data.keys(), 1):
+                        ws.cell(row=1, column=col, value=header)
+                    next_row = 2
             else:
                 wb = Workbook()
                 ws = wb.active
+                ws.title = "Truc In"
                 # Thêm headers
                 for col, header in enumerate(data.keys(), 1):
                     ws.cell(row=1, column=col, value=header)
@@ -338,11 +370,11 @@ class TrucInTab(TabBase):
             mau_sac = self.truc_in_mau_sac.get()
             mau_keo = self.truc_in_mau_keo.get()
             so_luong = self.truc_in_so_luong.get()
-            quy_cach = f"{self.truc_in_quy_cach.get()}mm"
+            quy_cach = f"{self.truc_in_quy_cach.get()} mm"
 
             email_content = (
                 f"Chào bác,\n\n"
-                f"Bác làm giúp con đơn hàng trc in \"{ten_hang}\" này nhé\n"
+                f"Bác làm giúp con đơn hàng trục in \"{ten_hang}\" này nhé\n"
                 f"Màu sắc: {mau_sac} / Màu keo: {mau_keo}\n"
                 f"Số lượng: {so_luong} cái\n"
                 f"Quy cách: {quy_cach}\n\n"
@@ -365,7 +397,7 @@ class TrucInTab(TabBase):
                 # Open the file after saving
                 os.startfile(file_path)
             else:
-                self.update_status("Xuấất email trục in bị hủy")
+                self.update_status("Xuất email trục in bị hủy")
 
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email trục in: {str(e)}")
@@ -393,7 +425,7 @@ class TrucInTab(TabBase):
                     field.delete(0, tk.END)
                     field.configure(state='readonly')
                     
-                # Xóa ID đơn hàng
+                # Clear ID đơn hàng
                 self.id_don_hang.configure(state='normal')
                 self.id_don_hang.delete(0, tk.END)
                 self.id_don_hang.configure(state='readonly')

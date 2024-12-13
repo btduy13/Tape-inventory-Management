@@ -15,7 +15,7 @@ class DonHangForm:
         # Configure the root window
         self.root.title("Phần Mềm Quản Lý Đơn Hàng")
         window_width = 1024
-        window_height = 768
+        window_height = 850
         
         # Get screen dimensions
         screen_width = self.root.winfo_screenwidth()
@@ -64,8 +64,20 @@ class DonHangForm:
 
         # File Menu
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Export Template", command=self.export_template)
-        file_menu.add_command(label="Import Data", command=self.import_data)
+        
+        # Export submenu
+        export_menu = tk.Menu(file_menu, tearoff=0)
+        export_menu.add_command(label="Xuất Template Băng Keo", command=lambda: self.export_template('bang_keo_in'))
+        export_menu.add_command(label="Xuất Template Trục In", command=lambda: self.export_template('truc_in'))
+        file_menu.add_cascade(label="Xuất Template", menu=export_menu)
+        
+        # Import submenu
+        import_menu = tk.Menu(file_menu, tearoff=0)
+        import_menu.add_command(label="Nhập Dữ Liệu Băng Keo", command=lambda: self.import_data('bang_keo_in'))
+        import_menu.add_command(label="Nhập Dữ Liệu Trục In", command=lambda: self.import_data('truc_in'))
+        file_menu.add_cascade(label="Nhập Dữ Liệu", menu=import_menu)
+        
+        file_menu.add_separator()
         file_menu.add_command(label="Thoát", command=self.root.quit)
         menu_bar.add_cascade(label="Tệp", menu=file_menu)
 
@@ -75,6 +87,7 @@ class DonHangForm:
         menu_bar.add_cascade(label="Trợ giúp", menu=help_menu)
 
         self.root.config(menu=menu_bar)
+        self.menu_bar = menu_bar
 
     def show_about(self):
         messagebox.showinfo("Giới thiệu", "Ứng dụng Đơn Hàng\nVersion 1.0")
@@ -109,14 +122,15 @@ class DonHangForm:
         # Reset timer
         self.resize_timer = None
 
-    def export_template(self):
+    def export_template(self, order_type):
         file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
         if file_path:
-            export_template(file_path)
+            export_template(file_path, order_type)
+            self.update_status(f"Đã xuất template {order_type} thành công")
 
-    def import_data(self):
+    def import_data(self, order_type):
         file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if file_path:
-            df = import_data(file_path)
-            # Here you can process the DataFrame `df` as needed
-            # For example, insert the data into the database
+            import_data(file_path, order_type, self.db_session)
+            self.history_tab.refresh_data()  # Refresh history tab after import
+            self.update_status(f"Đã nhập dữ liệu {order_type} thành công")
