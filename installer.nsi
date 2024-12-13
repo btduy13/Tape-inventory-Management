@@ -7,7 +7,7 @@
 !define COMPANYNAME "Tape Solutions"
 !define DESCRIPTION "Tape Inventory Management Software"
 !define VERSIONMAJOR 1
-!define VERSIONMINOR 0
+!define VERSIONMINOR 1
 !define VERSIONBUILD 0
 
 ; General
@@ -42,7 +42,7 @@ Section "MainSection" SEC01
     SetOutPath "$INSTDIR"
     
     ; Add files to install
-    File "dist\TapeInventoryManagement.exe"
+    File /r "dist\TapeInventoryManagement\*.*"
     File "requirements.txt"
     File "README.md"
     
