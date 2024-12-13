@@ -3,16 +3,16 @@
 !include LogicLib.nsh
 
 ; Define application name and version
-!define APPNAME "Order Management"
-!define COMPANYNAME "Thanh Que"
-!define DESCRIPTION "Order Management Software"
+!define APPNAME "Tape Inventory Management"
+!define COMPANYNAME "Tape Solutions"
+!define DESCRIPTION "Tape Inventory Management Software"
 !define VERSIONMAJOR 1
 !define VERSIONMINOR 0
 !define VERSIONBUILD 0
 
 ; General
 Name "${APPNAME}"
-OutFile "QuanLyDonHang_Setup.exe"
+OutFile "TapeInventoryManagement_Setup.exe"
 InstallDir "$PROGRAMFILES\${APPNAME}"
 InstallDirRegKey HKCU "Software\${APPNAME}" ""
 
@@ -42,21 +42,21 @@ Section "MainSection" SEC01
     SetOutPath "$INSTDIR"
     
     ; Add files to install
-    File /r "dist\QuanLyDonHang\*.*"
+    File "dist\TapeInventoryManagement.exe"
     File "requirements.txt"
     File "README.md"
     
     ; Create application data directory
-    CreateDirectory "$APPDATA\QuanLyDonHang"
-    CreateDirectory "$APPDATA\QuanLyDonHang\logs"
-    SetOutPath "$APPDATA\QuanLyDonHang\logs"
+    CreateDirectory "$APPDATA\TapeInventoryManagement"
+    CreateDirectory "$APPDATA\TapeInventoryManagement\logs"
+    SetOutPath "$APPDATA\TapeInventoryManagement\logs"
     
     ; Create desktop shortcut
-    CreateShortCut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\QuanLyDonHang.exe"
+    CreateShortCut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\TapeInventoryManagement.exe"
     
     ; Create start menu shortcut
     CreateDirectory "$SMPROGRAMS\${APPNAME}"
-    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\QuanLyDonHang.exe"
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\TapeInventoryManagement.exe"
     CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall.lnk" "$INSTDIR\uninstall.exe"
     
     ; Install dependencies
@@ -69,7 +69,7 @@ Section "MainSection" SEC01
     ; Write registry keys
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "UninstallString" "$INSTDIR\uninstall.exe"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$INSTDIR\assets\icon.ico"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$INSTDIR\TapeInventoryManagement.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "${COMPANYNAME}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}"
 SectionEnd
@@ -81,7 +81,7 @@ Section "Uninstall"
     RMDir "$INSTDIR"
     
     ; Remove AppData directory
-    RMDir /r "$APPDATA\QuanLyDonHang"
+    RMDir /r "$APPDATA\TapeInventoryManagement"
     
     ; Remove shortcuts
     Delete "$DESKTOP\${APPNAME}.lnk"

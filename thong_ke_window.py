@@ -13,7 +13,7 @@ class ThongKeTab(TabBase):
         notebook.add(self.tab, text="Thống kê")
         
         # Add sort tracking variables
-        self.bang_keo_in_sort = {'column': None, 'reverse': False}
+        self.bang_keo_sort = {'column': None, 'reverse': False}
         self.truc_in_sort = {'column': None, 'reverse': False}
         
         # Initialize counters
@@ -107,9 +107,9 @@ class ThongKeTab(TabBase):
         order_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Tab for "Băng keo in"
-        self.bang_keo_in_tab = ttk.Frame(order_notebook)
-        order_notebook.add(self.bang_keo_in_tab, text="Băng keo in")
-        self.create_order_list(self.bang_keo_in_tab, "Băng keo in")
+        self.bang_keo_tab = ttk.Frame(order_notebook)
+        order_notebook.add(self.bang_keo_tab, text="Băng keo in")
+        self.create_order_list(self.bang_keo_tab, "Băng keo in")
         
         # Tab for "Trục in"
         self.truc_in_tab = ttk.Frame(order_notebook)
@@ -199,10 +199,10 @@ class ThongKeTab(TabBase):
         
         # Store references for later use
         if order_type == "Băng keo in":
-            self.bang_keo_in_tree = tree
-            self.bang_keo_in_filter_var = filter_var
-            self.bang_keo_in_search_var = search_var
-            self.bang_keo_in_month_var = month_var
+            self.bang_keo_tree = tree
+            self.bang_keo_filter_var = filter_var
+            self.bang_keo_search_var = search_var
+            self.bang_keo_month_var = month_var
         else:
             self.truc_in_tree = tree
             self.truc_in_filter_var = filter_var
@@ -215,7 +215,7 @@ class ThongKeTab(TabBase):
         self.reset_counters()
         
         # Clear existing data in both Treeviews
-        for tree in [self.bang_keo_in_tree, self.truc_in_tree]:
+        for tree in [self.bang_keo_tree, self.truc_in_tree]:
             for item in tree.get_children():
                 tree.delete(item)
         
@@ -223,9 +223,9 @@ class ThongKeTab(TabBase):
         today = datetime.now().date()
         
         # Load Băng keo in orders
-        bang_keo_in_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
-        for order in bang_keo_in_orders:
-            self.process_order(order, "Băng keo in", today, self.bang_keo_in_tree)
+        bang_keo_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
+        for order in bang_keo_orders:
+            self.process_order(order, "Băng keo in", today, self.bang_keo_tree)
         
         # Load Trục in orders
         truc_in_orders = self.parent_form.db_session.query(TrucInOrder).all()
@@ -262,7 +262,7 @@ class ThongKeTab(TabBase):
             cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
             
             # Assign tag based on order type for identification
-            tag = "bang_keo_in" if order_type == "Băng keo in" else "truc_in"
+            tag = "bang_keo" if order_type == "Băng keo in" else "truc_in"
             
             # Insert data with proper order and formatting
             tree.insert("", "end", values=(
@@ -276,7 +276,7 @@ class ThongKeTab(TabBase):
             ), tags=(tag, str(order.id)))
         
         # After inserting data, apply sort if a column is selected
-        sort_state = self.bang_keo_in_sort if order_type == "Băng keo in" else self.truc_in_sort
+        sort_state = self.bang_keo_sort if order_type == "Băng keo in" else self.truc_in_sort
         if sort_state['column']:
             self.sort_treeview(sort_state['column'], order_type)
         else:
@@ -285,9 +285,9 @@ class ThongKeTab(TabBase):
     def should_show_order(self, order, days_until_due, order_type):
         """Determine whether an order should be displayed based on the current filter."""
         if order_type == "Băng keo in":
-            filter_value = self.bang_keo_in_filter_var.get()
-            search_text = self.bang_keo_in_search_var.get().lower().strip()
-            selected_month = self.bang_keo_in_month_var.get()
+            filter_value = self.bang_keo_filter_var.get()
+            search_text = self.bang_keo_search_var.get().lower().strip()
+            selected_month = self.bang_keo_month_var.get()
         else:
             filter_value = self.truc_in_filter_var.get()
             search_text = self.truc_in_search_var.get().lower().strip()
@@ -352,13 +352,23 @@ class ThongKeTab(TabBase):
         """Create and display a window to update the status of an order."""
         update_window = tk.Toplevel(self.tab)
         update_window.title("Cập nhật trạng thái")
-        update_window.geometry("350x250")  # Increased height for better layout
+        update_window.geometry("400x300")
         
-        # Fetch the order from the database
+        def center_window(window):
+            window.update_idletasks()
+            width = window.winfo_width()
+            height = window.winfo_height()
+            x = (window.winfo_screenwidth() // 2) - (width // 2)
+            y = (window.winfo_screenheight() // 2) - (height // 2)
+            window.geometry(f'{width}x{height}+{x}+{y}')
+        
+        center_window(update_window)
+        update_window.resizable(False, False)
+        
         try:
             if order_type == "Băng keo in":
                 order = self.parent_form.db_session.query(BangKeoInOrder).filter(BangKeoInOrder.id == order_id).first()
-            else:  # "Trục in"
+            else:
                 order = self.parent_form.db_session.query(TrucInOrder).filter(TrucInOrder.id == order_id).first()
                 
             if not order:
@@ -366,60 +376,80 @@ class ThongKeTab(TabBase):
                 update_window.destroy()
                 return
                 
-            # Main frame inside the update window
-            main_frame = ttk.Frame(update_window, padding="10")
+            # Main frame với padding lớn hơn
+            main_frame = ttk.Frame(update_window, padding="20")
             main_frame.pack(fill=tk.BOTH, expand=True)
             
-            # Order title label
-            title = "Băng keo in" if order_type == "Băng keo in" else "Trục in"
-            ttk.Label(main_frame, text=f"{title} - {order.ten_hang}", font=("Arial", 12, "bold")).pack(pady=5)
+            # Tiêu đề với font lớn hơn và đậm hơn
+            title_label = ttk.Label(main_frame, 
+                                  text=f"{order.ten_hang}", 
+                                  font=("Arial", 14, "bold"))
+            title_label.pack(pady=(0, 20))
             
-            # Variables to hold the state of checkboxes
+            # Frame cho checkboxes với khoảng cách lớn hơn
+            checkbox_frame = ttk.Frame(main_frame)
+            checkbox_frame.pack(fill=tk.X, pady=20)
+            
+            # Style cho checkboxes
+            style = ttk.Style()
+            style.configure("Large.TCheckbutton", 
+                           font=("Arial", 12),
+                           padding=10)
+            
+            # Variables cho checkboxes
             da_giao_var = tk.BooleanVar(value=order.da_giao)
             da_tat_toan_var = tk.BooleanVar(value=order.da_tat_toan)
             
-            # Frame for checkboxes
-            checkbox_frame = ttk.Frame(main_frame)
-            checkbox_frame.pack(fill=tk.X, pady=10)
+            # Checkboxes với font lớn hơn
+            ttk.Checkbutton(checkbox_frame, 
+                           text="Đã giao", 
+                           variable=da_giao_var,
+                           style="Large.TCheckbutton").pack(anchor=tk.W, pady=10)
             
-            # "Đã giao" checkbox
-            ttk.Checkbutton(checkbox_frame, text="Đã giao", variable=da_giao_var).pack(anchor=tk.W, pady=5)
+            ttk.Checkbutton(checkbox_frame, 
+                           text="Đã tất toán", 
+                           variable=da_tat_toan_var,
+                           style="Large.TCheckbutton").pack(anchor=tk.W, pady=10)
             
-            # "Đã tất toán" checkbox
-            ttk.Checkbutton(checkbox_frame, text="Đã tất toán", variable=da_tat_toan_var).pack(anchor=tk.W, pady=5)
-            
-            # Frame for buttons
+            # Frame cho buttons
             button_frame = ttk.Frame(main_frame)
-            button_frame.pack(side=tk.BOTTOM, pady=10)
+            button_frame.pack(side=tk.BOTTOM, pady=(20, 0))
+            
+            # Style cho buttons
+            style.configure("Action.TButton", 
+                           font=("Arial", 11),
+                           padding=(20, 10))
             
             def save_changes():
-                """Save the changes to the database when the 'Lưu' button is clicked."""
                 try:
-                    # Update the order's status based on the checkbox states
                     order.da_giao = da_giao_var.get()
                     order.da_tat_toan = da_tat_toan_var.get()
-                    
-                    # If the order is settled, set debt to zero
                     if order.da_tat_toan:
                         order.cong_no_khach = 0
-                        
                     self.parent_form.db_session.commit()
                     messagebox.showinfo("Thành công", "Cập nhật trạng thái đơn hàng thành công.")
                     update_window.destroy()
-                    self.load_data()  # Refresh the data in the main interface
+                    self.load_data()
                 except Exception as e:
                     self.parent_form.db_session.rollback()
                     messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi cập nhật: {str(e)}")
             
-            # Add Save and Cancel buttons
-            ttk.Button(button_frame, text="Lưu", command=save_changes).pack(side=tk.LEFT, padx=5)
-            ttk.Button(button_frame, text="Hủy", command=update_window.destroy).pack(side=tk.LEFT, padx=5)
+            # Buttons với style mới
+            ttk.Button(button_frame, 
+                      text="Lưu", 
+                      command=save_changes,
+                      style="Action.TButton").pack(side=tk.LEFT, padx=10)
+            
+            ttk.Button(button_frame, 
+                      text="Hủy", 
+                      command=update_window.destroy,
+                      style="Action.TButton").pack(side=tk.LEFT, padx=10)
             
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {str(e)}")
             update_window.destroy()
         
-    def create_bang_keo_in_tree(self):
+    def create_bang_keo_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
                   'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 
                   'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 
@@ -428,7 +458,7 @@ class ThongKeTab(TabBase):
                   'loi_giay', 'thung_bao', 'loi_nhuan')
         
         # Create container frame
-        container = ttk.Frame(self.bang_keo_in_frame)
+        container = ttk.Frame(self.bang_keo_frame)
         container.pack(fill=tk.BOTH, expand=True)
         
         # Configure grid weights
@@ -446,7 +476,7 @@ class ThongKeTab(TabBase):
                  background=[("selected", "#0078D7")],
                  foreground=[("selected", "#ffffff")])
         
-        self.bang_keo_in_tree = ttk.Treeview(container, columns=columns, show='headings',
+        self.bang_keo_tree = ttk.Treeview(container, columns=columns, show='headings',
                                          selectmode='extended', style="Custom.Treeview")
         
         # Define headings and column widths
@@ -463,17 +493,17 @@ class ThongKeTab(TabBase):
         
         # Cấu hình cột
         for col in columns:
-            self.bang_keo_in_tree.heading(col, text=headings[col],
-                                     command=lambda c=col: self.sort_treeview(self.bang_keo_in_tree, c, False))
+            self.bang_keo_tree.heading(col, text=headings[col],
+                                     command=lambda c=col: self.sort_treeview(self.bang_keo_tree, c, False))
             # Đặt độ rộng cho từng cột
             if col == 'id':
-                self.bang_keo_in_tree.column(col, width=100, stretch=False)
+                self.bang_keo_tree.column(col, width=100, stretch=False)
             elif col in ['thoi_gian', 'ngay_du_kien']:
-                self.bang_keo_in_tree.column(col, width=120, minwidth=120)
+                self.bang_keo_tree.column(col, width=120, minwidth=120)
             elif col == 'ten_hang':
-                self.bang_keo_in_tree.column(col, width=200, minwidth=150)
+                self.bang_keo_tree.column(col, width=200, minwidth=150)
             else:
-                self.bang_keo_in_tree.column(col, width=100, minwidth=80)
+                self.bang_keo_tree.column(col, width=100, minwidth=80)
 
     def create_truc_in_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
@@ -528,8 +558,8 @@ class ThongKeTab(TabBase):
         try:
             # Get the correct tree and sort state
             if order_type == "Băng keo in":
-                tree = self.bang_keo_in_tree
-                sort_state = self.bang_keo_in_sort
+                tree = self.bang_keo_tree
+                sort_state = self.bang_keo_sort
             else:
                 tree = self.truc_in_tree
                 sort_state = self.truc_in_sort
