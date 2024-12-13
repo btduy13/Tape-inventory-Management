@@ -1,9 +1,0 @@
-2024-12-12 23:07:16,779 - OrderSystem - INFO - Logging system initialized
-2024-12-12 23:07:16,781 - OrderSystem - INFO - Initializing OrderSelectionDialog
-2024-12-12 23:07:16,818 - OrderSystem - INFO - Initializing database connection in dialog...
-2024-12-12 23:07:17,316 - OrderSystem - INFO - Database session created successfully in dialog
-2024-12-12 23:07:17,322 - OrderSystem - INFO - Loading orders from database
-2024-12-12 23:07:17,431 - OrderSystem - INFO - Found 80 băng keo orders and 0 trục in orders
-2024-12-12 23:07:17,434 - OrderSystem - INFO - Orders loaded successfully
-2024-12-12 23:07:17,492 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
-2024-12-12 23:07:23,333 - OrderSystem - INFO - Canceling order selection

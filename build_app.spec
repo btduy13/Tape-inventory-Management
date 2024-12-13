@@ -2,7 +2,7 @@
 
 import sys
 import os
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
@@ -11,42 +11,17 @@ fonts_dir = os.path.join('assets', 'fonts')
 if not os.path.exists(fonts_dir):
     os.makedirs(fonts_dir)
 
+# Required imports for installer
 hidden_imports = [
-    'ttkthemes',
-    'PIL',
-    'PIL._tkinter_finder',
-    'sqlalchemy',
-    'sqlalchemy.sql.default_comparator',
-    'pandas',
-    'numpy',
-    'openpyxl',
     'tkinter',
-    'sqlite3',
-    'datetime',
-    'json',
-    'logging',
-    'encodings',
-    'encodings.aliases',
-    'encodings.utf_8',
-    'encodings.ascii',
-    'encodings.idna',
-    'encodings.cp1252',
-    'pkg_resources.py2_warn',
-    'win32api',
-    'win32con',
-    'babel',
-    'babel.numbers',
-    'babel.dates',
-    'babel.localedata',
-    'pkg_resources._vendor.packaging.version',
-    'pkg_resources._vendor.packaging.specifiers',
-    'pkg_resources._vendor.packaging.requirements',
-    'pkg_resources._vendor.pyparsing',
     'tkinter.ttk',
     '_tkinter',
-    'zlib',
-    'decimal',
-] + collect_submodules('pandas') + collect_submodules('babel')
+    'win32com.client',
+    'win32com.shell',
+    'win32api',
+    'win32con',
+    'pythoncom'
+]
 
 # Collect all font files
 font_datas = []
@@ -58,16 +33,24 @@ if os.path.exists(fonts_dir):
                 relative_path = os.path.relpath(root, '.')
                 font_datas.append((font_path, relative_path))
 
+# Get all Python files
+python_files = []
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file.endswith('.py') and not file.startswith('build'):
+            full_path = os.path.join(root, file)
+            if not any(exclude in full_path for exclude in ['build', 'dist', '__pycache__']):
+                python_files.append((full_path, '.'))
+
 a = Analysis(
-    ['main.py'],
+    ['installer.py'],
     pathex=[sys.path[0]],
     binaries=[],
     datas=[
         ('assets', 'assets'),
-        ('logs', 'logs'),
-        ((os.path.join(sys.prefix, 'tcl', 'tcl8.6'), os.path.join('tcl', 'tcl8.6'))),
-        ((os.path.join(sys.prefix, 'tcl', 'tk8.6'), os.path.join('tcl', 'tk8.6'))),
-    ] + collect_data_files('pandas') + font_datas + collect_data_files('babel'),
+        ('requirements.txt', '.'),
+        ('README.md', '.'),
+    ] + python_files,
     hiddenimports=hidden_imports,
     hookspath=[],
     hooksconfig={},
@@ -79,17 +62,11 @@ a = Analysis(
     noarchive=False,
 )
 
-# Add system fonts
-system_fonts = [
-    ('C:\\Windows\\Fonts\\segoeui.ttf', 'fonts'),
-    ('C:\\Windows\\Fonts\\segoeuib.ttf', 'fonts'),
-    ('C:\\Windows\\Fonts\\arial.ttf', 'fonts'),
-    ('C:\\Windows\\Fonts\\arialbd.ttf', 'fonts'),
+# Add system DLLs
+a.binaries += [
+    ('python3.dll', os.path.join(sys.base_prefix, 'python3.dll'), 'BINARY'),
+    ('python310.dll', os.path.join(sys.base_prefix, 'python310.dll'), 'BINARY')
 ]
-
-for font_path, target_dir in system_fonts:
-    if os.path.exists(font_path):
-        a.datas.append((os.path.join(target_dir, os.path.basename(font_path)), font_path, 'DATA'))
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
@@ -98,12 +75,12 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='QuanLyDonHang',
+    name='QuanLyDonHang_Setup',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=True,  # Set to True for debugging
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
@@ -121,5 +98,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='QuanLyDonHang'
+    name='QuanLyDonHang_Setup'
 ) 

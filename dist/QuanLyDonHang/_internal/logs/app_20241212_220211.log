@@ -1,9 +1,0 @@
-2024-12-12 22:02:11,026 - OrderSystem - INFO - Logging system initialized
-2024-12-12 22:02:11,030 - OrderSystem - INFO - Starting generate_order_form
-2024-12-12 22:02:11,030 - OrderSystem - INFO - Creating order selection dialog
-2024-12-12 22:02:11,030 - OrderSystem - ERROR - Error in generate_order_form: name 'root' is not defined
-Traceback (most recent call last):
-  File "c:\Users\PC\Documents\scr\report_gen.py", line 536, in generate_order_form
-    dialog = OrderSelectionDialog(root)
-                                  ^^^^
-NameError: name 'root' is not defined

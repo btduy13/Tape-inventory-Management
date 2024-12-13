@@ -18,32 +18,35 @@ from reportlab.lib.units import mm
 # Set up logging
 def setup_logging():
     try:
-        # Create logs directory if it doesn't exist
-        log_dir = 'logs'
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        # Sử dụng thư mục người dùng thay vì thư mục cài đặt
+        app_data = os.getenv('APPDATA')
+        log_dir = os.path.join(app_data, "QuanLyDonHang", "logs")
         
-        # Create log file with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        log_file = os.path.join(log_dir, f'app_{timestamp}.log')
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+        
+        log_file = os.path.join(log_dir, f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
         
         # Configure logging
         logging.basicConfig(
             level=logging.DEBUG,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            format='%(asctime)s [%(levelname)s] %(message)s',
             handlers=[
                 logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout)
+                logging.StreamHandler()
             ]
         )
         
-        logger = logging.getLogger('OrderSystem')
-        logger.info('Logging system initialized')
-        return logger
-        
+        return log_file
     except Exception as e:
-        print(f"Failed to setup logging: {str(e)}")
-        raise
+        print(f"Error setting up logging: {str(e)}")
+        # Fallback to console logging only if file logging fails
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s [%(levelname)s] %(message)s',
+            handlers=[logging.StreamHandler()]
+        )
+        return None
 
 # Initialize logger
 logger = setup_logging()
