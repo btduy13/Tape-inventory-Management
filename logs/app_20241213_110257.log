@@ -1,0 +1,15 @@
+2024-12-13 11:02:57,232 - OrderSystem - INFO - Logging system initialized
+2024-12-13 11:03:04,828 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 11:03:05,767 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 11:03:05,776 - OrderSystem - INFO - Loading orders from database
+2024-12-13 11:03:05,980 - OrderSystem - INFO - Found 84 băng keo orders and 9 trục in orders
+2024-12-13 11:03:05,983 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 11:03:10,763 - OrderSystem - INFO - Confirming order selection
+2024-12-13 11:03:10,763 - OrderSystem - INFO - Selected orders: ['BK-12-24-083', 'BK-12-24-082']
+2024-12-13 11:03:10,763 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 11:03:12,005 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 11:04:19,968 - OrderSystem - INFO - Opening save file dialog
+2024-12-13 11:04:25,366 - OrderSystem - INFO - Generating PDF at C:/Users/USER/Documents/Zalo Received Files/don_dat_hang.pdf
+2024-12-13 11:04:26,540 - OrderSystem - INFO - PDF generated successfully
+2024-12-13 11:04:26,540 - OrderSystem - INFO - Order form generation completed
+2024-12-13 11:05:04,535 - OrderSystem - INFO - Canceling order selection

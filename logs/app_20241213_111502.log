@@ -1,0 +1,25 @@
+2024-12-13 11:15:02,031 - OrderSystem - INFO - Logging system initialized
+2024-12-13 11:15:14,991 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 11:15:15,934 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 11:15:15,953 - OrderSystem - INFO - Loading orders from database
+2024-12-13 11:15:16,149 - OrderSystem - INFO - Found 84 băng keo orders and 9 trục in orders
+2024-12-13 11:15:16,152 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 11:15:26,059 - OrderSystem - INFO - Confirming order selection
+2024-12-13 11:15:26,059 - OrderSystem - INFO - Selected orders: ['BK-12-24-018', 'BK-12-24-079']
+2024-12-13 11:15:26,059 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 11:15:27,128 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 11:15:36,584 - OrderSystem - INFO - Opening save file dialog
+2024-12-13 11:15:39,570 - OrderSystem - INFO - Generating PDF at C:/Users/USER/Documents/Zalo Received Files/don_dat_hang.pdf
+2024-12-13 11:15:48,067 - OrderSystem - INFO - PDF generated successfully
+2024-12-13 11:15:48,067 - OrderSystem - INFO - Order form generation completed
+2024-12-13 11:16:45,922 - OrderSystem - INFO - Confirming order selection
+2024-12-13 11:16:45,922 - OrderSystem - INFO - Selected orders: ['TI-12-24-004']
+2024-12-13 11:16:45,922 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 11:16:47,216 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 11:16:49,434 - OrderSystem - INFO - Order form generation completed
+2024-12-13 11:16:52,010 - OrderSystem - INFO - Confirming order selection
+2024-12-13 11:16:52,010 - OrderSystem - INFO - Selected orders: ['BK-12-24-018', 'TI-12-24-004']
+2024-12-13 11:16:52,011 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 11:16:53,363 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 11:18:05,554 - OrderSystem - INFO - Order form generation completed
+2024-12-13 11:18:05,992 - OrderSystem - INFO - Canceling order selection

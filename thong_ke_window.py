@@ -194,6 +194,9 @@ class ThongKeTab(TabBase):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
+        # Bind double-click event
+        tree.bind('<Double-1>', lambda e, ot=order_type, t=tree: self.on_double_click(e, ot, t))
+        
         # Store references for later use
         if order_type == "Băng keo in":
             self.bang_keo_tree = tree
@@ -493,7 +496,7 @@ class ThongKeTab(TabBase):
             'id': 'ID đơn hàng',
             'thoi_gian': 'Thời gian',
             'ten_hang': 'Tên hàng',
-            'ngay_du_kien': 'Ng��y dự kiến',
+            'ngay_du_kien': 'Ngày dự kiến',
             'quy_cach': 'Quy cách',
             # ... các heading khác giữ nguyên
         }

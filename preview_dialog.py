@@ -8,65 +8,97 @@ class PreviewDialog(tk.Toplevel):
         self.title("Xem trước đơn hàng")
         self.order_data = order_data
         
-        # Create main frame
-        main_frame = ttk.Frame(self)
-        main_frame.pack(padx=10, pady=10, fill='both', expand=True)
+        # Remove style clam and use default system style
+        style = ttk.Style(self)
+        # style.theme_use("clam") # remove this line
+
+        # Set a default font for all widgets
+        default_font = ("Segoe UI", 10)
+        self.option_add("*Font", default_font)
+
+        self.configure(background="white")
+        
+        # Create main frame with uniform padding
+        main_frame = ttk.Frame(self, padding=10)
+        main_frame.grid(row=0, column=0, sticky='nsew')
+        
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
+        
+        # Default row heights
+        self.default_row_height = 25
+        self.expanded_row_height = 60
+        
+        # Style for treeview rows
+        style.configure("PreviewDialog.Treeview", rowheight=self.default_row_height, font=default_font)
+        
+        # content_frame with padding
+        content_frame = ttk.Frame(main_frame, padding=10)
+        content_frame.grid(row=0, column=0, sticky='nsew')
         
         # Customer information
-        customer_frame = ttk.LabelFrame(main_frame, text="Thông tin khách hàng")
+        customer_frame = ttk.LabelFrame(content_frame, text="Thông tin khách hàng", padding=10)
         customer_frame.pack(fill='x', pady=(0, 10))
         
-        ttk.Label(customer_frame, text="Kính gửi:").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Label(customer_frame, text="Kính gửi:").grid(row=0, column=0, padx=(0,5), pady=5, sticky='e')
         self.customer_name = ttk.Entry(customer_frame)
-        self.customer_name.grid(row=0, column=1, padx=5, pady=5)
-        self.customer_name.insert(0, order_data.get('customer_name', ''))
+        self.customer_name.grid(row=0, column=1, padx=5, pady=5, sticky='ew')
+        self.customer_name.insert(0, self.order_data.get('customer_name', ''))
         
-        ttk.Label(customer_frame, text="Địa chỉ:").grid(row=1, column=0, padx=5, pady=5)
+        ttk.Label(customer_frame, text="Địa chỉ:").grid(row=1, column=0, padx=(0,5), pady=5, sticky='e')
         self.address = ttk.Entry(customer_frame, width=50)
-        self.address.grid(row=1, column=1, padx=5, pady=5)
-        self.address.insert(0, order_data.get('address', ''))
+        self.address.grid(row=1, column=1, padx=5, pady=5, sticky='ew')
+        self.address.insert(0, self.order_data.get('address', ''))
+
+        customer_frame.grid_columnconfigure(1, weight=1)
+
+        # Products frame
+        products_frame = ttk.LabelFrame(content_frame, text="Chi tiết đơn hàng", padding=10)
+        products_frame.pack(fill='both', expand=True, pady=(0, 10))
         
-        # Products table
-        products_frame = ttk.LabelFrame(main_frame, text="Chi tiết đơn hàng")
-        products_frame.pack(fill='both', expand=True)
-        
-        # Create Treeview for products with row height adjustment
+        # Create Treeview for products
         columns = ('product', 'specs', 'text_color', 'bg_color', 'unit', 'quantity', 'price', 'total')
-        style = ttk.Style()
-        style.configure("Treeview", rowheight=60)  # Set default row height
+        style.configure("PreviewDialog.Treeview", rowheight=60, font=default_font)
         
-        self.tree = ttk.Treeview(products_frame, columns=columns, show='headings', style="Treeview")
+        tree_frame = ttk.Frame(products_frame)
+        tree_frame.pack(fill='both', expand=True)
         
-        # Set column headers and widths
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', style="PreviewDialog.Treeview")
+        
+        # Adjust columns: "Tên Sản Phẩm" anchored to left, wider
         headers = {
-            'product': ('Tên Sản Phẩm', 200),
-            'specs': ('Quy Cách', 100),
-            'text_color': ('Màu Chữ', 100),
-            'bg_color': ('Màu Nền', 100),
-            'unit': ('Đơn Vị', 80),
-            'quantity': ('Số Lượng', 100),
-            'price': ('Đơn Giá', 100),
-            'total': ('Tổng Cộng', 120)
+            'product': ('Tên Sản Phẩm', 300, 'w'),
+            'specs': ('Quy Cách', 100, 'center'),
+            'text_color': ('Màu Chữ', 100, 'center'),
+            'bg_color': ('Màu Nền', 100, 'center'),
+            'unit': ('Đơn Vị', 80, 'center'),
+            'quantity': ('Số Lượng', 100, 'center'),
+            'price': ('Đơn Giá', 100, 'center'),
+            'total': ('Tổng Cộng', 120, 'center')
         }
         
-        # Configure columns with specific widths
-        for col, (header, width) in headers.items():
+        for col, (header, width, anch) in headers.items():
             self.tree.heading(col, text=header)
-            self.tree.column(col, width=width, minwidth=width)
+            self.tree.column(col, width=width, minwidth=width, anchor=anch)
         
         # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(products_frame, orient='vertical', command=self.tree.yview)
-        h_scrollbar = ttk.Scrollbar(products_frame, orient='horizontal', command=self.tree.xview)
+        v_scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=self.tree.yview)
+        h_scrollbar = ttk.Scrollbar(tree_frame, orient='horizontal', command=self.tree.xview)
         self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-        # Pack scrollbars and treeview
-        self.tree.pack(side='top', fill='both', expand=True)
-        h_scrollbar.pack(side='bottom', fill='x')
-        v_scrollbar.pack(side='right', fill='y')
+        self.tree.grid(row=0, column=0, sticky='nsew')
+        v_scrollbar.grid(row=0, column=1, sticky='ns')
+        h_scrollbar.grid(row=1, column=0, sticky='ew')
         
-        # Load data into table
-        for item in order_data.get('products', []):
-            # Format long text with newlines if needed
+        tree_frame.grid_columnconfigure(0, weight=1)
+        tree_frame.grid_rowconfigure(0, weight=1)
+        
+        products_list = self.order_data.get('products', [])
+        for item in products_list:
+            price_value = float(item['price'])
+            total_value = float(item['total'])
             values = (
                 self.format_cell_text(item['product']),
                 self.format_cell_text(item['specs']),
@@ -74,57 +106,89 @@ class PreviewDialog(tk.Toplevel):
                 self.format_cell_text(item['bg_color']),
                 item['unit'],
                 item['quantity'],
-                item['price'],
-                item['total']
+                self.format_currency(price_value),
+                self.format_currency(total_value)
             )
             self.tree.insert('', 'end', values=values)
 
-        # Add VAT and Deposit fields
-        totals_frame = ttk.LabelFrame(main_frame, text="Tổng cộng")
-        totals_frame.pack(fill='x', pady=10)
+        # Tính tổng cộng các sản phẩm
+        self.total_sum = sum(float(p['total']) for p in products_list if 'total' in p and p['total'] is not None)
 
-        ttk.Label(totals_frame, text="VAT:").grid(row=0, column=0, padx=5, pady=5)
-        self.vat = ttk.Entry(totals_frame)
-        self.vat.grid(row=0, column=1, padx=5, pady=5)
+        # Totals frame: "Tổng cộng", "VAT", "Cọc" trên 1 dòng
+        totals_frame = ttk.LabelFrame(main_frame, text="Tổng cộng", padding=10)
+        totals_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=(0,10))
+        
+        # Tổng cộng
+        ttk.Label(totals_frame, text="Tổng cộng:").grid(row=0, column=0, padx=(5,5), pady=5, sticky='e')
+        self.total_entry = ttk.Entry(totals_frame, width=15, state='readonly')
+        self.total_entry.grid(row=0, column=1, padx=(0,20), pady=5, sticky='w')
+        self.total_entry.configure(state='normal')
+        self.total_entry.delete(0, tk.END)
+        self.total_entry.insert(0, self.format_currency(self.total_sum))
+        self.total_entry.configure(state='readonly')
+
+        # VAT
+        ttk.Label(totals_frame, text="VAT:").grid(row=0, column=2, padx=(0,5), pady=5, sticky='e')
+        self.vat = ttk.Entry(totals_frame, width=10)
+        self.vat.grid(row=0, column=3, padx=(0,20), pady=5, sticky='w')
         self.vat.insert(0, "0")
 
-        ttk.Label(totals_frame, text="Tiền cọc:").grid(row=0, column=2, padx=5, pady=5)
-        self.deposit = ttk.Entry(totals_frame)
-        self.deposit.grid(row=0, column=3, padx=5, pady=5)
+        # Cọc
+        ttk.Label(totals_frame, text="Cọc:").grid(row=0, column=4, padx=(0,5), pady=5, sticky='e')
+        self.deposit = ttk.Entry(totals_frame, width=10)
+        self.deposit.grid(row=0, column=5, padx=5, pady=5, sticky='w')
         self.deposit.insert(0, "0")
+
+        totals_frame.grid_columnconfigure(1, weight=1)
         
-        # Control buttons
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(pady=10)
+        # Button frame at the bottom
+        button_frame = ttk.Frame(main_frame, padding=10)
+        button_frame.grid(row=2, column=0, sticky='ew')
         
-        ttk.Button(button_frame, text="Chỉnh sửa dòng", command=self.edit_row).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Xuất PDF", command=self.confirm).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Hủy", command=self.cancel).pack(side='left', padx=5)
+        # Right align buttons
+        ttk.Button(button_frame, text="Hủy", command=self.cancel).pack(side='right', padx=5)
+        ttk.Button(button_frame, text="Xuất PDF", command=self.confirm).pack(side='right', padx=5)
+        ttk.Button(button_frame, text="Chỉnh sửa dòng", command=self.edit_row).pack(side='right', padx=5)
         
         # Bind double click to edit
         self.tree.bind('<Double-1>', lambda e: self.edit_row())
         
         self.result = None
         
-        # Center the window
+        # Let the window size itself according to the content
         self.update_idletasks()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f'{width}x{height}+{x}+{y}')
         
+        # Get the requested size
+        req_width = self.winfo_reqwidth()
+        req_height = self.winfo_reqheight()
+        
+        # Limit window size
+        max_width = 1200
+        max_height = 600
+        final_width = min(req_width, max_width)
+        final_height = min(req_height, max_height)
+        
+        # Center the window on the screen
+        x = (self.winfo_screenwidth() // 2) - (final_width // 2)
+        y = (self.winfo_screenheight() // 2) - (final_height // 2)
+        self.geometry(f'{final_width}x{final_height}+{x}+{y}')
+        
+    def format_currency(self, value):
+        # Format currency with commas and no decimal places
+        return "{:,.0f}".format(value)
+
     def format_cell_text(self, text):
-        """Format long text to fit in cell with newlines"""
+        """Format long text into multiple lines if needed."""
         if not text:
             return text
         words = str(text).split()
         lines = []
         current_line = []
+        max_chars = 20
         
         for word in words:
             current_line.append(word)
-            if len(' '.join(current_line)) > 20:  # Adjust this number for desired line length
+            if len(' '.join(current_line)) > max_chars:
                 if len(current_line) > 1:
                     lines.append(' '.join(current_line[:-1]))
                     current_line = [word]
@@ -135,7 +199,68 @@ class PreviewDialog(tk.Toplevel):
         if current_line:
             lines.append(' '.join(current_line))
             
-        return '\n'.join(lines)
+        result = '\n'.join(lines)
+        
+        if result.count('\n') > 0:
+            style = ttk.Style()
+            required_height = (result.count('\n') + 1) * 20
+            style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
+        
+        return result
+        
+    def reset_row_height(self):
+        style = ttk.Style()
+        style.configure("PreviewDialog.Treeview", rowheight=self.default_row_height)
+        
+    def update_row(self, item_id, values):
+        # Parse numeric values for price and total before formatting
+        price_val = float(values[6]) if values[6].replace(',', '').replace('.', '').isdigit() else 0.0
+        total_val = float(values[7]) if values[7].replace(',', '').replace('.', '').isdigit() else 0.0
+        
+        formatted_values = [
+            self.format_cell_text(values[0]),
+            self.format_cell_text(values[1]),
+            self.format_cell_text(values[2]),
+            self.format_cell_text(values[3]),
+            values[4],
+            values[5],
+            self.format_currency(price_val),
+            self.format_currency(total_val)
+        ]
+        
+        self.tree.item(item_id, values=formatted_values)
+        
+        needs_expansion = any(
+            str(val).count('\n') > 0 
+            for val in formatted_values[:4]
+        )
+        
+        style = ttk.Style()
+        if needs_expansion:
+            max_lines = max(str(val).count('\n') for val in formatted_values[:4]) + 1
+            required_height = max_lines * 20
+            style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
+        else:
+            style.configure("PreviewDialog.Treeview", rowheight=self.default_row_height)
+        
+        self.update_totals()
+
+    def update_totals(self):
+        # Recalculate total after update
+        total_sum = 0.0
+        for item_id in self.tree.get_children():
+            vals = self.tree.item(item_id)['values']
+            if len(vals) > 7:
+                # vals[7] is total formatted with commas, need to parse it back to float
+                try:
+                    total_sum += float(vals[7].replace(',', ''))
+                except ValueError:
+                    pass
+        self.total_sum = total_sum
+        self.total_entry.configure(state='normal')
+        self.total_entry.delete(0, tk.END)
+        self.total_entry.insert(0, self.format_currency(self.total_sum))
+        self.total_entry.configure(state='readonly')
         
     def edit_row(self):
         selected_item = self.tree.selection()
@@ -146,19 +271,20 @@ class PreviewDialog(tk.Toplevel):
         item = self.tree.item(selected_item[0])
         EditRowDialog(self, item['values'], selected_item[0])
         
-    def update_row(self, item_id, values):
-        self.tree.item(item_id, values=values)
-        
     def confirm(self):
         try:
-            # Validate VAT and deposit as numbers
-            vat = float(self.vat.get() or 0)
-            deposit = float(self.deposit.get() or 0)
+            # Parse VAT and deposit as float with possible commas
+            vat_str = self.vat.get().replace(',', '')
+            deposit_str = self.deposit.get().replace(',', '')
+            vat = float(vat_str or 0)
+            deposit = float(deposit_str or 0)
 
-            # Update data
             products = []
             for item_id in self.tree.get_children():
                 values = self.tree.item(item_id)['values']
+                # Parse back numeric fields
+                product_total = float(values[7].replace(',', ''))
+                product_price = float(values[6].replace(',', ''))
                 products.append({
                     'product': values[0],
                     'specs': values[1],
@@ -166,24 +292,26 @@ class PreviewDialog(tk.Toplevel):
                     'bg_color': values[3],
                     'unit': values[4],
                     'quantity': values[5],
-                    'price': values[6],
-                    'total': values[7]
+                    'price': product_price,
+                    'total': product_total
                 })
                 
             self.result = {
                 'customer_name': self.customer_name.get(),
                 'address': self.address.get(),
                 'products': products,
+                'total_sum': self.total_sum,
                 'vat': vat,
                 'deposit': deposit
             }
             self.destroy()
         except ValueError:
-            messagebox.showerror("Lỗi", "VAT và Tiền cọc phải là số")
+            messagebox.showerror("Lỗi", "VAT và Cọc phải là số")
         
     def cancel(self):
         self.result = None
         self.destroy()
+
 
 class EditRowDialog(tk.Toplevel):
     def __init__(self, parent, values, item_id):
@@ -192,14 +320,17 @@ class EditRowDialog(tk.Toplevel):
         self.parent = parent
         self.item_id = item_id
         
-        # Create main frame with padding
-        main_frame = ttk.Frame(self, padding="10")
+        style = ttk.Style(self)
+        # style.theme_use("clam") # no clam style
+        default_font = ("Segoe UI", 10)
+        self.option_add("*Font", default_font)
+        self.configure(background="white")
+        
+        main_frame = ttk.Frame(self, padding=10)
         main_frame.pack(fill='both', expand=True)
         
-        # Configure grid weights
         main_frame.grid_columnconfigure(1, weight=1)
         
-        # Create input fields with consistent spacing and alignment
         fields = [
             ('Tên Sản Phẩm', 40),
             ('Quy Cách', 20),
@@ -214,45 +345,41 @@ class EditRowDialog(tk.Toplevel):
         self.entries = []
         
         for i, ((field, width), value) in enumerate(zip(fields, values)):
-            # Label
             label = ttk.Label(main_frame, text=field, anchor='e')
             label.grid(row=i, column=0, padx=(5,10), pady=5, sticky='e')
             
-            # Entry/Combobox
-            if field == 'Đơn Vị':
-                entry = ttk.Combobox(main_frame, values=['Cuộn', 'Cây'], width=width)
-                entry.set(value)
-            else:
-                entry = ttk.Entry(main_frame, width=width)
-                entry.insert(0, value)
+            entry = ttk.Entry(main_frame, width=width)
+            # Không format lại ở đây, chỉ giữ nguyên dữ liệu sẵn có
+            entry.insert(0, value)
             
             entry.grid(row=i, column=1, padx=5, pady=5, sticky='ew')
             self.entries.append(entry)
         
-        # Button frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=len(fields), column=0, columnspan=2, pady=15)
+        button_frame = ttk.Frame(main_frame, padding=(0,10))
+        button_frame.grid(row=len(fields), column=0, columnspan=2, pady=15, sticky='e')
+
+        # Right align buttons
+        ttk.Button(button_frame, text="Hủy", command=self.destroy, width=10).pack(side='right', padx=5)
+        ttk.Button(button_frame, text="Lưu", command=self.save, width=10).pack(side='right', padx=5)
         
-        # Buttons
-        ttk.Button(button_frame, text="Lưu", command=self.save, width=10).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Hủy", command=self.destroy, width=10).pack(side='left', padx=5)
-        
-        # Center the window
         self.update_idletasks()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f'{width}x{height}+{x}+{y}')
+        req_width = self.winfo_reqwidth()
+        req_height = self.winfo_reqheight()
         
-        # Make dialog modal
+        max_width = 600
+        max_height = 400
+        final_width = min(req_width, max_width)
+        final_height = min(req_height, max_height)
+        
+        x = (self.winfo_screenwidth() // 2) - (final_width // 2)
+        y = (self.winfo_screenheight() // 2) - (final_height // 2)
+        self.geometry(f'{final_width}x{final_height}+{x}+{y}')
+        
         self.transient(parent)
         self.grab_set()
-        
-        # Focus first entry
         self.entries[0].focus_set()
         
     def save(self):
         values = [entry.get() for entry in self.entries]
         self.parent.update_row(self.item_id, values)
-        self.destroy() 
+        self.destroy()

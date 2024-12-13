@@ -195,7 +195,7 @@ def create_order_pdf(filename, order_data):
     # Table headers
     header_data = [
         ["Tên Sản Phẩm", "Quy Cách", "In Ấn", "", "Đơn Vị Tính", "Đơn Giá Theo Số Lượng", "", "Tổng Cộng"],
-        ["", "", "Màu Ch", "Màu Nn", "", "Số lượng", "Đơn Giá", ""]
+        ["", "", "Màu Chữ", "Màu Nền", "", "Số lượng", "Đơn Giá", ""]
     ]
 
     # Products data
@@ -307,7 +307,7 @@ def convert_order_to_preview_data(order):
         'unit': '',     # Default, can be changed by user
         'quantity': str(order.so_luong),
         'price': str(order.don_gia_ban),
-        'total': str(order.thanh_tien_goc)
+        'total': str(order.thanh_tien_ban)
     }
 
 class OrderSelectionDialog(tk.Toplevel):
@@ -413,7 +413,7 @@ class OrderSelectionDialog(tk.Toplevel):
                             command=lambda: self.sort_treeview('date'))
             self.tree.heading('name', text='Tên hàng', 
                             command=lambda: self.sort_treeview('name'))
-            self.tree.heading('quantity', text='Số lượng', 
+            self.tree.heading('quantity', text='Số Lượng', 
                             command=lambda: self.sort_treeview('quantity'))
             self.tree.heading('price', text='Đơn giá', 
                             command=lambda: self.sort_treeview('price'))
