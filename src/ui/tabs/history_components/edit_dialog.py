@@ -24,7 +24,7 @@ class EditDialogManager:
                 'so_luong', 'phi_sl', 'phi_keo', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_ban', 'tien_coc',
                 'hoa_hong', 'phi_mau', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay'
             ]
-            window_title = "Chỉnh sửa đơn hàng băng keo in"
+            window_title = "Chỉnh sửa đơn hàng Băng Keo In"
         elif order_type == 'truc_in':
             readonly_fields = [
                 'id',
@@ -34,7 +34,7 @@ class EditDialogManager:
             calculation_trigger_fields = [
                 'so_luong', 'don_gia_ban', 'don_gia_goc', 'hoa_hong'
             ]
-            window_title = "Chỉnh sửa đơn hàng trục in"
+            window_title = "Chỉnh sửa đơn hàng Trục In"
         else:  # bang_keo
             readonly_fields = [
                 'id',
@@ -44,7 +44,7 @@ class EditDialogManager:
             calculation_trigger_fields = [
                 'so_luong', 'don_gia_ban', 'don_gia_goc', 'hoa_hong'
             ]
-            window_title = "Chỉnh sửa đơn hàng băng keo"
+            window_title = "Chỉnh sửa đơn hàng Băng Keo"
             
         selected_item = tree.selection()
         if not selected_item:

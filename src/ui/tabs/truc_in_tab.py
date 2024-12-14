@@ -12,7 +12,7 @@ class TrucInTab(TabBase):
     def __init__(self, notebook, parent_form):
         super().__init__(parent_form)
         self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Trục in")
+        notebook.add(self.tab, text="Trục In")
         self.db_session = parent_form.db_session
 
         # Create main frame with padding
@@ -45,11 +45,11 @@ class TrucInTab(TabBase):
         main_frame.columnconfigure(3, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="TRỤC IN", font=('Segoe UI', 16, 'bold'))
+        title_label = ttk.Label(main_frame, text="Trục In", font=('Segoe UI', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='ew')
 
         # Basic Information Frame
-        basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin trục in", padding=10)
+        basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin Trục In", padding=10)
         basic_info_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
         self._configure_grid(basic_info_frame, 4)
 
@@ -228,10 +228,10 @@ class TrucInTab(TabBase):
             self.update_readonly_field(self.truc_in_tien_hoa_hong, tien_hoa_hong)
             self.update_readonly_field(self.truc_in_loi_nhuan, loi_nhuan)
 
-            self.update_status("Tính toán trục in thành công")
+            self.update_status("Tính toán Trục In thành công")
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán trục in: {str(e)}")
-            self.update_status("Lỗi khi tính toán trục in")
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán Trục In: {str(e)}")
+            self.update_status("Lỗi khi tính toán Trục In")
 
     def luu_truc_in(self):
         try:
@@ -374,7 +374,7 @@ class TrucInTab(TabBase):
 
             email_content = (
                 f"Chào bác,\n\n"
-                f"Bác làm giúp con đơn hàng trục in \"{ten_hang}\" này nhé\n"
+                f"Bác làm giúp con đơn hàng Trục In \"{ten_hang}\" này nhé\n"
                 f"Màu sắc: {mau_sac} / Màu keo: {mau_keo}\n"
                 f"Số lượng: {so_luong} cái\n"
                 f"Quy cách: {quy_cach}\n\n"
@@ -391,21 +391,21 @@ class TrucInTab(TabBase):
             if file_path:
                 with open(file_path, 'w', encoding='utf-8') as file:
                     file.write(email_content)
-                messagebox.showinfo("Thành công", "Đã xuất nội dung email trục in ra file văn bản thành công!")
-                self.update_status("Đã xuất email trục in thành công")
+                messagebox.showinfo("Thành công", "Đã xuất nội dung email Trục In ra file văn bản thành công!")
+                self.update_status("Đã xuất email Trục In thành công")
 
                 # Open the file after saving
                 os.startfile(file_path)
             else:
-                self.update_status("Xuất email trục in bị hủy")
+                self.update_status("Xuất email Trục In bị hủy")
 
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email trục in: {str(e)}")
-            self.update_status("Lỗi khi xuất email trục in")
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email Trục In: {str(e)}")
+            self.update_status("Lỗi khi xuất email Trục In")
 
     def xoa_form_truc_in(self):
         try:
-            if messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa toàn bộ form trục in?"):
+            if messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa toàn bộ form Trục In?"):
                 fields = [
                     self.truc_in_ten_hang, self.truc_in_quy_cach, self.truc_in_so_luong,
                     self.truc_in_mau_sac, self.truc_in_mau_keo, self.truc_in_don_gia_ban,
@@ -430,7 +430,7 @@ class TrucInTab(TabBase):
                 self.id_don_hang.delete(0, tk.END)
                 self.id_don_hang.configure(state='readonly')
 
-                self.update_status("Đã xóa form trục in")
+                self.update_status("Đã xóa form Trục In")
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xóa form trục in: {str(e)}")
-            self.update_status("Lỗi khi xóa form trục in")
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xóa form Trục In: {str(e)}")
+            self.update_status("Lỗi khi xóa form Trục In")

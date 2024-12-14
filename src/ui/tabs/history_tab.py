@@ -66,9 +66,9 @@ class HistoryTab(TabBase):
         self.bang_keo_frame = ttk.Frame(self.category_notebook)
         
         # Add frames to notebook
-        self.category_notebook.add(self.bang_keo_in_frame, text="Băng keo in")
-        self.category_notebook.add(self.truc_in_frame, text="Trục in")
-        self.category_notebook.add(self.bang_keo_frame, text="Băng keo")
+        self.category_notebook.add(self.bang_keo_in_frame, text="Băng Keo In")
+        self.category_notebook.add(self.truc_in_frame, text="Trục In")
+        self.category_notebook.add(self.bang_keo_frame, text="Băng Keo")
         
         # Create treeviews
         self.bang_keo_in_tree = self.tree_manager.create_bang_keo_in_tree(self.bang_keo_in_frame)
@@ -405,7 +405,7 @@ class HistoryTab(TabBase):
                 cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
                 
                 # Assign tag based on order type for identification
-                tag = "bang_keo_in" if order_type == "Băng keo in" else "truc_in" if order_type == "Trục in" else "bang_keo"
+                tag = "bang_keo_in" if order_type == "Băng Keo In" else "truc_in" if order_type == "Trục In" else "bang_keo"
                 
                 # Insert data with proper order and formatting
                 tree.insert("", "end", values=(
@@ -419,7 +419,7 @@ class HistoryTab(TabBase):
                 ), tags=(tag, str(order.id)))
             
             # After inserting data, apply sort if a column is selected
-            sort_state = self.bang_keo_in_sort if order_type == "Băng keo in" else self.truc_in_sort if order_type == "Trục in" else self.bang_keo_sort
+            sort_state = self.bang_keo_in_sort if order_type == "Băng Keo In" else self.truc_in_sort if order_type == "Trục In" else self.bang_keo_sort
             if sort_state['column']:
                 self.sort_treeview(sort_state['column'], order_type)
             else:

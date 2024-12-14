@@ -4,7 +4,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from src.ui.forms.preview_dialog import PreviewDialog
-from src.database.database import init_db, get_session, BangKeoInOrder, TrucInOrder
+from src.database.database import init_db, get_session, BangKeoInOrder, TrucInOrder, BangKeoOrder
 from sqlalchemy import text, or_, desc
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -69,7 +69,7 @@ def get_orders_from_database(session, order_ids):
                     print(f"Found BangKeoInOrder: {order.id}")
                 else:
                     print(f"No BangKeoInOrder found with ID: {order_id}")
-            else:
+            elif order_id.startswith('TI'):
                 query = session.query(TrucInOrder).filter_by(id=order_id)
                 print(f"Executing query: {query}")
                 
@@ -78,6 +78,15 @@ def get_orders_from_database(session, order_ids):
                     print(f"Found TrucInOrder: {order.id}")
                 else:
                     print(f"No TrucInOrder found with ID: {order_id}")
+            elif order_id.startswith('B'):
+                query = session.query(BangKeoOrder).filter_by(id=order_id)
+                print(f"Executing query: {query}")
+                
+                order = query.first()
+                if order:
+                    print(f"Found BangKeoOrder: {order.id}")
+                else:
+                    print(f"No BangKeoOrder found with ID: {order_id}")
             
             if order:
                 orders.append(order)
@@ -127,13 +136,29 @@ def create_order_pdf(filename, order_data):
         bold=True
     )
 
+    # Cell styles for table
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        fontName='VuArial',
+        fontSize=9,
+        leading=12,  # Line height
+        alignment=1  # Center alignment
+    )
+
+    cell_style_left = ParagraphStyle(
+        'CellStyleLeft',
+        parent=cell_style,
+        alignment=0  # Left alignment
+    )
+
     # Add company header
     story.append(Paragraph('CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI BĂNG KEO IN VĨNH THỊNH', header_style))
     story.append(Paragraph('90E đường số 18B, P. Bình Hưng Hòa A, Q. Bình Tân, TP. HCM, Việt Nam', subheader_style))
     story.append(Paragraph('Hotline: 0903003882 - 0936380405', subheader_style))
 
-    # Add title
-    story.append(Paragraph('ĐƠN ĐẶT HÀNG', title_style))
+    # Add title based on document type
+    title = "PHIẾU GIAO HÀNG" if order_data.get('document_type') == "phieu_giao_hang" else "ĐƠN ĐẶT HÀNG"
+    story.append(Paragraph(title, title_style))
 
     # Recipient information
     recipient_data = [
@@ -152,22 +177,31 @@ def create_order_pdf(filename, order_data):
 
     # Table headers
     header_data = [
-        ["Tên Sản Phẩm", "Quy Cách", "In Ấn", "", "Đơn Vị Tính", "Đơn Giá Theo Số Lượng", "", "Tổng Cộng"],
-        ["", "", "Màu Chữ", "Màu Nền", "", "Số lượng", "Đơn Giá", ""]
+        [Paragraph("Tên Sản Phẩm", cell_style), 
+         Paragraph("Quy Cách", cell_style), 
+         Paragraph("In Ấn", cell_style), "", 
+         Paragraph("Đơn Vị Tính", cell_style), 
+         Paragraph("Đơn Giá Theo Số Lượng", cell_style), "", 
+         Paragraph("Tổng Cộng", cell_style)],
+        ["", "", 
+         Paragraph("Màu Sắc", cell_style), 
+         Paragraph("Màu Keo", cell_style), "", 
+         Paragraph("Số lượng", cell_style), 
+         Paragraph("Đơn Giá", cell_style), ""]
     ]
 
-    # Products data
+    # Products data with wrapped text
     products_data = []
     for product in order_data['products']:
         products_data.append([
-            product['product'],
-            product['specs'],
-            product['text_color'],
-            product['bg_color'],
-            product['unit'],
-            format_currency(product['quantity']),
-            format_currency(product['price']),
-            format_currency(product['total'])
+            Paragraph(product['product'], cell_style_left),  # Left align product name
+            Paragraph(product['specs'], cell_style),
+            Paragraph(product['text_color'], cell_style),
+            Paragraph(product['bg_color'], cell_style),
+            Paragraph(product['unit'], cell_style),
+            Paragraph(format_currency(product['quantity']), cell_style),
+            Paragraph(format_currency(product['price']), cell_style),
+            Paragraph(format_currency(product['total']), cell_style)
         ])
 
     # Calculate totals
@@ -179,10 +213,10 @@ def create_order_pdf(filename, order_data):
 
     # Totals data
     totals_data = [
-        ["", "", "", "", "", "", "VAT", format_currency(vat)],
-        ["", "", "", "", "", "", "Tổng Cộng", format_currency(total)],
-        ["", "", "", "", "", "", "Cọc", format_currency(deposit)],
-        ["", "", "", "", "", "", "Còn Lại", format_currency(remaining)]
+        ["", "", "", "", "", "", Paragraph("VAT", cell_style), Paragraph(format_currency(vat), cell_style)],
+        ["", "", "", "", "", "", Paragraph("Tổng Cộng", cell_style), Paragraph(format_currency(total), cell_style)],
+        ["", "", "", "", "", "", Paragraph("Cọc", cell_style), Paragraph(format_currency(deposit), cell_style)],
+        ["", "", "", "", "", "", Paragraph("Còn Lại", cell_style), Paragraph(format_currency(remaining), cell_style)]
     ]
 
     # Combine all data
@@ -191,8 +225,8 @@ def create_order_pdf(filename, order_data):
     # Column widths
     col_widths = [45 * mm, 20 * mm, 20 * mm, 20 * mm, 20 * mm, 22 * mm, 22 * mm, 25 * mm]
 
-    # Create table
-    order_table = Table(table_data, colWidths=col_widths, rowHeights=[12 * mm] * len(table_data))  # Fixed row height
+    # Create table with automatic row heights
+    order_table = Table(table_data, colWidths=col_widths)
     table_style = TableStyle([
         ('FONT', (0, 0), (-1, -1), 'VuArial', 9),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -208,10 +242,10 @@ def create_order_pdf(filename, order_data):
         ('SPAN', (5, 0), (6, 0)),
         ('ALIGN', (-2, -4), (-2, -1), 'RIGHT'),
         ('ALIGN', (-1, -4), (-1, -1), 'CENTER'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 2),  # Reduce left padding
-        ('RIGHTPADDING', (0, 0), (-1, -1), 2),  # Reduce right padding
-        ('TOPPADDING', (0, 0), (-1, -1), 2),    # Reduce top padding  
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),  # Reduce bottom padding
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),  # Adjust cell padding
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ])
     order_table.setStyle(table_style)
     story.append(order_table)
@@ -234,13 +268,23 @@ def create_order_pdf(filename, order_data):
         spaceAfter=5 * mm
     )
 
-    footer_data = [
-        [Paragraph('NGƯỜI NHẬN HÀNG', footer_left_style),
-         Paragraph('CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI\nBĂNG KEO IN VĨNH THỊNH', footer_right_style)],
-        ['', Paragraph('ĐẠI DIỆN THƯƠNG MẠI', footer_right_style)],
-        ['', Paragraph('LÝ THANH QUẾ', footer_right_style)],
-        ['', Paragraph('HP:090 300 3882', footer_right_style)]
-    ]
+    # Change footer based on document type
+    if order_data.get('document_type') == "phieu_giao_hang":
+        footer_data = [
+            [Paragraph('NGƯỜI GIAO HÀNG', footer_left_style),
+             Paragraph('NGƯỜI NHẬN HÀNG', footer_right_style)],
+            ['', ''],
+            ['', ''],
+            ['', '']
+        ]
+    else:
+        footer_data = [
+            [Paragraph('NGƯỜI NHẬN HÀNG', footer_left_style),
+             Paragraph('CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI\nBĂNG KEO IN VĨNH THỊNH', footer_right_style)],
+            ['', Paragraph('ĐẠI DIỆN THƯƠNG MẠI', footer_right_style)],
+            ['', Paragraph('LÝ THANH QUẾ', footer_right_style)],
+            ['', Paragraph('HP:090 300 3882', footer_right_style)]
+        ]
 
     footer_table = Table(footer_data, colWidths=[doc.width/2, doc.width/2])
     footer_table.setStyle(TableStyle([
@@ -254,24 +298,32 @@ def create_order_pdf(filename, order_data):
 def convert_order_to_preview_data(order):
     if isinstance(order, BangKeoInOrder):
         specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
-    else:
+    else:  # TrucInOrder or BangKeoOrder
         specs = order.quy_cach
+
+    # Get thanh_tien_ban safely
+    thanh_tien = getattr(order, 'thanh_tien_ban', None)
+    if thanh_tien is None:
+        thanh_tien = getattr(order, 'thanh_tien', 0)  # For BangKeoOrder
 
     return {
         'product': order.ten_hang,
         'specs': specs,
-        'text_color': '',  # Will be input by user
-        'bg_color': '',    # Will be input by user
-        'unit': '',     # Default, can be changed by user
+        'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',  # Use mau_sac if available
+        'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',    # Use mau_keo if available
+        'unit': 'KG' if isinstance(order, BangKeoOrder) else '',  # Default unit for BangKeoOrder is KG
         'quantity': str(order.so_luong),
         'price': str(order.don_gia_ban),
-        'total': str(order.thanh_tien_ban)
+        'total': str(thanh_tien)
     }
 
 class OrderSelectionDialog(tk.Toplevel):
     def __init__(self, parent=None):
         super().__init__(parent if parent else tk.Tk())
-        self.title("Chọn đơn hàng")
+        self.title("Chọn đơn hàng - Đơn đặt hàng")  # Set initial title with document type
+        
+        # Add document type tracking
+        self.document_type = tk.StringVar(value="don_dat_hang")  # Default is đơn đặt hàng
         
         # Add sort tracking variables
         self.sort_column = None
@@ -312,6 +364,56 @@ class OrderSelectionDialog(tk.Toplevel):
             main_container = ttk.Frame(self)
             main_container.pack(fill='both', expand=True, padx=10, pady=10)
             
+            # Document type frame
+            doc_type_frame = ttk.LabelFrame(main_container, text="Loại tài liệu")
+            doc_type_frame.pack(fill='x', pady=(0, 10))
+            
+            # Document type buttons
+            button_frame = ttk.Frame(doc_type_frame)
+            button_frame.pack(fill='x', padx=5, pady=5)
+            
+            # Button styles
+            active_style = {
+                'bg': '#4CAF50',  # Material Green
+                'fg': 'white',
+                'font': ('Segoe UI', 10, 'bold'),
+                'relief': 'raised',
+                'width': 15,
+                'height': 2
+            }
+            
+            inactive_style = {
+                'bg': '#f0f0f0',  # Light gray
+                'fg': 'black',
+                'font': ('Segoe UI', 10),
+                'relief': 'raised',
+                'width': 15,
+                'height': 2
+            }
+            
+            # Create buttons with initial style
+            self.don_dat_hang_btn = tk.Button(
+                button_frame,
+                text="Đơn đặt hàng",
+                command=lambda: self.set_document_type("don_dat_hang"),
+                cursor='hand2',
+                **active_style
+            )
+            self.don_dat_hang_btn.pack(side='left', padx=5)
+            
+            self.phieu_giao_hang_btn = tk.Button(
+                button_frame,
+                text="Phiếu giao hàng",
+                command=lambda: self.set_document_type("phieu_giao_hang"),
+                cursor='hand2',
+                **inactive_style
+            )
+            self.phieu_giao_hang_btn.pack(side='left', padx=5)
+            
+            # Store styles for later use
+            self.active_style = active_style
+            self.inactive_style = inactive_style
+            
             # Search frame
             search_frame = ttk.LabelFrame(main_container, text="Tìm kiếm")
             search_frame.pack(fill='x', pady=(0, 10))
@@ -334,7 +436,7 @@ class OrderSelectionDialog(tk.Toplevel):
             
             ttk.Label(month_container, text="Tháng:").pack(side='left', padx=5)
             self.month_var = tk.StringVar(value="Tất cả")
-            months = ["T��t cả"] + [f"Tháng {i}" for i in range(1, 13)]
+            months = ["Tất cả"] + [f"Tháng {i}" for i in range(1, 13)]
             month_cb = ttk.Combobox(month_container, textvariable=self.month_var,
                                    values=months, state="readonly", width=15)
             month_cb.pack(side='left', padx=5)
@@ -351,8 +453,10 @@ class OrderSelectionDialog(tk.Toplevel):
                            value="all", command=self.filter_orders).pack(side='left', padx=5)
             ttk.Radiobutton(filter_container, text="Băng keo in", variable=self.order_type_var, 
                            value="BK", command=self.filter_orders).pack(side='left', padx=5)
-            ttk.Radiobutton(filter_container, text="Trục in", variable=self.order_type_var, 
+            ttk.Radiobutton(filter_container, text="Trục In", variable=self.order_type_var, 
                            value="TI", command=self.filter_orders).pack(side='left', padx=5)
+            ttk.Radiobutton(filter_container, text="Băng keo", variable=self.order_type_var, 
+                           value="B", command=self.filter_orders).pack(side='left', padx=5)
             
             # Orders frame
             orders_frame = ttk.LabelFrame(main_container, text="Danh sách đơn hàng")
@@ -381,6 +485,12 @@ class OrderSelectionDialog(tk.Toplevel):
             self.tree.column('quantity', width=100)
             self.tree.column('price', width=100)
             
+            # Add tag configuration for selected items
+            self.tree.tag_configure('selected', background='#e6f3ff')
+            
+            # Bind click event
+            self.tree.bind('<Button-1>', self.on_tree_click)
+            
             # Add scrollbar
             scrollbar = ttk.Scrollbar(orders_frame, orient='vertical', command=self.tree.yview)
             self.tree.configure(yscrollcommand=scrollbar.set)
@@ -400,7 +510,7 @@ class OrderSelectionDialog(tk.Toplevel):
                            font=('TkDefaultFont', 12))  # Larger font
             
             # Create extra large buttons
-            ttk.Button(button_frame, text="Xuất đơn đặt hàng", 
+            ttk.Button(button_frame, text="Xuất đơn", 
                       command=self.confirm,
                       style='ExtraLarge.TButton').pack(side='right', padx=15)
             ttk.Button(button_frame, text="Hủy", 
@@ -523,6 +633,37 @@ class OrderSelectionDialog(tk.Toplevel):
                         f"{order.so_luong:,.0f}",
                         f"{order.don_gia_ban:,.0f}"
                     ))
+
+            if order_type == "all" or order_type == "B":
+                query = self.session.query(BangKeoOrder)\
+                    .order_by(desc(BangKeoOrder.thoi_gian))
+                
+                # Apply text search filter
+                if search_text:
+                    query = query.filter(
+                        or_(
+                            BangKeoOrder.ten_hang.ilike(f'%{search_text}%'),
+                            BangKeoOrder.ctv.ilike(f'%{search_text}%'),
+                            BangKeoOrder.id.ilike(f'%{search_text}%')
+                        )
+                    )
+                
+                bang_keo_orders = query.all()
+                
+                # Filter by month in Python
+                if selected_month != "Tất cả":
+                    month_num = int(selected_month.split()[1])
+                    bang_keo_orders = [order for order in bang_keo_orders 
+                                    if order.thoi_gian.month == month_num]
+                
+                for order in bang_keo_orders:
+                    self.tree.insert('', 'end', values=(
+                        order.id,
+                        order.thoi_gian.strftime('%d/%m/%Y'),
+                        order.ten_hang,
+                        f"{order.so_luong:,.0f}",
+                        f"{order.don_gia_ban:,.0f}"
+                    ))
             
             # After inserting all items, sort by current column if one is selected
             if self.sort_column:
@@ -548,12 +689,16 @@ class OrderSelectionDialog(tk.Toplevel):
     
     def confirm(self):
         try:
-            selected_items = self.tree.selection()
-            if not selected_items:
+            # Check if any order is selected
+            if not self.selected_orders:
                 messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một đơn hàng")
                 return
             
-            self.selected_orders = [self.tree.item(item)['values'][0] for item in selected_items]
+            # Check if document type is selected
+            if not self.document_type.get():
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn loại tài liệu (Đơn đặt hàng hoặc Phiếu giao hàng)")
+                return
+            
             self.result = True
             
             # Process the selected orders here instead of destroying the window
@@ -580,7 +725,8 @@ class OrderSelectionDialog(tk.Toplevel):
             preview_data = {
                 'customer_name': '',
                 'address': '',
-                'products': [convert_order_to_preview_data(order) for order in orders]
+                'products': [convert_order_to_preview_data(order) for order in orders],
+                'document_type': self.document_type.get()  # Pass document type to preview
             }
             
             # Show preview dialog and make it modal
@@ -591,12 +737,15 @@ class OrderSelectionDialog(tk.Toplevel):
             
             # If user confirms, show save dialog and generate PDF
             if preview.result:
+                # Get title based on document type
+                title = "Phiếu giao hàng" if self.document_type.get() == "phieu_giao_hang" else "Đơn đặt hàng"
+                
                 # Show save file dialog
                 filename = filedialog.asksaveasfilename(
                     defaultextension=".pdf",
                     filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
-                    title="Lưu đơn đặt hàng",
-                    initialfile="don_dat_hang.pdf"
+                    title=f"Lưu {title.lower()}",
+                    initialfile=f"{title.lower()}.pdf"
                 )
                 
                 if filename:  # If user didn't cancel the save dialog
@@ -661,6 +810,50 @@ class OrderSelectionDialog(tk.Toplevel):
             print(f"Error sorting treeview: {str(e)}")
             messagebox.showerror("Lỗi", f"Lỗi khi sắp xếp dữ liệu: {str(e)}")
             
+    def set_document_type(self, doc_type):
+        """Set the document type and update UI accordingly"""
+        self.document_type.set(doc_type)
+        # Update window title based on document type
+        title = "Phiếu giao hàng" if doc_type == "phieu_giao_hang" else "Đơn đặt hàng"
+        self.title(f"Chọn đơn hàng - {title}")
+        
+        # Update button styles
+        if doc_type == "phieu_giao_hang":
+            for key, value in self.active_style.items():
+                self.phieu_giao_hang_btn.configure(**{key: value})
+            for key, value in self.inactive_style.items():
+                self.don_dat_hang_btn.configure(**{key: value})
+        else:
+            for key, value in self.active_style.items():
+                self.don_dat_hang_btn.configure(**{key: value})
+            for key, value in self.inactive_style.items():
+                self.phieu_giao_hang_btn.configure(**{key: value})
+
+    def on_tree_click(self, event):
+        """Handle click event on treeview"""
+        region = self.tree.identify_region(event.x, event.y)
+        if region == "heading":
+            # If clicking on heading, let the default sort handler work
+            return
+        
+        # Get the item that was clicked
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+            
+        # Toggle selection
+        if item in self.tree.selection():
+            self.tree.selection_remove(item)
+            self.tree.item(item, tags=[])  # Remove highlight
+        else:
+            self.tree.selection_add(item)
+            self.tree.item(item, tags=['selected'])  # Add highlight
+            
+        # Update selected orders list
+        self.selected_orders = [self.tree.item(i)['values'][0] for i in self.tree.selection()]
+        
+        # Prevent default handling
+        return "break"
 
 def generate_order_form():
     try:

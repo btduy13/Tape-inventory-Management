@@ -93,7 +93,7 @@ if __name__ == "__main__":
         
         # Add report button to the main menu if it exists
         if hasattr(app, 'menu_bar'):
-            app.menu_bar.add_command(label="Xuất đơn đặt hàng", command=open_report)
+            app.menu_bar.add_command(label="Xuất Đơn Đặt Hàng / Phiếu Giao Hàng", command=open_report)
         
         def on_closing():
             try:

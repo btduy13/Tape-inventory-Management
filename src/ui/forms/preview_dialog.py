@@ -7,6 +7,7 @@ class PreviewDialog(tk.Toplevel):
         super().__init__(parent)
         self.title("Xem trước đơn hàng")
         self.order_data = order_data
+        self.document_type = order_data.get('document_type', 'don_dat_hang')  # Store document type
         
         # Remove style clam and use default system style
         style = ttk.Style(self)
@@ -71,8 +72,8 @@ class PreviewDialog(tk.Toplevel):
         headers = {
             'product': ('Tên Sản Phẩm', 300, 'w'),
             'specs': ('Quy Cách', 100, 'center'),
-            'text_color': ('Màu Chữ', 100, 'center'),
-            'bg_color': ('Màu Nền', 100, 'center'),
+            'text_color': ('Màu Sắc', 100, 'center'),
+            'bg_color': ('Màu Keo', 100, 'center'),
             'unit': ('Đơn Vị', 80, 'center'),
             'quantity': ('Số Lượng', 100, 'center'),
             'price': ('Đơn Giá', 100, 'center'),
@@ -325,7 +326,8 @@ class PreviewDialog(tk.Toplevel):
                 'products': products,
                 'total_sum': self.total_sum,
                 'vat': vat,
-                'deposit': deposit
+                'deposit': deposit,
+                'document_type': self.document_type  # Include document type in result
             }
             self.destroy()
         except ValueError as e:
@@ -361,8 +363,8 @@ class EditRowDialog(tk.Toplevel):
         fields = [
             ('Tên Sản Phẩm', 40),
             ('Quy Cách', 20),
-            ('Màu Chữ', 20),
-            ('Màu Nền', 20),
+            ('Màu Keo', 20),
+            ('Màu Săc', 20),
             ('Đơn Vị', 10),
             ('Số Lượng', 15),
             ('Đơn Giá', 15),

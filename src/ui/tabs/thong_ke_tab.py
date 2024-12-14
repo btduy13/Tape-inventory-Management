@@ -97,7 +97,7 @@ class ThongKeTab(TabBase):
         # Add Export Order button
         export_btn = ttk.Button(
             actions_frame, 
-            text="Xuất đơn đặt hàng", 
+            text="Xuất Đơn Đặt Hàng / Phiếu Giao Hàng", 
             style='Action.TButton',
             command=self.open_order_export
         )
@@ -114,14 +114,14 @@ class ThongKeTab(TabBase):
         self.bang_keo_frame = ttk.Frame(self.order_notebook)
         
         # Add frames to notebook
-        self.order_notebook.add(self.bang_keo_in_frame, text="Băng keo in")
-        self.order_notebook.add(self.truc_in_frame, text="Trục in")
-        self.order_notebook.add(self.bang_keo_frame, text="Băng keo")
+        self.order_notebook.add(self.bang_keo_in_frame, text="Băng Keo In")
+        self.order_notebook.add(self.truc_in_frame, text="Trục In")
+        self.order_notebook.add(self.bang_keo_frame, text="Băng Keo")
         
         # Create order lists
-        self.create_order_list(self.bang_keo_in_frame, "Băng keo in")
-        self.create_order_list(self.truc_in_frame, "Trục in")
-        self.create_order_list(self.bang_keo_frame, "Băng keo")
+        self.create_order_list(self.bang_keo_in_frame, "Băng Keo In")
+        self.create_order_list(self.truc_in_frame, "Trục In")
+        self.create_order_list(self.bang_keo_frame, "Băng Keo")
         
     def create_order_list(self, parent, order_type):
         """Create the section displaying the list of orders for a specific type."""
@@ -205,12 +205,12 @@ class ThongKeTab(TabBase):
         tree.bind('<Double-1>', lambda e, ot=order_type, t=tree: self.on_double_click(e, ot, t))
         
         # Store references for later use
-        if order_type == "Băng keo in":
+        if order_type == "Băng Keo In":
             self.bang_keo_in_tree = tree
             self.bang_keo_in_filter_var = filter_var
             self.bang_keo_in_search_var = search_var
             self.bang_keo_in_month_var = month_var
-        elif order_type == "Trục in":
+        elif order_type == "Trục In":
             self.truc_in_tree = tree
             self.truc_in_filter_var = filter_var
             self.truc_in_search_var = search_var
@@ -234,20 +234,20 @@ class ThongKeTab(TabBase):
         # Get today's date
         today = datetime.now().date()
         
-        # Load Băng keo in orders
+        # Load Băng Keo In orders
         bang_keo_in_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
         for order in bang_keo_in_orders:
-            self.process_order(order, "Băng keo in", today, self.bang_keo_in_tree)
+            self.process_order(order, "Băng Keo In", today, self.bang_keo_in_tree)
         
-        # Load Trục in orders
+        # Load Trục In orders
         truc_in_orders = self.parent_form.db_session.query(TrucInOrder).all()
         for order in truc_in_orders:
-            self.process_order(order, "Trục in", today, self.truc_in_tree)
+            self.process_order(order, "Trục In", today, self.truc_in_tree)
             
-        # Load Băng keo orders
+        # Load Băng Keo orders
         bang_keo_orders = self.parent_form.db_session.query(BangKeoOrder).all()
         for order in bang_keo_orders:
-            self.process_order(order, "Băng keo", today, self.bang_keo_tree)
+            self.process_order(order, "Băng Keo", today, self.bang_keo_tree)
         
         # Update dashboard labels with the latest counts and sums
         self.update_dashboard_labels()
@@ -279,7 +279,7 @@ class ThongKeTab(TabBase):
             cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
             
             # Assign tag based on order type for identification
-            tag = "bang_keo_in" if order_type == "Băng keo in" else "truc_in" if order_type == "Trục in" else "bang_keo"
+            tag = "bang_keo_in" if order_type == "Băng Keo In" else "truc_in" if order_type == "Trục In" else "bang_keo"
             
             # Insert data with proper order and formatting
             tree.insert("", "end", values=(
@@ -293,7 +293,7 @@ class ThongKeTab(TabBase):
             ), tags=(tag, str(order.id)))
         
         # After inserting data, apply sort if a column is selected
-        sort_state = self.bang_keo_in_sort if order_type == "Băng keo in" else self.truc_in_sort if order_type == "Trục in" else self.bang_keo_sort
+        sort_state = self.bang_keo_in_sort if order_type == "Băng Keo In" else self.truc_in_sort if order_type == "Trục In" else self.bang_keo_sort
         if sort_state['column']:
             self.sort_treeview(sort_state['column'], order_type)
         else:
@@ -301,11 +301,11 @@ class ThongKeTab(TabBase):
         
     def should_show_order(self, order, days_until_due, order_type):
         """Determine whether an order should be displayed based on the current filter."""
-        if order_type == "Băng keo in":
+        if order_type == "Băng Keo In":
             filter_value = self.bang_keo_in_filter_var.get()
             search_text = self.bang_keo_in_search_var.get().lower().strip()
             selected_month = self.bang_keo_in_month_var.get()
-        elif order_type == "Trục in":
+        elif order_type == "Trục In":
             filter_value = self.truc_in_filter_var.get()
             search_text = self.truc_in_search_var.get().lower().strip()
             selected_month = self.truc_in_month_var.get()
@@ -372,11 +372,11 @@ class ThongKeTab(TabBase):
     def show_update_status_window(self, order_type, order_id):
         try:
             # Get the order from database based on type
-            if order_type == "Băng keo in":
+            if order_type == "Băng Keo In":
                 order = self.parent_form.db_session.query(BangKeoInOrder).filter_by(id=order_id).first()
-            elif order_type == "Trục in":
+            elif order_type == "Trục In":
                 order = self.parent_form.db_session.query(TrucInOrder).filter_by(id=order_id).first()
-            else:  # Băng keo
+            else:  # Băng Keo
                 order = self.parent_form.db_session.query(BangKeoOrder).filter_by(id=order_id).first()
                 
             if not order:
@@ -389,6 +389,15 @@ class ThongKeTab(TabBase):
             update_window.geometry("400x300")
             update_window.transient(self.tab)
             update_window.grab_set()
+            
+            # Center the window on screen
+            window_width = 400
+            window_height = 300
+            screen_width = update_window.winfo_screenwidth()
+            screen_height = update_window.winfo_screenheight()
+            x = (screen_width - window_width) // 2
+            y = (screen_height - window_height) // 2
+            update_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
             
             # Create main frame with padding
             main_frame = ttk.Frame(update_window, padding="20")
@@ -568,10 +577,10 @@ class ThongKeTab(TabBase):
         """Sort treeview content when a column header is clicked"""
         try:
             # Get the correct tree and sort state
-            if order_type == "Băng keo in":
+            if order_type == "Băng Keo In":
                 tree = self.bang_keo_in_tree
                 sort_state = self.bang_keo_in_sort
-            elif order_type == "Trục in":
+            elif order_type == "Trục In":
                 tree = self.truc_in_tree
                 sort_state = self.truc_in_sort
             else:

@@ -12,7 +12,7 @@ class BangKeoTab(TabBase):
     def __init__(self, notebook, parent_form):
         super().__init__(parent_form)
         self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Băng keo")
+        notebook.add(self.tab, text="Băng Keo")
         self.db_session = parent_form.db_session
 
         # Create main frame with padding
@@ -45,11 +45,11 @@ class BangKeoTab(TabBase):
         main_frame.columnconfigure(3, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="BĂNG KEO", font=('Segoe UI', 16, 'bold'))
+        title_label = ttk.Label(main_frame, text="Băng Keo", font=('Segoe UI', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='ew')
 
         # Basic Information Frame
-        basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin băng keo", padding=10)
+        basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin Băng Keo", padding=10)
         basic_info_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
         self._configure_grid(basic_info_frame, 4)
 
@@ -223,10 +223,10 @@ class BangKeoTab(TabBase):
             self.update_readonly_field(self.bang_keo_tien_hoa_hong, tien_hoa_hong)
             self.update_readonly_field(self.bang_keo_loi_nhuan, loi_nhuan)
 
-            self.update_status("Tính toán băng keo thành công")
+            self.update_status("Tính toán Băng Keo thành công")
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán băng keo: {str(e)}")
-            self.update_status("Lỗi khi tính toán băng keo")
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán Băng Keo: {str(e)}")
+            self.update_status("Lỗi khi tính toán Băng Keo")
 
     def luu_bang_keo(self):
         try:
@@ -366,7 +366,7 @@ class BangKeoTab(TabBase):
 
             email_content = (
                 f"Chào bác,\n\n"
-                f"Bác làm giúp con đơn hàng băng keo \"{ten_hang}\" này nhé\n"
+                f"Bác làm giúp con đơn hàng Băng Keo \"{ten_hang}\" này nhé\n"
                 f"Màu sắc: {mau_sac}\n"
                 f"Số lượng: {so_luong} cái\n"
                 f"Quy cách: {quy_cach}\n\n"
@@ -383,21 +383,21 @@ class BangKeoTab(TabBase):
             if file_path:
                 with open(file_path, 'w', encoding='utf-8') as file:
                     file.write(email_content)
-                messagebox.showinfo("Thành công", "Đã xuất nội dung email băng keo ra file văn bản thành công!")
-                self.update_status("Đã xuất email băng keo thành công")
+                messagebox.showinfo("Thành công", "Đã xuất nội dung email Băng Keo ra file văn bản thành công!")
+                self.update_status("Đã xuất email Băng Keo thành công")
 
                 # Open the file after saving
                 os.startfile(file_path)
             else:
-                self.update_status("Xuất email băng keo bị hủy")
+                self.update_status("Xuất email Băng Keo bị hủy")
 
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email băng keo: {str(e)}")
-            self.update_status("Lỗi khi xuất email băng keo")
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email Băng Keo: {str(e)}")
+            self.update_status("Lỗi khi xuất email Băng Keo")
 
     def xoa_form_bang_keo(self):
         try:
-            if messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa toàn bộ form băng keo?"):
+            if messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa toàn bộ form Băng Keo?"):
                 fields = [
                     self.bang_keo_ten_hang, self.bang_keo_quy_cach, self.bang_keo_so_luong,
                     self.bang_keo_mau_sac, self.bang_keo_don_gia_ban,
@@ -422,7 +422,7 @@ class BangKeoTab(TabBase):
                 self.id_don_hang.delete(0, tk.END)
                 self.id_don_hang.configure(state='readonly')
 
-                self.update_status("Đã xóa form băng keo")
+                self.update_status("Đã xóa form Băng Keo")
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xóa form băng keo: {str(e)}")
-            self.update_status("Lỗi khi xóa form băng keo") 
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xóa form Băng Keo: {str(e)}")
+            self.update_status("Lỗi khi xóa form Băng Keo") 

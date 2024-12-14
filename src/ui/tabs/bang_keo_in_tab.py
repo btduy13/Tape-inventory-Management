@@ -12,7 +12,7 @@ class BangKeoInTab(TabBase):
     def __init__(self, notebook, parent_form):
         super().__init__(parent_form)
         self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Băng keo In")
+        notebook.add(self.tab, text="Băng Keo In")
         self.db_session = parent_form.db_session
 
         # Create main frame with padding
@@ -41,7 +41,7 @@ class BangKeoInTab(TabBase):
         main_frame.columnconfigure(3, weight=1)
 
         # Title
-        title_label = ttk.Label(main_frame, text="BĂNG KEO IN", font=('Segoe UI', 16, 'bold'))
+        title_label = ttk.Label(main_frame, text="Băng Keo In", font=('Segoe UI', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='ew')
 
         # Basic Information Frame
