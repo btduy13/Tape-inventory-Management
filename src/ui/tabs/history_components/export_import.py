@@ -132,13 +132,23 @@ class ExportImportManager:
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
-            else:
+            elif order_type == 'truc_in':
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng trục in \"{values[2]}\" này nhé\n"  # ten_hang
                     f"Màu sắc: {values[6]} / Màu keo: {values[7]}\n"  # mau_sac, mau_keo
                     f"Số lượng: {values[5]} cái\n"  # so_luong
-                    f"Quy cách: {int(values[4])}mm\n\n"  # quy_cach
+                    f"Quy cách: {values[4]}mm\n\n"  # quy_cach
+                    f"Cám ơn bác\n"
+                    f"Quế"
+                )
+            else:  # bang_keo
+                email_content = (
+                    f"Chào bác,\n\n"
+                    f"Bác làm giúp con đơn hàng băng keo \"{values[2]}\" này nhé\n"  # ten_hang
+                    f"Màu sắc: {values[6]}\n"  # mau_sac
+                    f"Số lượng: {values[5]} KG\n"  # so_luong
+                    f"Quy cách: {values[4]} KG\n\n"  # quy_cach
                     f"Cám ơn bác\n"
                     f"Quế"
                 )

@@ -7,7 +7,7 @@ class TreeViewManager:
     def __init__(self, parent):
         self.parent = parent
         self.DATE_FORMAT = '%d/%m/%Y'
-        self.DATETIME_FORMAT = '%d/%m/%Y %H:%M:%S'
+        
         
     def create_bang_keo_in_tree(self, frame):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
@@ -148,3 +148,75 @@ class TreeViewManager:
             else:
                 tree.tag_configure('oddrow', background='#F0F0F0')
                 tree.item(item, tags=('oddrow',)) 
+
+    def create_bang_keo_tree(self, frame):
+        columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
+                  'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach',
+                  'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'da_giao', 'da_tat_toan')
+        
+        container = ttk.Frame(frame)
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        container.grid_columnconfigure(0, weight=1)
+        container.grid_rowconfigure(0, weight=1)
+        
+        style = ttk.Style()
+        style.configure("Custom.Treeview",
+                       background="#ffffff",
+                       foreground="black",
+                       fieldbackground="#ffffff",
+                       rowheight=25)
+        style.map("Custom.Treeview",
+                 background=[("selected", "#0078D7")],
+                 foreground=[("selected", "#ffffff")])
+        
+        tree = ttk.Treeview(container, columns=columns, show='headings',
+                           selectmode='extended', style="Custom.Treeview")
+        
+        headings = {
+            'id': 'ID đơn hàng',
+            'thoi_gian': 'Thời gian', 
+            'ten_hang': 'Tên hàng',
+            'ngay_du_kien': 'Ngày dự kiến',
+            'quy_cach': 'Quy cách (KG)',
+            'so_luong': 'Số lượng',
+            'mau_sac': 'Màu sắc',
+            'don_gia_goc': 'Đơn giá gốc',
+            'thanh_tien': 'Thành tiền',
+            'don_gia_ban': 'Đơn giá bán',
+            'thanh_tien_ban': 'Thành tiền bán',
+            'cong_no_khach': 'Công nợ khách',
+            'ctv': 'CTV',
+            'hoa_hong': 'Hoa hồng',
+            'tien_hoa_hong': 'Tiền hoa hồng',
+            'loi_nhuan': 'Lợi nhuận',
+            'da_giao': 'Đã giao',
+            'da_tat_toan': 'Đã tất toán'
+        }
+        
+        for col in columns:
+            tree.heading(col, text=headings[col],
+                        command=lambda c=col: self.sort_treeview(tree, c, False))
+            # Set width for each column
+            if col == 'id':
+                tree.column(col, width=100, stretch=False)
+            elif col in ['thoi_gian', 'ngay_du_kien']:
+                tree.column(col, width=120, minwidth=120)
+            elif col == 'ten_hang':
+                tree.column(col, width=200, minwidth=150)
+            else:
+                tree.column(col, width=100, minwidth=80)
+                
+        y_scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=tree.yview)
+        x_scrollbar = ttk.Scrollbar(container, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=y_scrollbar.set, xscrollcommand=x_scrollbar.set)
+        
+        tree.grid(row=0, column=0, sticky='nsew')
+        y_scrollbar.grid(row=0, column=1, sticky='ns')
+        x_scrollbar.grid(row=1, column=0, sticky='ew')
+        
+        tree.tag_configure('oddrow', background='#F0F0F0')
+        tree.tag_configure('evenrow', background='#FFFFFF')
+        
+        return tree
+        

@@ -62,7 +62,7 @@ class BangKeoInTab(TabBase):
         # Ngày dự kiến
         ttk.Label(basic_info_frame, text="Ngày dự kiến giao:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
         self.ngay_du_kien = DateEntry(basic_info_frame, width=15, background='darkblue',
-                                    foreground='white', borderwidth=2, date_pattern='dd-mm-yyyy',
+                                    foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy',
                                     locale='vi_VN')
         self.ngay_du_kien.grid(row=1, column=1, sticky='w', padx=5, pady=5)
 

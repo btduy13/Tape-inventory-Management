@@ -288,19 +288,36 @@ class PreviewDialog(tk.Toplevel):
             products = []
             for item_id in self.tree.get_children():
                 values = self.tree.item(item_id)['values']
-                # Parse back numeric fields
-                product_total = float(values[7].replace(',', ''))
-                product_price = float(values[6].replace(',', ''))
-                products.append({
-                    'product': values[0],
-                    'specs': values[1],
-                    'text_color': values[2],
-                    'bg_color': values[3],
-                    'unit': values[4],
-                    'quantity': values[5],
-                    'price': product_price,
-                    'total': product_total
-                })
+                # Parse back numeric fields safely
+                try:
+                    # Handle both string and numeric types for total
+                    total_val = values[7]
+                    if isinstance(total_val, str):
+                        product_total = float(total_val.replace(',', ''))
+                    else:
+                        product_total = float(total_val)
+
+                    # Handle both string and numeric types for price
+                    price_val = values[6]
+                    if isinstance(price_val, str):
+                        product_price = float(price_val.replace(',', ''))
+                    else:
+                        product_price = float(price_val)
+
+                    products.append({
+                        'product': values[0],
+                        'specs': values[1],
+                        'text_color': values[2],
+                        'bg_color': values[3],
+                        'unit': values[4],
+                        'quantity': values[5],
+                        'price': product_price,
+                        'total': product_total
+                    })
+                except (ValueError, IndexError) as e:
+                    print(f"Error parsing row values: {e}")
+                    messagebox.showerror("Lỗi", f"Lỗi khi xử lý dữ liệu dòng: {str(e)}")
+                    return
                 
             self.result = {
                 'customer_name': self.customer_name.get(),
@@ -311,8 +328,12 @@ class PreviewDialog(tk.Toplevel):
                 'deposit': deposit
             }
             self.destroy()
-        except ValueError:
+        except ValueError as e:
+            print(f"Error in confirm: {e}")
             messagebox.showerror("Lỗi", "VAT và Cọc phải là số")
+        except Exception as e:
+            print(f"Unexpected error in confirm: {e}")
+            messagebox.showerror("Lỗi", f"Lỗi không mong đợi: {str(e)}")
         
     def cancel(self):
         self.result = None

@@ -109,6 +109,36 @@ class TrucInOrder(Base):
     da_giao = Column(Boolean, default=False)
     da_tat_toan = Column(Boolean, default=False)
 
+class BangKeoOrder(Base):
+    __tablename__ = 'bang_keo_orders'
+
+    id = Column(String(20), primary_key=True)
+    thoi_gian = Column(DateTime, default=datetime.now)
+    ten_hang = Column(String(255), nullable=False)
+    ngay_du_kien = Column(Date, nullable=False)
+    
+    # Thông tin cơ bản
+    quy_cach = Column(String(100))  # In KG
+    so_luong = Column(Float, nullable=False)
+    mau_sac = Column(String(100))
+    
+    # Giá cả
+    don_gia_goc = Column(Float, default=0)
+    thanh_tien = Column(Float, default=0)
+    don_gia_ban = Column(Float, nullable=False)
+    thanh_tien_ban = Column(Float, default=0)
+    cong_no_khach = Column(Float, default=0)
+    
+    # CTV và hoa hồng
+    ctv = Column(String(100))
+    hoa_hong = Column(Float, default=0)
+    tien_hoa_hong = Column(Float, default=0)
+    loi_nhuan = Column(Float, default=0)
+
+    # Trạng thái đơn hàng
+    da_giao = Column(Boolean, default=False)
+    da_tat_toan = Column(Boolean, default=False)
+
 # Thêm event listeners để tự động tạo ID
 @event.listens_for(BangKeoInOrder, 'before_insert')
 def set_bang_keo_in_id(mapper, connection, target):
@@ -121,6 +151,12 @@ def set_truc_in_id(mapper, connection, target):
     if not target.id:
         session = object_session(target)
         target.id = generate_order_id("TI", session, TrucInOrder)
+
+@event.listens_for(BangKeoOrder, 'before_insert')
+def set_bang_keo_id(mapper, connection, target):
+    if not target.id:
+        session = object_session(target)
+        target.id = generate_order_id("B", session, BangKeoOrder)
 
 # Khởi tạo backup database
 def init_backup_db():
@@ -154,7 +190,7 @@ def sync_to_backup(target, backup_session, table_class):
                         value = datetime.strptime(value, '%d/%m/%Y')
                     except ValueError:
                         try:
-                            value = datetime.strptime(value, '%d/%m/%Y %H:%M:%S')
+                            value = datetime.strptime(value, '%d/%m/%Y')
                         except ValueError:
                             continue
                 setattr(existing_record, column.name, value)
@@ -169,7 +205,7 @@ def sync_to_backup(target, backup_session, table_class):
                         value = datetime.strptime(value, '%d/%m/%Y')
                     except ValueError:
                         try:
-                            value = datetime.strptime(value, '%d/%m/%Y %H:%M:%S')
+                            value = datetime.strptime(value, '%d/%m/%Y')
                         except ValueError:
                             continue
                 setattr(backup_record, column.name, value)

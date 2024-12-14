@@ -457,7 +457,7 @@
 #date.autoformatter.day:         %Y-%m-%d
 #date.autoformatter.hour:        %m-%d %H
 #date.autoformatter.minute:      %d %H:%M
-#date.autoformatter.second:      %H:%M:%S
+#date.autoformatter.second:     
 #date.autoformatter.microsecond: %M:%S.%f
 ## The reference date for Matplotlib's internal date representation
 ## See https://matplotlib.org/stable/gallery/ticks/date_precision_and_epochs.html

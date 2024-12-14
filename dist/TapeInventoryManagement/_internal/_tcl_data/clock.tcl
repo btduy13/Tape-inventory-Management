@@ -120,7 +120,7 @@ proc ::tcl::clock::Initialize {} {
 	BCE {B.C.E.}
 	CE {C.E.}
 	DATE_FORMAT {%m/%d/%Y}
-	DATE_TIME_FORMAT {%a %b %e %H:%M:%S %Y}
+	DATE_TIME_FORMAT {%a %b %e %Y}
 	DAYS_OF_WEEK_ABBREV	{
 	    Sun Mon Tue Wed Thu Fri Sat
 	}
@@ -129,7 +129,7 @@ proc ::tcl::clock::Initialize {} {
 	}
 	GREGORIAN_CHANGE_DATE	2299161
 	LOCALE_DATE_FORMAT {%m/%d/%Y}
-	LOCALE_DATE_TIME_FORMAT {%a %b %e %H:%M:%S %Y}
+	LOCALE_DATE_TIME_FORMAT {%a %b %e %Y}
 	LOCALE_ERAS {}
 	LOCALE_NUMERALS		{
 	    00 01 02 03 04 05 06 07 08 09
@@ -2496,7 +2496,7 @@ proc ::tcl::clock::LocalizeFormat { locale format } {
     set list {
 	%% %%
 	%D %m/%d/%Y
-	%+ {%a %b %e %H:%M:%S %Z %Y}
+	%+ {%a %b %e %Z %Y}
     }
     lappend list %EY [string map $list [mc LOCALE_YEAR_FORMAT]]
     lappend list %T  [string map $list [mc TIME_FORMAT_24_SECS]]

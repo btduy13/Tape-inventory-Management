@@ -28,7 +28,7 @@ def setup_logging():
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
     
-    log_file = os.path.join(LOG_DIR, f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    log_file = os.path.join(LOG_DIR, f"app_{datetime.now().strftime('%Y%m%d')}.log")
     
     # Configure root logger
     logger = logging.getLogger()

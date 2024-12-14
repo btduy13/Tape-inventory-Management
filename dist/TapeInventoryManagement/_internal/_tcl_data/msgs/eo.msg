@@ -50,5 +50,5 @@ namespace eval ::tcl::clock {
     ::msgcat::mcset eo PM "ptm"
     ::msgcat::mcset eo DATE_FORMAT "%Y-%b-%d"
     ::msgcat::mcset eo TIME_FORMAT "%H:%M:%S"
-    ::msgcat::mcset eo DATE_TIME_FORMAT "%Y-%b-%d %H:%M:%S %z"
+    ::msgcat::mcset eo DATE_TIME_FORMAT "%Y-%b-%d %z"
 }

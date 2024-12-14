@@ -4162,8 +4162,8 @@
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\\lib\\textwrap.py',
    'PYMODULE'),
-  ('thong_ke_window',
-   'E:\\OneDrive\\Desktop\\Tape-inventory-Management\\thong_ke_window.py',
+  ('thong_ke_tab',
+   'E:\\OneDrive\\Desktop\\Tape-inventory-Management\\thong_ke_tab.py',
    'PYMODULE'),
   ('threading',
    'C:\\Program '

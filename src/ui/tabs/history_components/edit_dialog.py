@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from tkcalendar import DateEntry
-from src.database.database import BangKeoInOrder, TrucInOrder
+from src.database.database import BangKeoInOrder, TrucInOrder, BangKeoOrder
 
 class EditDialogManager:
     def __init__(self, parent):
         self.parent = parent
         self.DATE_FORMAT = '%d/%m/%Y'
-        self.DATETIME_FORMAT = '%d/%m/%Y %H:%M:%S'
+        self.DATE_FORMAT = '%d/%m/%Y'
         self.edit_entries = {}
         self.current_edit_item = None
         self.current_edit_type = None
@@ -24,8 +24,8 @@ class EditDialogManager:
                 'so_luong', 'phi_sl', 'phi_keo', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_ban', 'tien_coc',
                 'hoa_hong', 'phi_mau', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay'
             ]
-            window_title = "Chỉnh sửa đơn hàng băng keo"
-        else:
+            window_title = "Chỉnh sửa đơn hàng băng keo in"
+        elif order_type == 'truc_in':
             readonly_fields = [
                 'id',
                 'thanh_tien', 'thanh_tien_ban', 'cong_no_khach',
@@ -35,6 +35,16 @@ class EditDialogManager:
                 'so_luong', 'don_gia_ban', 'don_gia_goc', 'hoa_hong'
             ]
             window_title = "Chỉnh sửa đơn hàng trục in"
+        else:  # bang_keo
+            readonly_fields = [
+                'id',
+                'thanh_tien', 'thanh_tien_ban', 'cong_no_khach',
+                'tien_hoa_hong', 'loi_nhuan'
+            ]
+            calculation_trigger_fields = [
+                'so_luong', 'don_gia_ban', 'don_gia_goc', 'hoa_hong'
+            ]
+            window_title = "Chỉnh sửa đơn hàng băng keo"
             
         selected_item = tree.selection()
         if not selected_item:
@@ -70,8 +80,10 @@ class EditDialogManager:
         
         if order_type == 'bang_keo_in':
             self._create_bang_keo_in_form(main_frame, values, readonly_fields)
-        else:
+        elif order_type == 'truc_in':
             self._create_truc_in_form(main_frame, values, readonly_fields)
+        else:  # bang_keo
+            self._create_bang_keo_form(main_frame, values, readonly_fields)
         
         button_frame = ttk.Frame(edit_window)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
@@ -175,26 +187,67 @@ class EditDialogManager:
         self._create_field(price_frame, 'tien_hoa_hong', 'Tiền hoa hồng:', values, 4, 0, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 4, 2, readonly_fields)
         
+    def _create_bang_keo_form(self, main_frame, values, readonly_fields):
+        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
+        info_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="5 5 5 5")
+        specs_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="5 5 5 5")
+        price_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Info section
+        self._create_field(info_frame, 'thoi_gian', 'Thời gian:', values, 0, 0, readonly_fields)
+        self._create_field(info_frame, 'ten_hang', 'Tên hàng:', values, 0, 2, readonly_fields)
+        self._create_field(info_frame, 'ngay_du_kien', 'Ngày dự kiến:', values, 1, 0, readonly_fields)
+        
+        # Specs section
+        self._create_field(specs_frame, 'quy_cach', 'Quy cách (KG):', values, 0, 0, readonly_fields)
+        self._create_field(specs_frame, 'so_luong', 'Số lượng:', values, 0, 2, readonly_fields)
+        self._create_field(specs_frame, 'mau_sac', 'Màu sắc:', values, 1, 0, readonly_fields)
+        
+        # Price section
+        self._create_field(price_frame, 'don_gia_goc', 'Đơn giá gốc:', values, 0, 0, readonly_fields)
+        self._create_field(price_frame, 'thanh_tien', 'Thành tiền:', values, 0, 2, readonly_fields)
+        
+        self._create_field(price_frame, 'don_gia_ban', 'Đơn giá bán:', values, 1, 0, readonly_fields)
+        self._create_field(price_frame, 'thanh_tien_ban', 'Thành tiền bán:', values, 1, 2, readonly_fields)
+        
+        self._create_field(price_frame, 'cong_no_khach', 'Công nợ khách:', values, 2, 0, readonly_fields)
+        
+        self._create_field(price_frame, 'ctv', 'CTV:', values, 3, 0, readonly_fields)
+        self._create_field(price_frame, 'hoa_hong', 'Hoa hồng (%):', values, 3, 2, readonly_fields)
+        
+        self._create_field(price_frame, 'tien_hoa_hong', 'Tiền hoa hồng:', values, 4, 0, readonly_fields)
+        self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 4, 2, readonly_fields)
+
     def _create_field(self, parent, field_name, label_text, values, row, col, readonly_fields):
         """Create a labeled field in the edit form"""
         ttk.Label(parent, text=label_text).grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
         
         field_index = list(self.parent.bang_keo_in_tree['columns'] if self.current_edit_type == 'bang_keo_in' 
-                          else self.parent.truc_in_tree['columns']).index(field_name)
+                          else self.parent.truc_in_tree['columns'] if self.current_edit_type == 'truc_in'
+                          else self.parent.bang_keo_tree['columns']).index(field_name)
         
         if field_name in ['thoi_gian', 'ngay_du_kien']:
-            date_value = values[field_index] if values[field_index] else datetime.now().strftime(self.DATE_FORMAT)
+            date_value = values[field_index] if values[field_index] else datetime.now()
             entry = DateEntry(parent, width=15, background='darkblue',
                              foreground='white', borderwidth=2,
                              date_pattern='dd/mm/yyyy',
                              locale='vi_VN')
             try:
-                entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
-            except ValueError:
-                try:
-                    entry.set_date(datetime.strptime(date_value, self.DATETIME_FORMAT).date())
-                except ValueError:
+                if isinstance(date_value, datetime):
+                    entry.set_date(date_value.date())
+                elif isinstance(date_value, str):
+                    try:
+                        entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
+                    except ValueError:
+                        entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
+                else:
                     entry.set_date(datetime.now().date())
+            except ValueError:
+                entry.set_date(datetime.now().date())
         else:
             entry = ttk.Entry(parent, width=15)
             entry.insert(0, values[field_index] if values[field_index] is not None else '')
@@ -211,6 +264,9 @@ class EditDialogManager:
                 ],
                 'truc_in': [
                     'so_luong', 'don_gia_ban', 'don_gia_goc', 'hoa_hong'
+                ],
+                'bang_keo': [
+                    'so_luong', 'don_gia_ban', 'don_gia_goc', 'hoa_hong'
                 ]
             }[self.current_edit_type]
             
@@ -224,7 +280,8 @@ class EditDialogManager:
             # Format currency for numeric fields
             elif field_name in ['don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban',
                               'tien_coc', 'cong_no_khach', 'tien_hoa_hong', 'loi_nhuan',
-                              'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von']:
+                              'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von',
+                              'thanh_tien']:
                 entry.bind('<FocusOut>', self.format_currency_input)
         
         entry.grid(row=row, column=col+1, sticky=tk.W, padx=5, pady=5)
@@ -239,12 +296,29 @@ class EditDialogManager:
             item_values = tree.item(self.current_edit_item)['values']
             record_id = item_values[0]
             
+            numeric_fields = [
+                'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong',
+                'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von',
+                'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban',
+                'tien_coc', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan',
+                'thanh_tien'
+            ]
+            
             for column in tree['columns']:
                 if column in ['id', 'da_giao', 'da_tat_toan']:
                     continue
+                    
                 if column in ['thoi_gian', 'ngay_du_kien']:
                     date_value = self.edit_entries[column].get_date()
-                    values[column] = date_value.strftime(self.DATE_FORMAT)
+                    if column == 'thoi_gian':
+                        current_time = datetime.now().time()
+                        values[column] = datetime.combine(date_value, current_time)
+                    else:
+                        values[column] = date_value
+                elif column in numeric_fields and column in self.edit_entries:
+                    # Convert numeric values, removing commas
+                    value = self.edit_entries[column].get()
+                    values[column] = self.validate_float_input(value)
                 else:
                     if column in self.edit_entries:
                         values[column] = self.edit_entries[column].get()
@@ -252,33 +326,33 @@ class EditDialogManager:
             try:
                 if self.current_edit_type == 'bang_keo_in':
                     order = db_session.query(BangKeoInOrder).filter_by(id=record_id).first()
-                else:
+                elif self.current_edit_type == 'truc_in':
                     order = db_session.query(TrucInOrder).filter_by(id=record_id).first()
+                else:  # bang_keo
+                    order = db_session.query(BangKeoOrder).filter_by(id=record_id).first()
                     
                 if order:
                     for field, value in values.items():
                         if field not in ['id', 'da_giao', 'da_tat_toan']:
-                            if field in ['thoi_gian', 'ngay_du_kien']:
-                                setattr(order, field, datetime.strptime(value, self.DATE_FORMAT))
-                            elif field in ['quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 
-                                      'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 
-                                      'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 
-                                      'tien_coc', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan']:
-                                setattr(order, field, self.validate_float_input(value))
-                            else:
-                                setattr(order, field, value)
+                            setattr(order, field, value)
                 
                 if not order:
                     raise Exception("Không tìm thấy đơn hàng trong database")
                 
                 db_session.commit()
                 
+                # Update tree view
                 tree_values = [record_id]
                 for column in tree['columns'][1:]:
-                    if column in ['thoi_gian', 'ngay_du_kien']:
-                        tree_values.append(values[column])
+                    if column in ['thoi_gian']:
+                        tree_values.append(values[column].strftime(self.DATE_FORMAT))
+                    elif column in ['ngay_du_kien']:
+                        tree_values.append(values[column].strftime(self.DATE_FORMAT))
                     elif column in ['da_giao', 'da_tat_toan']:
                         tree_values.append(item_values[tree['columns'].index(column)])
+                    elif column in numeric_fields:
+                        # Format numeric values with commas for display
+                        tree_values.append(self.format_currency(values.get(column, 0)))
                     else:
                         tree_values.append(values.get(column, ''))
                 

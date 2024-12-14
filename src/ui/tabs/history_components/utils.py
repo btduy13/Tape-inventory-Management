@@ -41,10 +41,10 @@ class HistoryUtils:
             return 0.0
             
     @staticmethod
-    def parse_date_string(date_string, date_format='%d/%m/%Y', datetime_format='%d/%m/%Y %H:%M:%S'):
+    def parse_date_string(date_string, date_format='%d/%m/%Y', DATE_FORMAT='%d/%m/%Y'):
         try:
             if ' ' in date_string:
-                return datetime.strptime(date_string, datetime_format)
+                return datetime.strptime(date_string, DATE_FORMAT)
             return datetime.strptime(date_string, date_format)
         except ValueError as e:
             logging.error(f"Date parsing error: {str(e)}")

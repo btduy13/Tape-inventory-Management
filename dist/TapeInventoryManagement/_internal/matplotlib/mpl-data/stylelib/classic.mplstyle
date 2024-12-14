@@ -229,10 +229,10 @@ axes3d.automargin   : False   # automatically add margin when manually setting 3
 date.autoformatter.year   : %Y
 date.autoformatter.month  : %b %Y
 date.autoformatter.day    : %b %d %Y
-date.autoformatter.hour   : %H:%M:%S
-date.autoformatter.minute : %H:%M:%S.%f
-date.autoformatter.second : %H:%M:%S.%f
-date.autoformatter.microsecond : %H:%M:%S.%f
+date.autoformatter.hour   :
+date.autoformatter.minute :.%f
+date.autoformatter.second :.%f
+date.autoformatter.microsecond :.%f
 date.converter:                  auto  # 'auto', 'concise'
 
 ### TICKS

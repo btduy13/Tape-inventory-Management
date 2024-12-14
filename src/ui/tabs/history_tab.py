@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from src.ui.tabs.tab_base import TabBase
-from src.database.database import BangKeoInOrder, TrucInOrder
+from src.database.database import BangKeoInOrder, TrucInOrder, BangKeoOrder
 import logging
 from src.services.excel_import import export_template, import_data
 from src.ui.tabs.history_components.tree_views import TreeViewManager
@@ -20,7 +20,7 @@ class HistoryTab(TabBase):
         
         # Define standard date formats
         self.DATE_FORMAT = '%d/%m/%Y'
-        self.DATETIME_FORMAT = '%d/%m/%Y %H:%M:%S'
+        self.DATE_FORMAT = '%d/%m/%Y'
         
         # Create main frame with padding
         main_frame = ttk.Frame(self.tab, padding="15 15 15 15")
@@ -29,8 +29,10 @@ class HistoryTab(TabBase):
         # Initialize data storage
         self.bang_keo_in_data = []
         self.truc_in_data = []
+        self.bang_keo_data = []
         self.all_bang_keo_in_items = []
         self.all_truc_in_items = []
+        self.all_bang_keo_items = []
         
         # Initialize managers
         self.tree_manager = TreeViewManager(self)
@@ -47,42 +49,31 @@ class HistoryTab(TabBase):
 
     def build_ui(self, main_frame):
         # Title with better styling
-        title_frame = ttk.Frame(main_frame)
-        title_frame.pack(fill=tk.X, pady=(0, 10))
-        title_label = ttk.Label(title_frame, text="LỊCH SỬ ĐƠN HÀNG", font=('Arial', 16, 'bold'))
-        title_label.pack(pady=10)
+        title_label = ttk.Label(main_frame, text="LỊCH SỬ ĐƠN HÀNG", 
+                              font=('Segoe UI', 16, 'bold'))
+        title_label.pack(pady=(0, 10))
         
         # Create filter frame
         self.filter_manager.create_filter_frame(main_frame)
         
-        # Instructions frame
-        instruction_frame = ttk.LabelFrame(main_frame, text="Hướng dẫn sử dụng", padding="10 5 10 5")
-        instruction_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        instructions = [
-            "- Click chuột để chọn một dòng",
-            "- Giữ Ctrl + Click để chọn nhiều dòng riêng lẻ",
-            "- Ctrl + A để chọn tất cả các dòng",
-            "- Double-click để chỉnh sửa thông tin",
-        ]
-        
-        for instruction in instructions:
-            ttk.Label(instruction_frame, text=instruction).pack(anchor=tk.W, padx=5, pady=2)
-        
         # Create notebook for categories
         self.category_notebook = ttk.Notebook(main_frame)
-        self.category_notebook.pack(fill=tk.BOTH, expand=True, pady=5)
+        self.category_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Create frames for each category
-        self.bang_keo_in_frame = ttk.Frame(self.category_notebook, padding="5 5 5 5")
-        self.truc_in_frame = ttk.Frame(self.category_notebook, padding="5 5 5 5")
+        self.bang_keo_in_frame = ttk.Frame(self.category_notebook)
+        self.truc_in_frame = ttk.Frame(self.category_notebook)
+        self.bang_keo_frame = ttk.Frame(self.category_notebook)
         
+        # Add frames to notebook
         self.category_notebook.add(self.bang_keo_in_frame, text="Băng keo in")
         self.category_notebook.add(self.truc_in_frame, text="Trục in")
+        self.category_notebook.add(self.bang_keo_frame, text="Băng keo")
         
         # Create treeviews
         self.bang_keo_in_tree = self.tree_manager.create_bang_keo_in_tree(self.bang_keo_in_frame)
         self.truc_in_tree = self.tree_manager.create_truc_in_tree(self.truc_in_frame)
+        self.bang_keo_tree = self.tree_manager.create_bang_keo_tree(self.bang_keo_frame)
         
         # Create button frame
         button_frame = ttk.Frame(main_frame)
@@ -123,85 +114,50 @@ class HistoryTab(TabBase):
         # Bind double-click events
         self.bang_keo_in_tree.bind('<Double-1>', lambda e: self.show_edit_form('bang_keo_in'))
         self.truc_in_tree.bind('<Double-1>', lambda e: self.show_edit_form('truc_in'))
-        
+        self.bang_keo_tree.bind('<Double-1>', lambda e: self.show_edit_form('bang_keo'))
+
     def load_data_from_db(self):
         try:
-            # Load bang keo orders
+            # Load bang keo in orders
             bang_keo_in_orders = self.db_session.query(BangKeoInOrder).all()
             for order in bang_keo_in_orders:
-                order_data = {
-                    'id': order.id,
-                    'thoi_gian': order.thoi_gian.strftime(self.DATE_FORMAT),
-                    'ten_hang': order.ten_hang,
-                    'ngay_du_kien': order.ngay_du_kien.strftime(self.DATE_FORMAT),
-                    'quy_cach_mm': order.quy_cach_mm,
-                    'quy_cach_m': order.quy_cach_m,
-                    'quy_cach_mic': order.quy_cach_mic,
-                    'cuon_cay': order.cuon_cay,
-                    'so_luong': order.so_luong,
-                    'phi_sl': order.phi_sl,
-                    'mau_keo': order.mau_keo,
-                    'phi_keo': order.phi_keo,
-                    'mau_sac': order.mau_sac,
-                    'phi_mau': order.phi_mau,
-                    'phi_size': order.phi_size,
-                    'phi_cat': order.phi_cat,
-                    'don_gia_von': order.don_gia_von,
-                    'don_gia_goc': order.don_gia_goc,
-                    'thanh_tien_goc': order.thanh_tien_goc,
-                    'don_gia_ban': order.don_gia_ban,
-                    'thanh_tien_ban': order.thanh_tien_ban,
-                    'tien_coc': order.tien_coc,
-                    'cong_no_khach': order.cong_no_khach,
-                    'ctv': order.ctv,
-                    'hoa_hong': order.hoa_hong,
-                    'tien_hoa_hong': order.tien_hoa_hong,
-                    'loi_giay': order.loi_giay,
-                    'thung_bao': order.thung_bao,
-                    'loi_nhuan': order.loi_nhuan,
-                    'da_giao': order.da_giao,
-                    'da_tat_toan': order.da_tat_toan
-                }
-                self.add_order('Băng keo in', order_data)
+                self.add_order('bang_keo_in', order.__dict__)
             
             # Load truc in orders
             truc_in_orders = self.db_session.query(TrucInOrder).all()
             for order in truc_in_orders:
-                order_data = {
-                    'id': order.id,
-                    'thoi_gian': order.thoi_gian.strftime(self.DATE_FORMAT),
-                    'ten_hang': order.ten_hang,
-                    'ngay_du_kien': order.ngay_du_kien.strftime(self.DATE_FORMAT),
-                    'quy_cach': order.quy_cach,
-                    'so_luong': order.so_luong,
-                    'mau_sac': order.mau_sac,
-                    'mau_keo': order.mau_keo,
-                    'don_gia_goc': order.don_gia_goc,
-                    'thanh_tien': order.thanh_tien,
-                    'don_gia_ban': order.don_gia_ban,
-                    'thanh_tien_ban': order.thanh_tien_ban,
-                    'cong_no_khach': order.cong_no_khach,
-                    'ctv': order.ctv,
-                    'hoa_hong': order.hoa_hong,
-                    'tien_hoa_hong': order.tien_hoa_hong,
-                    'loi_nhuan': order.loi_nhuan,
-                    'da_giao': order.da_giao,
-                    'da_tat_toan': order.da_tat_toan
-                }
-                self.add_order('Trục in', order_data)
+                self.add_order('truc_in', order.__dict__)
+                
+            # Load bang keo orders
+            bang_keo_orders = self.db_session.query(BangKeoOrder).all()
+            for order in bang_keo_orders:
+                self.add_order('bang_keo', order.__dict__)
+            
+            self.update_status("Đã tải dữ liệu thành công")
+            
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tải dữ liệu: {str(e)}")
-            self.update_status("Lỗi khi tải dữ liệu từ database")
-            
+            self.update_status("Lỗi khi tải dữ liệu")
+
     def add_order(self, order_type, order_data):
-        current_time = datetime.now().strftime(self.DATE_FORMAT)
-        
-        if order_type == 'Băng keo in':
+        # Format thời gian từ datetime object sang string theo định dạng dd/mm/yyyy
+        def format_datetime(dt):
+            if isinstance(dt, str):
+                try:
+                    dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S.%f')
+                except ValueError:
+                    try:
+                        dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        return dt
+            return dt.strftime('%d/%m/%Y') if dt else ''
+
+        if order_type == 'bang_keo_in':
             values = [
                 order_data.get('id', ''),
-                order_data.get('thoi_gian', current_time),
+                format_datetime(order_data.get('thoi_gian', '')),
                 order_data.get('ten_hang', ''),
-                order_data.get('ngay_du_kien', current_time),
+                format_datetime(order_data.get('ngay_du_kien', '')),
                 order_data.get('quy_cach_mm', ''),
                 order_data.get('quy_cach_m', ''),
                 order_data.get('quy_cach_mic', ''),
@@ -233,12 +189,12 @@ class HistoryTab(TabBase):
             item = self.bang_keo_in_tree.insert('', 0, values=values)
             self.bang_keo_in_data.append(item)
             self.all_bang_keo_in_items.append((item, values))
-        else:  # Trục in
+        elif order_type == 'truc_in':
             values = [
                 order_data.get('id', ''),
-                order_data.get('thoi_gian', current_time),
+                format_datetime(order_data.get('thoi_gian', '')),
                 order_data.get('ten_hang', ''),
-                order_data.get('ngay_du_kien', current_time),
+                format_datetime(order_data.get('ngay_du_kien', '')),
                 order_data.get('quy_cach', ''),
                 order_data.get('so_luong', ''),
                 order_data.get('mau_sac', ''),
@@ -258,16 +214,43 @@ class HistoryTab(TabBase):
             item = self.truc_in_tree.insert('', 0, values=values)
             self.truc_in_data.append(item)
             self.all_truc_in_items.append((item, values))
-            
+        else:  # bang_keo
+            values = [
+                order_data.get('id', ''),
+                format_datetime(order_data.get('thoi_gian', '')),
+                order_data.get('ten_hang', ''),
+                format_datetime(order_data.get('ngay_du_kien', '')),
+                order_data.get('quy_cach', ''),
+                order_data.get('so_luong', ''),
+                order_data.get('mau_sac', ''),
+                self.utils.format_currency(order_data.get('don_gia_goc', '')),
+                self.utils.format_currency(order_data.get('thanh_tien', '')),
+                self.utils.format_currency(order_data.get('don_gia_ban', '')),
+                self.utils.format_currency(order_data.get('thanh_tien_ban', '')),
+                self.utils.format_currency(order_data.get('cong_no_khach', '')),
+                order_data.get('ctv', ''),
+                order_data.get('hoa_hong', ''),
+                self.utils.format_currency(order_data.get('tien_hoa_hong', '')),
+                self.utils.format_currency(order_data.get('loi_nhuan', '')),
+                order_data.get('da_giao', ''),
+                order_data.get('da_tat_toan', '')
+            ]
+            item = self.bang_keo_tree.insert('', 0, values=values)
+            self.bang_keo_data.append(item)
+            self.all_bang_keo_items.append((item, values))
+
     def delete_selected(self):
         try:
             current_tab = self.category_notebook.select()
             if current_tab == str(self.bang_keo_in_frame):
                 tree = self.bang_keo_in_tree
                 model = BangKeoInOrder
-            else:
+            elif current_tab == str(self.truc_in_frame):
                 tree = self.truc_in_tree
                 model = TrucInOrder
+            else:
+                tree = self.bang_keo_tree
+                model = BangKeoOrder
 
             selected_items = tree.selection()
             if not selected_items:
@@ -301,10 +284,15 @@ class HistoryTab(TabBase):
                             (item, self.bang_keo_in_tree.item(item)['values'])
                             for item in self.bang_keo_in_tree.get_children()
                         ]
-                    else:
+                    elif current_tab == str(self.truc_in_frame):
                         self.all_truc_in_items = [
                             (item, self.truc_in_tree.item(item)['values'])
                             for item in self.truc_in_tree.get_children()
+                        ]
+                    else:
+                        self.all_bang_keo_items = [
+                            (item, self.bang_keo_tree.item(item)['values'])
+                            for item in self.bang_keo_tree.get_children()
                         ]
                         
                     if hasattr(self.parent_form, 'thong_ke_tab'):
@@ -323,8 +311,10 @@ class HistoryTab(TabBase):
     def show_edit_form(self, order_type):
         if order_type == 'bang_keo_in':
             tree = self.bang_keo_in_tree
-        else:
+        elif order_type == 'truc_in':
             tree = self.truc_in_tree
+        else:
+            tree = self.bang_keo_tree
         self.edit_manager.show_edit_form(order_type, tree, self.db_session)
         
     def export_selected_to_excel(self):
@@ -332,9 +322,12 @@ class HistoryTab(TabBase):
         if current_tab == str(self.bang_keo_in_frame):
             tree = self.bang_keo_in_tree
             sheet_name = "Bang keo in"
-        else:
+        elif current_tab == str(self.truc_in_frame):
             tree = self.truc_in_tree
             sheet_name = "Truc in"
+        else:
+            tree = self.bang_keo_tree
+            sheet_name = "Bang keo"
         self.export_import_manager.export_selected_to_excel(tree, sheet_name)
         
     def export_selected_to_email(self):
@@ -342,19 +335,25 @@ class HistoryTab(TabBase):
         if current_tab == str(self.bang_keo_in_frame):
             tree = self.bang_keo_in_tree
             order_type = 'bang_keo_in'
-        else:
+        elif current_tab == str(self.truc_in_frame):
             tree = self.truc_in_tree
             order_type = 'truc_in'
+        else:
+            tree = self.bang_keo_tree
+            order_type = 'bang_keo'
         self.export_import_manager.export_selected_to_email(tree, order_type)
         
     def refresh_data(self):
         try:
             self.bang_keo_in_tree.delete(*self.bang_keo_in_tree.get_children())
             self.truc_in_tree.delete(*self.truc_in_tree.get_children())
+            self.bang_keo_tree.delete(*self.bang_keo_tree.get_children())
             self.bang_keo_in_data.clear()
             self.truc_in_data.clear()
+            self.bang_keo_data.clear()
             self.all_bang_keo_in_items.clear()
             self.all_truc_in_items.clear()
+            self.all_bang_keo_items.clear()
             
             self.load_data_from_db()
             
@@ -377,4 +376,56 @@ class HistoryTab(TabBase):
     def update_status(self, message):
         self.status_bar.config(text=message)
         self.root.after(3000, lambda: self.status_bar.config(text=""))
+
+    def process_order(self, order, order_type, today, tree):
+        """Process each order to update counters and insert into Treeview if it matches the filter."""
+        try:
+            # Calculate days until due
+            days_until_due = (order.ngay_du_kien - today).days
+            
+            # Update statistical counters based on order status
+            if not order.da_giao:
+                if 0 <= days_until_due <= 3:
+                    self.sap_den_han_count += 1
+                elif days_until_due < 0:
+                    self.qua_han_count += 1
+                    
+            if not order.da_tat_toan:
+                self.chua_tat_toan_count += 1
+                self.tong_cong_no += order.cong_no_khach
+                
+            if order.da_giao and order.da_tat_toan:
+                self.hoan_thanh_count += 1
+                
+            self.tong_doanh_thu += order.thanh_tien_ban
+            
+            # Determine if the order should be displayed based on the current filter
+            if self.should_show_order(order, days_until_due, order_type):
+                # Format công nợ khách with thousand separator
+                cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
+                
+                # Assign tag based on order type for identification
+                tag = "bang_keo_in" if order_type == "Băng keo in" else "truc_in" if order_type == "Trục in" else "bang_keo"
+                
+                # Insert data with proper order and formatting
+                tree.insert("", "end", values=(
+                    order.id,  # ID đơn hàng
+                    order.thoi_gian.strftime("%d/%m/%Y"),  # Ngày tạo đơn
+                    order.ten_hang,  # Tên đơn
+                    order.ngay_du_kien.strftime("%d/%m/%Y"),  # Ngày giao
+                    cong_no,  # Công nợ khách
+                    "✓" if order.da_giao else "",  # Đã giao
+                    "✓" if order.da_tat_toan else ""  # Đã tất toán
+                ), tags=(tag, str(order.id)))
+            
+            # After inserting data, apply sort if a column is selected
+            sort_state = self.bang_keo_in_sort if order_type == "Băng keo in" else self.truc_in_sort if order_type == "Trục in" else self.bang_keo_sort
+            if sort_state['column']:
+                self.sort_treeview(sort_state['column'], order_type)
+            else:
+                self._apply_row_colors(tree)
+                
+        except Exception as e:
+            logging.error(f"Error processing order {order.id}: {str(e)}")
+            raise
 

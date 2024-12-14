@@ -15,7 +15,7 @@ src/ui/__init__.py
 src/ui/forms/__init__.py
 src/ui/forms/donhang_form.py
 src/ui/forms/preview_dialog.py
-src/ui/forms/thong_ke_window.py
+src/ui/forms/thong_ke_tab.py
 src/ui/tabs/__init__.py
 src/ui/tabs/bang_keo_in_tab.py
 src/ui/tabs/history_tab.py

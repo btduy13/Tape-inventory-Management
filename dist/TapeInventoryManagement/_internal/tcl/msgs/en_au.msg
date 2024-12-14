@@ -3,5 +3,5 @@ namespace eval ::tcl::clock {
     ::msgcat::mcset en_AU DATE_FORMAT "%e/%m/%Y"
     ::msgcat::mcset en_AU TIME_FORMAT "%H:%M:%S"
     ::msgcat::mcset en_AU TIME_FORMAT_12 "%I:%M:%S %P %z"
-    ::msgcat::mcset en_AU DATE_TIME_FORMAT "%e/%m/%Y %H:%M:%S %z"
+    ::msgcat::mcset en_AU DATE_TIME_FORMAT "%e/%m/%Y %z"
 }
