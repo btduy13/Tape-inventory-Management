@@ -1,45 +1,47 @@
 # main.py
 from ttkthemes import ThemedTk
 from tkinter import messagebox
-from donhang_form import DonHangForm
-from splash_screen import show_splash
-from database import init_db, get_session
+from src.ui.forms.donhang_form import DonHangForm
+from src.ui.forms.splash_screen import show_splash
+from src.database.database import init_db, get_session
+from src.utils.config import (
+    DATABASE_URL, APP_NAME, APP_THEME, 
+    ICON_ICO, ICON_PNG, LOG_DIR, LOG_FORMAT, LOG_ENCODING
+)
 import os
 import sys
 import traceback
 import logging
 from datetime import datetime
 from PIL import Image, ImageTk
-from openpyxl import Workbook, load_workbook
 import codecs
 import io
 from urllib.parse import urlparse
-from report_gen import generate_order_form, OrderSelectionDialog
+from src.services.report_gen import generate_order_form, OrderSelectionDialog
 
 # Set UTF-8 encoding for stdout if it's not None
 if sys.stdout is not None:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding=LOG_ENCODING)
 
 # Set up logging
 def setup_logging():
-    log_dir = "logs"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
     
-    log_file = os.path.join(log_dir, f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    log_file = os.path.join(LOG_DIR, f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     
     # Configure root logger
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     
     # File handler with UTF-8 encoding
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    file_handler = logging.FileHandler(log_file, encoding=LOG_ENCODING)
+    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
     logger.addHandler(file_handler)
     
     # Console handler with UTF-8 encoding
-    console_handler = logging.StreamHandler(codecs.getwriter('utf-8')(sys.stdout.buffer))
-    console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    console_handler = logging.StreamHandler(codecs.getwriter(LOG_ENCODING)(sys.stdout.buffer))
+    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
     logger.addHandler(console_handler)
     
     return log_file
@@ -49,37 +51,28 @@ if __name__ == "__main__":
     # logging.info("Starting application...")
     
     try:
-        # Database connection string (using connection pooling)
-        database_url = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
-        
         print("Connecting to online PostgreSQL database (via connection pool)...")
-        engine = init_db(database_url)
+        engine = init_db(DATABASE_URL)
         print("Successfully connected to PostgreSQL!")
             
         db_session = get_session(engine)
         
-        root = ThemedTk(theme="none")
-        root.title("Phần Mềm Quản Lý Đơn Hàng")
+        root = ThemedTk(theme=APP_THEME)
+        root.title(APP_NAME)
         # logging.info("Created main window")
         
         # Set window icon
         try:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            icon_path = os.path.join(sys._MEIPASS, "assets", "icon.ico")
-            # logging.debug(f"Attempting to load icon from: {icon_path}")
-            
-            if os.path.exists(icon_path):
-                root.iconbitmap(icon_path)
+            if os.path.exists(ICON_ICO):
+                root.iconbitmap(ICON_ICO)
                 # logging.debug("Successfully loaded .ico icon")
+            elif os.path.exists(ICON_PNG):
+                icon_image = ImageTk.PhotoImage(file=ICON_PNG)
+                root.iconphoto(True, icon_image)
+                # logging.debug("Successfully loaded .png icon") 
             else:
-                png_path = os.path.join(script_dir, "assets", "icon.png")
-                if os.path.exists(png_path):
-                    icon_image = ImageTk.PhotoImage(file=png_path)
-                    root.iconphoto(True, icon_image)
-                    # logging.debug("Successfully loaded .png icon") 
-                else:
-                    # logging.warning("No icon file found")
-                    pass
+                # logging.warning("No icon file found")
+                pass
         except Exception as e:
             # logging.warning(f"Failed to load icon: {str(e)}")
             pass

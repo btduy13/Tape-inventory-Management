@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: quanlydonhang
+Version: 1.0.0
+Requires-Python: >=3.8
+Requires-Dist: ttkthemes
+Requires-Dist: pillow
+Requires-Dist: sqlalchemy
+Requires-Dist: openpyxl
+Requires-Dist: babel

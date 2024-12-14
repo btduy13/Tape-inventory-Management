@@ -1,40 +1,70 @@
-# Phần mềm Quản Lý Đơn Hàng
+# Phần Mềm Quản Lý Đơn Hàng
+
+Ứng dụng quản lý đơn hàng được xây dựng bằng Python và Tkinter.
+
+## Cấu trúc dự án
+
+```
+quanlydonhang/
+├── src/                    # Mã nguồn chính
+│   ├── ui/                 # Giao diện người dùng
+│   │   ├── forms/         # Các form chính
+│   │   └── tabs/          # Các tab trong form
+│   ├── database/          # Xử lý cơ sở dữ liệu
+│   ├── services/          # Các dịch vụ (báo cáo, nhập/xuất)
+│   └── utils/             # Tiện ích và cấu hình
+├── assets/                # Tài nguyên (hình ảnh, font)
+├── logs/                  # File logs
+├── tests/                 # Unit tests
+└── build/                 # Build scripts và cấu hình
+```
 
 ## Yêu cầu hệ thống
-- Windows 10 trở lên
-- Python 3.8 trở lên
 
-## Hướng dẫn cài đặt
+- Python 3.8 hoặc cao hơn
+- PostgreSQL
 
-### Cách 1: Sử dụng trình cài đặt tự động
-1. Tải và cài đặt Python 3.8 trở lên từ [python.org](https://www.python.org/downloads/)
-2. Chạy file `installer.py`
-3. Nhấn nút "Bắt đầu cài đặt" và chờ quá trình cài đặt hoàn tất
-4. Sau khi cài đặt xong, chạy shortcut trên Desktop để khởi động chương trình
+## Cài đặt
 
-### Cách 2: Cài đặt thủ công
-1. Tải và cài đặt Python 3.8 trở lên từ [python.org](https://www.python.org/downloads/)
-2. Mở Command Prompt với quyền Administrator
-3. Cài đặt các thư viện cần thiết:
-   ```
-   pip install -r requirements.txt
-   ```
-4. Chạy chương trình:
-   ```
-   python main.py
-   ```
+1. Clone repository:
+```bash
+git clone <repository-url>
+cd quanlydonhang
+```
 
-## Các thư viện sử dụng
-- ttkthemes: Giao diện đồ họa
-- pillow: Xử lý hình ảnh
-- sqlalchemy: Quản lý cơ sở dữ liệu
-- pandas: Xử lý dữ liệu
-- numpy: Tính toán số học
-- openpyxl: Đọc/ghi file Excel
-- babel: Định dạng số và ngày tháng
-- pywin32: Tương tác với Windows
+2. Cài đặt các thư viện phụ thuộc:
+```bash
+pip install -r requirements.txt
+```
 
-## Ghi chú
-- Nếu gặp lỗi trong quá trình cài đặt, vui lòng kiểm tra file log trong thư mục `logs`
-- Đảm bảo máy tính được kết nối internet trong quá trình cài đặt
-- Cần quyền Administrator để cài đặt các thư viện
+3. Cấu hình cơ sở dữ liệu:
+- Mở file `src/utils/config.py`
+- Cập nhật `DATABASE_URL` với thông tin kết nối PostgreSQL của bạn
+
+## Chạy ứng dụng
+
+```bash
+python main.py
+```
+
+## Build ứng dụng
+
+Để tạo file thực thi:
+```bash
+python build/build.py
+```
+
+## Tính năng
+
+- Quản lý đơn hàng
+- Xuất báo cáo
+- Nhập/xuất dữ liệu Excel
+- Theo dõi lịch sử
+
+## Đóng góp
+
+Vui lòng đọc [CONTRIBUTING.md](CONTRIBUTING.md) để biết thêm chi tiết về quy trình đóng góp.
+
+## Giấy phép
+
+[MIT License](LICENSE)

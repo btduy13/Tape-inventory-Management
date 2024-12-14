@@ -1,0 +1,15 @@
+2024-12-13 23:43:30,529 - OrderSystem - INFO - Logging system initialized
+2024-12-13 23:43:33,899 - OrderSystem - INFO - Initializing OrderSelectionDialog
+2024-12-13 23:43:33,899 - OrderSystem - INFO - Initializing database connection in dialog...
+2024-12-13 23:43:34,407 - OrderSystem - INFO - Database session created successfully in dialog
+2024-12-13 23:43:34,414 - OrderSystem - INFO - Loading orders from database
+2024-12-13 23:43:34,550 - OrderSystem - INFO - Found 89 băng keo orders and 11 trục in orders
+2024-12-13 23:43:34,551 - OrderSystem - INFO - Orders loaded successfully
+2024-12-13 23:43:34,566 - OrderSystem - INFO - OrderSelectionDialog initialized successfully
+2024-12-13 23:43:36,540 - OrderSystem - INFO - Confirming order selection
+2024-12-13 23:43:36,540 - OrderSystem - INFO - Selected orders: ['BK-12-24-085']
+2024-12-13 23:43:36,540 - OrderSystem - INFO - Initializing database connection for preview
+2024-12-13 23:43:37,136 - OrderSystem - INFO - Showing preview dialog
+2024-12-13 23:43:52,001 - OrderSystem - INFO - Generating PDF
+2024-12-13 23:43:53,322 - OrderSystem - INFO - PDF generated successfully
+2024-12-13 23:43:53,376 - OrderSystem - INFO - Order form generation completed
