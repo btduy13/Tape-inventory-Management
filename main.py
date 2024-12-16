@@ -6,18 +6,18 @@ from src.ui.forms.splash_screen import show_splash
 from src.database.database import init_db, get_session
 from src.utils.config import (
     DATABASE_URL, APP_NAME, APP_THEME, 
-    ICON_ICO, ICON_PNG, LOG_DIR, LOG_FORMAT, LOG_ENCODING
+    LOG_DIR, LOG_FORMAT, LOG_ENCODING
 )
+from src.utils.ui_utils import set_window_icon, center_window
 import os
 import sys
 import traceback
 import logging
 from datetime import datetime
-from PIL import Image, ImageTk
 import codecs
 import io
 from urllib.parse import urlparse
-from src.services.report_gen import generate_order_form, OrderSelectionDialog
+from src.services.report_gen import OrderSelectionDialog
 
 # Set UTF-8 encoding for stdout if it's not None
 if sys.stdout is not None:
@@ -47,9 +47,6 @@ def setup_logging():
     return log_file
 
 if __name__ == "__main__":
-    # log_file = setup_logging()
-    # logging.info("Starting application...")
-    
     try:
         print("Connecting to online PostgreSQL database (via connection pool)...")
         engine = init_db(DATABASE_URL)
@@ -59,29 +56,18 @@ if __name__ == "__main__":
         
         root = ThemedTk(theme=APP_THEME)
         root.title(APP_NAME)
-        # logging.info("Created main window")
         
         # Set window icon
-        try:
-            if os.path.exists(ICON_ICO):
-                root.iconbitmap(ICON_ICO)
-                # logging.debug("Successfully loaded .ico icon")
-            elif os.path.exists(ICON_PNG):
-                icon_image = ImageTk.PhotoImage(file=ICON_PNG)
-                root.iconphoto(True, icon_image)
-                # logging.debug("Successfully loaded .png icon") 
-            else:
-                # logging.warning("No icon file found")
-                pass
-        except Exception as e:
-            # logging.warning(f"Failed to load icon: {str(e)}")
-            pass
-            
-        # show_splash(root)
-        # logging.info("Showed splash screen")
+        set_window_icon(root)
+        
+        # Set window size and position
+        window_width = 1024
+        window_height = 850
+        center_window(root, window_width, window_height)
+        
+        root.minsize(800, 600)  # Set minimum size
         
         app = DonHangForm(root, db_session)
-        # logging.info("Created main form")
         
         # Add report generation to the main window
         def open_report():
@@ -97,22 +83,16 @@ if __name__ == "__main__":
         
         def on_closing():
             try:
-                # logging.info("Application closing...")
                 db_session.close()
-                # logging.info("Database session closed")
                 root.quit()
             except Exception as e:
-                # logging.error(f"Error during shutdown: {str(e)}")
                 root.quit()
             
         root.protocol("WM_DELETE_WINDOW", on_closing)
-        
-        # logging.info("Starting main loop")
         root.mainloop()
         
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}\n\nStack trace:\n{traceback.format_exc()}"
-        # logging.error(f"Critical error: {str(e)}\n{traceback.format_exc()}")
         messagebox.showerror("Lỗi", error_msg)
         
 

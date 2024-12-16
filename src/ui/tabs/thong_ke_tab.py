@@ -5,6 +5,8 @@ from src.database.database import BangKeoInOrder, TrucInOrder, BangKeoOrder
 from src.ui.tabs.tab_base import TabBase
 import logging
 from src.services.report_gen import OrderSelectionDialog
+from src.database.database import get_session
+from src.utils.ui_utils import set_window_icon, center_window
 
 class ThongKeTab(TabBase):
     def __init__(self, notebook, parent):
@@ -69,7 +71,7 @@ class ThongKeTab(TabBase):
         self.chua_tat_toan_label.pack(anchor=tk.W, padx=5, pady=2)
         
         # Completed orders
-        self.hoan_thanh_label = ttk.Label(status_frame, text="Đã hoàn thành: 0", foreground="green")
+        self.hoan_thanh_label = ttk.Label(status_frame, text="Đã hoàn th��nh: 0", foreground="green")
         self.hoan_thanh_label.pack(anchor=tk.W, padx=5, pady=2)
         
         # Financial Info Frame
@@ -223,34 +225,56 @@ class ThongKeTab(TabBase):
         
     def load_data(self, order_type=None):
         """Load data from the database and populate the Treeviews."""
-        # Reset all counters
-        self.reset_counters()
-        
-        # Clear existing data in all Treeviews
-        for tree in [self.bang_keo_in_tree, self.truc_in_tree, self.bang_keo_tree]:
-            for item in tree.get_children():
-                tree.delete(item)
-        
-        # Get today's date
-        today = datetime.now().date()
-        
-        # Load Băng Keo In orders
-        bang_keo_in_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
-        for order in bang_keo_in_orders:
-            self.process_order(order, "Băng Keo In", today, self.bang_keo_in_tree)
-        
-        # Load Trục In orders
-        truc_in_orders = self.parent_form.db_session.query(TrucInOrder).all()
-        for order in truc_in_orders:
-            self.process_order(order, "Trục In", today, self.truc_in_tree)
+        try:
+            # Reset all counters
+            self.reset_counters()
             
-        # Load Băng Keo orders
-        bang_keo_orders = self.parent_form.db_session.query(BangKeoOrder).all()
-        for order in bang_keo_orders:
-            self.process_order(order, "Băng Keo", today, self.bang_keo_tree)
-        
-        # Update dashboard labels with the latest counts and sums
-        self.update_dashboard_labels()
+            # Clear existing data in all Treeviews
+            for tree in [self.bang_keo_in_tree, self.truc_in_tree, self.bang_keo_tree]:
+                for item in tree.get_children():
+                    tree.delete(item)
+            
+            # Get today's date
+            today = datetime.now().date()
+            
+            try:
+                # Thử query database
+                bang_keo_in_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
+                truc_in_orders = self.parent_form.db_session.query(TrucInOrder).all()
+                bang_keo_orders = self.parent_form.db_session.query(BangKeoOrder).all()
+            except Exception as db_error:
+                # Nếu có lỗi database, thử tạo session mới
+                logging.error(f"Database error: {str(db_error)}")
+                self.parent_form.db_session.rollback()
+                # Tạo session mới
+                self.parent_form.db_session = get_session(self.parent_form.db_session.bind)
+                # Thử query lại
+                bang_keo_in_orders = self.parent_form.db_session.query(BangKeoInOrder).all()
+                truc_in_orders = self.parent_form.db_session.query(TrucInOrder).all()
+                bang_keo_orders = self.parent_form.db_session.query(BangKeoOrder).all()
+            
+            # Load Băng Keo In orders
+            for order in bang_keo_in_orders:
+                self.process_order(order, "Băng Keo In", today, self.bang_keo_in_tree)
+            
+            # Load Trục In orders
+            for order in truc_in_orders:
+                self.process_order(order, "Trục In", today, self.truc_in_tree)
+                
+            # Load Băng Keo orders
+            for order in bang_keo_orders:
+                self.process_order(order, "Băng Keo", today, self.bang_keo_tree)
+            
+            # Update dashboard labels with the latest counts and sums
+            self.update_dashboard_labels()
+            
+        except Exception as e:
+            logging.error(f"Error loading data: {str(e)}")
+            messagebox.showerror("Lỗi", 
+                               "Có lỗi xảy ra khi tải dữ liệu. Hệ thống sẽ thử tải lại.\n" + 
+                               f"Chi tiết lỗi: {str(e)}")
+            # Thử tải lại dữ liệu một lần nữa sau 1 giây
+            self.tab.after(1000, self.load_data)
         
     def process_order(self, order, order_type, today, tree):
         """Process each order to update counters and insert into Treeview if it matches the filter."""
@@ -386,18 +410,17 @@ class ThongKeTab(TabBase):
             # Create update window
             update_window = tk.Toplevel(self.tab)
             update_window.title("Cập nhật trạng thái đơn hàng")
-            update_window.geometry("400x300")
-            update_window.transient(self.tab)
-            update_window.grab_set()
             
-            # Center the window on screen
+            # Set window icon
+            set_window_icon(update_window)
+            
+            # Center window
             window_width = 400
             window_height = 300
-            screen_width = update_window.winfo_screenwidth()
-            screen_height = update_window.winfo_screenheight()
-            x = (screen_width - window_width) // 2
-            y = (screen_height - window_height) // 2
-            update_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+            center_window(update_window, window_width, window_height)
+            
+            update_window.transient(self.tab)
+            update_window.grab_set()
             
             # Create main frame with padding
             main_frame = ttk.Frame(update_window, padding="20")

@@ -48,5 +48,5 @@ namespace eval ::tcl::clock {
     ::msgcat::mcset fr CE "ap. J.-C."
     ::msgcat::mcset fr DATE_FORMAT "%e %B %Y"
     ::msgcat::mcset fr TIME_FORMAT "%H:%M:%S"
-    ::msgcat::mcset fr DATE_TIME_FORMAT "%e %B %Y %z"
+    ::msgcat::mcset fr DATE_TIME_FORMAT "%e %B %Y %H:%M:%S %z"
 }
