@@ -16,13 +16,16 @@ def build_exe():
     hidden_imports = [
         'babel.numbers',
         'sqlalchemy.sql.default_comparator',
-        'PIL._tkinter_finder'
+        'PIL._tkinter_finder',
+        'ttkthemes',
+        'sqlalchemy.ext.baked',
+        'sqlalchemy.ext.declarative'
     ]
     
     # Các data files cần bundle
     datas = [
-        os.path.join('assets', '*'),  # Copy thư mục assets
-        os.path.join('theme', '*'),   # Copy thư mục theme
+        ('assets', 'assets'),  # Copy thư mục assets
+        ('theme', 'theme'),    # Copy thư mục theme
     ]
     
     # Các options cho PyInstaller
@@ -33,6 +36,7 @@ def build_exe():
         '--windowed',                     # Không hiện console window
         f'--icon={icon_path}',            # Icon cho ứng dụng
         '--clean',                        # Clean cache
+        '--noconfirm',                    # Không hỏi khi ghi đè
     ]
     
     # Thêm hidden imports
@@ -40,15 +44,12 @@ def build_exe():
         options.append(f'--hidden-import={hidden_import}')
     
     # Thêm data files
-    for data in datas:
-        options.append(f'--add-data={data}:.')
+    for src, dst in datas:
+        if os.path.exists(src):
+            options.append(f'--add-data={src};{dst}')
+        else:
+            print(f"Warning: {src} directory not found")
     
-    # Thêm các options khác
-    options.extend([
-        '--uac-admin',                    # Yêu cầu quyền admin khi cài đặt
-        '--noconfirm',                    # Không hỏi khi ghi đè
-    ])
-
     # Thêm options cho debug nếu cần
     if '--debug' in sys.argv:
         options.extend([
