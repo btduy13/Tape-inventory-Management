@@ -388,6 +388,14 @@ class OrderSelectionDialog(tk.Toplevel):
         self.transient(parent if parent else None)
         self.grab_set()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
+        
+        # Initialize selected_orders list at the start
+        self.selected_orders = []
+        
+        # Configure tag styles once at initialization
+        self.tree.tag_configure('evenrow', background='#FFFFFF')
+        self.tree.tag_configure('oddrow', background='#F0F0F0')
+        self.tree.tag_configure('selected', background='#e6f3ff')
 
     def show_loading(self, show=True):
         """Show or hide loading indicator"""
@@ -441,15 +449,13 @@ class OrderSelectionDialog(tk.Toplevel):
             if self.current_task and self.current_task.is_cancelled:
                 return
 
+            # Store current selections before filtering
+            current_selections = self.selected_orders.copy()
+            
             search_text = self.search_var.get().lower().strip()
             order_type = self.order_type_var.get()
             selected_month = self.month_var.get()
             
-            # Store currently selected order IDs
-            if not hasattr(self, 'selected_orders'):
-                self.selected_orders = []
-
-            # Use after() to update UI from background thread
             self.after(0, lambda: self.tree.delete(*self.tree.get_children()))
             
             # Get orders from database based on type
@@ -521,7 +527,7 @@ class OrderSelectionDialog(tk.Toplevel):
                 
                 orders.extend(bang_keo_orders)
 
-            # Update UI in batches to maintain responsiveness
+            # Update UI in batches
             batch_size = 50
             for i in range(0, len(orders), batch_size):
                 if self.current_task and self.current_task.is_cancelled:
@@ -529,9 +535,17 @@ class OrderSelectionDialog(tk.Toplevel):
                     
                 batch = orders[i:i + batch_size]
                 self.after(0, lambda b=batch: self.insert_orders_batch(b))
-                
-            # After all batches are inserted, update sorting and colors
-            self.after(0, lambda: self.finalize_filter_update())
+            
+            # Important: Restore selections after all batches are inserted
+            def restore_selections():
+                for item in self.tree.get_children():
+                    item_id = self.tree.item(item)['values'][0]
+                    if item_id in current_selections:
+                        self.tree.selection_add(item)
+                        self.tree.item(item, tags=['selected'])
+            
+            # Schedule the selection restoration after the batches are inserted
+            self.after(100, restore_selections)
             
         except Exception as e:
             self.after(0, lambda: messagebox.showerror("Lỗi", f"Lỗi khi lọc đơn hàng: {str(e)}"))
@@ -548,27 +562,13 @@ class OrderSelectionDialog(tk.Toplevel):
                 f"{order.so_luong:,.0f}",
                 f"{order.don_gia_ban:,.0f}"
             ))
+            
+            # Apply initial coloring
             if order.id in self.selected_orders:
                 self.tree.selection_add(item)
                 self.tree.item(item, tags=['selected'])
-
-    def _apply_row_colors(self):
-        """Apply alternating row colors to tree while preserving selections"""
-        items = self.tree.get_children()
-        selected_ids = [self.tree.item(item)['values'][0] for item in self.tree.selection()]
-        
-        # Configure tag styles if not already configured
-        self.tree.tag_configure('evenrow', background='#FFFFFF')
-        self.tree.tag_configure('oddrow', background='#F0F0F0')
-        self.tree.tag_configure('selected', background='#e6f3ff')
-        
-        for i, item in enumerate(items):
-            # Check if item is selected
-            if self.tree.item(item)['values'][0] in selected_ids:
-                self.tree.item(item, tags=['selected'])
             else:
-                # Apply alternating row colors for non-selected items
-                if i % 2 == 0:
+                if len(self.tree.get_children()) % 2 == 0:
                     self.tree.item(item, tags=['evenrow'])
                 else:
                     self.tree.item(item, tags=['oddrow'])
@@ -590,7 +590,8 @@ class OrderSelectionDialog(tk.Toplevel):
             if self.current_task and self.current_task.is_cancelled:
                 return
 
-            selected_ids = [self.tree.item(item)['values'][0] for item in self.tree.selection()]
+            # Store current selections
+            current_selections = self.selected_orders.copy() if hasattr(self, 'selected_orders') else []
             
             self.after(0, lambda: self.tree.delete(*self.tree.get_children()))
             
@@ -598,6 +599,7 @@ class OrderSelectionDialog(tk.Toplevel):
             orders = []
             orders.extend(self.session.query(BangKeoInOrder).order_by(desc(BangKeoInOrder.thoi_gian)).all())
             orders.extend(self.session.query(TrucInOrder).order_by(desc(TrucInOrder.thoi_gian)).all())
+            orders.extend(self.session.query(BangKeoOrder).order_by(desc(BangKeoOrder.thoi_gian)).all())
             
             # Update UI in batches
             batch_size = 50
@@ -608,8 +610,11 @@ class OrderSelectionDialog(tk.Toplevel):
                 batch = orders[i:i + batch_size]
                 self.after(0, lambda b=batch: self.insert_orders_batch(b))
             
-            # Update selected_orders list
-            self.selected_orders = selected_ids
+            # Restore selections after loading
+            self.selected_orders = current_selections
+            
+            # Apply colors and restore selections
+            self.after(0, lambda: self.finalize_filter_update())
             
         except Exception as e:
             self.after(0, lambda: messagebox.showerror("Lỗi", f"Không thể tải danh sách đơn hàng: {str(e)}"))
@@ -953,30 +958,59 @@ class OrderSelectionDialog(tk.Toplevel):
             # If clicking on heading, let the default sort handler work
             return
         
-        # Get the item that was clicked
         item = self.tree.identify_row(event.y)
         if not item:
             return
-            
+        
         # Toggle selection
         if item in self.tree.selection():
             self.tree.selection_remove(item)
-            self.tree.item(item, tags=[])  # Remove highlight
+            self.tree.item(item, tags=[])
+            # Remove from selected_orders
+            item_id = self.tree.item(item)['values'][0]
+            if item_id in self.selected_orders:
+                self.selected_orders.remove(item_id)
         else:
             self.tree.selection_add(item)
-            self.tree.item(item, tags=['selected'])  # Add highlight
-            
-        # Update selected orders list
-        self.selected_orders = [self.tree.item(i)['values'][0] for i in self.tree.selection()]
+            self.tree.item(item, tags=['selected'])
+            # Add to selected_orders
+            item_id = self.tree.item(item)['values'][0]
+            if item_id not in self.selected_orders:
+                self.selected_orders.append(item_id)
         
-        # Prevent default handling
         return "break"
 
     def on_order_type_change(self, *args):
         """Handle changes in order type radio buttons"""
-        # Store current selections before filtering
-        self.selected_orders = [self.tree.item(item)['values'][0] for item in self.tree.selection()]
+        # No need to update selected_orders here as it's maintained globally
         self.filter_orders()
+
+    def filter_orders(self):
+        """Filter orders based on the selected order type and other criteria."""
+        # This method should encapsulate the filtering logic that was previously triggered
+        # directly in the `do_filter_orders` method. Now, it just needs to call that method.
+        self.queue_background_task('filter')
+
+    def _apply_row_colors(self):
+        """Apply alternating row colors to tree while preserving selections"""
+        items = self.tree.get_children()
+        selected_ids = [self.tree.item(item)['values'][0] for item in self.tree.selection()]
+        
+        # Configure tag styles if not already configured
+        self.tree.tag_configure('evenrow', background='#FFFFFF')
+        self.tree.tag_configure('oddrow', background='#F0F0F0')
+        self.tree.tag_configure('selected', background='#e6f3ff')
+        
+        for i, item in enumerate(items):
+            # Check if item is selected
+            if self.tree.item(item)['values'][0] in selected_ids:
+                self.tree.item(item, tags=['selected'])
+            else:
+                # Apply alternating row colors for non-selected items
+                if i % 2 == 0:
+                    self.tree.item(item, tags=['evenrow'])
+                else:
+                    self.tree.item(item, tags=['oddrow'])
 
 def generate_order_form():
     try:
