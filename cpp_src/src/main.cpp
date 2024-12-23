@@ -1,25 +1,32 @@
 #include <QApplication>
 #include <QMessageBox>
-#include "MainWindow.hpp"
+#include "ui/MainWindow.hpp"
+#include "database/Database.hpp"
+#include <exception>
+#include <memory>
 
 int main(int argc, char *argv[]) {
     try {
         QApplication app(argc, argv);
         
-        // Set application properties
+        // Set application information
         QApplication::setApplicationName("Tape Inventory Management");
-        QApplication::setApplicationVersion("1.0.0");
+        QApplication::setApplicationVersion("1.0");
+        QApplication::setOrganizationName("TapeInventory");
+        
+        // Initialize database connection pool
+        auto& pool = TapeInventory::Database::ConnectionPool::getInstance();
         
         // Create and show main window
-        MainWindow mainWindow;
-        mainWindow.resize(1024, 850);
-        mainWindow.setMinimumSize(800, 600);
+        TapeInventory::UI::MainWindow mainWindow;
         mainWindow.show();
         
         return app.exec();
+        
     } catch (const std::exception& e) {
-        QMessageBox::critical(nullptr, "Error", 
-            QString("An unexpected error occurred: %1").arg(e.what()));
+        QMessageBox::critical(nullptr, 
+            QObject::tr("Critical Error"),
+            QObject::tr("Application failed to start: %1").arg(e.what()));
         return 1;
     }
 } 
