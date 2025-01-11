@@ -83,16 +83,24 @@ if __name__ == "__main__":
         
         def on_closing():
             try:
-                db_session.close()
+                if db_session:
+                    # Rollback any pending transactions
+                    db_session.rollback()
+                    db_session.close()
                 root.quit()
             except Exception as e:
+                logging.error(f"Error during cleanup: {str(e)}")
                 root.quit()
             
         root.protocol("WM_DELETE_WINDOW", on_closing)
         root.mainloop()
         
     except Exception as e:
+        if 'db_session' in locals():
+            try:
+                db_session.rollback()
+                db_session.close()
+            except:
+                pass
         error_msg = f"Unexpected error: {str(e)}\n\nStack trace:\n{traceback.format_exc()}"
         messagebox.showerror("Lỗi", error_msg)
-        
-

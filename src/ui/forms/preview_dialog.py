@@ -175,39 +175,69 @@ class PreviewDialog(tk.Toplevel):
         self.geometry(f'{final_width}x{final_height}+{x}+{y}')
         
     def format_currency(self, value):
-        # Format currency with commas and no decimal places
-        return "{:,.0f}".format(value)
+        """Format currency value with proper error handling."""
+        try:
+            # Handle string input with possible commas
+            if isinstance(value, str):
+                value = float(value.replace(',', ''))
+            # Handle None or invalid values
+            if value is None:
+                return "0"
+            # Convert to float and format
+            return "{:,.0f}".format(float(value))
+        except (ValueError, TypeError, AttributeError):
+            return "0"
 
     def format_cell_text(self, text):
         """Format long text into multiple lines if needed."""
-        if not text:
-            return text
-        words = str(text).split()
-        lines = []
-        current_line = []
-        max_chars = 20
-        
-        for word in words:
-            current_line.append(word)
-            if len(' '.join(current_line)) > max_chars:
-                if len(current_line) > 1:
-                    lines.append(' '.join(current_line[:-1]))
-                    current_line = [word]
-                else:
-                    lines.append(word)
-                    current_line = []
-                    
-        if current_line:
-            lines.append(' '.join(current_line))
+        try:
+            # Handle None, numeric, and empty values
+            if text is None:
+                return ""
             
-        result = '\n'.join(lines)
-        
-        if result.count('\n') > 0:
-            style = ttk.Style()
-            required_height = (result.count('\n') + 1) * 20
-            style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
-        
-        return result
+            # Convert numeric values to string without decimal places if they're whole numbers
+            if isinstance(text, (int, float)):
+                if float(text).is_integer():
+                    result = str(int(text))
+                else:
+                    result = str(text)
+                return result
+                
+            # Convert to string and handle empty values
+            text = str(text).strip()
+            if not text:
+                return ""
+                
+            words = text.split()
+            lines = []
+            current_line = []
+            max_chars = 20
+            
+            for word in words:
+                current_line.append(word)
+                if len(' '.join(current_line)) > max_chars:
+                    if len(current_line) > 1:
+                        lines.append(' '.join(current_line[:-1]))
+                        current_line = [word]
+                    else:
+                        lines.append(word)
+                        current_line = []
+                        
+            if current_line:
+                lines.append(' '.join(current_line))
+                
+            result = '\n'.join(lines)
+            
+            if result.count('\n') > 0:
+                style = ttk.Style()
+                required_height = (result.count('\n') + 1) * 20
+                style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
+            
+            return result
+        except (ValueError, TypeError, AttributeError):
+            if isinstance(text, (int, float)):
+                return str(text)
+            return ""
         
     def reset_row_height(self):
         style = ttk.Style()
@@ -224,33 +254,37 @@ class PreviewDialog(tk.Toplevel):
             price_val = 0.0
             total_val = 0.0
         
-        formatted_values = [
-            self.format_cell_text(values[0]),
-            self.format_cell_text(values[1]),
-            self.format_cell_text(values[2]),
-            self.format_cell_text(values[3]),
-            values[4],
-            values[5],
-            self.format_currency(price_val),
-            self.format_currency(total_val)
-        ]
-        
-        self.tree.item(item_id, values=formatted_values)
-        
-        needs_expansion = any(
-            str(val).count('\n') > 0 
-            for val in formatted_values[:4]
-        )
-        
-        style = ttk.Style()
-        if needs_expansion:
-            max_lines = max(str(val).count('\n') for val in formatted_values[:4]) + 1
-            required_height = max_lines * 20
-            style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
-        else:
-            style.configure("PreviewDialog.Treeview", rowheight=self.default_row_height)
-        
-        self.update_totals()
+        try:
+            formatted_values = [
+                self.format_cell_text(values[0]),
+                self.format_cell_text(values[1]),
+                self.format_cell_text(values[2]),
+                self.format_cell_text(values[3]),
+                values[4],
+                values[5],
+                self.format_currency(price_val),
+                self.format_currency(total_val)
+            ]
+            
+            self.tree.item(item_id, values=formatted_values)
+            
+            needs_expansion = any(
+                str(val).count('\n') > 0 
+                for val in formatted_values[:4]
+            )
+            
+            style = ttk.Style()
+            if needs_expansion:
+                max_lines = max(str(val).count('\n') for val in formatted_values[:4]) + 1
+                required_height = max_lines * 20
+                style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
+            else:
+                style.configure("PreviewDialog.Treeview", rowheight=self.default_row_height)
+            
+            self.update_totals()
+            
+        except Exception as e:
+            raise
 
     def update_totals(self):
         # Recalculate total after update

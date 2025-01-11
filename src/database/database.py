@@ -176,4 +176,11 @@ def init_db(database_url):
 def get_session(engine):
     """Create a new session"""
     Session = sessionmaker(bind=engine)
-    return Session() 
+    session = Session()
+    
+    # Wrap the session in a try-except
+    try:
+        return session
+    except:
+        session.rollback()
+        raise 

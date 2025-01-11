@@ -96,6 +96,78 @@ def get_orders_from_database(session, order_ids):
     
     return orders
 
+def convert_order_to_preview_data(order):
+    # Handle different order types
+    if isinstance(order, BangKeoInOrder):
+        try:
+            # For BangKeoInOrder, construct specs from individual components
+            specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
+        except (ValueError, TypeError, AttributeError):
+            specs = ""
+        text_color = str(order.mau_sac) if order.mau_sac else ''
+        bg_color = str(order.mau_keo) if order.mau_keo else ''
+        unit = 'Cuộn'
+    elif isinstance(order, TrucInOrder):
+        # For TrucInOrder, handle quy_cach which might be numeric
+        try:
+            if isinstance(order.quy_cach, (int, float)):
+                specs = str(int(order.quy_cach))  # Convert numeric to string without decimal
+            else:
+                specs = str(order.quy_cach) if order.quy_cach else ''
+        except (ValueError, TypeError, AttributeError):
+            specs = ""
+        text_color = str(order.mau_sac) if order.mau_sac else ''
+        bg_color = str(order.mau_keo) if order.mau_keo else ''
+        unit = 'Cái'
+    elif isinstance(order, BangKeoOrder):
+        # For BangKeoOrder
+        try:
+            if isinstance(order.quy_cach, (int, float)):
+                specs = str(int(order.quy_cach))  # Convert numeric to string without decimal
+            else:
+                specs = str(order.quy_cach) if order.quy_cach else ''
+        except (ValueError, TypeError, AttributeError):
+            specs = ""
+        text_color = str(order.mau_sac) if order.mau_sac else ''
+        bg_color = ''  # BangKeoOrder doesn't have mau_keo
+        unit = 'KG'
+    else:
+        raise ValueError(f"Unknown order type: {type(order)}")
+
+    # Get thanh_tien_ban safely with proper error handling
+    try:
+        if hasattr(order, 'thanh_tien_ban') and order.thanh_tien_ban is not None:
+            total = float(order.thanh_tien_ban)
+        elif hasattr(order, 'thanh_tien') and order.thanh_tien is not None:
+            total = float(order.thanh_tien)
+        else:
+            total = 0
+    except (ValueError, TypeError):
+        total = 0
+
+    # Ensure numeric values are properly formatted with error handling
+    try:
+        quantity = float(order.so_luong) if order.so_luong is not None else 0
+    except (ValueError, TypeError):
+        quantity = 0
+
+    try:
+        price = float(order.don_gia_ban) if order.don_gia_ban is not None else 0
+    except (ValueError, TypeError):
+        price = 0
+
+    # Ensure all values are strings
+    return {
+        'product': str(order.ten_hang) if order.ten_hang else '',
+        'specs': str(specs),  # Ensure specs is a string
+        'text_color': str(text_color) if text_color else '',
+        'bg_color': str(bg_color) if bg_color else '',
+        'unit': str(unit),
+        'quantity': str(quantity),
+        'price': str(price),
+        'total': str(total)
+    }
+
 def create_order_pdf(filename, order_data):
     doc = SimpleDocTemplate(
         filename,
@@ -107,7 +179,7 @@ def create_order_pdf(filename, order_data):
     )
 
     story = []
-
+    
     # Styles
     header_style = ParagraphStyle(
         'HeaderStyle',
@@ -192,17 +264,22 @@ def create_order_pdf(filename, order_data):
 
     # Products data with wrapped text
     products_data = []
-    for product in order_data['products']:
-        products_data.append([
-            Paragraph(product['product'], cell_style_left),  # Left align product name
-            Paragraph(product['specs'], cell_style),
-            Paragraph(product['text_color'], cell_style),
-            Paragraph(product['bg_color'], cell_style),
-            Paragraph(product['unit'], cell_style),
-            Paragraph(format_currency(product['quantity']), cell_style),
-            Paragraph(format_currency(product['price']), cell_style),
-            Paragraph(format_currency(product['total']), cell_style)
-        ])
+    try:
+        for product in order_data['products']:
+            # Convert all values to strings before creating Paragraphs
+            product_data = [
+                Paragraph(str(product['product']), cell_style_left),
+                Paragraph(str(product['specs']), cell_style),
+                Paragraph(str(product['text_color']), cell_style),
+                Paragraph(str(product['bg_color']), cell_style),
+                Paragraph(str(product['unit']), cell_style),
+                Paragraph(format_currency(product['quantity']), cell_style),
+                Paragraph(format_currency(product['price']), cell_style),
+                Paragraph(format_currency(product['total']), cell_style)
+            ]
+            products_data.append(product_data)
+    except Exception as e:
+        raise
 
     # Calculate totals
     subtotal = sum(float(str(p['total']).replace(',', '')) for p in order_data['products'])
@@ -210,14 +287,6 @@ def create_order_pdf(filename, order_data):
     total = subtotal + vat
     deposit = float(order_data.get('deposit', 0))
     remaining = total - deposit
-
-    # Totals data
-    totals_data = [
-        ["", "", "", "", "", "", Paragraph("VAT", cell_style), Paragraph(format_currency(vat), cell_style)],
-        ["", "", "", "", "", "", Paragraph("Tổng Cộng", cell_style), Paragraph(format_currency(total), cell_style)],
-        ["", "", "", "", "", "", Paragraph("Cọc", cell_style), Paragraph(format_currency(deposit), cell_style)],
-        ["", "", "", "", "", "", Paragraph("Còn Lại", cell_style), Paragraph(format_currency(remaining), cell_style)]
-    ]
 
     # Combine all data
     table_data = header_data + products_data + totals_data
@@ -242,7 +311,7 @@ def create_order_pdf(filename, order_data):
         ('SPAN', (5, 0), (6, 0)),
         ('ALIGN', (-2, -4), (-2, -1), 'RIGHT'),
         ('ALIGN', (-1, -4), (-1, -1), 'CENTER'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 3),  # Adjust cell padding
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
         ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
@@ -252,21 +321,6 @@ def create_order_pdf(filename, order_data):
 
     # Footer
     story.append(Spacer(1, 15 * mm))
-    footer_left_style = ParagraphStyle(
-        'FooterLeftStyle',
-        fontName='VuArial',
-        fontSize=9,
-        alignment=0,
-        spaceAfter=5 * mm
-    )
-
-    footer_right_style = ParagraphStyle(
-        'FooterRightStyle',
-        fontName='VuArial',
-        fontSize=9,
-        alignment=2,
-        spaceAfter=5 * mm
-    )
 
     # Change footer based on document type
     if order_data.get('document_type') == "phieu_giao_hang":
@@ -293,29 +347,10 @@ def create_order_pdf(filename, order_data):
     ]))
     story.append(footer_table)
 
-    doc.build(story)
-
-def convert_order_to_preview_data(order):
-    if isinstance(order, BangKeoInOrder):
-        specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
-    else:  # TrucInOrder or BangKeoOrder
-        specs = order.quy_cach
-
-    # Get thanh_tien_ban safely
-    thanh_tien = getattr(order, 'thanh_tien_ban', None)
-    if thanh_tien is None:
-        thanh_tien = getattr(order, 'thanh_tien', 0)  # For BangKeoOrder
-
-    return {
-        'product': order.ten_hang,
-        'specs': specs,
-        'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',  # Use mau_sac if available
-        'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',    # Use mau_keo if available
-        'unit': 'KG' if isinstance(order, BangKeoOrder) else '',  # Default unit for BangKeoOrder is KG
-        'quantity': str(order.so_luong),
-        'price': str(order.don_gia_ban),
-        'total': str(thanh_tien)
-    }
+    try:
+        doc.build(story)
+    except Exception as e:
+        raise
 
 class OrderSelectionDialog(tk.Toplevel):
     def __init__(self, parent=None):
@@ -328,6 +363,9 @@ class OrderSelectionDialog(tk.Toplevel):
         # Add sort tracking variables
         self.sort_column = None
         self.sort_reverse = False
+        
+        # Track selected order IDs
+        self.selected_order_ids = set()
         
         # Initialize database connection
         self.engine = init_db(DATABASE_URL)
@@ -510,7 +548,7 @@ class OrderSelectionDialog(tk.Toplevel):
                            font=('TkDefaultFont', 12))  # Larger font
             
             # Create extra large buttons
-            ttk.Button(button_frame, text="Xuất đơn", 
+            ttk.Button(button_frame, text="Xuất đơn",
                       command=self.confirm,
                       style='ExtraLarge.TButton').pack(side='right', padx=15)
             ttk.Button(button_frame, text="Hủy", 
@@ -563,11 +601,12 @@ class OrderSelectionDialog(tk.Toplevel):
 
     def filter_orders(self):
         try:
-            search_text = self.search_var.get().lower().strip()  # Add strip() to remove whitespace
+            search_text = self.search_var.get().lower().strip()
             order_type = self.order_type_var.get()
             selected_month = self.month_var.get()
             
-            # Clear existing items
+            # Clear existing items but remember selections
+            current_selections = self.selected_order_ids.copy()
             for item in self.tree.get_children():
                 self.tree.delete(item)
             
@@ -576,7 +615,6 @@ class OrderSelectionDialog(tk.Toplevel):
                 query = self.session.query(BangKeoInOrder)\
                     .order_by(desc(BangKeoInOrder.thoi_gian))
                 
-                # Apply text search filter
                 if search_text:
                     query = query.filter(
                         or_(
@@ -588,26 +626,28 @@ class OrderSelectionDialog(tk.Toplevel):
                 
                 bang_keo_orders = query.all()
                 
-                # Filter by month in Python (since SQLAlchemy doesn't handle month extraction well)
                 if selected_month != "Tất cả":
                     month_num = int(selected_month.split()[1])
                     bang_keo_orders = [order for order in bang_keo_orders 
                                      if order.thoi_gian.month == month_num]
                 
                 for order in bang_keo_orders:
-                    self.tree.insert('', 'end', values=(
+                    item = self.tree.insert('', 'end', values=(
                         order.id,
                         order.thoi_gian.strftime('%d/%m/%Y'),
                         order.ten_hang,
                         f"{order.so_luong:,.0f}",
                         f"{order.don_gia_ban:,.0f}"
                     ))
+                    # Restore selection if this order was previously selected
+                    if order.id in current_selections:
+                        self.tree.selection_add(item)
+                        self.tree.item(item, tags=['selected'])
             
             if order_type == "all" or order_type == "TI":
                 query = self.session.query(TrucInOrder)\
                     .order_by(desc(TrucInOrder.thoi_gian))
                 
-                # Apply text search filter
                 if search_text:
                     query = query.filter(
                         or_(
@@ -619,26 +659,28 @@ class OrderSelectionDialog(tk.Toplevel):
                 
                 truc_in_orders = query.all()
                 
-                # Filter by month in Python
                 if selected_month != "Tất cả":
                     month_num = int(selected_month.split()[1])
                     truc_in_orders = [order for order in truc_in_orders 
                                     if order.thoi_gian.month == month_num]
                 
                 for order in truc_in_orders:
-                    self.tree.insert('', 'end', values=(
+                    item = self.tree.insert('', 'end', values=(
                         order.id,
                         order.thoi_gian.strftime('%d/%m/%Y'),
                         order.ten_hang,
                         f"{order.so_luong:,.0f}",
                         f"{order.don_gia_ban:,.0f}"
                     ))
+                    # Restore selection if this order was previously selected
+                    if order.id in current_selections:
+                        self.tree.selection_add(item)
+                        self.tree.item(item, tags=['selected'])
 
             if order_type == "all" or order_type == "B":
                 query = self.session.query(BangKeoOrder)\
                     .order_by(desc(BangKeoOrder.thoi_gian))
                 
-                # Apply text search filter
                 if search_text:
                     query = query.filter(
                         or_(
@@ -650,43 +692,60 @@ class OrderSelectionDialog(tk.Toplevel):
                 
                 bang_keo_orders = query.all()
                 
-                # Filter by month in Python
                 if selected_month != "Tất cả":
                     month_num = int(selected_month.split()[1])
                     bang_keo_orders = [order for order in bang_keo_orders 
                                     if order.thoi_gian.month == month_num]
                 
                 for order in bang_keo_orders:
-                    self.tree.insert('', 'end', values=(
+                    item = self.tree.insert('', 'end', values=(
                         order.id,
                         order.thoi_gian.strftime('%d/%m/%Y'),
                         order.ten_hang,
                         f"{order.so_luong:,.0f}",
                         f"{order.don_gia_ban:,.0f}"
                     ))
+                    # Restore selection if this order was previously selected
+                    if order.id in current_selections:
+                        self.tree.selection_add(item)
+                        self.tree.item(item, tags=['selected'])
             
             # After inserting all items, sort by current column if one is selected
             if self.sort_column:
                 self.sort_treeview(self.sort_column)
             else:
-                # Apply alternating row colors
-                self._apply_row_colors()
+                # Apply alternating row colors while preserving selections
+                self._apply_row_colors(preserve_selection=True)
                 
         except Exception as e:
             print(f"Error filtering orders: {str(e)}")
             messagebox.showerror("Lỗi", f"Lỗi khi lọc đơn hàng: {str(e)}")
     
-    def _apply_row_colors(self):
-        """Apply alternating row colors to tree"""
+    def _apply_row_colors(self, preserve_selection=False):
+        """Apply alternating row colors to tree while optionally preserving selection"""
         items = self.tree.get_children()
         for i, item in enumerate(items):
-            if i % 2 == 0:
-                self.tree.tag_configure('evenrow', background='#FFFFFF')
-                self.tree.item(item, tags=('evenrow',))
+            current_tags = list(self.tree.item(item)['tags'])
+            
+            # Remove existing row color tags
+            if 'evenrow' in current_tags:
+                current_tags.remove('evenrow')
+            if 'oddrow' in current_tags:
+                current_tags.remove('oddrow')
+            
+            # Add new row color tag
+            new_tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            if preserve_selection and 'selected' in current_tags:
+                # Keep the 'selected' tag if it exists
+                self.tree.item(item, tags=current_tags + [new_tag])
             else:
-                self.tree.tag_configure('oddrow', background='#F0F0F0')
-                self.tree.item(item, tags=('oddrow',))
-    
+                self.tree.item(item, tags=[new_tag])
+            
+            # Configure tag colors
+            self.tree.tag_configure('evenrow', background='#FFFFFF')
+            self.tree.tag_configure('oddrow', background='#F0F0F0')
+            self.tree.tag_configure('selected', background='#e6f3ff')
+
     def confirm(self):
         try:
             # Check if any order is selected
@@ -833,26 +892,28 @@ class OrderSelectionDialog(tk.Toplevel):
         """Handle click event on treeview"""
         region = self.tree.identify_region(event.x, event.y)
         if region == "heading":
-            # If clicking on heading, let the default sort handler work
             return
         
-        # Get the item that was clicked
         item = self.tree.identify_row(event.y)
         if not item:
             return
+            
+        # Get the order ID from the clicked item
+        order_id = self.tree.item(item)['values'][0]
             
         # Toggle selection
         if item in self.tree.selection():
             self.tree.selection_remove(item)
             self.tree.item(item, tags=[])  # Remove highlight
+            self.selected_order_ids.discard(order_id)  # Remove from tracked selections
         else:
             self.tree.selection_add(item)
             self.tree.item(item, tags=['selected'])  # Add highlight
+            self.selected_order_ids.add(order_id)  # Add to tracked selections
             
         # Update selected orders list
-        self.selected_orders = [self.tree.item(i)['values'][0] for i in self.tree.selection()]
+        self.selected_orders = list(self.selected_order_ids)
         
-        # Prevent default handling
         return "break"
 
 def generate_order_form():
