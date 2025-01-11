@@ -73,6 +73,8 @@ class BangKeoInOrder(Base):
     loi_giay = Column(String(100))
     thung_bao = Column(String(100))
     loi_nhuan = Column(Float, default=0)
+    tien_ship = Column(Float, default=0)
+    loi_nhuan_rong = Column(Float, default=0)
 
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
@@ -104,6 +106,8 @@ class TrucInOrder(Base):
     hoa_hong = Column(Float, default=0)
     tien_hoa_hong = Column(Float, default=0)
     loi_nhuan = Column(Float, default=0)
+    tien_ship = Column(Float, default=0)
+    loi_nhuan_rong = Column(Float, default=0)
 
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
@@ -134,6 +138,8 @@ class BangKeoOrder(Base):
     hoa_hong = Column(Float, default=0)
     tien_hoa_hong = Column(Float, default=0)
     loi_nhuan = Column(Float, default=0)
+    tien_ship = Column(Float, default=0)
+    loi_nhuan_rong = Column(Float, default=0)
 
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
