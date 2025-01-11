@@ -299,26 +299,65 @@ def create_order_pdf(filename, order_data):
     doc.build(story)
 
 def convert_order_to_preview_data(order):
+    print(f"\nProcessing order: {order.id}")
+    print(f"Order type: {type(order).__name__}")
+    
+    # Handle specifications based on order type
     if isinstance(order, BangKeoInOrder):
+        print("Processing BangKeoInOrder specifications")
         specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
-    else:  # TrucInOrder or BangKeoOrder
-        specs = order.quy_cach
+        if order.cuon_cay:
+            specs += f"\n{order.cuon_cay} cuộn/cây"
+        print(f"Generated specs: {specs}")
+    elif isinstance(order, TrucInOrder):
+        print("Processing TrucInOrder specifications")
+        print(f"Raw quy_cach value: {order.quy_cach}")
+        # Format TrucInOrder quy_cach
+        specs = f"{order.quy_cach}mm" if order.quy_cach else ""
+        print(f"Generated specs: {specs}")
+    else:  # BangKeoOrder
+        print(f"Processing BangKeoOrder specifications")
+        print(f"Raw quy_cach value: {order.quy_cach}")
+        try:
+            # Try to parse quy_cach if it's a string containing numbers
+            parts = str(order.quy_cach).split('x')
+            print(f"Split parts: {parts}")
+            if len(parts) >= 3:
+                # If it has the format "mmxmxmic"
+                specs = 'x'.join(parts)
+            else:
+                # If it's just a regular string
+                specs = str(order.quy_cach)
+            print(f"Generated specs: {specs}")
+        except (ValueError, AttributeError) as e:
+            print(f"Error processing quy_cach: {str(e)}")
+            # If parsing fails, just use the raw value
+            specs = str(order.quy_cach) if order.quy_cach else ''
+            print(f"Fallback specs: {specs}")
 
     # Get thanh_tien_ban safely
+    print("\nProcessing pricing information:")
     thanh_tien = getattr(order, 'thanh_tien_ban', None)
+    print(f"thanh_tien_ban value: {thanh_tien}")
     if thanh_tien is None:
-        thanh_tien = getattr(order, 'thanh_tien', 0)  # For BangKeoOrder
+        thanh_tien = getattr(order, 'thanh_tien_goc', 0)
+        print(f"Using thanh_tien_goc instead: {thanh_tien}")
 
-    return {
+    result = {
         'product': order.ten_hang,
         'specs': specs,
-        'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',  # Use mau_sac if available
-        'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',    # Use mau_keo if available
-        'unit': 'KG' if isinstance(order, BangKeoOrder) else '',  # Default unit for BangKeoOrder is KG
+        'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',
+        'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',
+        'unit': 'KG' if isinstance(order, BangKeoOrder) else 'Cái',
         'quantity': str(order.so_luong),
         'price': str(order.don_gia_ban),
         'total': str(thanh_tien)
     }
+    print("\nFinal converted data:")
+    for key, value in result.items():
+        print(f"{key}: {value}")
+    
+    return result
 
 def debounce(wait_time):
     """

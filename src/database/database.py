@@ -96,7 +96,7 @@ class TrucInOrder(Base):
     
     # Giá cả
     don_gia_goc = Column(Float, default=0)
-    thanh_tien = Column(Float, default=0)
+    thanh_tien_goc = Column(Float, default=0)
     don_gia_ban = Column(Float, nullable=False)
     thanh_tien_ban = Column(Float, default=0)
     cong_no_khach = Column(Float, default=0)

@@ -20,7 +20,6 @@ class HistoryTab(TabBase):
         
         # Define standard date formats
         self.DATE_FORMAT = '%d/%m/%Y'
-        self.DATE_FORMAT = '%d/%m/%Y'
         
         # Create main frame with padding
         main_frame = ttk.Frame(self.tab, padding="15 15 15 15")
@@ -33,6 +32,77 @@ class HistoryTab(TabBase):
         self.all_bang_keo_in_items = []
         self.all_truc_in_items = []
         self.all_bang_keo_items = []
+        
+        # Add sort tracking variables
+        self.bang_keo_in_sort = {'column': None, 'reverse': False}
+        self.truc_in_sort = {'column': None, 'reverse': False}
+        self.bang_keo_sort = {'column': None, 'reverse': False}
+        
+        # Define column headers in Vietnamese
+        self.column_headers = {
+            'id': 'ID Đơn Hàng',
+            'thoi_gian': 'Thời Gian',
+            'ten_hang': 'Tên Hàng',
+            'ngay_du_kien': 'Ngày Dự Kiến',
+            'quy_cach_mm': 'Quy Cách (mm)',
+            'quy_cach_m': 'Quy Cách (m)',
+            'quy_cach_mic': 'Quy Cách (mic)',
+            'cuon_cay': 'Cuộn/Cây',
+            'so_luong': 'Số Lượng',
+            'phi_sl': 'Phí SL',
+            'mau_keo': 'Màu Keo',
+            'phi_keo': 'Phí Keo',
+            'mau_sac': 'Màu Sắc',
+            'phi_mau': 'Phí Màu',
+            'phi_size': 'Phí Size',
+            'phi_cat': 'Phí Cắt',
+            'don_gia_von': 'Đơn Giá Vốn',
+            'don_gia_goc': 'Đơn Giá Gốc',
+            'thanh_tien_goc': 'Thành Tiền Gốc',
+            'don_gia_ban': 'Đơn Giá Bán',
+            'thanh_tien_ban': 'Thành Tiền Bán',
+            'tien_coc': 'Tiền Cọc',
+            'cong_no_khach': 'Công Nợ Khách',
+            'ctv': 'CTV',
+            'hoa_hong': 'Hoa Hồng',
+            'tien_hoa_hong': 'Tiền Hoa Hồng',
+            'loi_giay': 'Lõi Giấy',
+            'thung_bao': 'Thùng/Bao',
+            'loi_nhuan': 'Lợi Nhuận',
+            'tien_ship': 'Tiền Ship',
+            'loi_nhuan_rong': 'Lợi Nhuận Ròng',
+            'da_giao': 'Đã Giao',
+            'da_tat_toan': 'Đã Tất Toán'
+        }
+        
+        # Define columns for each tree
+        self.bang_keo_in_columns = [
+            'id', 'thoi_gian', 'ten_hang', 'ngay_du_kien',
+            'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay',
+            'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac',
+            'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von',
+            'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban',
+            'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv',
+            'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao',
+            'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'da_giao', 'da_tat_toan'
+        ]
+        
+        self.truc_in_columns = [
+            'id', 'thoi_gian', 'ten_hang', 'ngay_du_kien',
+            'quy_cach', 'so_luong', 'mau_sac', 'mau_keo',
+            'don_gia_goc', 'thanh_tien', 'don_gia_ban',
+            'thanh_tien_ban', 'cong_no_khach', 'ctv',
+            'hoa_hong', 'tien_hoa_hong', 'loi_nhuan',
+            'tien_ship', 'loi_nhuan_rong', 'da_giao', 'da_tat_toan'
+        ]
+        
+        self.bang_keo_columns = [
+            'id', 'thoi_gian', 'ten_hang', 'ngay_du_kien',
+            'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc',
+            'thanh_tien', 'don_gia_ban', 'thanh_tien_ban',
+            'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong',
+            'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'da_giao', 'da_tat_toan'
+        ]
         
         # Initialize managers
         self.tree_manager = TreeViewManager(self)
@@ -70,10 +140,45 @@ class HistoryTab(TabBase):
         self.category_notebook.add(self.truc_in_frame, text="Trục In")
         self.category_notebook.add(self.bang_keo_frame, text="Băng Keo")
         
-        # Create treeviews
-        self.bang_keo_in_tree = self.tree_manager.create_bang_keo_in_tree(self.bang_keo_in_frame)
-        self.truc_in_tree = self.tree_manager.create_truc_in_tree(self.truc_in_frame)
-        self.bang_keo_tree = self.tree_manager.create_bang_keo_tree(self.bang_keo_frame)
+        # Create treeviews with defined columns
+        self.bang_keo_in_tree = ttk.Treeview(self.bang_keo_in_frame, columns=self.bang_keo_in_columns, show='headings')
+        self.truc_in_tree = ttk.Treeview(self.truc_in_frame, columns=self.truc_in_columns, show='headings')
+        self.bang_keo_tree = ttk.Treeview(self.bang_keo_frame, columns=self.bang_keo_columns, show='headings')
+        
+        # Set up headings and columns for each tree
+        for tree, columns in [
+            (self.bang_keo_in_tree, self.bang_keo_in_columns),
+            (self.truc_in_tree, self.truc_in_columns),
+            (self.bang_keo_tree, self.bang_keo_columns)
+        ]:
+            for col in columns:
+                # Set Vietnamese heading text
+                tree.heading(col, text=self.column_headers.get(col, col),
+                           command=lambda c=col, t=tree: self.sort_treeview(t, c))
+                
+                # Set column width based on content type
+                if col in ['id', 'thoi_gian', 'ngay_du_kien']:
+                    tree.column(col, width=120, minwidth=120)
+                elif col == 'ten_hang':
+                    tree.column(col, width=200, minwidth=150)
+                elif col in ['da_giao', 'da_tat_toan']:
+                    tree.column(col, width=80, minwidth=80)
+                else:
+                    tree.column(col, width=120, minwidth=100)
+            
+            # Add scrollbars
+            scrollbar_y = ttk.Scrollbar(tree.master, orient='vertical', command=tree.yview)
+            scrollbar_x = ttk.Scrollbar(tree.master, orient='horizontal', command=tree.xview)
+            tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+            
+            # Grid layout
+            tree.grid(row=0, column=0, sticky='nsew')
+            scrollbar_y.grid(row=0, column=1, sticky='ns')
+            scrollbar_x.grid(row=1, column=0, sticky='ew')
+            
+            # Configure grid weights
+            tree.master.grid_rowconfigure(0, weight=1)
+            tree.master.grid_columnconfigure(0, weight=1)
         
         # Create button frame
         button_frame = ttk.Frame(main_frame)
@@ -183,6 +288,8 @@ class HistoryTab(TabBase):
                 order_data.get('loi_giay', ''),
                 order_data.get('thung_bao', ''),
                 self.utils.format_currency(order_data.get('loi_nhuan', '')),
+                self.utils.format_currency(order_data.get('tien_ship', '')),
+                self.utils.format_currency(order_data.get('loi_nhuan_rong', '')),
                 order_data.get('da_giao', ''),
                 order_data.get('da_tat_toan', '')
             ]
@@ -208,6 +315,8 @@ class HistoryTab(TabBase):
                 order_data.get('hoa_hong', ''),
                 self.utils.format_currency(order_data.get('tien_hoa_hong', '')),
                 self.utils.format_currency(order_data.get('loi_nhuan', '')),
+                self.utils.format_currency(order_data.get('tien_ship', '')),
+                self.utils.format_currency(order_data.get('loi_nhuan_rong', '')),
                 order_data.get('da_giao', ''),
                 order_data.get('da_tat_toan', '')
             ]
@@ -232,6 +341,8 @@ class HistoryTab(TabBase):
                 order_data.get('hoa_hong', ''),
                 self.utils.format_currency(order_data.get('tien_hoa_hong', '')),
                 self.utils.format_currency(order_data.get('loi_nhuan', '')),
+                self.utils.format_currency(order_data.get('tien_ship', '')),
+                self.utils.format_currency(order_data.get('loi_nhuan_rong', '')),
                 order_data.get('da_giao', ''),
                 order_data.get('da_tat_toan', '')
             ]
@@ -423,9 +534,86 @@ class HistoryTab(TabBase):
             if sort_state['column']:
                 self.sort_treeview(sort_state['column'], order_type)
             else:
-                self._apply_row_colors(tree)
+                self.apply_row_colors(tree)
                 
         except Exception as e:
             logging.error(f"Error processing order {order.id}: {str(e)}")
             raise
+
+    def sort_treeview(self, tree, col):
+        """Sort treeview content when a column header is clicked"""
+        try:
+            # Get sort state for the current tree
+            if tree == self.bang_keo_in_tree:
+                sort_state = self.bang_keo_in_sort
+            elif tree == self.truc_in_tree:
+                sort_state = self.truc_in_sort
+            else:
+                sort_state = self.bang_keo_sort
+            
+            # Get all items from treeview
+            items = [(tree.set(item, col), item) for item in tree.get_children('')]
+            
+            # If clicking the same column, reverse the sort order
+            if sort_state['column'] == col:
+                sort_state['reverse'] = not sort_state['reverse']
+            else:
+                sort_state['column'] = col
+                sort_state['reverse'] = False
+            
+            # Sort based on column type
+            if col in ['cong_no_khach', 'don_gia_von', 'don_gia_goc', 'don_gia_ban', 
+                      'thanh_tien_goc', 'thanh_tien_ban', 'tien_coc', 'tien_hoa_hong',
+                      'loi_nhuan', 'tien_ship', 'loi_nhuan_rong']:
+                # Convert string numbers with commas to float for sorting
+                items.sort(key=lambda x: float(x[0].replace(',', '').replace('₫', '')) if x[0] else 0,
+                         reverse=sort_state['reverse'])
+            elif col in ['thoi_gian', 'ngay_du_kien']:
+                # Convert date strings to datetime objects for sorting
+                items.sort(key=lambda x: datetime.strptime(x[0], '%d/%m/%Y') if x[0] else datetime.min,
+                         reverse=sort_state['reverse'])
+            elif col in ['da_giao', 'da_tat_toan']:
+                # Sort checkmarks
+                items.sort(key=lambda x: x[0] == "✓",
+                         reverse=sort_state['reverse'])
+            else:
+                # Regular string sorting for other columns
+                items.sort(key=lambda x: str(x[0]).lower() if x[0] else "",
+                         reverse=sort_state['reverse'])
+            
+            # Rearrange items in treeview
+            for index, (val, item) in enumerate(items):
+                tree.move(item, '', index)
+            
+            # Update column header to show sort direction
+            for column in tree['columns']:
+                if column == col:
+                    direction = "▼" if sort_state['reverse'] else "▲"
+                    tree.heading(column, text=f"{self.column_headers.get(column, column)} {direction}")
+                else:
+                    tree.heading(column, text=self.column_headers.get(column, column))
+            
+            # Apply alternating row colors
+            self.apply_row_colors(tree)
+            
+        except Exception as e:
+            logging.error(f"Error sorting treeview: {str(e)}")
+            messagebox.showerror("Lỗi", f"Lỗi khi sắp xếp dữ liệu: {str(e)}")
+
+    def apply_row_colors(self, tree):
+        """Apply alternating row colors to the treeview"""
+        try:
+            # Configure tag colors
+            tree.tag_configure('evenrow', background='#FFFFFF')  # White for even rows
+            tree.tag_configure('oddrow', background='#F0F0F0')   # Light gray for odd rows
+            
+            # Apply colors to rows
+            for i, item in enumerate(tree.get_children()):
+                if i % 2 == 0:
+                    tree.item(item, tags=('evenrow',))
+                else:
+                    tree.item(item, tags=('oddrow',))
+                    
+        except Exception as e:
+            logging.error(f"Error applying row colors: {str(e)}")
 

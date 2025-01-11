@@ -142,6 +142,16 @@ class TrucInTab(TabBase):
         self.truc_in_loi_nhuan = ttk.Entry(price_frame, width=20, state='readonly')
         self.truc_in_loi_nhuan.grid(row=5, column=1, sticky='w', padx=5, pady=5)
 
+        # Tiền ship
+        ttk.Label(price_frame, text="Tiền ship:").grid(row=5, column=2, sticky='e', padx=5, pady=5)
+        self.truc_in_tien_ship = ttk.Entry(price_frame, width=20)
+        self.truc_in_tien_ship.grid(row=5, column=3, sticky='w', padx=5, pady=5)
+
+        # Lợi nhuận ròng
+        ttk.Label(price_frame, text="Lợi nhuận ròng:").grid(row=6, column=0, sticky='e', padx=5, pady=5)
+        self.truc_in_loi_nhuan_rong = ttk.Entry(price_frame, width=20, state='readonly')
+        self.truc_in_loi_nhuan_rong.grid(row=6, column=1, sticky='w', padx=5, pady=5)
+
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=3, column=0, columnspan=4, pady=20, sticky='e')  # Align to the right
@@ -180,6 +190,7 @@ class TrucInTab(TabBase):
             self.truc_in_don_gia_ban,
             self.truc_in_don_gia_goc,
             self.truc_in_hoa_hong,
+            self.truc_in_tien_ship,
         ]
         for entry in entries_to_bind:
             entry.bind('<KeyRelease>', self.auto_calculate)
@@ -213,6 +224,7 @@ class TrucInTab(TabBase):
             don_gia_ban = self.validate_float_input(self.truc_in_don_gia_ban.get())
             don_gia_goc = self.validate_float_input(self.truc_in_don_gia_goc.get())
             hoa_hong = self.validate_float_input(self.truc_in_hoa_hong.get()) / 100
+            tien_ship = self.validate_float_input(self.truc_in_tien_ship.get())
 
             # Calculate values
             thanh_tien = don_gia_goc * so_luong  # Thành tiền gốc
@@ -220,6 +232,7 @@ class TrucInTab(TabBase):
             loi_nhuan = thanh_tien_ban - thanh_tien  # Lợi nhuận
             tien_hoa_hong = loi_nhuan * hoa_hong  # Tiền hoa hồng
             cong_no_khach = thanh_tien_ban  # Công nợ khách = thành tiền bán
+            loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship  # Lợi nhuận ròng = lợi nhuận - tiền hoa hồng - tiền ship
 
             # Update fields
             self.update_readonly_field(self.truc_in_thanh_tien, thanh_tien)
@@ -227,6 +240,7 @@ class TrucInTab(TabBase):
             self.update_readonly_field(self.truc_in_cong_no_khach, cong_no_khach)
             self.update_readonly_field(self.truc_in_tien_hoa_hong, tien_hoa_hong)
             self.update_readonly_field(self.truc_in_loi_nhuan, loi_nhuan)
+            self.update_readonly_field(self.truc_in_loi_nhuan_rong, loi_nhuan_rong)
 
             self.update_status("Tính toán Trục In thành công")
         except Exception as e:
@@ -252,7 +266,7 @@ class TrucInTab(TabBase):
                 'thoi_gian': datetime.now(),
                 'ten_hang': self.truc_in_ten_hang.get(),
                 'ngay_du_kien': self.truc_in_ngay_du_kien.get_date(),
-                'quy_cach': self.truc_in_quy_cach.get(),
+                'quy_cach': str(self.truc_in_quy_cach.get()),
                 'so_luong': self.parse_float(self.truc_in_so_luong.get()),
                 'mau_sac': self.truc_in_mau_sac.get(),
                 'mau_keo': self.truc_in_mau_keo.get(),
@@ -265,6 +279,8 @@ class TrucInTab(TabBase):
                 'hoa_hong': self.parse_float(self.truc_in_hoa_hong.get()),
                 'tien_hoa_hong': self.parse_float(self.truc_in_tien_hoa_hong.get()),
                 'loi_nhuan': self.parse_float(self.truc_in_loi_nhuan.get()),
+                'tien_ship': self.parse_float(self.truc_in_tien_ship.get()),
+                'loi_nhuan_rong': self.parse_float(self.truc_in_loi_nhuan_rong.get()),
                 'da_giao': self.da_giao.get(),
                 'da_tat_toan': self.da_tat_toan_var.get()
             }

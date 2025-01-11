@@ -137,6 +137,16 @@ class BangKeoTab(TabBase):
         self.bang_keo_loi_nhuan = ttk.Entry(price_frame, width=20, state='readonly')
         self.bang_keo_loi_nhuan.grid(row=5, column=1, sticky='w', padx=5, pady=5)
 
+        # Tiền ship
+        ttk.Label(price_frame, text="Tiền ship:").grid(row=6, column=0, sticky='e', padx=5, pady=5)
+        self.bang_keo_tien_ship = ttk.Entry(price_frame, width=20)
+        self.bang_keo_tien_ship.grid(row=6, column=1, sticky='w', padx=5, pady=5)
+
+        # Lợi nhuận ròng
+        ttk.Label(price_frame, text="Lợi nhuận ròng:").grid(row=6, column=2, sticky='e', padx=5, pady=5)
+        self.bang_keo_loi_nhuan_rong = ttk.Entry(price_frame, width=20, state='readonly')
+        self.bang_keo_loi_nhuan_rong.grid(row=6, column=3, sticky='w', padx=5, pady=5)
+
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=3, column=0, columnspan=4, pady=20, sticky='e')  # Align to the right
@@ -175,6 +185,7 @@ class BangKeoTab(TabBase):
             self.bang_keo_don_gia_ban,
             self.bang_keo_don_gia_goc,
             self.bang_keo_hoa_hong,
+            self.bang_keo_tien_ship,
         ]
         for entry in entries_to_bind:
             entry.bind('<KeyRelease>', self.auto_calculate)
@@ -208,6 +219,7 @@ class BangKeoTab(TabBase):
             don_gia_ban = self.validate_float_input(self.bang_keo_don_gia_ban.get())
             don_gia_goc = self.validate_float_input(self.bang_keo_don_gia_goc.get())
             hoa_hong = self.validate_float_input(self.bang_keo_hoa_hong.get()) / 100
+            tien_ship = self.validate_float_input(self.bang_keo_tien_ship.get())
 
             # Calculate values
             thanh_tien = don_gia_goc * so_luong
@@ -215,6 +227,7 @@ class BangKeoTab(TabBase):
             loi_nhuan = thanh_tien_ban - thanh_tien
             tien_hoa_hong = loi_nhuan * hoa_hong
             cong_no_khach = thanh_tien_ban
+            loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship
 
             # Update readonly fields
             self.update_readonly_field(self.bang_keo_thanh_tien, thanh_tien)
@@ -222,6 +235,7 @@ class BangKeoTab(TabBase):
             self.update_readonly_field(self.bang_keo_cong_no_khach, cong_no_khach)
             self.update_readonly_field(self.bang_keo_tien_hoa_hong, tien_hoa_hong)
             self.update_readonly_field(self.bang_keo_loi_nhuan, loi_nhuan)
+            self.update_readonly_field(self.bang_keo_loi_nhuan_rong, loi_nhuan_rong)
 
             self.update_status("Tính toán Băng Keo thành công")
         except Exception as e:
@@ -247,7 +261,7 @@ class BangKeoTab(TabBase):
                 'thoi_gian': datetime.now(),
                 'ten_hang': self.bang_keo_ten_hang.get(),
                 'ngay_du_kien': self.bang_keo_ngay_du_kien.get_date(),
-                'quy_cach': self.bang_keo_quy_cach.get(),
+                'quy_cach': str(self.bang_keo_quy_cach.get()),
                 'so_luong': self.parse_float(self.bang_keo_so_luong.get()),
                 'mau_sac': self.bang_keo_mau_sac.get(),
                 'don_gia_goc': self.parse_float(self.bang_keo_don_gia_goc.get()),
@@ -259,6 +273,8 @@ class BangKeoTab(TabBase):
                 'hoa_hong': self.parse_float(self.bang_keo_hoa_hong.get()),
                 'tien_hoa_hong': self.parse_float(self.bang_keo_tien_hoa_hong.get()),
                 'loi_nhuan': self.parse_float(self.bang_keo_loi_nhuan.get()),
+                'tien_ship': self.parse_float(self.bang_keo_tien_ship.get()),
+                'loi_nhuan_rong': self.parse_float(self.bang_keo_loi_nhuan_rong.get()),
                 'da_giao': self.da_giao.get(),
                 'da_tat_toan': self.da_tat_toan_var.get()
             }
@@ -309,7 +325,7 @@ class BangKeoTab(TabBase):
                 'Tên Hàng': self.bang_keo_ten_hang.get(),
                 'Ngày dự kiến': self.bang_keo_ngay_du_kien.get_date().strftime('%d-%m-%Y'),
                 'Quy Cách': f"{self.bang_keo_quy_cach.get()} KG",
-                'S��� Lượng': self.bang_keo_so_luong.get(),
+                'Số Lượng': self.bang_keo_so_luong.get(),
                 'Màu Sắc': self.bang_keo_mau_sac.get(),
                 'Đơn giá gốc': self.bang_keo_don_gia_goc.get(),
                 'Thành tiền': self.bang_keo_thanh_tien.get(),

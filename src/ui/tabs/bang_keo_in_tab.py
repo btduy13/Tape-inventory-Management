@@ -189,6 +189,16 @@ class BangKeoInTab(TabBase):
         self.loi_nhuan = ttk.Entry(price_frame, width=20, state='readonly')
         self.loi_nhuan.grid(row=7, column=1, sticky='w', padx=5, pady=5)
 
+        # Tiền ship
+        ttk.Label(price_frame, text="Tiền ship:").grid(row=7, column=2, sticky='e', padx=5, pady=5)
+        self.tien_ship = ttk.Entry(price_frame, width=20)
+        self.tien_ship.grid(row=7, column=3, sticky='w', padx=5, pady=5)
+
+        # Lợi nhuận ròng
+        ttk.Label(price_frame, text="Lợi nhuận ròng:").grid(row=8, column=0, sticky='e', padx=5, pady=5)
+        self.loi_nhuan_rong = ttk.Entry(price_frame, width=20, state='readonly')
+        self.loi_nhuan_rong.grid(row=8, column=1, sticky='w', padx=5, pady=5)
+
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=4, column=0, columnspan=4, pady=20, sticky='e')  # Align to the right
@@ -228,7 +238,8 @@ class BangKeoInTab(TabBase):
             self.so_luong, self.phi_sl, self.phi_keo, self.phi_size,
             self.phi_cat, self.don_gia_von, self.don_gia_ban, self.tien_coc,
             self.hoa_hong, self.phi_mau, self.quy_cach_mm,
-            self.quy_cach_m, self.quy_cach_mic, self.cuon_cay
+            self.quy_cach_m, self.quy_cach_mic, self.cuon_cay,
+            self.tien_ship  # Thêm tiền ship
         ]
         for entry in entries_to_bind:
             entry.bind('<KeyRelease>', self.auto_calculate)
@@ -275,6 +286,7 @@ class BangKeoInTab(TabBase):
             don_gia_ban = self.validate_float_input(self.don_gia_ban.get())
             tien_coc = self.validate_float_input(self.tien_coc.get())
             hoa_hong = self.validate_float_input(self.hoa_hong.get()) / 100  # Chuyển % thành decimal
+            tien_ship = self.validate_float_input(self.tien_ship.get())
 
             # 2. Tính đơn giá gốc
             cuon_cay = self.validate_float_input(self.cuon_cay.get())
@@ -293,6 +305,7 @@ class BangKeoInTab(TabBase):
             cong_no_khach = thanh_tien_ban - tien_coc  # Công nợ = thành tiền bán - tiền cọc
             loi_nhuan = thanh_tien_ban - thanh_tien_goc  # Lợi nhuận = thành tiền bán - thành tiền gốc
             tien_hoa_hong = loi_nhuan * hoa_hong  # Tiền hoa hồng = lợi nhuận × tỷ lệ hoa hồng
+            loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship  # Lợi nhuận ròng = lợi nhuận - tiền hoa hồng - tiền ship
 
             # Cập nhật giao diện
             self.update_readonly_field(self.don_gia_goc, don_gia_goc)
@@ -301,6 +314,7 @@ class BangKeoInTab(TabBase):
             self.update_readonly_field(self.cong_no_khach, cong_no_khach)
             self.update_readonly_field(self.tien_hoa_hong, tien_hoa_hong)
             self.update_readonly_field(self.loi_nhuan, loi_nhuan)
+            self.update_readonly_field(self.loi_nhuan_rong, loi_nhuan_rong)
 
             # Update status bar
             self.update_status("Tính toán thành công")
@@ -352,6 +366,8 @@ class BangKeoInTab(TabBase):
                 'loi_giay': self.loi_giay.get(),
                 'thung_bao': self.thung_bao.get(),
                 'loi_nhuan': self.parse_float(self.loi_nhuan.get()),
+                'tien_ship': self.parse_float(self.tien_ship.get()),
+                'loi_nhuan_rong': self.parse_float(self.loi_nhuan_rong.get()),
                 'da_giao': self.da_giao,
                 'da_tat_toan': self.da_tat_toan
             }

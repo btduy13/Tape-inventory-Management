@@ -190,9 +190,12 @@ class PreviewDialog(tk.Toplevel):
 
     def format_cell_text(self, text):
         """Format long text into multiple lines if needed."""
+        print(f"\nFormatting cell text: {text}")
+        print(f"Text type: {type(text)}")
         try:
             # Handle None, numeric, and empty values
             if text is None:
+                print("Text is None, returning empty string")
                 return ""
             
             # Convert numeric values to string without decimal places if they're whole numbers
@@ -201,13 +204,22 @@ class PreviewDialog(tk.Toplevel):
                     result = str(int(text))
                 else:
                     result = str(text)
+                print(f"Formatted numeric value: {result}")
+                return result
+            
+            # Handle quy_cach for BangKeoInOrder
+            if isinstance(text, dict) and all(key in text for key in ['mm', 'm', 'mic', 'cuon_cay']):
+                result = f"{text['mm']}mm x {text['m']}m x {text['mic']}mic\n{text['cuon_cay']} cuộn/cây"
+                print(f"Formatted dict specs: {result}")
                 return result
                 
             # Convert to string and handle empty values
             text = str(text).strip()
             if not text:
+                print("Text is empty after stripping")
                 return ""
                 
+            print(f"Processing text: {text}")
             words = text.split()
             lines = []
             current_line = []
@@ -227,6 +239,7 @@ class PreviewDialog(tk.Toplevel):
                 lines.append(' '.join(current_line))
                 
             result = '\n'.join(lines)
+            print(f"Final formatted result: {result}")
             
             if result.count('\n') > 0:
                 style = ttk.Style()
@@ -234,9 +247,13 @@ class PreviewDialog(tk.Toplevel):
                 style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
             
             return result
-        except (ValueError, TypeError, AttributeError):
+        except (ValueError, TypeError, AttributeError) as e:
+            print(f"Error formatting cell text: {str(e)}")
             if isinstance(text, (int, float)):
-                return str(text)
+                result = str(text)
+                print(f"Fallback to simple string conversion: {result}")
+                return result
+            print("Returning empty string due to error")
             return ""
         
     def reset_row_height(self):

@@ -40,6 +40,7 @@ class ThongKeTab(TabBase):
         self.hoan_thanh_count = 0
         self.tong_cong_no = 0
         self.tong_doanh_thu = 0
+        self.tong_loi_nhuan_rong = 0  # Add total net profit counter
         
     def create_dashboard(self):
         """Create the dashboard displaying summary information."""
@@ -71,7 +72,7 @@ class ThongKeTab(TabBase):
         self.chua_tat_toan_label.pack(anchor=tk.W, padx=5, pady=2)
         
         # Completed orders
-        self.hoan_thanh_label = ttk.Label(status_frame, text="Đã hoàn th��nh: 0", foreground="green")
+        self.hoan_thanh_label = ttk.Label(status_frame, text="Đã hoàn thành: 0", foreground="green")
         self.hoan_thanh_label.pack(anchor=tk.W, padx=5, pady=2)
         
         # Financial Info Frame
@@ -85,6 +86,10 @@ class ThongKeTab(TabBase):
         # Total revenue
         self.tong_doanh_thu_label = ttk.Label(finance_frame, text="Tổng doanh thu: 0")
         self.tong_doanh_thu_label.pack(anchor=tk.W, padx=5, pady=2)
+        
+        # Total net profit
+        self.tong_loi_nhuan_rong_label = ttk.Label(finance_frame, text="Tổng lợi nhuận ròng: 0", foreground="blue")
+        self.tong_loi_nhuan_rong_label.pack(anchor=tk.W, padx=5, pady=2)
         
         # Add Actions Frame
         actions_frame = ttk.LabelFrame(dashboard_frame, text="Thao tác")
@@ -296,6 +301,7 @@ class ThongKeTab(TabBase):
             self.hoan_thanh_count += 1
             
         self.tong_doanh_thu += order.thanh_tien_ban
+        self.tong_loi_nhuan_rong += order.loi_nhuan_rong  # Add net profit to total
         
         # Determine if the order should be displayed based on the current filter
         if self.should_show_order(order, days_until_due, order_type):
@@ -370,6 +376,7 @@ class ThongKeTab(TabBase):
         self.hoan_thanh_label.config(text=f"Đã hoàn thành: {self.hoan_thanh_count}")
         self.tong_cong_no_label.config(text=f"Tổng công nợ: {self.tong_cong_no:,.0f}")
         self.tong_doanh_thu_label.config(text=f"Tổng doanh thu: {self.tong_doanh_thu:,.0f}")
+        self.tong_loi_nhuan_rong_label.config(text=f"Tổng lợi nhuận ròng: {self.tong_loi_nhuan_rong:,.0f}")  # Update net profit label
         
     def on_double_click(self, event, order_type, tree):
         """Handle double-click event on a Treeview item to open the update status window."""

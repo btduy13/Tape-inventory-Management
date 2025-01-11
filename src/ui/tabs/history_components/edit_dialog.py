@@ -150,6 +150,9 @@ class EditDialogManager:
         self._create_field(price_frame, 'loi_giay', 'Lõi giấy:', values, 6, 0, readonly_fields)
         self._create_field(price_frame, 'thung_bao', 'Thùng/Bao:', values, 6, 2, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 6, 4, readonly_fields)
+
+        self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 7, 0, readonly_fields)
+        self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 7, 2, readonly_fields)
         
     def _create_truc_in_form(self, main_frame, values, readonly_fields):
         info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
@@ -187,6 +190,12 @@ class EditDialogManager:
         self._create_field(price_frame, 'tien_hoa_hong', 'Tiền hoa hồng:', values, 4, 0, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 4, 2, readonly_fields)
         
+        self._create_field(price_frame, 'loi_giay', 'Lõi giấy:', values, 5, 0, readonly_fields)
+        self._create_field(price_frame, 'thung_bao', 'Thùng/Bao:', values, 5, 2, readonly_fields)
+
+        self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 6, 0, readonly_fields)
+        self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 6, 2, readonly_fields)
+        
     def _create_bang_keo_form(self, main_frame, values, readonly_fields):
         info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
         info_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -222,38 +231,64 @@ class EditDialogManager:
         self._create_field(price_frame, 'tien_hoa_hong', 'Tiền hoa hồng:', values, 4, 0, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 4, 2, readonly_fields)
 
+        self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 5, 0, readonly_fields)
+        self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 5, 2, readonly_fields)
+
     def _create_field(self, parent, field_name, label_text, values, row, col, readonly_fields):
         """Create a labeled field in the edit form"""
         ttk.Label(parent, text=label_text).grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
         
-        field_index = list(self.parent.bang_keo_in_tree['columns'] if self.current_edit_type == 'bang_keo_in' 
-                          else self.parent.truc_in_tree['columns'] if self.current_edit_type == 'truc_in'
-                          else self.parent.bang_keo_tree['columns']).index(field_name)
-        
-        if field_name in ['thoi_gian', 'ngay_du_kien']:
-            date_value = values[field_index] if values[field_index] else datetime.now()
-            entry = DateEntry(parent, width=15, background='darkblue',
-                             foreground='white', borderwidth=2,
-                             date_pattern='dd/mm/yyyy',
-                             locale='vi_VN')
-            try:
-                if isinstance(date_value, datetime):
-                    entry.set_date(date_value.date())
-                elif isinstance(date_value, str):
-                    try:
-                        entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
-                    except ValueError:
-                        entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
-                else:
-                    entry.set_date(datetime.now().date())
-            except ValueError:
-                entry.set_date(datetime.now().date())
-        else:
+        # Xử lý các trường mới
+        if field_name in ['tien_ship', 'loi_nhuan_rong']:
             entry = ttk.Entry(parent, width=15)
-            entry.insert(0, values[field_index] if values[field_index] is not None else '')
-            
-            if field_name in readonly_fields:
+            if values and len(values) > 0:
+                try:
+                    field_index = list(self.parent.bang_keo_in_tree['columns'] if self.current_edit_type == 'bang_keo_in' 
+                                    else self.parent.truc_in_tree['columns'] if self.current_edit_type == 'truc_in'
+                                    else self.parent.bang_keo_tree['columns']).index(field_name)
+                    entry.insert(0, values[field_index] if values[field_index] is not None else '')
+                except ValueError:
+                    entry.insert(0, '0')
+            else:
+                entry.insert(0, '0')
+                
+            if field_name == 'loi_nhuan_rong':
                 entry.configure(state='readonly')
+            elif field_name == 'tien_ship':
+                entry.bind('<KeyRelease>', lambda e: self.recalculate_edit_form(self.current_edit_type))
+                entry.bind('<FocusOut>', lambda e: (
+                    self.format_currency_input(e),
+                    self.recalculate_edit_form(self.current_edit_type)
+                ))
+        else:
+            field_index = list(self.parent.bang_keo_in_tree['columns'] if self.current_edit_type == 'bang_keo_in' 
+                            else self.parent.truc_in_tree['columns'] if self.current_edit_type == 'truc_in'
+                            else self.parent.bang_keo_tree['columns']).index(field_name)
+            
+            if field_name in ['thoi_gian', 'ngay_du_kien']:
+                date_value = values[field_index] if values[field_index] else datetime.now()
+                entry = DateEntry(parent, width=15, background='darkblue',
+                                foreground='white', borderwidth=2,
+                                date_pattern='dd/mm/yyyy',
+                                locale='vi_VN')
+                try:
+                    if isinstance(date_value, datetime):
+                        entry.set_date(date_value.date())
+                    elif isinstance(date_value, str):
+                        try:
+                            entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
+                        except ValueError:
+                            entry.set_date(datetime.strptime(date_value, self.DATE_FORMAT).date())
+                    else:
+                        entry.set_date(datetime.now().date())
+                except ValueError:
+                    entry.set_date(datetime.now().date())
+            else:
+                entry = ttk.Entry(parent, width=15)
+                entry.insert(0, values[field_index] if values[field_index] is not None else '')
+                
+                if field_name in readonly_fields:
+                    entry.configure(state='readonly')
             
             # Define calculation trigger fields for each order type
             calculation_trigger_fields = {
@@ -301,27 +336,26 @@ class EditDialogManager:
                 'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von',
                 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban',
                 'tien_coc', 'cong_no_khach', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan',
-                'thanh_tien'
+                'thanh_tien', 'tien_ship', 'loi_nhuan_rong'
             ]
             
-            for column in tree['columns']:
-                if column in ['id', 'da_giao', 'da_tat_toan']:
+            for field_name, entry in self.edit_entries.items():
+                if field_name in ['id', 'da_giao', 'da_tat_toan']:
                     continue
                     
-                if column in ['thoi_gian', 'ngay_du_kien']:
-                    date_value = self.edit_entries[column].get_date()
-                    if column == 'thoi_gian':
+                if field_name in ['thoi_gian', 'ngay_du_kien']:
+                    date_value = entry.get_date()
+                    if field_name == 'thoi_gian':
                         current_time = datetime.now().time()
-                        values[column] = datetime.combine(date_value, current_time)
+                        values[field_name] = datetime.combine(date_value, current_time)
                     else:
-                        values[column] = date_value
-                elif column in numeric_fields and column in self.edit_entries:
+                        values[field_name] = date_value
+                elif field_name in numeric_fields:
                     # Convert numeric values, removing commas
-                    value = self.edit_entries[column].get()
-                    values[column] = self.validate_float_input(value)
+                    value = entry.get()
+                    values[field_name] = self.validate_float_input(value)
                 else:
-                    if column in self.edit_entries:
-                        values[column] = self.edit_entries[column].get()
+                    values[field_name] = entry.get()
             
             try:
                 if self.current_edit_type == 'bang_keo_in':
@@ -402,6 +436,7 @@ class EditDialogManager:
                 hoa_hong = self.validate_float_input(self.edit_entries['hoa_hong'].get()) / 100
                 cuon_cay = self.validate_float_input(self.edit_entries['cuon_cay'].get())
                 quy_cach_m = self.validate_float_input(self.edit_entries['quy_cach_m'].get())
+                tien_ship = self.validate_float_input(self.edit_entries['tien_ship'].get())
 
                 # Calculate don_gia_goc
                 if cuon_cay == 0 or quy_cach_m == 0:
@@ -415,6 +450,7 @@ class EditDialogManager:
                 cong_no_khach = thanh_tien_ban - tien_coc
                 loi_nhuan = thanh_tien_ban - thanh_tien_goc
                 tien_hoa_hong = loi_nhuan * hoa_hong
+                loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship
 
                 # Update readonly fields
                 self.update_readonly_field('don_gia_goc', don_gia_goc)
@@ -423,13 +459,15 @@ class EditDialogManager:
                 self.update_readonly_field('cong_no_khach', cong_no_khach)
                 self.update_readonly_field('tien_hoa_hong', tien_hoa_hong)
                 self.update_readonly_field('loi_nhuan', loi_nhuan)
+                self.update_readonly_field('loi_nhuan_rong', loi_nhuan_rong)
 
-            else:  # truc_in
+            else:  # truc_in và bang_keo
                 # Get values
                 so_luong = self.validate_float_input(self.edit_entries['so_luong'].get())
                 don_gia_ban = self.validate_float_input(self.edit_entries['don_gia_ban'].get())
                 don_gia_goc = self.validate_float_input(self.edit_entries['don_gia_goc'].get())
                 hoa_hong = self.validate_float_input(self.edit_entries['hoa_hong'].get()) / 100
+                tien_ship = self.validate_float_input(self.edit_entries['tien_ship'].get())
 
                 # Calculate values
                 thanh_tien = don_gia_goc * so_luong
@@ -437,6 +475,7 @@ class EditDialogManager:
                 loi_nhuan = thanh_tien_ban - thanh_tien
                 tien_hoa_hong = loi_nhuan * hoa_hong
                 cong_no_khach = thanh_tien_ban
+                loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship
 
                 # Update readonly fields
                 self.update_readonly_field('thanh_tien', thanh_tien)
@@ -444,6 +483,7 @@ class EditDialogManager:
                 self.update_readonly_field('cong_no_khach', cong_no_khach)
                 self.update_readonly_field('tien_hoa_hong', tien_hoa_hong)
                 self.update_readonly_field('loi_nhuan', loi_nhuan)
+                self.update_readonly_field('loi_nhuan_rong', loi_nhuan_rong)
 
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán: {str(e)}")
@@ -484,3 +524,23 @@ class EditDialogManager:
             entry.insert(0, f"{value:,.0f}")
         except ValueError:
             pass
+
+    def update_loi_nhuan_rong(self, event=None):
+        """Cập nhật lợi nhuận ròng khi thay đổi tiền ship"""
+        try:
+            # Lấy giá trị lợi nhuận và tiền hoa hồng
+            loi_nhuan = self.validate_float_input(self.edit_entries['loi_nhuan'].get())
+            tien_hoa_hong = self.validate_float_input(self.edit_entries['tien_hoa_hong'].get())
+            tien_ship = self.validate_float_input(self.edit_entries['tien_ship'].get())
+            
+            # Tính lợi nhuận ròng
+            loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship
+            
+            # Cập nhật trường lợi nhuận ròng
+            self.edit_entries['loi_nhuan_rong'].configure(state='normal')
+            self.edit_entries['loi_nhuan_rong'].delete(0, tk.END)
+            self.edit_entries['loi_nhuan_rong'].insert(0, f"{loi_nhuan_rong:,.0f}")
+            self.edit_entries['loi_nhuan_rong'].configure(state='readonly')
+            
+        except Exception as e:
+            print(f"Lỗi khi cập nhật lợi nhuận ròng: {str(e)}")
