@@ -5,8 +5,8 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets\\*', '.'), ('theme\\*', '.')],
-    hiddenimports=['babel.numbers', 'sqlalchemy.sql.default_comparator', 'PIL._tkinter_finder'],
+    datas=[('assets', 'assets'), ('theme', 'theme')],
+    hiddenimports=['babel.numbers', 'sqlalchemy.sql.default_comparator', 'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked', 'sqlalchemy.ext.declarative'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -31,7 +31,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    uac_admin=True,
     icon=['assets\\icon.ico'],
 )
 coll = COLLECT(

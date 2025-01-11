@@ -3,6 +3,9 @@ import os
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import threading
+import queue
+from functools import wraps
 from src.ui.forms.preview_dialog import PreviewDialog
 from src.database.database import init_db, get_session, BangKeoInOrder, TrucInOrder, BangKeoOrder
 from sqlalchemy import text, or_, desc
@@ -96,78 +99,6 @@ def get_orders_from_database(session, order_ids):
     
     return orders
 
-def convert_order_to_preview_data(order):
-    # Handle different order types
-    if isinstance(order, BangKeoInOrder):
-        try:
-            # For BangKeoInOrder, construct specs from individual components
-            specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
-        except (ValueError, TypeError, AttributeError):
-            specs = ""
-        text_color = str(order.mau_sac) if order.mau_sac else ''
-        bg_color = str(order.mau_keo) if order.mau_keo else ''
-        unit = 'Cuộn'
-    elif isinstance(order, TrucInOrder):
-        # For TrucInOrder, handle quy_cach which might be numeric
-        try:
-            if isinstance(order.quy_cach, (int, float)):
-                specs = str(int(order.quy_cach))  # Convert numeric to string without decimal
-            else:
-                specs = str(order.quy_cach) if order.quy_cach else ''
-        except (ValueError, TypeError, AttributeError):
-            specs = ""
-        text_color = str(order.mau_sac) if order.mau_sac else ''
-        bg_color = str(order.mau_keo) if order.mau_keo else ''
-        unit = 'Cái'
-    elif isinstance(order, BangKeoOrder):
-        # For BangKeoOrder
-        try:
-            if isinstance(order.quy_cach, (int, float)):
-                specs = str(int(order.quy_cach))  # Convert numeric to string without decimal
-            else:
-                specs = str(order.quy_cach) if order.quy_cach else ''
-        except (ValueError, TypeError, AttributeError):
-            specs = ""
-        text_color = str(order.mau_sac) if order.mau_sac else ''
-        bg_color = ''  # BangKeoOrder doesn't have mau_keo
-        unit = 'KG'
-    else:
-        raise ValueError(f"Unknown order type: {type(order)}")
-
-    # Get thanh_tien_ban safely with proper error handling
-    try:
-        if hasattr(order, 'thanh_tien_ban') and order.thanh_tien_ban is not None:
-            total = float(order.thanh_tien_ban)
-        elif hasattr(order, 'thanh_tien') and order.thanh_tien is not None:
-            total = float(order.thanh_tien)
-        else:
-            total = 0
-    except (ValueError, TypeError):
-        total = 0
-
-    # Ensure numeric values are properly formatted with error handling
-    try:
-        quantity = float(order.so_luong) if order.so_luong is not None else 0
-    except (ValueError, TypeError):
-        quantity = 0
-
-    try:
-        price = float(order.don_gia_ban) if order.don_gia_ban is not None else 0
-    except (ValueError, TypeError):
-        price = 0
-
-    # Ensure all values are strings
-    return {
-        'product': str(order.ten_hang) if order.ten_hang else '',
-        'specs': str(specs),  # Ensure specs is a string
-        'text_color': str(text_color) if text_color else '',
-        'bg_color': str(bg_color) if bg_color else '',
-        'unit': str(unit),
-        'quantity': str(quantity),
-        'price': str(price),
-        'total': str(total)
-    }
-
 def create_order_pdf(filename, order_data):
     doc = SimpleDocTemplate(
         filename,
@@ -179,7 +110,7 @@ def create_order_pdf(filename, order_data):
     )
 
     story = []
-    
+
     # Styles
     header_style = ParagraphStyle(
         'HeaderStyle',
@@ -264,22 +195,17 @@ def create_order_pdf(filename, order_data):
 
     # Products data with wrapped text
     products_data = []
-    try:
-        for product in order_data['products']:
-            # Convert all values to strings before creating Paragraphs
-            product_data = [
-                Paragraph(str(product['product']), cell_style_left),
-                Paragraph(str(product['specs']), cell_style),
-                Paragraph(str(product['text_color']), cell_style),
-                Paragraph(str(product['bg_color']), cell_style),
-                Paragraph(str(product['unit']), cell_style),
-                Paragraph(format_currency(product['quantity']), cell_style),
-                Paragraph(format_currency(product['price']), cell_style),
-                Paragraph(format_currency(product['total']), cell_style)
-            ]
-            products_data.append(product_data)
-    except Exception as e:
-        raise
+    for product in order_data['products']:
+        products_data.append([
+            Paragraph(product['product'], cell_style_left),  # Left align product name
+            Paragraph(product['specs'], cell_style),
+            Paragraph(product['text_color'], cell_style),
+            Paragraph(product['bg_color'], cell_style),
+            Paragraph(product['unit'], cell_style),
+            Paragraph(format_currency(product['quantity']), cell_style),
+            Paragraph(format_currency(product['price']), cell_style),
+            Paragraph(format_currency(product['total']), cell_style)
+        ])
 
     # Calculate totals
     subtotal = sum(float(str(p['total']).replace(',', '')) for p in order_data['products'])
@@ -287,6 +213,14 @@ def create_order_pdf(filename, order_data):
     total = subtotal + vat
     deposit = float(order_data.get('deposit', 0))
     remaining = total - deposit
+
+    # Totals data
+    totals_data = [
+        ["", "", "", "", "", "", Paragraph("VAT", cell_style), Paragraph(format_currency(vat), cell_style)],
+        ["", "", "", "", "", "", Paragraph("Tổng Cộng", cell_style), Paragraph(format_currency(total), cell_style)],
+        ["", "", "", "", "", "", Paragraph("Cọc", cell_style), Paragraph(format_currency(deposit), cell_style)],
+        ["", "", "", "", "", "", Paragraph("Còn Lại", cell_style), Paragraph(format_currency(remaining), cell_style)]
+    ]
 
     # Combine all data
     table_data = header_data + products_data + totals_data
@@ -311,7 +245,7 @@ def create_order_pdf(filename, order_data):
         ('SPAN', (5, 0), (6, 0)),
         ('ALIGN', (-2, -4), (-2, -1), 'RIGHT'),
         ('ALIGN', (-1, -4), (-1, -1), 'CENTER'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),  # Adjust cell padding
         ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
@@ -321,6 +255,21 @@ def create_order_pdf(filename, order_data):
 
     # Footer
     story.append(Spacer(1, 15 * mm))
+    footer_left_style = ParagraphStyle(
+        'FooterLeftStyle',
+        fontName='VuArial',
+        fontSize=9,
+        alignment=0,
+        spaceAfter=5 * mm
+    )
+
+    footer_right_style = ParagraphStyle(
+        'FooterRightStyle',
+        fontName='VuArial',
+        fontSize=9,
+        alignment=2,
+        spaceAfter=5 * mm
+    )
 
     # Change footer based on document type
     if order_data.get('document_type') == "phieu_giao_hang":
@@ -347,38 +296,85 @@ def create_order_pdf(filename, order_data):
     ]))
     story.append(footer_table)
 
-    try:
-        doc.build(story)
-    except Exception as e:
-        raise
+    doc.build(story)
+
+def convert_order_to_preview_data(order):
+    if isinstance(order, BangKeoInOrder):
+        specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
+    else:  # TrucInOrder or BangKeoOrder
+        specs = order.quy_cach
+
+    # Get thanh_tien_ban safely
+    thanh_tien = getattr(order, 'thanh_tien_ban', None)
+    if thanh_tien is None:
+        thanh_tien = getattr(order, 'thanh_tien', 0)  # For BangKeoOrder
+
+    return {
+        'product': order.ten_hang,
+        'specs': specs,
+        'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',  # Use mau_sac if available
+        'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',    # Use mau_keo if available
+        'unit': 'KG' if isinstance(order, BangKeoOrder) else '',  # Default unit for BangKeoOrder is KG
+        'quantity': str(order.so_luong),
+        'price': str(order.don_gia_ban),
+        'total': str(thanh_tien)
+    }
+
+def debounce(wait_time):
+    """
+    Decorator to debounce a function call.
+    Will wait for wait_time seconds before executing the function.
+    If the function is called again during the wait time, the timer resets.
+    """
+    def decorator(fn):
+        timer = None
+        @wraps(fn)
+        def debounced(*args, **kwargs):
+            nonlocal timer
+            if timer is not None:
+                timer.cancel()
+            timer = threading.Timer(wait_time, lambda: fn(*args, **kwargs))
+            timer.start()
+        return debounced
+    return decorator
+
+class BackgroundTask:
+    """Helper class to manage background tasks"""
+    def __init__(self, callback):
+        self.callback = callback
+        self.is_cancelled = False
+
+    def cancel(self):
+        self.is_cancelled = True
 
 class OrderSelectionDialog(tk.Toplevel):
     def __init__(self, parent=None):
         super().__init__(parent if parent else tk.Tk())
-        self.title("Chọn đơn hàng - Đơn đặt hàng")  # Set initial title with document type
+        self.title("Chọn đơn hàng - Đơn đặt hàng")
         
-        # Add document type tracking
-        self.document_type = tk.StringVar(value="don_dat_hang")  # Default is đơn đặt hàng
+        # Initialize background processing queue and thread
+        self.queue = queue.Queue()
+        self.current_task = None
         
-        # Add sort tracking variables
+        # Start background worker thread
+        self.worker_thread = threading.Thread(target=self.process_queue, daemon=True)
+        self.worker_thread.start()
+        
+        # Add loading indicator
+        self.loading = False
+        self.loading_label = None
+        
+        # Rest of your existing initialization code...
+        self.document_type = tk.StringVar(value="don_dat_hang")
         self.sort_column = None
         self.sort_reverse = False
-        
-        # Track selected order IDs
-        self.selected_order_ids = set()
-        
-        # Initialize database connection
         self.engine = init_db(DATABASE_URL)
         self.session = get_session(self.engine)
-        
         self.selected_orders = []
         self.result = False
         
-        # Configure the window
         self.resizable(True, True)
         self.minsize(800, 600)
-        
-        # Create widgets before setting window position
         self.create_widgets()
         
         # Center the window
@@ -389,13 +385,254 @@ class OrderSelectionDialog(tk.Toplevel):
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f'{width}x{height}+{x}+{y}')
         
-        # Make dialog modal
         self.transient(parent if parent else None)
         self.grab_set()
-        
-        # Bind window close event
         self.protocol("WM_DELETE_WINDOW", self.cancel)
-    
+        
+        # Initialize selected_orders list at the start
+        self.selected_orders = []
+        
+        # Configure tag styles once at initialization
+        self.tree.tag_configure('evenrow', background='#FFFFFF')
+        self.tree.tag_configure('oddrow', background='#F0F0F0')
+        self.tree.tag_configure('selected', background='#e6f3ff')
+
+    def show_loading(self, show=True):
+        """Show or hide loading indicator"""
+        if show and not self.loading:
+            self.loading = True
+            if not self.loading_label:
+                self.loading_label = ttk.Label(self, text="Đang tải...", font=('Segoe UI', 10))
+                self.loading_label.place(relx=0.5, rely=0.5, anchor='center')
+            self.loading_label.lift()
+            self.update_idletasks()
+        elif not show and self.loading:
+            self.loading = False
+            if self.loading_label:
+                self.loading_label.place_forget()
+            self.update_idletasks()
+
+    def process_queue(self):
+        """Process background tasks from queue"""
+        while True:
+            try:
+                task, args, kwargs = self.queue.get()
+                if task == 'filter':
+                    self.do_filter_orders(*args, **kwargs)
+                elif task == 'load':
+                    self.do_load_orders(*args, **kwargs)
+                self.queue.task_done()
+            except queue.Empty:
+                continue
+            except Exception as e:
+                print(f"Error in background thread: {str(e)}")
+
+    def queue_background_task(self, task_type, *args, **kwargs):
+        """Queue a task to be processed in background"""
+        # Cancel current task if it exists
+        if self.current_task:
+            self.current_task.cancel()
+        
+        # Create new task
+        self.current_task = BackgroundTask(lambda: None)
+        self.queue.put((task_type, args, kwargs))
+        self.show_loading(True)
+
+    @debounce(0.5)  # 500ms debounce
+    def on_filter_change(self, *args):
+        """Debounced filter change handler"""
+        self.queue_background_task('filter')
+
+    def do_filter_orders(self):
+        """Actual filter implementation to run in background"""
+        try:
+            if self.current_task and self.current_task.is_cancelled:
+                return
+
+            # Store current selections before filtering
+            current_selections = self.selected_orders.copy()
+            
+            search_text = self.search_var.get().lower().strip()
+            order_type = self.order_type_var.get()
+            selected_month = self.month_var.get()
+            
+            self.after(0, lambda: self.tree.delete(*self.tree.get_children()))
+            
+            # Get orders from database based on type
+            orders = []
+            
+            if order_type == "all" or order_type == "BK":
+                query = self.session.query(BangKeoInOrder)\
+                    .order_by(desc(BangKeoInOrder.thoi_gian))
+                
+                if search_text:
+                    query = query.filter(
+                        or_(
+                            BangKeoInOrder.ten_hang.ilike(f'%{search_text}%'),
+                            BangKeoInOrder.ctv.ilike(f'%{search_text}%'),
+                            BangKeoInOrder.id.ilike(f'%{search_text}%')
+                        )
+                    )
+                
+                bang_keo_orders = query.all()
+                
+                if selected_month != "Tất cả":
+                    month_num = int(selected_month.split()[1])
+                    bang_keo_orders = [order for order in bang_keo_orders 
+                                     if order.thoi_gian.month == month_num]
+                
+                orders.extend(bang_keo_orders)
+
+            if order_type == "all" or order_type == "TI":
+                query = self.session.query(TrucInOrder)\
+                    .order_by(desc(TrucInOrder.thoi_gian))
+                
+                if search_text:
+                    query = query.filter(
+                        or_(
+                            TrucInOrder.ten_hang.ilike(f'%{search_text}%'),
+                            TrucInOrder.ctv.ilike(f'%{search_text}%'),
+                            TrucInOrder.id.ilike(f'%{search_text}%')
+                        )
+                    )
+                
+                truc_in_orders = query.all()
+                
+                if selected_month != "Tất cả":
+                    month_num = int(selected_month.split()[1])
+                    truc_in_orders = [order for order in truc_in_orders 
+                                    if order.thoi_gian.month == month_num]
+                
+                orders.extend(truc_in_orders)
+
+            if order_type == "all" or order_type == "B":
+                query = self.session.query(BangKeoOrder)\
+                    .order_by(desc(BangKeoOrder.thoi_gian))
+                
+                if search_text:
+                    query = query.filter(
+                        or_(
+                            BangKeoOrder.ten_hang.ilike(f'%{search_text}%'),
+                            BangKeoOrder.ctv.ilike(f'%{search_text}%'),
+                            BangKeoOrder.id.ilike(f'%{search_text}%')
+                        )
+                    )
+                
+                bang_keo_orders = query.all()
+                
+                if selected_month != "Tất cả":
+                    month_num = int(selected_month.split()[1])
+                    bang_keo_orders = [order for order in bang_keo_orders 
+                                    if order.thoi_gian.month == month_num]
+                
+                orders.extend(bang_keo_orders)
+
+            # Update UI in batches
+            batch_size = 50
+            for i in range(0, len(orders), batch_size):
+                if self.current_task and self.current_task.is_cancelled:
+                    return
+                    
+                batch = orders[i:i + batch_size]
+                self.after(0, lambda b=batch: self.insert_orders_batch(b))
+            
+            # Important: Restore selections after all batches are inserted
+            def restore_selections():
+                for item in self.tree.get_children():
+                    item_id = self.tree.item(item)['values'][0]
+                    if item_id in current_selections:
+                        self.tree.selection_add(item)
+                        self.tree.item(item, tags=['selected'])
+            
+            # Schedule the selection restoration after the batches are inserted
+            self.after(100, restore_selections)
+            
+        except Exception as e:
+            self.after(0, lambda: messagebox.showerror("Lỗi", f"Lỗi khi lọc đơn hàng: {str(e)}"))
+        finally:
+            self.after(0, lambda: self.show_loading(False))
+
+    def insert_orders_batch(self, orders):
+        """Insert a batch of orders into the treeview"""
+        for order in orders:
+            item = self.tree.insert('', 'end', values=(
+                order.id,
+                order.thoi_gian.strftime('%d/%m/%Y'),
+                order.ten_hang,
+                f"{order.so_luong:,.0f}",
+                f"{order.don_gia_ban:,.0f}"
+            ))
+            
+            # Apply initial coloring
+            if order.id in self.selected_orders:
+                self.tree.selection_add(item)
+                self.tree.item(item, tags=['selected'])
+            else:
+                if len(self.tree.get_children()) % 2 == 0:
+                    self.tree.item(item, tags=['evenrow'])
+                else:
+                    self.tree.item(item, tags=['oddrow'])
+
+    def finalize_filter_update(self):
+        """Finalize the filter update by applying sorting and colors"""
+        if self.sort_column:
+            self.sort_treeview(self.sort_column)
+        else:
+            self._apply_row_colors()
+
+    def load_orders(self):
+        """Queue loading orders in background"""
+        self.queue_background_task('load')
+
+    def do_load_orders(self):
+        """Actual load orders implementation to run in background"""
+        try:
+            if self.current_task and self.current_task.is_cancelled:
+                return
+
+            # Store current selections
+            current_selections = self.selected_orders.copy() if hasattr(self, 'selected_orders') else []
+            
+            self.after(0, lambda: self.tree.delete(*self.tree.get_children()))
+            
+            # Get orders from both tables
+            orders = []
+            orders.extend(self.session.query(BangKeoInOrder).order_by(desc(BangKeoInOrder.thoi_gian)).all())
+            orders.extend(self.session.query(TrucInOrder).order_by(desc(TrucInOrder.thoi_gian)).all())
+            orders.extend(self.session.query(BangKeoOrder).order_by(desc(BangKeoOrder.thoi_gian)).all())
+            
+            # Update UI in batches
+            batch_size = 50
+            for i in range(0, len(orders), batch_size):
+                if self.current_task and self.current_task.is_cancelled:
+                    return
+                    
+                batch = orders[i:i + batch_size]
+                self.after(0, lambda b=batch: self.insert_orders_batch(b))
+            
+            # Restore selections after loading
+            self.selected_orders = current_selections
+            
+            # Apply colors and restore selections
+            self.after(0, lambda: self.finalize_filter_update())
+            
+        except Exception as e:
+            self.after(0, lambda: messagebox.showerror("Lỗi", f"Không thể tải danh sách đơn hàng: {str(e)}"))
+        finally:
+            self.after(0, lambda: self.show_loading(False))
+
+    def destroy(self):
+        """Clean up resources before destroying the window"""
+        # Cancel any pending tasks
+        if self.current_task:
+            self.current_task.cancel()
+        
+        # Close database connection
+        if hasattr(self, 'session'):
+            self.session.close()
+        
+        super().destroy()
+
     def create_widgets(self):
         try:
             # Main container
@@ -488,13 +725,13 @@ class OrderSelectionDialog(tk.Toplevel):
             
             self.order_type_var = tk.StringVar(value="all")
             ttk.Radiobutton(filter_container, text="Tất cả", variable=self.order_type_var, 
-                           value="all", command=self.filter_orders).pack(side='left', padx=5)
+                           value="all", command=self.on_order_type_change).pack(side='left', padx=5)
             ttk.Radiobutton(filter_container, text="Băng keo in", variable=self.order_type_var, 
-                           value="BK", command=self.filter_orders).pack(side='left', padx=5)
+                           value="BK", command=self.on_order_type_change).pack(side='left', padx=5)
             ttk.Radiobutton(filter_container, text="Trục In", variable=self.order_type_var, 
-                           value="TI", command=self.filter_orders).pack(side='left', padx=5)
+                           value="TI", command=self.on_order_type_change).pack(side='left', padx=5)
             ttk.Radiobutton(filter_container, text="Băng keo", variable=self.order_type_var, 
-                           value="B", command=self.filter_orders).pack(side='left', padx=5)
+                           value="B", command=self.on_order_type_change).pack(side='left', padx=5)
             
             # Orders frame
             orders_frame = ttk.LabelFrame(main_container, text="Danh sách đơn hàng")
@@ -548,7 +785,7 @@ class OrderSelectionDialog(tk.Toplevel):
                            font=('TkDefaultFont', 12))  # Larger font
             
             # Create extra large buttons
-            ttk.Button(button_frame, text="Xuất đơn",
+            ttk.Button(button_frame, text="Xuất đơn", 
                       command=self.confirm,
                       style='ExtraLarge.TButton').pack(side='right', padx=15)
             ttk.Button(button_frame, text="Hủy", 
@@ -562,190 +799,6 @@ class OrderSelectionDialog(tk.Toplevel):
             print(f"Error creating widgets: {str(e)}")
             messagebox.showerror("Lỗi", f"Không thể tạo giao diện: {str(e)}")
     
-    def load_orders(self):
-        try:
-            # Clear existing items
-            for item in self.tree.get_children():
-                self.tree.delete(item)
-            
-            # Get orders from both tables
-            bang_keo_orders = self.session.query(BangKeoInOrder).order_by(desc(BangKeoInOrder.thoi_gian)).all()
-            truc_in_orders = self.session.query(TrucInOrder).order_by(desc(TrucInOrder.thoi_gian)).all()
-            
-            # Add orders to treeview
-            for order in bang_keo_orders:
-                self.tree.insert('', 'end', values=(
-                    order.id,
-                    order.thoi_gian.strftime('%d/%m/%Y'),
-                    order.ten_hang,
-                    f"{order.so_luong:,.0f}",
-                    f"{order.don_gia_ban:,.0f}"
-                ))
-            
-            for order in truc_in_orders:
-                self.tree.insert('', 'end', values=(
-                    order.id,
-                    order.thoi_gian.strftime('%d/%m/%Y'),
-                    order.ten_hang,
-                    f"{order.so_luong:,.0f}",
-                    f"{order.don_gia_ban:,.0f}"
-                ))
-                
-        except Exception as e:
-            print(f"Error loading orders: {str(e)}")
-            messagebox.showerror("Lỗi", f"Không thể tải danh sách đơn hàng: {str(e)}")
-    
-    def on_filter_change(self, *args):
-        """Handle changes in any filter (search text or month)"""
-        self.filter_orders()
-
-    def filter_orders(self):
-        try:
-            search_text = self.search_var.get().lower().strip()
-            order_type = self.order_type_var.get()
-            selected_month = self.month_var.get()
-            
-            # Clear existing items but remember selections
-            current_selections = self.selected_order_ids.copy()
-            for item in self.tree.get_children():
-                self.tree.delete(item)
-            
-            # Get orders from database based on type
-            if order_type == "all" or order_type == "BK":
-                query = self.session.query(BangKeoInOrder)\
-                    .order_by(desc(BangKeoInOrder.thoi_gian))
-                
-                if search_text:
-                    query = query.filter(
-                        or_(
-                            BangKeoInOrder.ten_hang.ilike(f'%{search_text}%'),
-                            BangKeoInOrder.ctv.ilike(f'%{search_text}%'),
-                            BangKeoInOrder.id.ilike(f'%{search_text}%')
-                        )
-                    )
-                
-                bang_keo_orders = query.all()
-                
-                if selected_month != "Tất cả":
-                    month_num = int(selected_month.split()[1])
-                    bang_keo_orders = [order for order in bang_keo_orders 
-                                     if order.thoi_gian.month == month_num]
-                
-                for order in bang_keo_orders:
-                    item = self.tree.insert('', 'end', values=(
-                        order.id,
-                        order.thoi_gian.strftime('%d/%m/%Y'),
-                        order.ten_hang,
-                        f"{order.so_luong:,.0f}",
-                        f"{order.don_gia_ban:,.0f}"
-                    ))
-                    # Restore selection if this order was previously selected
-                    if order.id in current_selections:
-                        self.tree.selection_add(item)
-                        self.tree.item(item, tags=['selected'])
-            
-            if order_type == "all" or order_type == "TI":
-                query = self.session.query(TrucInOrder)\
-                    .order_by(desc(TrucInOrder.thoi_gian))
-                
-                if search_text:
-                    query = query.filter(
-                        or_(
-                            TrucInOrder.ten_hang.ilike(f'%{search_text}%'),
-                            TrucInOrder.ctv.ilike(f'%{search_text}%'),
-                            TrucInOrder.id.ilike(f'%{search_text}%')
-                        )
-                    )
-                
-                truc_in_orders = query.all()
-                
-                if selected_month != "Tất cả":
-                    month_num = int(selected_month.split()[1])
-                    truc_in_orders = [order for order in truc_in_orders 
-                                    if order.thoi_gian.month == month_num]
-                
-                for order in truc_in_orders:
-                    item = self.tree.insert('', 'end', values=(
-                        order.id,
-                        order.thoi_gian.strftime('%d/%m/%Y'),
-                        order.ten_hang,
-                        f"{order.so_luong:,.0f}",
-                        f"{order.don_gia_ban:,.0f}"
-                    ))
-                    # Restore selection if this order was previously selected
-                    if order.id in current_selections:
-                        self.tree.selection_add(item)
-                        self.tree.item(item, tags=['selected'])
-
-            if order_type == "all" or order_type == "B":
-                query = self.session.query(BangKeoOrder)\
-                    .order_by(desc(BangKeoOrder.thoi_gian))
-                
-                if search_text:
-                    query = query.filter(
-                        or_(
-                            BangKeoOrder.ten_hang.ilike(f'%{search_text}%'),
-                            BangKeoOrder.ctv.ilike(f'%{search_text}%'),
-                            BangKeoOrder.id.ilike(f'%{search_text}%')
-                        )
-                    )
-                
-                bang_keo_orders = query.all()
-                
-                if selected_month != "Tất cả":
-                    month_num = int(selected_month.split()[1])
-                    bang_keo_orders = [order for order in bang_keo_orders 
-                                    if order.thoi_gian.month == month_num]
-                
-                for order in bang_keo_orders:
-                    item = self.tree.insert('', 'end', values=(
-                        order.id,
-                        order.thoi_gian.strftime('%d/%m/%Y'),
-                        order.ten_hang,
-                        f"{order.so_luong:,.0f}",
-                        f"{order.don_gia_ban:,.0f}"
-                    ))
-                    # Restore selection if this order was previously selected
-                    if order.id in current_selections:
-                        self.tree.selection_add(item)
-                        self.tree.item(item, tags=['selected'])
-            
-            # After inserting all items, sort by current column if one is selected
-            if self.sort_column:
-                self.sort_treeview(self.sort_column)
-            else:
-                # Apply alternating row colors while preserving selections
-                self._apply_row_colors(preserve_selection=True)
-                
-        except Exception as e:
-            print(f"Error filtering orders: {str(e)}")
-            messagebox.showerror("Lỗi", f"Lỗi khi lọc đơn hàng: {str(e)}")
-    
-    def _apply_row_colors(self, preserve_selection=False):
-        """Apply alternating row colors to tree while optionally preserving selection"""
-        items = self.tree.get_children()
-        for i, item in enumerate(items):
-            current_tags = list(self.tree.item(item)['tags'])
-            
-            # Remove existing row color tags
-            if 'evenrow' in current_tags:
-                current_tags.remove('evenrow')
-            if 'oddrow' in current_tags:
-                current_tags.remove('oddrow')
-            
-            # Add new row color tag
-            new_tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            if preserve_selection and 'selected' in current_tags:
-                # Keep the 'selected' tag if it exists
-                self.tree.item(item, tags=current_tags + [new_tag])
-            else:
-                self.tree.item(item, tags=[new_tag])
-            
-            # Configure tag colors
-            self.tree.tag_configure('evenrow', background='#FFFFFF')
-            self.tree.tag_configure('oddrow', background='#F0F0F0')
-            self.tree.tag_configure('selected', background='#e6f3ff')
-
     def confirm(self):
         try:
             # Check if any order is selected
@@ -837,6 +890,9 @@ class OrderSelectionDialog(tk.Toplevel):
     def sort_treeview(self, col):
         """Sort treeview content when a column header is clicked"""
         try:
+            # Store currently selected order IDs before sorting
+            selected_ids = [self.tree.item(item)['values'][0] for item in self.tree.selection()]
+            
             # Get all items from treeview
             items = [(self.tree.set(item, col), item) for item in self.tree.get_children('')]
             
@@ -861,9 +917,16 @@ class OrderSelectionDialog(tk.Toplevel):
             # Rearrange items in treeview
             for index, (val, item) in enumerate(items):
                 self.tree.move(item, '', index)
-            
-            # Apply alternating row colors
-            self._apply_row_colors()
+                # If this item was previously selected, reselect it
+                if self.tree.item(item)['values'][0] in selected_ids:
+                    self.tree.selection_add(item)
+                    self.tree.item(item, tags=['selected'])
+                else:
+                    # Apply alternating row colors for non-selected items
+                    if index % 2 == 0:
+                        self.tree.item(item, tags=['evenrow'])
+                    else:
+                        self.tree.item(item, tags=['oddrow'])
             
         except Exception as e:
             print(f"Error sorting treeview: {str(e)}")
@@ -892,29 +955,62 @@ class OrderSelectionDialog(tk.Toplevel):
         """Handle click event on treeview"""
         region = self.tree.identify_region(event.x, event.y)
         if region == "heading":
+            # If clicking on heading, let the default sort handler work
             return
         
         item = self.tree.identify_row(event.y)
         if not item:
             return
-            
-        # Get the order ID from the clicked item
-        order_id = self.tree.item(item)['values'][0]
-            
+        
         # Toggle selection
         if item in self.tree.selection():
             self.tree.selection_remove(item)
-            self.tree.item(item, tags=[])  # Remove highlight
-            self.selected_order_ids.discard(order_id)  # Remove from tracked selections
+            self.tree.item(item, tags=[])
+            # Remove from selected_orders
+            item_id = self.tree.item(item)['values'][0]
+            if item_id in self.selected_orders:
+                self.selected_orders.remove(item_id)
         else:
             self.tree.selection_add(item)
-            self.tree.item(item, tags=['selected'])  # Add highlight
-            self.selected_order_ids.add(order_id)  # Add to tracked selections
-            
-        # Update selected orders list
-        self.selected_orders = list(self.selected_order_ids)
+            self.tree.item(item, tags=['selected'])
+            # Add to selected_orders
+            item_id = self.tree.item(item)['values'][0]
+            if item_id not in self.selected_orders:
+                self.selected_orders.append(item_id)
         
         return "break"
+
+    def on_order_type_change(self, *args):
+        """Handle changes in order type radio buttons"""
+        # No need to update selected_orders here as it's maintained globally
+        self.filter_orders()
+
+    def filter_orders(self):
+        """Filter orders based on the selected order type and other criteria."""
+        # This method should encapsulate the filtering logic that was previously triggered
+        # directly in the `do_filter_orders` method. Now, it just needs to call that method.
+        self.queue_background_task('filter')
+
+    def _apply_row_colors(self):
+        """Apply alternating row colors to tree while preserving selections"""
+        items = self.tree.get_children()
+        selected_ids = [self.tree.item(item)['values'][0] for item in self.tree.selection()]
+        
+        # Configure tag styles if not already configured
+        self.tree.tag_configure('evenrow', background='#FFFFFF')
+        self.tree.tag_configure('oddrow', background='#F0F0F0')
+        self.tree.tag_configure('selected', background='#e6f3ff')
+        
+        for i, item in enumerate(items):
+            # Check if item is selected
+            if self.tree.item(item)['values'][0] in selected_ids:
+                self.tree.item(item, tags=['selected'])
+            else:
+                # Apply alternating row colors for non-selected items
+                if i % 2 == 0:
+                    self.tree.item(item, tags=['evenrow'])
+                else:
+                    self.tree.item(item, tags=['oddrow'])
 
 def generate_order_form():
     try:
