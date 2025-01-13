@@ -384,7 +384,7 @@ class BangKeoTab(TabBase):
                 f"Chào bác,\n\n"
                 f"Bác làm giúp con đơn hàng Băng Keo \"{ten_hang}\" này nhé\n"
                 f"Màu sắc: {mau_sac}\n"
-                f"Số lượng: {so_luong} cái\n"
+                f"Số lượng: {so_luong} cuộn\n"
                 f"Quy cách: {quy_cach}\n\n"
                 f"Cám ơn bác\n"
                 f"Quế"

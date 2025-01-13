@@ -137,7 +137,7 @@ class ExportImportManager:
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"  # ten_hang
                     f"Màu sắc: {values[6]} / Màu keo: {values[7]}\n"  # mau_sac, mau_keo
-                    f"Số lượng: {values[5]} cái\n"  # so_luong
+                    f"Số lượng: {values[5]} cuộn\n"  # so_luong
                     f"Quy cách: {values[4]}mm\n\n"  # quy_cach
                     f"Cám ơn bác\n"
                     f"Quế"

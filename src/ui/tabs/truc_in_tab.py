@@ -271,7 +271,7 @@ class TrucInTab(TabBase):
                 'mau_sac': self.truc_in_mau_sac.get(),
                 'mau_keo': self.truc_in_mau_keo.get(),
                 'don_gia_goc': self.parse_float(self.truc_in_don_gia_goc.get()),
-                'thanh_tien': self.parse_float(self.truc_in_thanh_tien.get()),
+                'thanh_tien_goc': self.parse_float(self.truc_in_thanh_tien.get()),
                 'don_gia_ban': self.parse_float(self.truc_in_don_gia_ban.get()),
                 'thanh_tien_ban': self.parse_float(self.truc_in_thanh_tien_ban.get()),
                 'cong_no_khach': self.parse_float(self.truc_in_cong_no_khach.get()),
@@ -392,7 +392,7 @@ class TrucInTab(TabBase):
                 f"Chào bác,\n\n"
                 f"Bác làm giúp con đơn hàng Trục In \"{ten_hang}\" này nhé\n"
                 f"Màu sắc: {mau_sac} / Màu keo: {mau_keo}\n"
-                f"Số lượng: {so_luong} cái\n"
+                f"Số lượng: {so_luong} cuộn\n"
                 f"Quy cách: {quy_cach}\n\n"
                 f"Cám ơn bác\n"
                 f"Quế"

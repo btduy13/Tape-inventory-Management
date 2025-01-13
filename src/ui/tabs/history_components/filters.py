@@ -66,10 +66,8 @@ class FilterManager:
             if isinstance(date_str, datetime):
                 return date_str.date()
             elif isinstance(date_str, str):
-                try:
-                    return datetime.strptime(date_str, self.DATE_FORMAT).date()
-                except ValueError:
-                    return datetime.strptime(date_str, self.DATE_FORMAT).date()
+                # Chuẩn hóa định dạng ngày/tháng/năm
+                return datetime.strptime(date_str, '%d/%m/%Y').date()
             return None
         except (ValueError, TypeError) as e:
             logging.error(f"Error parsing date {date_str}: {str(e)}")
@@ -125,29 +123,27 @@ class FilterManager:
             
             tree, all_items = self.get_current_tree_and_items()
             
+            # Xóa tất cả items hiện tại
             for item in tree.get_children():
                 tree.delete(item)
             
             for item_id, values in all_items:
                 try:
+                    # Chỉ kiểm tra ngày tạo đơn (values[1])
+                    order_date = self.parse_date(values[1])
+                    
+                    # Kiểm tra ngày nằm trong khoảng
+                    date_match = True
+                    if from_date and to_date and order_date:
+                        date_match = from_date <= order_date <= to_date
+                    
+                    # Kiểm tra text search
                     text_match = True
                     if search_text:
-                        text_match = False
-                        for value in values:
-                            if str(value).lower().find(search_text) != -1:
-                                text_match = True
-                                break
+                        text_match = any(search_text in str(v).lower() for v in values)
                     
-                    date_match = True
-                    if from_date and to_date:
-                        order_date = self.parse_date(values[1])
-                        expected_date = self.parse_date(values[3])
-                        
-                        if order_date and expected_date:
-                            date_match = (from_date <= order_date <= to_date or 
-                                        from_date <= expected_date <= to_date)
-                    
-                    if text_match and date_match:
+                    # Chỉ hiển thị nếu thỏa mãn cả 2 điều kiện
+                    if date_match and text_match:
                         tree.insert('', 'end', values=values)
                 
                 except (ValueError, IndexError) as e:

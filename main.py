@@ -5,8 +5,12 @@ from src.ui.forms.donhang_form import DonHangForm
 from src.ui.forms.splash_screen import show_splash
 from src.database.database import init_db, get_session
 from src.utils.config import (
-    DATABASE_URL, APP_NAME, APP_THEME, 
-    LOG_DIR, LOG_FORMAT, LOG_ENCODING
+    LOG_DIR,
+    LOG_FORMAT, 
+    LOG_ENCODING,
+    DATABASE_URL,
+    APP_THEME,
+    APP_NAME
 )
 from src.utils.ui_utils import set_window_icon, center_window
 import os

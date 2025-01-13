@@ -305,9 +305,8 @@ def convert_order_to_preview_data(order):
     # Handle specifications based on order type
     if isinstance(order, BangKeoInOrder):
         print("Processing BangKeoInOrder specifications")
-        specs = f"{int(order.quy_cach_mm)}x{int(order.quy_cach_m)}x{int(order.quy_cach_mic)}"
-        if order.cuon_cay:
-            specs += f"\n{order.cuon_cay} cuộn/cây"
+        # Thêm đơn vị đo cho từng thông số
+        specs = f"{int(order.quy_cach_mm)}mm x {int(order.quy_cach_m)}m x {int(order.quy_cach_mic)}mic"
         print(f"Generated specs: {specs}")
     elif isinstance(order, TrucInOrder):
         print("Processing TrucInOrder specifications")
@@ -319,19 +318,11 @@ def convert_order_to_preview_data(order):
         print(f"Processing BangKeoOrder specifications")
         print(f"Raw quy_cach value: {order.quy_cach}")
         try:
-            # Try to parse quy_cach if it's a string containing numbers
-            parts = str(order.quy_cach).split('x')
-            print(f"Split parts: {parts}")
-            if len(parts) >= 3:
-                # If it has the format "mmxmxmic"
-                specs = 'x'.join(parts)
-            else:
-                # If it's just a regular string
-                specs = str(order.quy_cach)
+            # Thêm đơn vị kg cho băng keo
+            specs = f"{order.quy_cach}kg" if order.quy_cach else ""
             print(f"Generated specs: {specs}")
         except (ValueError, AttributeError) as e:
             print(f"Error processing quy_cach: {str(e)}")
-            # If parsing fails, just use the raw value
             specs = str(order.quy_cach) if order.quy_cach else ''
             print(f"Fallback specs: {specs}")
 
@@ -348,7 +339,7 @@ def convert_order_to_preview_data(order):
         'specs': specs,
         'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',
         'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',
-        'unit': 'KG' if isinstance(order, BangKeoOrder) else 'Cái',
+        'unit': 'KG' if isinstance(order, BangKeoOrder) else 'cuộn',
         'quantity': str(order.so_luong),
         'price': str(order.don_gia_ban),
         'total': str(thanh_tien)
@@ -488,12 +479,13 @@ class OrderSelectionDialog(tk.Toplevel):
             if self.current_task and self.current_task.is_cancelled:
                 return
 
-            # Store current selections before filtering
+            # Store current selections
             current_selections = self.selected_orders.copy()
             
             search_text = self.search_var.get().lower().strip()
             order_type = self.order_type_var.get()
             selected_month = self.month_var.get()
+            selected_year = int(self.year_var.get())
             
             self.after(0, lambda: self.tree.delete(*self.tree.get_children()))
             
@@ -514,6 +506,10 @@ class OrderSelectionDialog(tk.Toplevel):
                     )
                 
                 bang_keo_orders = query.all()
+                
+                # Filter by year and month
+                bang_keo_orders = [order for order in bang_keo_orders 
+                                 if order.thoi_gian.year == selected_year]
                 
                 if selected_month != "Tất cả":
                     month_num = int(selected_month.split()[1])
@@ -575,7 +571,7 @@ class OrderSelectionDialog(tk.Toplevel):
                 batch = orders[i:i + batch_size]
                 self.after(0, lambda b=batch: self.insert_orders_batch(b))
             
-            # Important: Restore selections after all batches are inserted
+            # Restore selections after loading
             def restore_selections():
                 for item in self.tree.get_children():
                     item_id = self.tree.item(item)['values'][0]
@@ -583,7 +579,6 @@ class OrderSelectionDialog(tk.Toplevel):
                         self.tree.selection_add(item)
                         self.tree.item(item, tags=['selected'])
             
-            # Schedule the selection restoration after the batches are inserted
             self.after(100, restore_selections)
             
         except Exception as e:
@@ -744,18 +739,29 @@ class OrderSelectionDialog(tk.Toplevel):
             # Bind search text changes
             self.search_var.trace_add('write', self.on_filter_change)
             
-            # Month filter
-            month_container = ttk.Frame(search_frame)
-            month_container.pack(fill='x', padx=5, pady=5)
+            # Month and Year filters
+            filter_container = ttk.Frame(search_frame)
+            filter_container.pack(fill='x', padx=5, pady=5)
             
-            ttk.Label(month_container, text="Tháng:").pack(side='left', padx=5)
+            # Year filter
+            ttk.Label(filter_container, text="Năm:").pack(side='left', padx=5)
+            current_year = datetime.now().year
+            years = list(range(current_year - 5, current_year + 1))  # 5 năm trước đến năm hiện tại
+            self.year_var = tk.StringVar(value=str(current_year))
+            year_cb = ttk.Combobox(filter_container, textvariable=self.year_var,
+                                  values=years, state="readonly", width=10)
+            year_cb.pack(side='left', padx=5)
+            
+            # Month filter (đã có từ trước)
+            ttk.Label(filter_container, text="Tháng:").pack(side='left', padx=5)
             self.month_var = tk.StringVar(value="Tất cả")
             months = ["Tất cả"] + [f"Tháng {i}" for i in range(1, 13)]
-            month_cb = ttk.Combobox(month_container, textvariable=self.month_var,
+            month_cb = ttk.Combobox(filter_container, textvariable=self.month_var,
                                    values=months, state="readonly", width=15)
             month_cb.pack(side='left', padx=5)
             
-            # Bind month selection changes
+            # Bind year and month selection changes
+            self.year_var.trace_add('write', self.on_filter_change)
             self.month_var.trace_add('write', self.on_filter_change)
             
             # Order type filter

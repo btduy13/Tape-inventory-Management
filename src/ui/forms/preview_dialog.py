@@ -189,72 +189,65 @@ class PreviewDialog(tk.Toplevel):
             return "0"
 
     def format_cell_text(self, text):
-        """Format long text into multiple lines if needed."""
-        print(f"\nFormatting cell text: {text}")
-        print(f"Text type: {type(text)}")
+        """Format cell text with proper error handling."""
         try:
-            # Handle None, numeric, and empty values
-            if text is None:
-                print("Text is None, returning empty string")
+            # Handle None or empty case
+            if text is None or text == '':
                 return ""
             
-            # Convert numeric values to string without decimal places if they're whole numbers
-            if isinstance(text, (int, float)):
-                if float(text).is_integer():
-                    result = str(int(text))
-                else:
-                    result = str(text)
-                print(f"Formatted numeric value: {result}")
-                return result
-            
-            # Handle quy_cach for BangKeoInOrder
-            if isinstance(text, dict) and all(key in text for key in ['mm', 'm', 'mic', 'cuon_cay']):
-                result = f"{text['mm']}mm x {text['m']}m x {text['mic']}mic\n{text['cuon_cay']} cuộn/cây"
-                print(f"Formatted dict specs: {result}")
-                return result
-                
-            # Convert to string and handle empty values
+            # Convert to string and strip
             text = str(text).strip()
+            
+            # Handle empty string after stripping
             if not text:
-                print("Text is empty after stripping")
                 return ""
+            
+            # Handle numeric values (including those with mm)
+            if isinstance(text, (int, float)) or text.replace('.', '').replace('mm', '').isdigit():
+                # If it's a measurement (ends with mm)
+                if str(text).lower().endswith('mm'):
+                    return str(text)
+                # If it's just a number
+                try:
+                    num = float(text)
+                    if num.is_integer():
+                        return str(int(num))
+                    return str(num)
+                except:
+                    return str(text)
+            
+            # For non-numeric text, handle word wrapping
+            try:
+                words = text.split()
+                if not words:
+                    return ""
                 
-            print(f"Processing text: {text}")
-            words = text.split()
-            lines = []
-            current_line = []
-            max_chars = 20
-            
-            for word in words:
-                current_line.append(word)
-                if len(' '.join(current_line)) > max_chars:
-                    if len(current_line) > 1:
-                        lines.append(' '.join(current_line[:-1]))
-                        current_line = [word]
-                    else:
-                        lines.append(word)
-                        current_line = []
-                        
-            if current_line:
-                lines.append(' '.join(current_line))
+                lines = []
+                current_line = []
+                max_chars = 20
                 
-            result = '\n'.join(lines)
-            print(f"Final formatted result: {result}")
-            
-            if result.count('\n') > 0:
-                style = ttk.Style()
-                required_height = (result.count('\n') + 1) * 20
-                style.configure("PreviewDialog.Treeview", rowheight=max(self.expanded_row_height, required_height))
-            
-            return result
-        except (ValueError, TypeError, AttributeError) as e:
-            print(f"Error formatting cell text: {str(e)}")
-            if isinstance(text, (int, float)):
-                result = str(text)
-                print(f"Fallback to simple string conversion: {result}")
-                return result
-            print("Returning empty string due to error")
-            return ""
+                for word in words:
+                    current_line.append(word)
+                    if len(' '.join(current_line)) > max_chars:
+                        if len(current_line) > 1:
+                            lines.append(' '.join(current_line[:-1]))
+                            current_line = [word]
+                        else:
+                            lines.append(word)
+                            current_line = []
+                            
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    
+                return '\n'.join(lines)
+                
+            except Exception as e:
+                print(f"Error in word wrapping: {str(e)}")
+                return str(text)
+                
+        except Exception as e:
+            print(f"Error in format_cell_text: {str(e)}")
+            return str(text) if text is not None else ""
         
     def reset_row_height(self):
         style = ttk.Style()
