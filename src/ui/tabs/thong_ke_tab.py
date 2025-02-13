@@ -177,7 +177,7 @@ class ThongKeTab(TabBase):
         
         # Treeview to display order data
         tree = ttk.Treeview(tree_frame, columns=(
-            "id", "thoi_gian", "ten_hang", "ngay_du_kien", 
+            "id", "thoi_gian", "ten_hang", "ten_khach_hang", "ngay_du_kien", 
             "cong_no_khach", "da_giao", "da_tat_toan"
         ), show="headings")
         
@@ -186,6 +186,7 @@ class ThongKeTab(TabBase):
             "id": ("ID đơn hàng", 100),
             "thoi_gian": ("Ngày tạo đơn", 150),
             "ten_hang": ("Tên đơn", 200),
+            "ten_khach_hang": ("Tên khách hàng", 200),
             "ngay_du_kien": ("Ngày giao", 150),
             "cong_no_khach": ("Công nợ khách", 150),
             "da_giao": ("Đã giao", 100),
@@ -316,6 +317,7 @@ class ThongKeTab(TabBase):
                 order.id,  # ID đơn hàng
                 order.thoi_gian.strftime("%d/%m/%Y"),  # Ngày tạo đơn
                 order.ten_hang,  # Tên đơn
+                order.ten_khach_hang,  # Tên khách hàng
                 order.ngay_du_kien.strftime("%d/%m/%Y"),  # Ngày giao
                 cong_no,  # Công nợ khách
                 "✓" if order.da_giao else "",  # Đã giao

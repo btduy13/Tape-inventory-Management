@@ -1,19 +1,28 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="TapeInventoryManagement",
+    name="tape-inventory-management",
     version="1.0.0",
     packages=find_packages(),
     install_requires=[
-        'ttkthemes',
         'sqlalchemy',
-        'psycopg2-binary',
+        'alembic',
+        'ttkthemes',
         'pillow',
-        'pandas',
-        'openpyxl',
         'reportlab',
-        'babel',
-        # Thêm các dependency khác của dự án vào đây
+        'pandas',
+        'matplotlib',
+        'seaborn',
+        'openpyxl',
+        'tkcalendar',
+        'schedule'
     ],
+    entry_points={
+        'console_scripts': [
+            'tape-inventory=main:main',
+        ],
+    },
+    author="Your Name",
+    description="Tape Inventory Management System",
     python_requires='>=3.8',
 ) 

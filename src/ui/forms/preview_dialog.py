@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+import logging
 
 class PreviewDialog(tk.Toplevel):
     def __init__(self, parent, order_data):
@@ -191,40 +192,61 @@ class PreviewDialog(tk.Toplevel):
     def format_cell_text(self, text):
         """Format cell text with proper error handling."""
         try:
+            logging.info(f"Formatting cell text. Input value: {text}, Type: {type(text)}")
+            
             # Handle None or empty case
             if text is None or text == '':
+                logging.info("Empty or None value detected, returning empty string")
                 return ""
             
             # Convert to string and strip
             text = str(text).strip()
+            logging.info(f"After string conversion and strip: {text}")
             
             # Handle empty string after stripping
             if not text:
+                logging.info("Empty string after stripping, returning empty string")
                 return ""
-            
-            # Handle numeric values (including those with mm)
+
+            # Handle numeric values and measurements
             if isinstance(text, (int, float)) or text.replace('.', '').replace('mm', '').isdigit():
-                # If it's a measurement (ends with mm)
-                if str(text).lower().endswith('mm'):
-                    return str(text)
-                # If it's just a number
+                logging.info(f"Handling numeric value or measurement: {text}")
+                # Keep measurement values as is
+                if text.lower().endswith('mm'):
+                    logging.info(f"Measurement value detected, keeping as is: {text}")
+                    return text
+                # Convert numeric values
                 try:
                     num = float(text)
                     if num.is_integer():
-                        return str(int(num))
-                    return str(num)
-                except:
-                    return str(text)
+                        result = str(int(num))
+                        logging.info(f"Converted to integer: {result}")
+                        return result
+                    result = str(num)
+                    logging.info(f"Converted to float: {result}")
+                    return result
+                except ValueError:
+                    logging.warning(f"Error converting numeric value")
+                    return text
+            
+            # For short text (less than max_chars), return as is
+            max_chars = 20
+            if len(text) <= max_chars:
+                logging.info(f"Short text, returning as is: {text}")
+                return text
             
             # For non-numeric text, handle word wrapping
             try:
-                words = text.split()
+                logging.info("Processing text for word wrapping")
+                # Convert to string before splitting
+                text_str = str(text)
+                words = text_str.split()
                 if not words:
+                    logging.info("No words found after splitting")
                     return ""
                 
                 lines = []
                 current_line = []
-                max_chars = 20
                 
                 for word in words:
                     current_line.append(word)
@@ -239,14 +261,16 @@ class PreviewDialog(tk.Toplevel):
                 if current_line:
                     lines.append(' '.join(current_line))
                     
-                return '\n'.join(lines)
+                result = '\n'.join(lines)
+                logging.info(f"Final formatted text: {result}")
+                return result
                 
             except Exception as e:
-                print(f"Error in word wrapping: {str(e)}")
+                logging.error(f"Error in word wrapping: {str(e)}")
                 return str(text)
                 
         except Exception as e:
-            print(f"Error in format_cell_text: {str(e)}")
+            logging.error(f"Error in format_cell_text: {str(e)}")
             return str(text) if text is not None else ""
         
     def reset_row_height(self):

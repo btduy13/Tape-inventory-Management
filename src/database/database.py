@@ -4,7 +4,8 @@ from sqlalchemy.orm import sessionmaker, relationship, object_session
 from datetime import datetime
 from sqlalchemy import event
 import os
-from .models import Base, DonHang, ChiTietDonHang
+
+Base = declarative_base()
 
 # Thêm hàm helper để to ID
 def generate_order_id(prefix, session, table_class):
@@ -36,6 +37,7 @@ class BangKeoInOrder(Base):
     id = Column(String(20), primary_key=True)
     thoi_gian = Column(DateTime, default=datetime.now)
     ten_hang = Column(String(255), nullable=False)
+    ten_khach_hang = Column(String(255), nullable=False)
     ngay_du_kien = Column(Date, nullable=False)
     
     # Quy cách
@@ -85,6 +87,7 @@ class TrucInOrder(Base):
     id = Column(String(20), primary_key=True)
     thoi_gian = Column(DateTime, default=datetime.now)
     ten_hang = Column(String(255), nullable=False)
+    ten_khach_hang = Column(String(255), nullable=False)
     ngay_du_kien = Column(Date, nullable=False)
     
     # Thông tin cơ bản
@@ -118,6 +121,7 @@ class BangKeoOrder(Base):
     id = Column(String(20), primary_key=True)
     thoi_gian = Column(DateTime, default=datetime.now)
     ten_hang = Column(String(255), nullable=False)
+    ten_khach_hang = Column(String(255), nullable=False)
     ngay_du_kien = Column(Date, nullable=False)
     
     # Thông tin cơ bản

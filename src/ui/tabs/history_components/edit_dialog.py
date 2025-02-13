@@ -167,7 +167,8 @@ class EditDialogManager:
         # Info section
         self._create_field(info_frame, 'thoi_gian', 'Thời gian:', values, 0, 0, readonly_fields)
         self._create_field(info_frame, 'ten_hang', 'Tên hàng:', values, 0, 2, readonly_fields)
-        self._create_field(info_frame, 'ngay_du_kien', 'Ngày dự kiến:', values, 1, 0, readonly_fields)
+        self._create_field(info_frame, 'ten_khach_hang', 'Tên khách hàng:', values, 1, 0, readonly_fields)
+        self._create_field(info_frame, 'ngay_du_kien', 'Ngày dự kiến:', values, 1, 2, readonly_fields)
         
         # Specs section
         self._create_field(specs_frame, 'quy_cach', 'Quy cách:', values, 0, 0, readonly_fields)
@@ -190,11 +191,22 @@ class EditDialogManager:
         self._create_field(price_frame, 'tien_hoa_hong', 'Tiền hoa hồng:', values, 4, 0, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan', 'Lợi nhuận:', values, 4, 2, readonly_fields)
         
-        self._create_field(price_frame, 'loi_giay', 'Lõi giấy:', values, 5, 0, readonly_fields)
-        self._create_field(price_frame, 'thung_bao', 'Thùng/Bao:', values, 5, 2, readonly_fields)
+        self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 5, 0, readonly_fields)
+        self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 5, 2, readonly_fields)
 
-        self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 6, 0, readonly_fields)
-        self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 6, 2, readonly_fields)
+        # Status section
+        status_frame = ttk.LabelFrame(main_frame, text="Trạng thái", padding="5 5 5 5")
+        status_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        # Add status checkboxes
+        da_giao_var = tk.BooleanVar(value=values[self.parent.truc_in_tree['columns'].index('da_giao')] == "✓")
+        da_tat_toan_var = tk.BooleanVar(value=values[self.parent.truc_in_tree['columns'].index('da_tat_toan')] == "✓")
+
+        ttk.Checkbutton(status_frame, text="Đã giao hàng", variable=da_giao_var).grid(row=0, column=0, padx=5, pady=5, sticky='w')
+        ttk.Checkbutton(status_frame, text="Đã tất toán", variable=da_tat_toan_var).grid(row=0, column=1, padx=5, pady=5, sticky='w')
+
+        self.edit_entries['da_giao'] = da_giao_var
+        self.edit_entries['da_tat_toan'] = da_tat_toan_var
         
     def _create_bang_keo_form(self, main_frame, values, readonly_fields):
         info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")

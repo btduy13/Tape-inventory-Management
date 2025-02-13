@@ -72,12 +72,13 @@ class HistoryTab(TabBase):
             'tien_ship': 'Tiền Ship',
             'loi_nhuan_rong': 'Lợi Nhuận Ròng',
             'da_giao': 'Đã Giao',
-            'da_tat_toan': 'Đã Tất Toán'
+            'da_tat_toan': 'Đã Tất Toán',
+            'ten_khach_hang': 'Tên Khách Hàng'
         }
         
         # Define columns for each tree
         self.bang_keo_in_columns = [
-            'id', 'thoi_gian', 'ten_hang', 'ngay_du_kien',
+            'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
             'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay',
             'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac',
             'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von',
@@ -88,7 +89,7 @@ class HistoryTab(TabBase):
         ]
         
         self.truc_in_columns = [
-            'id', 'thoi_gian', 'ten_hang', 'ngay_du_kien',
+            'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
             'quy_cach', 'so_luong', 'mau_sac', 'mau_keo',
             'don_gia_goc', 'thanh_tien', 'don_gia_ban',
             'thanh_tien_ban', 'cong_no_khach', 'ctv',
@@ -97,7 +98,7 @@ class HistoryTab(TabBase):
         ]
         
         self.bang_keo_columns = [
-            'id', 'thoi_gian', 'ten_hang', 'ngay_du_kien',
+            'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
             'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc',
             'thanh_tien', 'don_gia_ban', 'thanh_tien_ban',
             'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong',
@@ -247,21 +248,16 @@ class HistoryTab(TabBase):
     def add_order(self, order_type, order_data):
         # Format thời gian từ datetime object sang string theo định dạng dd/mm/yyyy
         def format_datetime(dt):
-            if isinstance(dt, str):
-                try:
-                    dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S.%f')
-                except ValueError:
-                    try:
-                        dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-                    except ValueError:
-                        return dt
-            return dt.strftime('%d/%m/%Y') if dt else ''
+            if isinstance(dt, datetime):
+                return dt.strftime(self.DATE_FORMAT)
+            return dt
 
         if order_type == 'bang_keo_in':
             values = [
                 order_data.get('id', ''),
                 format_datetime(order_data.get('thoi_gian', '')),
                 order_data.get('ten_hang', ''),
+                order_data.get('ten_khach_hang', ''),
                 format_datetime(order_data.get('ngay_du_kien', '')),
                 order_data.get('quy_cach_mm', ''),
                 order_data.get('quy_cach_m', ''),
@@ -301,6 +297,7 @@ class HistoryTab(TabBase):
                 order_data.get('id', ''),
                 format_datetime(order_data.get('thoi_gian', '')),
                 order_data.get('ten_hang', ''),
+                order_data.get('ten_khach_hang', ''),
                 format_datetime(order_data.get('ngay_du_kien', '')),
                 order_data.get('quy_cach', ''),
                 order_data.get('so_luong', ''),
@@ -328,6 +325,7 @@ class HistoryTab(TabBase):
                 order_data.get('id', ''),
                 format_datetime(order_data.get('thoi_gian', '')),
                 order_data.get('ten_hang', ''),
+                order_data.get('ten_khach_hang', ''),
                 format_datetime(order_data.get('ngay_du_kien', '')),
                 order_data.get('quy_cach', ''),
                 order_data.get('so_luong', ''),
@@ -523,6 +521,7 @@ class HistoryTab(TabBase):
                     order.id,  # ID đơn hàng
                     order.thoi_gian.strftime("%d/%m/%Y"),  # Ngày tạo đơn
                     order.ten_hang,  # Tên đơn
+                    order.ten_khach_hang,  # Tên khách hàng
                     order.ngay_du_kien.strftime("%d/%m/%Y"),  # Ngày giao
                     cong_no,  # Công nợ khách
                     "✓" if order.da_giao else "",  # Đã giao

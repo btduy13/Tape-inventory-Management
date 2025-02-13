@@ -10,7 +10,7 @@ class TreeViewManager:
         
         
     def create_bang_keo_in_tree(self, frame):
-        columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
+        columns = ('id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
                   'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 
                   'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 
                   'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 
@@ -39,6 +39,7 @@ class TreeViewManager:
         headings = {
             'id': 'ID',
             'thoi_gian': 'Thời gian', 'ten_hang': 'Tên hàng', 
+            'ten_khach_hang': 'Tên khách hàng',
             'ngay_du_kien': 'Ngày dự kiến giao',
             'quy_cach_mm': 'Quy cách (mm)', 'quy_cach_m': 'Quy cách (m)', 
             'quy_cach_mic': 'Quy cách (mic)', 'cuon_cay': 'Cuộn/cây',
@@ -76,7 +77,7 @@ class TreeViewManager:
         return tree
         
     def create_truc_in_tree(self, frame):
-        columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
+        columns = ('id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
                   'mau_keo', 'don_gia_goc', 'thanh_tien', 'don_gia_ban',
                   'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
                   'tien_hoa_hong', 'loi_nhuan', 'da_giao', 'da_tat_toan')
@@ -92,6 +93,7 @@ class TreeViewManager:
         headings = {
             'id': 'ID',
             'thoi_gian': 'Thời gian', 'ten_hang': 'Tên hàng',
+            'ten_khach_hang': 'Tên khách hàng',
             'ngay_du_kien': 'Ngày dự kiến giao',
             'quy_cach': 'Quy cách', 'so_luong': 'Số lượng',
             'mau_sac': 'Màu sắc', 'mau_keo': 'Màu keo',
@@ -150,7 +152,7 @@ class TreeViewManager:
                 tree.item(item, tags=('oddrow',)) 
 
     def create_bang_keo_tree(self, frame):
-        columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
+        columns = ('id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
                   'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach',
                   'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'da_giao', 'da_tat_toan')
         
@@ -177,6 +179,7 @@ class TreeViewManager:
             'id': 'ID đơn hàng',
             'thoi_gian': 'Thời gian', 
             'ten_hang': 'Tên hàng',
+            'ten_khach_hang': 'Tên khách hàng',
             'ngay_du_kien': 'Ngày dự kiến',
             'quy_cach': 'Quy cách (KG)',
             'so_luong': 'Số lượng',
@@ -185,10 +188,8 @@ class TreeViewManager:
             'thanh_tien': 'Thành tiền',
             'don_gia_ban': 'Đơn giá bán',
             'thanh_tien_ban': 'Thành tiền bán',
-            'cong_no_khach': 'Công nợ khách',
-            'ctv': 'CTV',
-            'hoa_hong': 'Hoa hồng',
-            'tien_hoa_hong': 'Tiền hoa hồng',
+            'cong_no_khach': 'Công nợ khách', 'ctv': 'CTV',
+            'hoa_hong': 'Hoa hồng', 'tien_hoa_hong': 'Tiền hoa hồng',
             'loi_nhuan': 'Lợi nhuận',
             'da_giao': 'Đã giao',
             'da_tat_toan': 'Đã tất toán'

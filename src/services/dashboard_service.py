@@ -79,8 +79,19 @@ class DashboardService:
         df_ti = pd.read_sql(truc_in_query.statement, self.session.bind)
         df_bk = pd.read_sql(bang_keo_query.statement, self.session.bind)
         
-        # Merge dataframes
-        df = pd.concat([df_bki, df_ti, df_bk])
+        # Filter out empty DataFrames and ensure consistent dtypes
+        dataframes = []
+        for df in [df_bki, df_ti, df_bk]:
+            if not df.empty:
+                df['quantity'] = df['quantity'].astype('float64')
+                df['amount'] = df['amount'].astype('float64')
+                dataframes.append(df)
+        
+        # Merge dataframes only if we have any non-empty ones
+        if dataframes:
+            df = pd.concat(dataframes, ignore_index=True)
+        else:
+            df = pd.DataFrame(columns=['period', 'quantity', 'amount'])
         
         # Group and aggregate
         df = df.groupby('period').agg({

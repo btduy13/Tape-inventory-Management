@@ -49,42 +49,37 @@ class BangKeoInTab(TabBase):
         basic_info_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
         self._configure_grid(basic_info_frame, 4)
 
-        # Thêm ID đơn hàng
-        ttk.Label(basic_info_frame, text="ID đơn hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
-        self.id_don_hang = ttk.Entry(basic_info_frame, width=20, state='readonly')
-        self.id_don_hang.grid(row=0, column=1, sticky='w', padx=5, pady=5)
+        # Row 0: Tên hàng và Ngày dự kiến
+        ttk.Label(basic_info_frame, text="Tên hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
+        self.ten_hang_entry = ttk.Entry(basic_info_frame)
+        self.ten_hang_entry.grid(row=0, column=1, sticky='ew', padx=5, pady=5)
 
-        # Tên Hàng
-        ttk.Label(basic_info_frame, text="Tên Hàng:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
-        self.ten_hang = ttk.Entry(basic_info_frame, width=40)
-        self.ten_hang.grid(row=0, column=3, sticky='w', padx=5, pady=5)
+        ttk.Label(basic_info_frame, text="Ngày dự kiến:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
+        self.ngay_du_kien = DateEntry(basic_info_frame, width=20, background='darkblue', foreground='white', borderwidth=2)
+        self.ngay_du_kien.grid(row=0, column=3, sticky='ew', padx=5, pady=5)
 
-        # Ngày dự kiến
-        ttk.Label(basic_info_frame, text="Ngày dự kiến giao:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
-        self.ngay_du_kien = DateEntry(basic_info_frame, width=15, background='darkblue',
-                                    foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy',
-                                    locale='vi_VN')
-        self.ngay_du_kien.grid(row=1, column=1, sticky='w', padx=5, pady=5)
+        # Row 1: Tên khách hàng
+        ttk.Label(basic_info_frame, text="Tên khách hàng:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
+        self.ten_khach_hang_entry = ttk.Entry(basic_info_frame)
+        self.ten_khach_hang_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
 
-        # Quy cách
-        ttk.Label(basic_info_frame, text="Quy cách:").grid(row=2, column=0, sticky='e', padx=5, pady=5)
-        quy_cach_frame = ttk.Frame(basic_info_frame)
-        quy_cach_frame.grid(row=2, column=1, columnspan=3, sticky='w', padx=5, pady=5)
-        
-        self.quy_cach_mm = ttk.Entry(quy_cach_frame, width=10)
-        self.quy_cach_mm.pack(side=tk.LEFT, padx=2)
-        ttk.Label(quy_cach_frame, text="mm x").pack(side=tk.LEFT)
-        self.quy_cach_m = ttk.Entry(quy_cach_frame, width=10)
-        self.quy_cach_m.pack(side=tk.LEFT, padx=2)
-        ttk.Label(quy_cach_frame, text="m x").pack(side=tk.LEFT)
-        self.quy_cach_mic = ttk.Entry(quy_cach_frame, width=10)
-        self.quy_cach_mic.pack(side=tk.LEFT, padx=2)
-        ttk.Label(quy_cach_frame, text="mic").pack(side=tk.LEFT)
+        # Row 2: Quy cách
+        ttk.Label(basic_info_frame, text="Quy cách (mm):").grid(row=2, column=0, sticky='e', padx=5, pady=5)
+        self.quy_cach_mm = ttk.Entry(basic_info_frame)
+        self.quy_cach_mm.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
 
-        # Cuộn/1 cây
-        ttk.Label(basic_info_frame, text="Cuộn/1 cây:").grid(row=3, column=0, sticky='e', padx=5, pady=5)
-        self.cuon_cay = ttk.Entry(basic_info_frame, width=20)
-        self.cuon_cay.grid(row=3, column=1, sticky='w', padx=5, pady=5)
+        ttk.Label(basic_info_frame, text="Quy cách (m):").grid(row=2, column=2, sticky='e', padx=5, pady=5)
+        self.quy_cach_m = ttk.Entry(basic_info_frame)
+        self.quy_cach_m.grid(row=2, column=3, sticky='ew', padx=5, pady=5)
+
+        # Row 3: Quy cách mic và cuộn/cây
+        ttk.Label(basic_info_frame, text="Quy cách (mic):").grid(row=3, column=0, sticky='e', padx=5, pady=5)
+        self.quy_cach_mic = ttk.Entry(basic_info_frame)
+        self.quy_cach_mic.grid(row=3, column=1, sticky='ew', padx=5, pady=5)
+
+        ttk.Label(basic_info_frame, text="Cuộn/Cây:").grid(row=3, column=2, sticky='e', padx=5, pady=5)
+        self.cuon_cay = ttk.Entry(basic_info_frame)
+        self.cuon_cay.grid(row=3, column=3, sticky='ew', padx=5, pady=5)
 
         # Chi phí Frame
         cost_frame = ttk.LabelFrame(main_frame, text="Chi phí", padding=10)
@@ -226,7 +221,7 @@ class BangKeoInTab(TabBase):
         btn_tinh_toan.pack(side='right', padx=5)
 
         # Set focus to the first entry
-        self.ten_hang.focus_set()
+        self.ten_hang_entry.focus_set()
 
     def _configure_grid(self, frame, cols):
         """Configure grid columns to be evenly spaced"""
@@ -323,23 +318,27 @@ class BangKeoInTab(TabBase):
             self.update_status("Lỗi khi tính toán")
 
     def luu_don_hang(self):
+        """Save the order to database"""
         try:
             # Kiểm tra các trường bắt buộc
             required_fields = {
-                'Tên hàng': self.ten_hang.get(),
+                'Tên hàng': self.ten_hang_entry.get(),
+                'Tên khách hàng': self.ten_khach_hang_entry.get(),
                 'Số lượng': self.so_luong.get(),
                 'Đơn giá bán': self.don_gia_ban.get()
             }
             
-            empty_fields = [field for field, value in required_fields.items() if not value.strip()]
-            if empty_fields:
-                messagebox.showwarning("Cảnh báo", f"Vui lòng điền đầy đủ thông tin: {', '.join(empty_fields)}")
-                return
+            # Validate required fields
+            for field_name, value in required_fields.items():
+                if not value:
+                    messagebox.showerror("Lỗi", f"Vui lòng nhập {field_name}")
+                    return
             
-            # Lấy dữ liệu từ form
+            # Create data dictionary
             data = {
                 'thoi_gian': datetime.now(),
-                'ten_hang': self.ten_hang.get(),
+                'ten_hang': self.ten_hang_entry.get(),
+                'ten_khach_hang': self.ten_khach_hang_entry.get(),
                 'ngay_du_kien': self.ngay_du_kien.get_date(),
                 'quy_cach_mm': self.parse_float(self.quy_cach_mm.get()),
                 'quy_cach_m': self.parse_float(self.quy_cach_m.get()),
@@ -368,8 +367,8 @@ class BangKeoInTab(TabBase):
                 'loi_nhuan': self.parse_float(self.loi_nhuan.get()),
                 'tien_ship': self.parse_float(self.tien_ship.get()),
                 'loi_nhuan_rong': self.parse_float(self.loi_nhuan_rong.get()),
-                'da_giao': self.da_giao,
-                'da_tat_toan': self.da_tat_toan
+                'da_giao': False,
+                'da_tat_toan': False
             }
             
             # Tạo đối tượng BangKeoInOrder mới
@@ -380,10 +379,10 @@ class BangKeoInTab(TabBase):
             self.db_session.commit()
             
             # Cập nhật ID đơn hàng trên form
-            self.id_don_hang.configure(state='normal')
-            self.id_don_hang.delete(0, tk.END)
-            self.id_don_hang.insert(0, str(don_hang.id))
-            self.id_don_hang.configure(state='readonly')
+            self.ten_hang_entry.configure(state='normal')
+            self.ten_hang_entry.delete(0, tk.END)
+            self.ten_hang_entry.insert(0, str(don_hang.id))
+            self.ten_hang_entry.configure(state='readonly')
             
             messagebox.showinfo("Thành công", "Đã lưu đơn hàng thành công!")
             
@@ -398,22 +397,58 @@ class BangKeoInTab(TabBase):
             self.db_session.rollback()
 
     def xoa_form(self):
+        """Clear all form fields"""
         try:
-            if messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa toàn bộ form?"):
-                # Xóa nội dung của tất cả các Entry trong tab này
-                for child in self.tab.winfo_children():
-                    self.clear_widget(child)
-                
-                # Xóa ID đơn hàng
-                self.id_don_hang.configure(state='normal')
-                self.id_don_hang.delete(0, tk.END)
-                self.id_don_hang.configure(state='readonly')
-                
-                messagebox.showinfo("Thành công", "Đã xóa form")
-                self.update_status("Form đã được xóa")
+            # Clear basic information
+            self.ten_hang_entry.delete(0, tk.END)
+            self.ten_khach_hang_entry.delete(0, tk.END)
+            self.quy_cach_mm.delete(0, tk.END)
+            self.quy_cach_m.delete(0, tk.END)
+            self.quy_cach_mic.delete(0, tk.END)
+            self.cuon_cay.delete(0, tk.END)
+            
+            # Clear quantities and fees
+            self.so_luong.delete(0, tk.END)
+            self.phi_sl.delete(0, tk.END)
+            self.mau_keo.delete(0, tk.END)
+            self.phi_keo.delete(0, tk.END)
+            self.mau_sac.delete(0, tk.END)
+            self.phi_mau.delete(0, tk.END)
+            self.phi_size.delete(0, tk.END)
+            self.phi_cat.delete(0, tk.END)
+            
+            # Clear prices
+            self.don_gia_von.delete(0, tk.END)
+            self.don_gia_goc.delete(0, tk.END)
+            self.thanh_tien_goc.delete(0, tk.END)
+            self.don_gia_ban.delete(0, tk.END)
+            self.thanh_tien_ban.delete(0, tk.END)
+            self.tien_coc.delete(0, tk.END)
+            self.cong_no_khach.delete(0, tk.END)
+            
+            # Clear CTV and commission
+            self.ctv.delete(0, tk.END)
+            self.hoa_hong.delete(0, tk.END)
+            self.tien_hoa_hong.delete(0, tk.END)
+            
+            # Clear additional info
+            self.loi_giay.delete(0, tk.END)
+            self.thung_bao.delete(0, tk.END)
+            self.loi_nhuan.delete(0, tk.END)
+            self.tien_ship.delete(0, tk.END)
+            self.loi_nhuan_rong.delete(0, tk.END)
+            
+            # Reset date to today
+            self.ngay_du_kien.set_date(datetime.now())
+            
+            # Set focus to first field
+            self.ten_hang_entry.focus_set()
+            
+            messagebox.showinfo("Thành công", "Đã xóa form")
+            
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xóa form: {str(e)}")
-            self.update_status("Lỗi khi xóa form")
+            messagebox.showerror("Lỗi", f"Lỗi khi xóa form: {str(e)}")
+            raise
 
     def thoat(self):
         try:
@@ -425,124 +460,108 @@ class BangKeoInTab(TabBase):
             self.update_status("Lỗi khi thoát chương trình")
 
     def export_to_excel(self):
+        """Export the order details to Excel"""
         try:
-            # Chọn vị trí lưu file
-            file_path = filedialog.asksaveasfilename(
-                defaultextension='.xlsx',
-                filetypes=[("Excel files", "*.xlsx")],
-                title="Chọn vị trí lưu file Excel"
-            )
-
-            if not file_path:  # Nếu người dùng hủy
-                return
-
-            # Tạo dữ liệu với ngày là trường đầu tiên
-            current_date = datetime.now().strftime('%d-%m-%Y')
-
+            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_name = f"don_hang_{current_date}.xlsx"
+            
+            # Create workbook and worksheet
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Đơn hàng"
+            
+            # Prepare data
             data = {
-                'ID': self.id_don_hang.get(),
+                'ID': self.ten_hang_entry.get(),
                 'Ngày': current_date,
-                'Tên Hàng': self.ten_hang.get(),
+                'Tên Hàng': self.ten_hang_entry.get(),
+                'Tên Khách Hàng': self.ten_khach_hang_entry.get(),
                 'Ngày dự kiến': self.ngay_du_kien.get_date().strftime('%d-%m-%Y'),
                 'Quy Cách (mm)': self.quy_cach_mm.get(),
                 'Quy Cách (m)': self.quy_cach_m.get(),
                 'Quy Cách (mic)': self.quy_cach_mic.get(),
-                'Cuộn/1 cây': self.cuon_cay.get(),
-                'Số Lượng': self.so_luong.get(),
-                'Phí số lượng': self.phi_sl.get(),
-                'Màu Keo': self.mau_keo.get(),
-                'Phí Keo': self.phi_keo.get(),
-                'Màu Sắc': self.mau_sac.get(),
+                'Cuộn/Cây': self.cuon_cay.get(),
+                'Số lượng': self.so_luong.get(),
+                'Phí SL': self.phi_sl.get(),
+                'Màu keo': self.mau_keo.get(),
+                'Phí keo': self.phi_keo.get(),
+                'Màu sắc': self.mau_sac.get(),
                 'Phí màu': self.phi_mau.get(),
                 'Phí size': self.phi_size.get(),
                 'Phí cắt': self.phi_cat.get(),
                 'Đơn giá vốn': self.don_gia_von.get(),
                 'Đơn giá gốc': self.don_gia_goc.get(),
-                'Thành Tiền(gốc)': self.thanh_tien_goc.get(),
-                'Đơn giá(bán)': self.don_gia_ban.get(),
-                'Thành Tiền(bán)': self.thanh_tien_ban.get(),
+                'Thành tiền gốc': self.thanh_tien_goc.get(),
+                'Đơn giá bán': self.don_gia_ban.get(),
+                'Thành tiền bán': self.thanh_tien_ban.get(),
                 'Tiền cọc': self.tien_coc.get(),
                 'Công nợ khách': self.cong_no_khach.get(),
                 'CTV': self.ctv.get(),
-                'Hoa hồng(%)': self.hoa_hong.get(),
+                'Hoa hồng': self.hoa_hong.get(),
                 'Tiền hoa hồng': self.tien_hoa_hong.get(),
-                'Lõi Giấy': self.loi_giay.get(),
+                'Lỗi giấy': self.loi_giay.get(),
                 'Thùng/Bao': self.thung_bao.get(),
-                'Lợi nhuận': self.loi_nhuan.get()
+                'Lợi nhuận': self.loi_nhuan.get(),
+                'Tiền ship': self.tien_ship.get(),
+                'Lợi nhuận ròng': self.loi_nhuan_rong.get()
             }
-
-            # Kiểm tra file có tồn tại không
-            if os.path.exists(file_path):
-                # Nếu file đã tồn tại, mở file và thêm dữ liệu mới
-                wb = load_workbook(file_path)
-                if "Bang keo in" in wb.sheetnames:
-                    ws = wb["Bang keo in"]
-                    next_row = ws.max_row + 1
-                else:
-                    ws = wb.create_sheet("Bang keo in")
-                    # Ghi headers cho sheet mới
-                    for col, header in enumerate(data.keys(), 1):
-                        ws.cell(row=1, column=col, value=header)
-                    next_row = 2
-            else:
-                # Tạo file mới nếu chưa tồn tại
-                wb = Workbook()
-                ws = wb.active
-                ws.title = "Bang keo in"
-                # Ghi headers
-                for col, header in enumerate(data.keys(), 1):
-                    ws.cell(row=1, column=col, value=header)
-                next_row = 2
-
-            # Ghi data vào dòng tiếp theo
-            for col, value in enumerate(data.values(), 1):
-                ws.cell(row=next_row, column=col, value=value)
-
-            # Lưu file
-            wb.save(file_path)
-
-            messagebox.showinfo("Thành công", "Đã xuất dữ liệu ra Excel thành công!")
-            self.update_status("Đã xuất Excel thành công")
-
+            
+            # Write headers and data
+            for col, (header, value) in enumerate(data.items(), start=1):
+                ws.cell(row=1, column=col, value=header)
+                ws.cell(row=2, column=col, value=value)
+            
+            # Save file
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx")],
+                initialfile=file_name
+            )
+            
+            if file_path:
+                wb.save(file_path)
+                messagebox.showinfo("Thành công", f"Đã xuất file Excel: {file_path}")
+        
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất Excel: {str(e)}")
-            self.update_status("Lỗi khi xuất Excel")
+            messagebox.showerror("Lỗi", f"Lỗi khi xuất Excel: {str(e)}")
+            raise
 
     def export_email(self):
-        """Export the order details to a text file and open it."""
-        ten_hang = self.ten_hang.get()
-        mau_sac = self.mau_sac.get()
-        mau_keo = self.mau_keo.get()
-        so_luong = self.so_luong.get()
-        quy_cach = f"{self.quy_cach_mm.get()}mm * {self.quy_cach_m.get()}m * {self.quy_cach_mic.get()}mic"
-        loi_giay = self.loi_giay.get()
-        thung_bao = self.thung_bao.get()
-
-        email_content = (
-            f"Chào bác,\n\n"
-            f"Bác làm giúp con đơn hàng in logo \"{ten_hang}\" này nhé\n"
-            f"Màu sắc: {mau_sac} / Màu keo: {mau_keo}\n"
-            f"Số lượng: {so_luong} cuộn\n"
-            f"Quy cách: {quy_cach}\n"
-            f"Lõi giấy: {loi_giay} - Thùng bao: {thung_bao}\n\n"
-            f"Cám ơn bác\n"
-            f"Quế"
-        )
-
-        # Ask user for file location to save the text file
-        file_path = filedialog.asksaveasfilename(
-            defaultextension='.txt',
-            filetypes=[("Text files", "*.txt")],
-            title="Chọn vị trí lưu file văn bản"
-        )
-
-        if file_path:  # If user selects a file path
-            with open(file_path, 'w', encoding='utf-8') as file:
-                file.write(email_content)
-            messagebox.showinfo("Thành công", "Đã xuất nội dung email ra file văn bản thành công!")
-            self.update_status("Đã xuất email thành công")
-
-            # Open the saved text file using default text editor
-            os.startfile(file_path)
-        else:
-            self.update_status("Xuất email bị hủy")
+        """Export the order details for email"""
+        try:
+            ten_hang = self.ten_hang_entry.get()
+            ten_khach_hang = self.ten_khach_hang_entry.get()
+            mau_sac = self.mau_sac.get()
+            mau_keo = self.mau_keo.get()
+            quy_cach = f"{self.quy_cach_mm.get()}mm x {self.quy_cach_m.get()}m x {self.quy_cach_mic.get()}mic"
+            so_luong = self.so_luong.get()
+            
+            content = f"""
+THÔNG TIN ĐƠN HÀNG:
+------------------
+Tên hàng: {ten_hang}
+Tên khách hàng: {ten_khach_hang}
+Màu sắc: {mau_sac}
+Màu keo: {mau_keo}
+Quy cách: {quy_cach}
+Số lượng: {so_luong}
+"""
+            
+            # Save to temp file
+            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_name = f"don_hang_{current_date}.txt"
+            
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt")],
+                initialfile=file_name
+            )
+            
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                messagebox.showinfo("Thành công", f"Đã xuất file: {file_path}")
+        
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Lỗi khi xuất file: {str(e)}")
+            raise

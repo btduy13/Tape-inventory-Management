@@ -45,7 +45,12 @@ class Application:
             for handler in logger.handlers[:]:
                 logger.removeHandler(handler)
 
+            # Configure matplotlib logger to ignore font debug messages
+            logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
+            logging.getLogger('PIL.PngImagePlugin').setLevel(logging.WARNING)
+
             # File handler
+            
             file_handler = logging.FileHandler(self.log_file, encoding=LOG_ENCODING)
             file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
             logger.addHandler(file_handler)

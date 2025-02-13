@@ -312,7 +312,13 @@ def convert_order_to_preview_data(order):
         print("Processing TrucInOrder specifications")
         print(f"Raw quy_cach value: {order.quy_cach}")
         # Format TrucInOrder quy_cach
-        specs = f"{order.quy_cach}mm" if order.quy_cach else ""
+        if not order.quy_cach:
+            specs = ""
+        else:
+            # Only append mm if not already present
+            specs = str(order.quy_cach)
+            if not specs.lower().endswith('mm'):
+                specs = f"{specs}mm"
         print(f"Generated specs: {specs}")
     else:  # BangKeoOrder
         print(f"Processing BangKeoOrder specifications")
@@ -897,17 +903,26 @@ class OrderSelectionDialog(tk.Toplevel):
                 # Get title based on document type
                 title = "Phiếu giao hàng" if self.document_type.get() == "phieu_giao_hang" else "Đơn đặt hàng"
                 
+                # Set default directory to current directory
+                default_dir = os.path.dirname(os.path.abspath(__file__))
+                default_filename = os.path.join(default_dir, f"{title.lower()}.pdf")
+                
                 # Show save file dialog
                 filename = filedialog.asksaveasfilename(
                     defaultextension=".pdf",
                     filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
                     title=f"Lưu {title.lower()}",
-                    initialfile=f"{title.lower()}.pdf"
+                    initialfile=default_filename
                 )
                 
                 if filename:  # If user didn't cancel the save dialog
-                    create_order_pdf(filename, preview.result)
-                    messagebox.showinfo("Thành công", f"Đã xuất PDF thành công!\nFile được lưu tại: {filename}")
+                    try:
+                        create_order_pdf(filename, preview.result)
+                        messagebox.showinfo("Thành công", f"Đã xuất PDF thành công!\nFile được lưu tại: {filename}")
+                    except PermissionError:
+                        messagebox.showerror("Lỗi", f"Không thể lưu file tại {filename}.\nVui lòng chọn vị trí khác hoặc đóng file PDF nếu đang mở.")
+                    except Exception as e:
+                        messagebox.showerror("Lỗi", f"Lỗi khi tạo PDF: {str(e)}")
             
         except Exception as e:
             print(f"Error processing orders: {str(e)}")
