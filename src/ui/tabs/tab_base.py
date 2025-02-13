@@ -5,8 +5,10 @@ import os
 
 class TabBase:
     def __init__(self, parent_form):
-        self.parent_form = parent_form  # Reference to DonHangForm
+        """Initialize base tab"""
+        self.parent_form = parent_form
         self.root = parent_form.root
+        self.db_session = parent_form.db_session
         # Khởi tạo các biến trạng thái mặc định
         self.da_giao = False
         self.da_tat_toan = False
@@ -50,6 +52,7 @@ class TabBase:
         self.parent_form.update_status(message)
 
     def clear_widget(self, widget):
+        """Clear widget contents"""
         if isinstance(widget, tk.Entry) or isinstance(widget, ttk.Entry):
             if widget.cget('state') != 'readonly':
                 widget.delete(0, tk.END)
@@ -88,6 +91,7 @@ class TabBase:
             pass
 
     def create_button(self, parent, text, command, image=None):
+        """Create a styled button"""
         button = ttk.Button(parent, text=text, command=command, image=image, compound=tk.LEFT)
         return button
 

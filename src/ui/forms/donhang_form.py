@@ -6,6 +6,7 @@ from src.ui.tabs.truc_in_tab import TrucInTab
 from src.ui.tabs.history_tab import HistoryTab
 from src.ui.tabs.thong_ke_tab import ThongKeTab
 from src.ui.tabs.bang_keo_tab import BangKeoTab
+from src.ui.tabs.dashboard_tab import DashboardTab
 from src.services.excel_import import export_template, import_data
 
 class DonHangForm:
@@ -40,6 +41,7 @@ class DonHangForm:
         
         # Create tabs
         self.thong_ke_tab = ThongKeTab(self.notebook, self)
+        self.dashboard_tab = DashboardTab(self.notebook, self)
         self.bang_keo_in_tab = BangKeoInTab(self.notebook, self)
         self.bang_keo_tab = BangKeoTab(self.notebook, self)
         self.truc_in_tab = TrucInTab(self.notebook, self)

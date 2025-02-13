@@ -4,8 +4,7 @@ from sqlalchemy.orm import sessionmaker, relationship, object_session
 from datetime import datetime
 from sqlalchemy import event
 import os
-
-Base = declarative_base()
+from .models import Base, DonHang, ChiTietDonHang
 
 # Thêm hàm helper để to ID
 def generate_order_id(prefix, session, table_class):
