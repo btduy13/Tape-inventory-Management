@@ -1,0 +1,142 @@
+2025-02-13 10:19:52,944 [INFO] Logging system initialized
+2025-02-13 10:19:52,944 [INFO] Initializing database connection...
+2025-02-13 10:19:54,471 [INFO] Database connection established successfully
+2025-02-13 10:19:58,113 [INFO] GUI initialized successfully
+2025-02-13 10:25:18,632 [INFO] Application shutdown initiated
+2025-02-13 10:25:18,679 [INFO] Database session closed
+2025-02-13 10:25:18,679 [INFO] Application terminated
+2025-02-13 10:25:23,861 [INFO] Logging system initialized
+2025-02-13 10:25:23,862 [INFO] Initializing database connection...
+2025-02-13 10:25:25,043 [INFO] Database connection established successfully
+2025-02-13 10:25:28,664 [INFO] GUI initialized successfully
+2025-02-13 10:25:40,533 [INFO] Application shutdown initiated
+2025-02-13 10:25:40,578 [INFO] Database session closed
+2025-02-13 10:25:40,579 [INFO] Application terminated
+2025-02-13 10:25:45,647 [INFO] Logging system initialized
+2025-02-13 10:25:45,648 [INFO] Initializing database connection...
+2025-02-13 10:25:46,546 [INFO] Database connection established successfully
+2025-02-13 10:25:49,749 [INFO] GUI initialized successfully
+2025-02-13 10:27:31,331 [INFO] Application shutdown initiated
+2025-02-13 10:27:31,373 [INFO] Database session closed
+2025-02-13 10:27:31,373 [INFO] Application terminated
+2025-02-13 10:27:36,922 [INFO] Logging system initialized
+2025-02-13 10:27:36,924 [INFO] Initializing database connection...
+2025-02-13 10:27:38,048 [INFO] Database connection established successfully
+2025-02-13 10:27:40,632 [INFO] GUI initialized successfully
+2025-02-13 10:53:49,293 [INFO] Application shutdown initiated
+2025-02-13 10:53:49,338 [WARNING] Session rollback error: (psycopg2.OperationalError) server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-02-13 10:53:49,339 [INFO] Database session closed
+2025-02-13 10:53:49,339 [INFO] Application terminated
+2025-02-13 10:53:54,659 [INFO] Logging system initialized
+2025-02-13 10:53:54,659 [INFO] Initializing database connection...
+2025-02-13 10:53:55,639 [INFO] Database connection established successfully
+2025-02-13 10:53:58,119 [INFO] GUI initialized successfully
+2025-02-13 10:54:02,089 [INFO] Application shutdown initiated
+2025-02-13 10:54:02,131 [INFO] Database session closed
+2025-02-13 10:54:02,131 [INFO] Application terminated
+2025-02-13 10:55:23,543 [INFO] Logging system initialized
+2025-02-13 10:55:23,543 [INFO] Initializing database connection...
+2025-02-13 10:55:24,654 [INFO] Database connection established successfully
+2025-02-13 10:55:26,263 [DEBUG] STREAM b'IHDR' 16 13
+2025-02-13 10:55:26,266 [DEBUG] STREAM b'sRGB' 41 1
+2025-02-13 10:55:26,267 [DEBUG] STREAM b'gAMA' 54 4
+2025-02-13 10:55:26,267 [DEBUG] STREAM b'pHYs' 70 9
+2025-02-13 10:55:26,267 [DEBUG] STREAM b'IDAT' 91 36431
+2025-02-13 10:55:26,293 [CRITICAL] Critical application error: invalid color name "#00000022"
+2025-02-13 10:56:17,582 [INFO] Logging system initialized
+2025-02-13 10:56:17,583 [INFO] Initializing database connection...
+2025-02-13 10:56:18,455 [INFO] Database connection established successfully
+2025-02-13 10:56:19,849 [DEBUG] STREAM b'IHDR' 16 13
+2025-02-13 10:56:19,849 [DEBUG] STREAM b'sRGB' 41 1
+2025-02-13 10:56:19,849 [DEBUG] STREAM b'gAMA' 54 4
+2025-02-13 10:56:19,849 [DEBUG] STREAM b'pHYs' 70 9
+2025-02-13 10:56:19,850 [DEBUG] STREAM b'IDAT' 91 36431
+2025-02-13 10:56:19,862 [CRITICAL] Critical application error: invalid color name "#00000022"
+2025-02-13 10:56:59,470 [INFO] Logging system initialized
+2025-02-13 10:56:59,470 [INFO] Initializing database connection...
+2025-02-13 10:57:00,481 [INFO] Database connection established successfully
+2025-02-13 10:57:01,775 [DEBUG] STREAM b'IHDR' 16 13
+2025-02-13 10:57:01,775 [DEBUG] STREAM b'sRGB' 41 1
+2025-02-13 10:57:01,775 [DEBUG] STREAM b'gAMA' 54 4
+2025-02-13 10:57:01,775 [DEBUG] STREAM b'pHYs' 70 9
+2025-02-13 10:57:01,775 [DEBUG] STREAM b'IDAT' 91 36431
+2025-02-13 10:57:02,835 [INFO] GUI initialized successfully
+2025-02-13 10:57:10,422 [INFO] Application shutdown initiated
+2025-02-13 10:57:10,459 [INFO] Database session closed
+2025-02-13 10:57:10,459 [INFO] Application terminated
+2025-02-13 10:57:14,756 [INFO] Logging system initialized
+2025-02-13 10:57:14,757 [INFO] Initializing database connection...
+2025-02-13 10:57:15,782 [INFO] Database connection established successfully
+2025-02-13 10:57:17,429 [DEBUG] STREAM b'IHDR' 16 13
+2025-02-13 10:57:17,429 [DEBUG] STREAM b'sRGB' 41 1
+2025-02-13 10:57:17,429 [DEBUG] STREAM b'gAMA' 54 4
+2025-02-13 10:57:17,429 [DEBUG] STREAM b'pHYs' 70 9
+2025-02-13 10:57:17,430 [DEBUG] STREAM b'IDAT' 91 36431
+2025-02-13 10:57:18,657 [INFO] GUI initialized successfully
+2025-02-13 10:58:56,129 [INFO] Application shutdown initiated
+2025-02-13 10:58:56,176 [INFO] Database session closed
+2025-02-13 10:58:56,176 [INFO] Application terminated
+2025-02-13 10:59:01,753 [INFO] Logging system initialized
+2025-02-13 10:59:01,753 [INFO] Initializing database connection...
+2025-02-13 10:59:02,814 [INFO] Database connection established successfully
+2025-02-13 10:59:05,120 [INFO] GUI initialized successfully
+2025-02-13 10:59:11,384 [INFO] Application shutdown initiated
+2025-02-13 10:59:11,425 [INFO] Database session closed
+2025-02-13 10:59:11,426 [INFO] Application terminated
+2025-02-13 10:59:19,496 [INFO] Logging system initialized
+2025-02-13 10:59:19,496 [INFO] Initializing database connection...
+2025-02-13 10:59:20,261 [INFO] Database connection established successfully
+2025-02-13 10:59:22,702 [INFO] GUI initialized successfully
+2025-02-13 11:00:07,220 [INFO] Logging system initialized
+2025-02-13 11:00:07,220 [INFO] Initializing database connection...
+2025-02-13 11:00:08,475 [INFO] Database connection established successfully
+2025-02-13 11:00:10,819 [INFO] GUI initialized successfully
+2025-02-13 11:01:24,786 [INFO] Application shutdown initiated
+2025-02-13 11:01:24,824 [INFO] Database session closed
+2025-02-13 11:01:24,824 [INFO] Application terminated
+2025-02-13 11:01:29,037 [INFO] Logging system initialized
+2025-02-13 11:01:29,039 [INFO] Initializing database connection...
+2025-02-13 11:01:30,102 [INFO] Database connection established successfully
+2025-02-13 11:01:32,601 [INFO] GUI initialized successfully
+2025-02-13 11:02:08,441 [INFO] Application shutdown initiated
+2025-02-13 11:02:08,474 [INFO] Database session closed
+2025-02-13 11:02:08,474 [INFO] Application terminated
+2025-02-13 11:02:12,780 [INFO] Logging system initialized
+2025-02-13 11:02:12,780 [INFO] Initializing database connection...
+2025-02-13 11:02:13,823 [INFO] Database connection established successfully
+2025-02-13 11:02:16,524 [INFO] GUI initialized successfully
+2025-02-13 11:02:27,799 [INFO] Application shutdown initiated
+2025-02-13 11:02:27,846 [INFO] Database session closed
+2025-02-13 11:02:27,847 [INFO] Application terminated
+2025-02-13 11:03:25,364 [INFO] Logging system initialized
+2025-02-13 11:03:25,366 [INFO] Initializing database connection...
+2025-02-13 11:03:27,681 [INFO] Database connection established successfully
+2025-02-13 11:03:30,381 [INFO] GUI initialized successfully
+2025-02-13 11:04:35,019 [INFO] Application shutdown initiated
+2025-02-13 11:04:35,064 [INFO] Database session closed
+2025-02-13 11:04:35,064 [INFO] Application terminated
+2025-02-13 11:05:05,977 [INFO] Logging system initialized
+2025-02-13 11:05:05,979 [INFO] Initializing database connection...
+2025-02-13 11:05:07,280 [INFO] Database connection established successfully
+2025-02-13 11:05:09,799 [INFO] GUI initialized successfully
+2025-02-13 11:06:14,130 [INFO] Application shutdown initiated
+2025-02-13 11:06:14,177 [INFO] Database session closed
+2025-02-13 11:06:14,177 [INFO] Application terminated
+2025-02-13 11:07:32,257 [INFO] Logging system initialized
+2025-02-13 11:07:32,257 [INFO] Initializing database connection...
+2025-02-13 11:07:33,741 [INFO] Database connection established successfully
+2025-02-13 11:07:36,452 [INFO] GUI initialized successfully
+2025-02-13 11:07:48,948 [INFO] Application shutdown initiated
+2025-02-13 11:07:48,991 [INFO] Database session closed
+2025-02-13 11:07:48,991 [INFO] Application terminated
+2025-02-13 11:07:53,342 [INFO] Logging system initialized
+2025-02-13 11:07:53,342 [INFO] Initializing database connection...
+2025-02-13 11:07:54,340 [INFO] Database connection established successfully
+2025-02-13 11:07:56,920 [INFO] GUI initialized successfully

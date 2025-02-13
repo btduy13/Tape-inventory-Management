@@ -1,0 +1,9 @@
+2025-02-13 10:19:35,549 - root - INFO - === Application Starting ===
+2025-02-13 10:19:35,550 - root - INFO - Version: Tape Inventory Management
+2025-02-13 10:19:35,550 - root - INFO - Log file: e:\OneDrive\Desktop\Tape-inventory-Management\src\logs\app_20250213_101935.log
+2025-02-13 10:19:35,551 - root - INFO - Initializing database connection...
+2025-02-13 10:19:35,551 - root - INFO - Connecting to database at None:None//inventory.db
+2025-02-13 10:19:35,726 - root - ERROR - Database initialization failed: Not an executable object: 'SELECT 1'
+2025-02-13 10:19:35,728 - root - ERROR - Database connection failed: Failed to initialize database: Not an executable object: 'SELECT 1'
+2025-02-13 10:19:35,728 - root - CRITICAL - Critical application error: Failed to connect to database: Failed to initialize database: Not an executable object: 'SELECT 1'
+2025-02-13 10:19:40,876 - root - INFO - Application shutdown initiated

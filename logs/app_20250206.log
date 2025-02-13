@@ -1,0 +1,4 @@
+2025-02-06 10:25:40,822 [INFO] Logging system initialized
+2025-02-06 10:25:40,822 [INFO] Initializing database connection...
+2025-02-06 10:25:42,967 [INFO] Database connection established successfully
+2025-02-06 10:25:48,953 [INFO] GUI initialized successfully
