@@ -122,13 +122,18 @@ class ExportImportManager:
             values = tree.item(selected_items[0])['values']
             
             if order_type == 'bang_keo_in':
+                # Safely get quy_cach values
+                quy_cach_mm = str(values[5]) if values[5] else "0"
+                quy_cach_m = str(values[6]) if values[6] else "0"
+                quy_cach_mic = str(values[7]) if values[7] else "0"
+                
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"  # ten_hang
-                    f"Màu sắc: {values[12]} / Màu keo: {values[10]}\n"  # mau_sac, mau_keo
-                    f"Số lượng: {values[8]} cuộn\n"  # so_luong
-                    f"Quy cách: {int(values[4])}mm * {int(values[5])}m * {int(values[6])}mic\n"  # quy_cach
-                    f"Lõi giấy: {values[26]} - Thùng bao: {values[27]}\n\n"  # loi_giay, thung_bao
+                    f"Màu sắc: {values[13]} / Màu keo: {values[11]}\n"  # mau_sac, mau_keo
+                    f"Số lượng: {values[9]} cuộn\n"  # so_luong
+                    f"Quy cách: {quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic\n"  # quy_cach
+                    f"Lõi giấy: {values[27]} - Thùng bao: {values[28]}\n\n"  # loi_giay, thung_bao
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
@@ -136,9 +141,9 @@ class ExportImportManager:
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"  # ten_hang
-                    f"Màu sắc: {values[6]} / Màu keo: {values[7]}\n"  # mau_sac, mau_keo
-                    f"Số lượng: {values[5]} cuộn\n"  # so_luong
-                    f"Quy cách: {values[4]}mm\n\n"  # quy_cach
+                    f"Màu sắc: {values[7]} / Màu keo: {values[8]}\n"  # mau_sac, mau_keo
+                    f"Số lượng: {values[6]} cuộn\n"  # so_luong
+                    f"Quy cách: {values[5]}\n\n"  # quy_cach
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
@@ -146,17 +151,31 @@ class ExportImportManager:
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng Băng Keo \"{values[2]}\" này nhé\n"  # ten_hang
-                    f"Màu sắc: {values[6]}\n"  # mau_sac
-                    f"Số lượng: {values[5]} KG\n"  # so_luong
-                    f"Quy cách: {values[4]} KG\n\n"  # quy_cach
+                    f"Màu sắc: {values[7]}\n"  # mau_sac
+                    f"Số lượng: {values[6]} KG\n"  # so_luong
+                    f"Quy cách: {values[5]} KG\n\n"  # quy_cach
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
 
+            # Create temporary file
+            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_name = f"{order_type}_{current_date}.txt"
+            temp_file = os.path.join(os.environ.get('TEMP') or os.environ.get('TMP') or '/tmp', file_name)
+
+            # Write content to temp file
+            with open(temp_file, 'w', encoding='utf-8') as file:
+                file.write(email_content)
+
+            # Open the file with default text editor
+            os.startfile(temp_file)
+
+            # Also allow saving to custom location
             file_path = filedialog.asksaveasfilename(
                 defaultextension='.txt',
                 filetypes=[("Text files", "*.txt")],
-                title="Chọn vị trí lưu file văn bản"
+                title="Chọn vị trí lưu file văn bản",
+                initialfile=file_name
             )
 
             if file_path:
@@ -164,8 +183,6 @@ class ExportImportManager:
                     file.write(email_content)
                 messagebox.showinfo("Thành công", "Đã xuất nội dung email ra file văn bản thành công!")
                 self.parent.update_status("Đã xuất email thành công")
-
-                os.startfile(file_path)
             else:
                 self.parent.update_status("Xuất email bị hủy")
 

@@ -381,6 +381,10 @@ class TrucInTab(TabBase):
             so_luong = self.so_luong.get()
 
             content = f"""
+Chào bác,
+
+Bác làm giúp con đơn hàng trục in bên dưới nhé:
+
 THÔNG TIN ĐƠN HÀNG TRỤC IN:
 --------------------------
 Tên hàng: {ten_hang}
@@ -389,12 +393,23 @@ Màu sắc: {mau_sac}
 Màu keo: {mau_keo}
 Quy cách: {quy_cach}
 Số lượng: {so_luong}
-"""
 
-            # Save to temp file
+Cảm ơn bác!
+Quế
+"""
+            # Create temporary file
             current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
             file_name = f"truc_in_{current_date}.txt"
+            temp_file = os.path.join(os.environ.get('TEMP') or os.environ.get('TMP') or '/tmp', file_name)
             
+            # Write content to temp file
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # Open the file with default text editor
+            os.startfile(temp_file)
+            
+            # Also allow saving to custom location
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".txt",
                 filetypes=[("Text files", "*.txt")],
