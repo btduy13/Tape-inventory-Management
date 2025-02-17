@@ -1,0 +1,22 @@
+2025-02-17 09:23:41,442 [INFO] Logging system initialized
+2025-02-17 09:23:41,443 [INFO] Initializing database connection...
+2025-02-17 09:23:42,632 [INFO] Database connection established successfully
+2025-02-17 09:23:49,169 [INFO] GUI initialized successfully
+2025-02-17 09:27:45,016 [INFO] Application shutdown initiated
+2025-02-17 09:27:45,047 [INFO] Database session closed
+2025-02-17 09:27:45,047 [INFO] Application terminated
+2025-02-17 09:27:48,921 [INFO] Logging system initialized
+2025-02-17 09:27:48,921 [INFO] Initializing database connection...
+2025-02-17 09:27:49,861 [INFO] Database connection established successfully
+2025-02-17 09:27:54,324 [INFO] GUI initialized successfully
+2025-02-17 09:29:36,143 [INFO] Successfully deleted record BK-02-25-026 from database
+2025-02-17 09:29:36,143 [INFO] Successfully deleted item from tree
+2025-02-17 09:29:36,366 [INFO] Successfully deleted record BK-02-25-025 from database
+2025-02-17 09:29:36,366 [INFO] Successfully deleted item from tree
+2025-02-17 09:29:43,393 [INFO] Successfully deleted record TI-02-25-007 from database
+2025-02-17 09:29:43,393 [INFO] Successfully deleted item from tree
+2025-02-17 09:29:49,698 [INFO] Successfully deleted record B-02-25-006 from database
+2025-02-17 09:29:49,698 [INFO] Successfully deleted item from tree
+2025-02-17 09:31:15,848 [INFO] Application shutdown initiated
+2025-02-17 09:31:15,886 [INFO] Database session closed
+2025-02-17 09:31:15,886 [INFO] Application terminated

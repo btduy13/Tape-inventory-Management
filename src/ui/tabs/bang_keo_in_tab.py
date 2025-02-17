@@ -378,13 +378,8 @@ class BangKeoInTab(TabBase):
             self.db_session.add(don_hang)
             self.db_session.commit()
             
-            # Cập nhật ID đơn hàng trên form
-            self.ten_hang_entry.configure(state='normal')
-            self.ten_hang_entry.delete(0, tk.END)
-            self.ten_hang_entry.insert(0, str(don_hang.id))
-            self.ten_hang_entry.configure(state='readonly')
-            
-            messagebox.showinfo("Thành công", "Đã lưu đơn hàng thành công!")
+            # Hiển thị thông báo thành công với mã đơn hàng
+            messagebox.showinfo("Thành công", f"Đã lưu đơn hàng thành công!\nMã đơn hàng: {don_hang.id}")
             
             # Cập nhật history tab và thống kê tab
             if hasattr(self.parent_form, 'history_tab'):
