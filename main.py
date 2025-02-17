@@ -83,19 +83,21 @@ class Application:
             self.root.title(APP_NAME)
             
             # Apply modern styling
-            apply_modern_style(self.root)
+            COLORS, FONTS = apply_modern_style(self.root)
             
             # Window configuration
             set_window_icon(self.root)
-            center_window(self.root, 1024, 850)
-            self.root.minsize(800, 600)
+            center_window(self.root, 1200, 800)  # Increased window size
+            self.root.minsize(1000, 700)  # Increased minimum size
             
             # Set window background
-            self.root.configure(background='white')
+            self.root.configure(background=COLORS['background'])
             
-            # Initialize main form
+            # Initialize main form with session
             self.db_session = get_session(self.engine)
             self.donhang_form = DonHangForm(self.root, self.db_session)
+            
+            # Add report button with new style
             self._add_report_button()
             
             # Window close handler
@@ -113,7 +115,9 @@ class Application:
                 self.donhang_form.menu_bar.add_command(
                     label="Xuất Đơn Đặt Hàng / Phiếu Giao Hàng",
                     command=self.open_report_dialog,
-                    font=UI_STYLES['font']
+                    font=('Segoe UI', 10),
+                    background='#2196F3',
+                    foreground='white'
                 )
         except Exception as e:
             logging.warning("Failed to add report button: %s", str(e))
@@ -125,7 +129,11 @@ class Application:
             self.root.wait_window(dialog)
         except Exception as e:
             logging.error("Report dialog error: %s", str(e))
-            messagebox.showerror("Lỗi", f"Không thể mở cửa sổ xuất đơn: {str(e)}")
+            messagebox.showerror(
+                "Lỗi",
+                f"Không thể mở cửa sổ xuất đơn: {str(e)}",
+                parent=self.root
+            )
 
     def on_closing(self):
         """Handle application shutdown"""

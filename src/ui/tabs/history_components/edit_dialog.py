@@ -72,44 +72,147 @@ class EditDialogManager:
         center_x = int((screen_width - window_width) / 2)
         center_y = int((screen_height - window_height) / 2)
         edit_window.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+
+        # Configure edit window grid
+        edit_window.grid_columnconfigure(0, weight=1)
+        edit_window.grid_rowconfigure(0, weight=0)  # Title section
+        edit_window.grid_rowconfigure(1, weight=1)  # Content section
+        edit_window.grid_rowconfigure(2, weight=0)  # Button section
+
+        # Create main frame with grid
+        main_frame = ttk.Frame(edit_window, padding="10 5 10 5")
+        main_frame.grid(row=1, column=0, sticky='nsew')
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(0, weight=1)
+
+        # Create title section with better styling
+        title_section = ttk.Frame(edit_window, style='Title.TFrame')
+        title_section.grid(row=0, column=0, sticky='ew', pady=(0, 5))
+        title_section.grid_columnconfigure(0, weight=1)
+
+        # Configure styles for title
+        style = ttk.Style()
+        style.configure('Title.TFrame', background='#2196F3')
+        style.configure('DialogTitle.TLabel', 
+                       font=('Segoe UI', -14, 'bold'),
+                       foreground='white',
+                       background='#2196F3',
+                       padding=(0, 10))
+
+        # Create title label
+        title_label = ttk.Label(title_section, 
+                              text=window_title, 
+                              style='DialogTitle.TLabel', 
+                              anchor='center')
+        title_label.grid(row=0, column=0, sticky='ew')
+
+        # Create content frame with grid
+        content_frame = ttk.Frame(main_frame)
+        content_frame.grid(row=0, column=0, sticky='nsew')
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
         
-        main_frame = ttk.Frame(edit_window, padding="10 10 10 10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Create canvas and scrollable frame
+        canvas = tk.Canvas(content_frame)
+        scrollbar_y = ttk.Scrollbar(content_frame, orient="vertical", command=canvas.yview)
+        scrollbar_x = ttk.Scrollbar(content_frame, orient="horizontal", command=canvas.xview)
+        
+        # Configure canvas
+        canvas.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        
+        # Create scrollable frame
+        scrollable_frame = ttk.Frame(canvas)
+        scrollable_frame.grid_columnconfigure(0, weight=1)
+        
+        # Add scrollable frame to canvas
+        canvas_frame = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        # Grid layout for canvas and scrollbars
+        canvas.grid(row=0, column=0, sticky='nsew', padx=(0, 2))
+        scrollbar_y.grid(row=0, column=1, sticky='ns')
+        scrollbar_x.grid(row=1, column=0, sticky='ew')
+        
+        # Configure content frame grid weights
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
         
         self.edit_entries = {}
         
         if order_type == 'bang_keo_in':
-            self._create_bang_keo_in_form(main_frame, values, readonly_fields)
+            self._create_bang_keo_in_form(scrollable_frame, values, readonly_fields)
         elif order_type == 'truc_in':
-            self._create_truc_in_form(main_frame, values, readonly_fields)
+            self._create_truc_in_form(scrollable_frame, values, readonly_fields)
         else:  # bang_keo
-            self._create_bang_keo_form(main_frame, values, readonly_fields)
+            self._create_bang_keo_form(scrollable_frame, values, readonly_fields)
         
+        # Create button frame
         button_frame = ttk.Frame(edit_window)
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+        button_frame.grid(row=2, column=0, sticky='ew', padx=10, pady=(5, 10))
+        button_frame.grid_columnconfigure(1, weight=1)  # Push buttons to the right
         
-        ttk.Button(button_frame, text="Lưu", 
-                  command=lambda: self.save_edit(tree, db_session, edit_window)).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(button_frame, text="Hủy", 
-                  command=edit_window.destroy).pack(side=tk.RIGHT, padx=5)
+        # Configure button style for auto-resizing text
+        style.configure('AutoResize.TButton', 
+                       font=('TkDefaultFont', -12),
+                       padding=(10, 3))
         
+        # Create buttons with auto-resize style
+        cancel_button = ttk.Button(button_frame, text="Hủy", style='AutoResize.TButton',
+                                 command=edit_window.destroy)
+        save_button = ttk.Button(button_frame, text="Lưu", style='AutoResize.TButton',
+                               command=lambda: self.save_edit(tree, db_session, edit_window))
+        
+        cancel_button.grid(row=0, column=2, padx=(0, 3))
+        save_button.grid(row=0, column=3, padx=(0, 3))
+        
+        # Configure canvas scrolling
+        def configure_scroll_region(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            
+        def configure_canvas_width(event):
+            canvas.itemconfig(canvas_frame, width=event.width)
+            
+        scrollable_frame.bind("<Configure>", configure_scroll_region)
+        canvas.bind("<Configure>", configure_canvas_width)
+        
+        # Bind mouse wheel to scroll
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+        
+        # Bind keyboard shortcuts
         edit_window.bind('<Escape>', lambda e: edit_window.destroy())
         edit_window.bind('<Control-s>', lambda e: self.save_edit(tree, db_session, edit_window))
         
+        # Set initial focus
         for entry in self.edit_entries.values():
             if entry.cget('state') != 'readonly':
                 entry.focus_set()
                 break
                 
+        # Update window size based on content
+        edit_window.update_idletasks()
+        
+        # Configure main frame grid weights for resizing
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(0, weight=1)
+        
     def _create_bang_keo_in_form(self, main_frame, values, readonly_fields):
-        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
-        info_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Configure main frame for resizing
+        main_frame.grid_columnconfigure(0, weight=1)
         
-        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="5 5 5 5")
-        specs_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Create frames with grid layout
+        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="8 5 8 5")
+        info_frame.grid(row=0, column=0, sticky='ew', padx=3, pady=3)
+        info_frame.grid_columnconfigure((1, 3), weight=1)
         
-        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="5 5 5 5")
-        price_frame.pack(fill=tk.X, padx=5, pady=5)
+        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="8 5 8 5")
+        specs_frame.grid(row=1, column=0, sticky='ew', padx=3, pady=3)
+        specs_frame.grid_columnconfigure((1, 3), weight=1)
+        
+        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="8 5 8 5")
+        price_frame.grid(row=2, column=0, sticky='ew', padx=3, pady=3)
+        price_frame.grid_columnconfigure((1, 3, 5), weight=1)
         
         # Info section
         self._create_field(info_frame, 'thoi_gian', 'Thời gian:', values, 0, 0, readonly_fields)
@@ -153,17 +256,28 @@ class EditDialogManager:
 
         self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 7, 0, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 7, 2, readonly_fields)
-        
+
     def _create_truc_in_form(self, main_frame, values, readonly_fields):
-        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
-        info_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Configure main frame for resizing
+        main_frame.grid_columnconfigure(0, weight=1)
         
-        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="5 5 5 5")
-        specs_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Create frames with grid layout
+        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="8 5 8 5")
+        info_frame.grid(row=0, column=0, sticky='ew', padx=3, pady=3)
+        info_frame.grid_columnconfigure((1, 3), weight=1)
         
-        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="5 5 5 5")
-        price_frame.pack(fill=tk.X, padx=5, pady=5)
+        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="8 5 8 5")
+        specs_frame.grid(row=1, column=0, sticky='ew', padx=3, pady=3)
+        specs_frame.grid_columnconfigure((1, 3), weight=1)
         
+        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="8 5 8 5")
+        price_frame.grid(row=2, column=0, sticky='ew', padx=3, pady=3)
+        price_frame.grid_columnconfigure((1, 3), weight=1)
+        
+        status_frame = ttk.LabelFrame(main_frame, text="Trạng thái", padding="8 5 8 5")
+        status_frame.grid(row=3, column=0, sticky='ew', padx=3, pady=3)
+        status_frame.grid_columnconfigure((0, 1), weight=1)
+
         # Info section
         self._create_field(info_frame, 'thoi_gian', 'Thời gian:', values, 0, 0, readonly_fields)
         self._create_field(info_frame, 'ten_hang', 'Tên hàng:', values, 0, 2, readonly_fields)
@@ -194,29 +308,38 @@ class EditDialogManager:
         self._create_field(price_frame, 'tien_ship', 'Tiền ship:', values, 5, 0, readonly_fields)
         self._create_field(price_frame, 'loi_nhuan_rong', 'Lợi nhuận ròng:', values, 5, 2, readonly_fields)
 
-        # Status section
-        status_frame = ttk.LabelFrame(main_frame, text="Trạng thái", padding="5 5 5 5")
-        status_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Configure style for checkbuttons
+        style = ttk.Style()
+        style.configure('AutoResize.TCheckbutton', font=('TkDefaultFont', -12))
 
-        # Add status checkboxes
+        # Add status checkboxes with auto-resize style
         da_giao_var = tk.BooleanVar(value=values[self.parent.truc_in_tree['columns'].index('da_giao')] == "✓")
         da_tat_toan_var = tk.BooleanVar(value=values[self.parent.truc_in_tree['columns'].index('da_tat_toan')] == "✓")
 
-        ttk.Checkbutton(status_frame, text="Đã giao hàng", variable=da_giao_var).grid(row=0, column=0, padx=5, pady=5, sticky='w')
-        ttk.Checkbutton(status_frame, text="Đã tất toán", variable=da_tat_toan_var).grid(row=0, column=1, padx=5, pady=5, sticky='w')
+        ttk.Checkbutton(status_frame, text="Đã giao hàng", variable=da_giao_var, 
+                       style='AutoResize.TCheckbutton').grid(row=0, column=0, padx=3, pady=3, sticky='w')
+        ttk.Checkbutton(status_frame, text="Đã tất toán", variable=da_tat_toan_var,
+                       style='AutoResize.TCheckbutton').grid(row=0, column=1, padx=3, pady=3, sticky='w')
 
         self.edit_entries['da_giao'] = da_giao_var
         self.edit_entries['da_tat_toan'] = da_tat_toan_var
-        
+
     def _create_bang_keo_form(self, main_frame, values, readonly_fields):
-        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="5 5 5 5")
-        info_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Configure main frame for resizing
+        main_frame.grid_columnconfigure(0, weight=1)
         
-        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="5 5 5 5")
-        specs_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Create frames with grid layout
+        info_frame = ttk.LabelFrame(main_frame, text="Thông tin đơn hàng", padding="8 5 8 5")
+        info_frame.grid(row=0, column=0, sticky='ew', padx=3, pady=3)
+        info_frame.grid_columnconfigure((1, 3), weight=1)
         
-        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="5 5 5 5")
-        price_frame.pack(fill=tk.X, padx=5, pady=5)
+        specs_frame = ttk.LabelFrame(main_frame, text="Quy cách", padding="8 5 8 5")
+        specs_frame.grid(row=1, column=0, sticky='ew', padx=3, pady=3)
+        specs_frame.grid_columnconfigure((1, 3), weight=1)
+        
+        price_frame = ttk.LabelFrame(main_frame, text="Giá và phí", padding="8 5 8 5")
+        price_frame.grid(row=2, column=0, sticky='ew', padx=3, pady=3)
+        price_frame.grid_columnconfigure((1, 3), weight=1)
         
         # Info section
         self._create_field(info_frame, 'thoi_gian', 'Thời gian:', values, 0, 0, readonly_fields)
@@ -248,11 +371,21 @@ class EditDialogManager:
 
     def _create_field(self, parent, field_name, label_text, values, row, col, readonly_fields):
         """Create a labeled field in the edit form"""
-        ttk.Label(parent, text=label_text).grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
+        # Configure styles for auto-resizing text
+        style = ttk.Style()
+        style.configure('AutoResize.TLabel', font=('TkDefaultFont', -12))
+        style.configure('AutoResize.TEntry', font=('TkDefaultFont', -12))
+        
+        # Create label with auto-resize style
+        label = ttk.Label(parent, text=label_text, style='AutoResize.TLabel')
+        label.grid(row=row, column=col, sticky='e', padx=3, pady=2)
+        
+        # Configure grid weights for the parent frame
+        parent.grid_columnconfigure(col+1, weight=1)
         
         # Xử lý các trường mới
         if field_name in ['tien_ship', 'loi_nhuan_rong']:
-            entry = ttk.Entry(parent, width=15)
+            entry = ttk.Entry(parent, width=15, style='AutoResize.TEntry')
             if values and len(values) > 0:
                 try:
                     field_index = list(self.parent.bang_keo_in_tree['columns'] if self.current_edit_type == 'bang_keo_in' 
@@ -261,8 +394,6 @@ class EditDialogManager:
                     entry.insert(0, values[field_index] if values[field_index] is not None else '')
                 except ValueError:
                     entry.insert(0, '0')
-            else:
-                entry.insert(0, '0')
                 
             if field_name == 'loi_nhuan_rong':
                 entry.configure(state='readonly')
@@ -282,7 +413,8 @@ class EditDialogManager:
                 entry = DateEntry(parent, width=15, background='darkblue',
                                 foreground='white', borderwidth=2,
                                 date_pattern='dd/mm/yyyy',
-                                locale='vi_VN')
+                                locale='vi_VN',
+                                font=('TkDefaultFont', -12))  # Add auto-scaling font
                 try:
                     if isinstance(date_value, datetime):
                         entry.set_date(date_value.date())
@@ -296,7 +428,7 @@ class EditDialogManager:
                 except ValueError:
                     entry.set_date(datetime.now().date())
             else:
-                entry = ttk.Entry(parent, width=15)
+                entry = ttk.Entry(parent, width=15, style='AutoResize.TEntry')
                 entry.insert(0, values[field_index] if values[field_index] is not None else '')
                 
                 if field_name in readonly_fields:
@@ -331,7 +463,8 @@ class EditDialogManager:
                               'thanh_tien']:
                 entry.bind('<FocusOut>', self.format_currency_input)
         
-        entry.grid(row=row, column=col+1, sticky=tk.W, padx=5, pady=5)
+        entry.grid(row=row, column=col+1, sticky=tk.EW, padx=5, pady=5)  # Changed sticky to EW for better resizing
+        
         self.edit_entries[field_name] = entry
         
     def save_edit(self, tree, db_session, edit_window):
@@ -508,15 +641,6 @@ class EditDialogManager:
             entry.delete(0, tk.END)
             entry.insert(0, self.format_currency(value))
             entry.configure(state='readonly')
-
-    def validate_float_input(self, value):
-        """Convert string input to float, handling commas"""
-        try:
-            if isinstance(value, str):
-                value = value.replace(',', '')
-            return float(value)
-        except (ValueError, TypeError):
-            return 0.0
 
     def format_currency(self, value):
         """Format currency value with thousand separators"""

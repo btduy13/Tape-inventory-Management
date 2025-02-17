@@ -175,6 +175,10 @@ class ThongKeTab(TabBase):
         tree_frame = ttk.Frame(list_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+        # Configure grid weights for tree_frame
+        tree_frame.grid_columnconfigure(0, weight=1)
+        tree_frame.grid_rowconfigure(0, weight=1)
+        
         # Treeview to display order data
         tree = ttk.Treeview(tree_frame, columns=(
             "id", "thoi_gian", "ten_hang", "ten_khach_hang", "ngay_du_kien", 
@@ -193,21 +197,30 @@ class ThongKeTab(TabBase):
             "da_tat_toan": ("Đã tất toán", 100)
         }
         
+        # Calculate total fixed width
+        fixed_width = sum(width for _, width in columns_config.values())
+        
+        # Configure columns
         for col, (heading, width) in columns_config.items():
             tree.heading(col, text=heading,
                         command=lambda c=col, t=order_type: self.sort_treeview(c, t))
-            tree.column(col, width=width, 
-                       anchor=tk.CENTER if col not in ["ten_hang"] else tk.W)
-            if col == "cong_no_khach":
-                tree.column(col, anchor=tk.E)
+            # Set stretch=True for ten_hang and ten_khach_hang columns
+            if col in ["ten_hang", "ten_khach_hang"]:
+                tree.column(col, width=width, minwidth=width, stretch=True,
+                          anchor=tk.W)
+            else:
+                tree.column(col, width=width, minwidth=width, stretch=False,
+                          anchor=tk.E if col == "cong_no_khach" else tk.CENTER)
         
-        # Add scrollbar to Treeview
-        scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scrollbar.set)
+        # Add scrollbars to Treeview
+        y_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
+        x_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=y_scrollbar.set, xscrollcommand=x_scrollbar.set)
         
-        # Pack scrollbar and treeview
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Grid layout for treeview and scrollbars
+        tree.grid(row=0, column=0, sticky='nsew')
+        y_scrollbar.grid(row=0, column=1, sticky='ns')
+        x_scrollbar.grid(row=1, column=0, sticky='ew')
         
         # Bind double-click event
         tree.bind('<Double-1>', lambda e, ot=order_type, t=tree: self.on_double_click(e, ot, t))

@@ -599,6 +599,7 @@ class OrderSelectionDialog(tk.Toplevel):
                 order.id,
                 order.thoi_gian.strftime('%d/%m/%Y'),
                 order.ten_hang,
+                order.ten_khach_hang,
                 f"{order.so_luong:,.0f}",
                 f"{order.don_gia_ban:,.0f}"
             ))
@@ -789,7 +790,7 @@ class OrderSelectionDialog(tk.Toplevel):
             orders_frame.pack(fill='both', expand=True)
             
             # Treeview
-            self.tree = ttk.Treeview(orders_frame, columns=('id', 'date', 'name', 'quantity', 'price'), 
+            self.tree = ttk.Treeview(orders_frame, columns=('id', 'date', 'name', 'customer', 'quantity', 'price'), 
                                    show='headings', selectmode='extended')
             
             # Set column headings with sort command
@@ -799,6 +800,8 @@ class OrderSelectionDialog(tk.Toplevel):
                             command=lambda: self.sort_treeview('date'))
             self.tree.heading('name', text='Tên hàng', 
                             command=lambda: self.sort_treeview('name'))
+            self.tree.heading('customer', text='Tên khách hàng', 
+                            command=lambda: self.sort_treeview('customer'))
             self.tree.heading('quantity', text='Số Lượng', 
                             command=lambda: self.sort_treeview('quantity'))
             self.tree.heading('price', text='Đơn giá', 
@@ -807,7 +810,8 @@ class OrderSelectionDialog(tk.Toplevel):
             # Set column widths
             self.tree.column('id', width=100)
             self.tree.column('date', width=100)
-            self.tree.column('name', width=300)
+            self.tree.column('name', width=200)
+            self.tree.column('customer', width=200)
             self.tree.column('quantity', width=100)
             self.tree.column('price', width=100)
             

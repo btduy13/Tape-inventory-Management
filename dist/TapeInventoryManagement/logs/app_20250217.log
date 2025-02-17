@@ -1,0 +1,37 @@
+2025-02-17 09:38:16,326 [INFO] Logging system initialized
+2025-02-17 09:38:16,327 [INFO] Initializing database connection...
+2025-02-17 09:38:17,351 [INFO] Database connection established successfully
+2025-02-17 09:38:20,929 [INFO] GUI initialized successfully
+2025-02-17 09:38:38,971 [INFO] Application shutdown initiated
+2025-02-17 09:38:39,013 [INFO] Database session closed
+2025-02-17 09:38:39,013 [INFO] Application terminated
+2025-02-17 09:43:50,499 [INFO] Logging system initialized
+2025-02-17 09:43:50,500 [INFO] Initializing database connection...
+2025-02-17 09:43:50,536 [INFO] Logging system initialized
+2025-02-17 09:43:50,536 [INFO] Initializing database connection...
+2025-02-17 09:43:51,439 [INFO] Database connection established successfully
+2025-02-17 09:43:51,532 [INFO] Database connection established successfully
+2025-02-17 09:43:55,214 [INFO] GUI initialized successfully
+2025-02-17 09:43:55,489 [INFO] GUI initialized successfully
+2025-02-17 09:56:49,187 [INFO] Application shutdown initiated
+2025-02-17 09:56:49,792 [WARNING] Session rollback error: (psycopg2.OperationalError) server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-02-17 09:56:49,792 [INFO] Database session closed
+2025-02-17 09:56:49,794 [INFO] Application terminated
+2025-02-17 09:56:53,443 [INFO] Application shutdown initiated
+2025-02-17 09:56:53,491 [WARNING] Session rollback error: (psycopg2.OperationalError) server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-02-17 09:56:53,491 [INFO] Database session closed
+2025-02-17 09:56:53,491 [INFO] Application terminated

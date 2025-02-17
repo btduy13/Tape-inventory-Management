@@ -44,6 +44,7 @@ class HistoryTab(TabBase):
             'thoi_gian': 'Thời Gian',
             'ten_hang': 'Tên Hàng',
             'ngay_du_kien': 'Ngày Dự Kiến',
+            'quy_cach': 'Quy Cách',
             'quy_cach_mm': 'Quy Cách (mm)',
             'quy_cach_m': 'Quy Cách (m)',
             'quy_cach_mic': 'Quy Cách (mic)',
@@ -73,7 +74,8 @@ class HistoryTab(TabBase):
             'loi_nhuan_rong': 'Lợi Nhuận Ròng',
             'da_giao': 'Đã Giao',
             'da_tat_toan': 'Đã Tất Toán',
-            'ten_khach_hang': 'Tên Khách Hàng'
+            'ten_khach_hang': 'Tên Khách Hàng',
+            'thanh_tien': 'Thành Tiền'
         }
         
         # Define columns for each tree
@@ -508,33 +510,47 @@ class HistoryTab(TabBase):
                 
             self.tong_doanh_thu += order.thanh_tien_ban
             
-            # Determine if the order should be displayed based on the current filter
-            if self.should_show_order(order, days_until_due, order_type):
-                # Format công nợ khách with thousand separator
-                cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
-                
-                # Assign tag based on order type for identification
-                tag = "bang_keo_in" if order_type == "Băng Keo In" else "truc_in" if order_type == "Trục In" else "bang_keo"
-                
-                # Insert data with proper order and formatting
-                tree.insert("", "end", values=(
-                    order.id,  # ID đơn hàng
-                    order.thoi_gian.strftime("%d/%m/%Y"),  # Ngày tạo đơn
-                    order.ten_hang,  # Tên đơn
-                    order.ten_khach_hang,  # Tên khách hàng
-                    order.ngay_du_kien.strftime("%d/%m/%Y"),  # Ngày giao
-                    cong_no,  # Công nợ khách
-                    "✓" if order.da_giao else "",  # Đã giao
-                    "✓" if order.da_tat_toan else ""  # Đã tất toán
-                ), tags=(tag, str(order.id)))
-            
-            # After inserting data, apply sort if a column is selected
-            sort_state = self.bang_keo_in_sort if order_type == "Băng Keo In" else self.truc_in_sort if order_type == "Trục In" else self.bang_keo_sort
-            if sort_state['column']:
-                self.sort_treeview(sort_state['column'], order_type)
+            # Format quy_cach based on order type
+            if order_type == "Băng Keo In":
+                quy_cach = f"{order.quy_cach_mm}mm x {order.quy_cach_m}m x {order.quy_cach_mic}mic"
             else:
-                self.apply_row_colors(tree)
-                
+                quy_cach = order.quy_cach if order.quy_cach else ""
+
+            # Format công nợ khách with thousand separator
+            cong_no = f"{order.cong_no_khach:,.0f}" if order.cong_no_khach else "0"
+            
+            # Prepare values for display
+            values = [
+                order.id,
+                order.thoi_gian.strftime("%d/%m/%Y"),
+                order.ten_hang,
+                order.ten_khach_hang,
+                order.ngay_du_kien.strftime("%d/%m/%Y")
+            ]
+
+            # Add quy_cach based on order type
+            if order_type == "Băng Keo In":
+                values.extend([
+                    order.quy_cach_mm,
+                    order.quy_cach_m,
+                    order.quy_cach_mic,
+                    order.cuon_cay
+                ])
+            else:
+                values.append(quy_cach)
+
+            # Add remaining values
+            values.extend([
+                order.so_luong,
+                cong_no,
+                "✓" if order.da_giao else "",
+                "✓" if order.da_tat_toan else ""
+            ])
+
+            # Insert into tree with proper tag
+            tag = order_type.lower().replace(" ", "_")
+            tree.insert("", "end", values=values, tags=(tag,))
+            
         except Exception as e:
             logging.error(f"Error processing order {order.id}: {str(e)}")
             raise

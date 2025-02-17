@@ -19,13 +19,14 @@ class TrucInTab(TabBase):
         main_frame = ttk.Frame(self.tab, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Configure the grid to expand properly
-        main_frame.columnconfigure(0, weight=1)
-        for row_index in range(4):  # Assuming 4 rows including buttons
-            if row_index == 3:
-                main_frame.rowconfigure(row_index, weight=0)  # Buttons row should not expand
-            else:
-                main_frame.rowconfigure(row_index, weight=1)
+        # Configure grid weights for auto-resizing
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+        main_frame.grid_columnconfigure(2, weight=1)
+        main_frame.grid_columnconfigure(3, weight=1)
+        
+        for i in range(4):  # 4 rows for different sections
+            main_frame.grid_rowconfigure(i, weight=1)
 
         # Build the UI components
         self.build_ui(main_frame)
@@ -38,20 +39,22 @@ class TrucInTab(TabBase):
         self.da_tat_toan_var = tk.BooleanVar(value=False)
 
     def build_ui(self, main_frame):
-        # Configure grid columns
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.columnconfigure(2, weight=1)
-        main_frame.columnconfigure(3, weight=1)
+        # Configure grid columns with padding
+        main_frame.configure(padding="20")
 
-        # Title
-        title_label = ttk.Label(main_frame, text="Trục In", font=('Segoe UI', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='ew')
+        # Title with better styling
+        title_label = ttk.Label(main_frame, text="Trục In", style='Header.TLabel')
+        title_label.grid(row=0, column=0, columnspan=4, pady=(0, 20), sticky='nsew')
 
         # Basic Information Frame
-        basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin cơ bản", padding=10)
+        basic_info_frame = ttk.LabelFrame(main_frame, text="Thông tin cơ bản", padding=15)
         basic_info_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
-        self._configure_grid(basic_info_frame, 4)
+        
+        # Configure grid for basic info frame
+        for i in range(4):
+            basic_info_frame.columnconfigure(i, weight=1)
+        for i in range(4):
+            basic_info_frame.rowconfigure(i, weight=1)
 
         # Row 0: Tên hàng và Ngày dự kiến
         ttk.Label(basic_info_frame, text="Tên hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
@@ -85,10 +88,15 @@ class TrucInTab(TabBase):
         self.mau_keo = ttk.Entry(basic_info_frame)
         self.mau_keo.grid(row=3, column=3, sticky='ew', padx=5, pady=5)
 
-        # Giá cả Frame
-        price_frame = ttk.LabelFrame(main_frame, text="Giá cả", padding=10)
+        # Price Frame
+        price_frame = ttk.LabelFrame(main_frame, text="Giá và Chi phí", padding=10)
         price_frame.grid(row=2, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
-        self._configure_grid(price_frame, 4)
+        
+        # Configure grid for price frame
+        for i in range(4):
+            price_frame.columnconfigure(i, weight=1)
+        for i in range(7):  # 7 rows for all price-related fields
+            price_frame.rowconfigure(i, weight=1)
 
         # Đơn giá gốc
         ttk.Label(price_frame, text="Đơn giá gốc:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
@@ -169,11 +177,6 @@ class TrucInTab(TabBase):
 
         # Set focus to the first entry
         self.ten_hang_entry.focus_set()
-
-    def _configure_grid(self, frame, cols):
-        """Configure grid columns to be evenly spaced"""
-        for i in range(cols):
-            frame.columnconfigure(i, weight=1)
 
     def bind_events(self):
         entries_to_bind = [

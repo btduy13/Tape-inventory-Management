@@ -20,3 +20,252 @@
 2025-02-17 09:31:15,848 [INFO] Application shutdown initiated
 2025-02-17 09:31:15,886 [INFO] Database session closed
 2025-02-17 09:31:15,886 [INFO] Application terminated
+2025-02-17 10:06:05,072 [INFO] Logging system initialized
+2025-02-17 10:06:05,072 [INFO] Initializing database connection...
+2025-02-17 10:06:06,371 [INFO] Database connection established successfully
+2025-02-17 10:06:11,851 [INFO] GUI initialized successfully
+2025-02-17 10:09:25,852 [INFO] Application shutdown initiated
+2025-02-17 10:09:25,895 [INFO] Database session closed
+2025-02-17 10:09:25,895 [INFO] Application terminated
+2025-02-17 10:09:30,290 [INFO] Logging system initialized
+2025-02-17 10:09:30,290 [INFO] Initializing database connection...
+2025-02-17 10:09:31,306 [INFO] Database connection established successfully
+2025-02-17 10:09:35,991 [INFO] GUI initialized successfully
+2025-02-17 10:11:03,208 [INFO] Application shutdown initiated
+2025-02-17 10:11:03,252 [INFO] Database session closed
+2025-02-17 10:11:03,252 [INFO] Application terminated
+2025-02-17 10:11:07,079 [INFO] Logging system initialized
+2025-02-17 10:11:07,079 [INFO] Initializing database connection...
+2025-02-17 10:11:08,216 [INFO] Database connection established successfully
+2025-02-17 10:11:13,106 [INFO] GUI initialized successfully
+2025-02-17 10:13:09,367 [INFO] Application shutdown initiated
+2025-02-17 10:13:09,420 [INFO] Database session closed
+2025-02-17 10:13:09,420 [INFO] Application terminated
+2025-02-17 10:13:25,611 [INFO] Logging system initialized
+2025-02-17 10:13:25,611 [INFO] Initializing database connection...
+2025-02-17 10:13:26,502 [INFO] Database connection established successfully
+2025-02-17 10:13:31,657 [INFO] GUI initialized successfully
+2025-02-17 10:16:50,599 [INFO] Application shutdown initiated
+2025-02-17 10:16:50,639 [INFO] Database session closed
+2025-02-17 10:16:50,640 [INFO] Application terminated
+2025-02-17 10:16:57,484 [INFO] Logging system initialized
+2025-02-17 10:16:57,484 [INFO] Initializing database connection...
+2025-02-17 10:16:58,592 [INFO] Database connection established successfully
+2025-02-17 10:17:03,487 [INFO] GUI initialized successfully
+2025-02-17 10:19:00,145 [INFO] Application shutdown initiated
+2025-02-17 10:19:00,192 [INFO] Database session closed
+2025-02-17 10:19:00,192 [INFO] Application terminated
+2025-02-17 10:19:02,390 [INFO] Logging system initialized
+2025-02-17 10:19:02,390 [INFO] Initializing database connection...
+2025-02-17 10:19:03,624 [INFO] Database connection established successfully
+2025-02-17 10:19:08,816 [INFO] GUI initialized successfully
+2025-02-17 10:21:11,709 [INFO] Application shutdown initiated
+2025-02-17 10:21:11,750 [INFO] Database session closed
+2025-02-17 10:21:11,750 [INFO] Application terminated
+2025-02-17 10:21:13,923 [INFO] Logging system initialized
+2025-02-17 10:21:13,924 [INFO] Initializing database connection...
+2025-02-17 10:21:15,051 [INFO] Database connection established successfully
+2025-02-17 10:21:21,359 [INFO] GUI initialized successfully
+2025-02-17 10:23:56,134 [INFO] Application shutdown initiated
+2025-02-17 10:23:56,185 [INFO] Database session closed
+2025-02-17 10:23:56,185 [INFO] Application terminated
+2025-02-17 10:24:00,087 [INFO] Logging system initialized
+2025-02-17 10:24:00,088 [INFO] Initializing database connection...
+2025-02-17 10:24:01,280 [INFO] Database connection established successfully
+2025-02-17 10:24:05,990 [INFO] GUI initialized successfully
+2025-02-17 10:26:36,015 [INFO] Application shutdown initiated
+2025-02-17 10:26:36,070 [INFO] Database session closed
+2025-02-17 10:26:36,070 [INFO] Application terminated
+2025-02-17 10:26:38,450 [INFO] Logging system initialized
+2025-02-17 10:26:38,451 [INFO] Initializing database connection...
+2025-02-17 10:26:39,560 [INFO] Database connection established successfully
+2025-02-17 10:26:44,414 [INFO] GUI initialized successfully
+2025-02-17 10:29:05,180 [INFO] Application shutdown initiated
+2025-02-17 10:29:05,223 [INFO] Database session closed
+2025-02-17 10:29:05,223 [INFO] Application terminated
+2025-02-17 10:29:21,088 [INFO] Logging system initialized
+2025-02-17 10:29:21,091 [INFO] Initializing database connection...
+2025-02-17 10:29:22,123 [INFO] Database connection established successfully
+2025-02-17 10:29:27,121 [INFO] GUI initialized successfully
+2025-02-17 10:30:47,550 [INFO] Application shutdown initiated
+2025-02-17 10:30:47,594 [INFO] Database session closed
+2025-02-17 10:30:47,594 [INFO] Application terminated
+2025-02-17 10:30:54,977 [INFO] Logging system initialized
+2025-02-17 10:30:54,977 [INFO] Initializing database connection...
+2025-02-17 10:30:56,106 [INFO] Database connection established successfully
+2025-02-17 10:31:01,250 [INFO] GUI initialized successfully
+2025-02-17 10:32:45,639 [INFO] Application shutdown initiated
+2025-02-17 10:32:45,689 [INFO] Database session closed
+2025-02-17 10:32:45,689 [INFO] Application terminated
+2025-02-17 10:35:21,906 [INFO] Logging system initialized
+2025-02-17 10:35:21,906 [INFO] Initializing database connection...
+2025-02-17 10:35:23,553 [INFO] Database connection established successfully
+2025-02-17 10:35:28,143 [INFO] GUI initialized successfully
+2025-02-17 10:35:56,412 [INFO] Application shutdown initiated
+2025-02-17 10:35:56,438 [INFO] Database session closed
+2025-02-17 10:35:56,438 [INFO] Application terminated
+2025-02-17 10:36:00,913 [INFO] Logging system initialized
+2025-02-17 10:36:00,913 [INFO] Initializing database connection...
+2025-02-17 10:36:02,266 [INFO] Database connection established successfully
+2025-02-17 10:36:07,273 [INFO] GUI initialized successfully
+2025-02-17 10:39:05,243 [INFO] Application shutdown initiated
+2025-02-17 10:39:05,296 [INFO] Database session closed
+2025-02-17 10:39:05,297 [INFO] Application terminated
+2025-02-17 10:39:08,948 [INFO] Logging system initialized
+2025-02-17 10:39:08,949 [INFO] Initializing database connection...
+2025-02-17 10:39:10,238 [INFO] Database connection established successfully
+2025-02-17 10:39:15,233 [INFO] GUI initialized successfully
+2025-02-17 10:40:51,275 [INFO] Application shutdown initiated
+2025-02-17 10:40:51,319 [INFO] Database session closed
+2025-02-17 10:40:51,319 [INFO] Application terminated
+2025-02-17 10:40:56,494 [INFO] Logging system initialized
+2025-02-17 10:40:56,494 [INFO] Initializing database connection...
+2025-02-17 10:40:57,758 [INFO] Database connection established successfully
+2025-02-17 10:41:02,850 [INFO] GUI initialized successfully
+2025-02-17 10:41:56,054 [INFO] Formatting cell text. Input value: OLWEN, Type: <class 'str'>
+2025-02-17 10:41:56,054 [INFO] After string conversion and strip: OLWEN
+2025-02-17 10:41:56,054 [INFO] Short text, returning as is: OLWEN
+2025-02-17 10:41:56,054 [INFO] Formatting cell text. Input value: 380mm, Type: <class 'str'>
+2025-02-17 10:41:56,054 [INFO] After string conversion and strip: 380mm
+2025-02-17 10:41:56,054 [INFO] Handling numeric value or measurement: 380mm
+2025-02-17 10:41:56,054 [INFO] Measurement value detected, keeping as is: 380mm
+2025-02-17 10:41:56,054 [INFO] Formatting cell text. Input value: ĐỎ, Type: <class 'str'>
+2025-02-17 10:41:56,054 [INFO] After string conversion and strip: ĐỎ
+2025-02-17 10:41:56,054 [INFO] Short text, returning as is: ĐỎ
+2025-02-17 10:41:56,054 [INFO] Formatting cell text. Input value: TRẮNG, Type: <class 'str'>
+2025-02-17 10:41:56,054 [INFO] After string conversion and strip: TRẮNG
+2025-02-17 10:41:56,054 [INFO] Short text, returning as is: TRẮNG
+2025-02-17 10:42:18,960 [INFO] Application shutdown initiated
+2025-02-17 10:42:19,004 [INFO] Database session closed
+2025-02-17 10:42:19,004 [INFO] Application terminated
+2025-02-17 10:43:52,096 [INFO] Logging system initialized
+2025-02-17 10:43:52,096 [INFO] Initializing database connection...
+2025-02-17 10:43:53,444 [INFO] Database connection established successfully
+2025-02-17 10:43:58,795 [INFO] GUI initialized successfully
+2025-02-17 10:46:49,974 [INFO] Application shutdown initiated
+2025-02-17 10:46:49,974 [INFO] Database session closed
+2025-02-17 10:46:49,974 [INFO] Application terminated
+2025-02-17 10:46:55,006 [INFO] Logging system initialized
+2025-02-17 10:46:55,006 [INFO] Initializing database connection...
+2025-02-17 10:46:56,550 [INFO] Database connection established successfully
+2025-02-17 10:47:01,708 [INFO] GUI initialized successfully
+2025-02-17 10:47:28,537 [INFO] Application shutdown initiated
+2025-02-17 10:47:28,586 [INFO] Database session closed
+2025-02-17 10:47:28,586 [INFO] Application terminated
+2025-02-17 10:47:33,588 [INFO] Logging system initialized
+2025-02-17 10:47:33,588 [INFO] Initializing database connection...
+2025-02-17 10:47:34,606 [INFO] Database connection established successfully
+2025-02-17 10:47:39,409 [INFO] GUI initialized successfully
+2025-02-17 10:48:51,312 [INFO] Application shutdown initiated
+2025-02-17 10:48:51,348 [INFO] Database session closed
+2025-02-17 10:48:51,348 [INFO] Application terminated
+2025-02-17 10:49:06,389 [INFO] Logging system initialized
+2025-02-17 10:49:06,389 [INFO] Initializing database connection...
+2025-02-17 10:49:07,463 [INFO] Database connection established successfully
+2025-02-17 10:49:12,492 [INFO] GUI initialized successfully
+2025-02-17 10:51:35,844 [INFO] Application shutdown initiated
+2025-02-17 10:51:35,887 [INFO] Database session closed
+2025-02-17 10:51:35,887 [INFO] Application terminated
+2025-02-17 10:51:39,733 [INFO] Logging system initialized
+2025-02-17 10:51:39,733 [INFO] Initializing database connection...
+2025-02-17 10:51:40,767 [INFO] Database connection established successfully
+2025-02-17 10:51:46,163 [INFO] GUI initialized successfully
+2025-02-17 10:53:25,394 [INFO] Application shutdown initiated
+2025-02-17 10:53:25,440 [INFO] Database session closed
+2025-02-17 10:53:26,950 [INFO] Application terminated
+2025-02-17 10:53:53,267 [INFO] Logging system initialized
+2025-02-17 10:53:53,267 [INFO] Initializing database connection...
+2025-02-17 10:53:54,449 [INFO] Database connection established successfully
+2025-02-17 10:53:59,804 [INFO] GUI initialized successfully
+2025-02-17 10:54:15,487 [INFO] Application shutdown initiated
+2025-02-17 10:54:15,526 [INFO] Database session closed
+2025-02-17 10:54:15,526 [INFO] Application terminated
+2025-02-17 10:54:41,239 [INFO] Logging system initialized
+2025-02-17 10:54:41,240 [INFO] Initializing database connection...
+2025-02-17 10:54:42,327 [INFO] Database connection established successfully
+2025-02-17 10:54:48,032 [INFO] GUI initialized successfully
+2025-02-17 10:56:42,517 [INFO] Application shutdown initiated
+2025-02-17 10:56:42,565 [INFO] Database session closed
+2025-02-17 10:56:42,566 [INFO] Application terminated
+2025-02-17 10:56:47,948 [INFO] Logging system initialized
+2025-02-17 10:56:47,948 [INFO] Initializing database connection...
+2025-02-17 10:56:49,184 [INFO] Database connection established successfully
+2025-02-17 10:56:54,357 [INFO] GUI initialized successfully
+2025-02-17 10:57:27,244 [INFO] Application shutdown initiated
+2025-02-17 10:57:27,286 [INFO] Database session closed
+2025-02-17 10:57:27,286 [INFO] Application terminated
+2025-02-17 10:59:22,195 [INFO] Logging system initialized
+2025-02-17 10:59:22,196 [INFO] Initializing database connection...
+2025-02-17 10:59:23,352 [INFO] Database connection established successfully
+2025-02-17 10:59:28,338 [INFO] GUI initialized successfully
+2025-02-17 11:02:31,520 [INFO] Application shutdown initiated
+2025-02-17 11:02:31,565 [INFO] Database session closed
+2025-02-17 11:02:31,565 [INFO] Application terminated
+2025-02-17 11:02:38,690 [INFO] Logging system initialized
+2025-02-17 11:02:38,690 [INFO] Initializing database connection...
+2025-02-17 11:02:39,694 [INFO] Database connection established successfully
+2025-02-17 11:02:44,025 [INFO] GUI initialized successfully
+2025-02-17 11:02:55,783 [INFO] Application shutdown initiated
+2025-02-17 11:02:55,822 [INFO] Database session closed
+2025-02-17 11:02:55,822 [INFO] Application terminated
+2025-02-17 11:03:06,747 [INFO] Logging system initialized
+2025-02-17 11:03:06,747 [INFO] Initializing database connection...
+2025-02-17 11:03:07,584 [INFO] Database connection established successfully
+2025-02-17 11:03:11,860 [INFO] GUI initialized successfully
+2025-02-17 11:03:52,575 [INFO] Application shutdown initiated
+2025-02-17 11:03:52,615 [INFO] Database session closed
+2025-02-17 11:03:52,615 [INFO] Application terminated
+2025-02-17 11:03:57,272 [INFO] Logging system initialized
+2025-02-17 11:03:57,272 [INFO] Initializing database connection...
+2025-02-17 11:03:58,282 [INFO] Database connection established successfully
+2025-02-17 11:04:02,850 [INFO] GUI initialized successfully
+2025-02-17 11:04:15,633 [INFO] Application shutdown initiated
+2025-02-17 11:04:15,673 [INFO] Database session closed
+2025-02-17 11:04:15,673 [INFO] Application terminated
+2025-02-17 11:07:59,523 [INFO] Logging system initialized
+2025-02-17 11:07:59,523 [INFO] Initializing database connection...
+2025-02-17 11:08:00,659 [INFO] Database connection established successfully
+2025-02-17 11:08:05,145 [INFO] GUI initialized successfully
+2025-02-17 11:11:32,314 [INFO] Application shutdown initiated
+2025-02-17 11:11:32,359 [INFO] Database session closed
+2025-02-17 11:11:32,360 [INFO] Application terminated
+2025-02-17 11:11:36,265 [INFO] Logging system initialized
+2025-02-17 11:11:36,266 [INFO] Initializing database connection...
+2025-02-17 11:11:39,785 [INFO] Database connection established successfully
+2025-02-17 11:11:44,112 [INFO] GUI initialized successfully
+2025-02-17 11:13:32,566 [INFO] Application shutdown initiated
+2025-02-17 11:13:32,608 [INFO] Database session closed
+2025-02-17 11:13:32,608 [INFO] Application terminated
+2025-02-17 11:17:56,658 [INFO] Logging system initialized
+2025-02-17 11:17:56,658 [INFO] Initializing database connection...
+2025-02-17 11:17:57,779 [INFO] Database connection established successfully
+2025-02-17 11:18:02,945 [INFO] GUI initialized successfully
+2025-02-17 11:19:09,398 [INFO] Application shutdown initiated
+2025-02-17 11:19:09,445 [INFO] Database session closed
+2025-02-17 11:19:09,446 [INFO] Application terminated
+2025-02-17 11:19:13,671 [INFO] Logging system initialized
+2025-02-17 11:19:13,671 [INFO] Initializing database connection...
+2025-02-17 11:19:14,714 [INFO] Database connection established successfully
+2025-02-17 11:19:19,044 [INFO] GUI initialized successfully
+2025-02-17 11:21:06,558 [INFO] Application shutdown initiated
+2025-02-17 11:21:06,600 [INFO] Database session closed
+2025-02-17 11:21:06,601 [INFO] Application terminated
+2025-02-17 11:21:10,672 [INFO] Logging system initialized
+2025-02-17 11:21:10,673 [INFO] Initializing database connection...
+2025-02-17 11:21:12,259 [INFO] Database connection established successfully
+2025-02-17 11:21:16,648 [INFO] GUI initialized successfully
+2025-02-17 11:22:59,370 [INFO] Application shutdown initiated
+2025-02-17 11:22:59,417 [INFO] Database session closed
+2025-02-17 11:22:59,417 [INFO] Application terminated
+2025-02-17 11:23:04,487 [INFO] Logging system initialized
+2025-02-17 11:23:04,487 [INFO] Initializing database connection...
+2025-02-17 11:23:06,901 [INFO] Database connection established successfully
+2025-02-17 11:23:11,270 [INFO] GUI initialized successfully
+2025-02-17 11:23:17,123 [ERROR] Error showing edit form: None
+2025-02-17 11:24:40,305 [INFO] Application shutdown initiated
+2025-02-17 11:24:40,352 [INFO] Database session closed
+2025-02-17 11:24:40,352 [INFO] Application terminated
+2025-02-17 11:26:34,642 [INFO] Logging system initialized
+2025-02-17 11:26:34,642 [INFO] Initializing database connection...
+2025-02-17 11:26:35,806 [INFO] Database connection established successfully
+2025-02-17 11:26:40,271 [INFO] GUI initialized successfully
