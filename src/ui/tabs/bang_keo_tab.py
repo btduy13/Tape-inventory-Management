@@ -299,51 +299,70 @@ class BangKeoTab(TabBase):
     def export_to_excel(self):
         """Export the order details to Excel"""
         try:
-            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_name = f"bang_keo_{current_date}.xlsx"
-            
-            # Create workbook and worksheet
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Băng Keo"
-            
-            # Prepare data
-            data = {
-                'Ngày': current_date,
-                'Tên Hàng': self.ten_hang_entry.get(),
-                'Tên Khách Hàng': self.ten_khach_hang_entry.get(),
-                'Ngày dự kiến': self.ngay_du_kien.get_date().strftime('%d-%m-%Y'),
-                'Quy cách (KG)': self.quy_cach.get(),
-                'Số lượng': self.so_luong.get(),
-                'Màu sắc': self.mau_sac.get(),
-                'Đơn giá gốc': self.don_gia_goc.get(),
-                'Thành tiền': self.thanh_tien.get(),
-                'Đơn giá bán': self.don_gia_ban.get(),
-                'Thành tiền bán': self.thanh_tien_ban.get(),
-                'Công nợ khách': self.cong_no_khach.get(),
-                'CTV': self.ctv.get(),
-                'Hoa hồng': self.hoa_hong.get(),
-                'Tiền hoa hồng': self.tien_hoa_hong.get(),
-                'Lợi nhuận': self.loi_nhuan.get(),
-                'Tiền ship': self.tien_ship.get(),
-                'Lợi nhuận ròng': self.loi_nhuan_rong.get()
-            }
-            
-            # Write headers and data
-            for col, (header, value) in enumerate(data.items(), start=1):
-                ws.cell(row=1, column=col, value=header)
-                ws.cell(row=2, column=col, value=value)
-            
-            # Save file
+            # Get the file path
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".xlsx",
                 filetypes=[("Excel files", "*.xlsx")],
-                initialfile=file_name
+                initialfile=f"bang_keo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             )
             
-            if file_path:
-                wb.save(file_path)
-                messagebox.showinfo("Thành công", f"Đã xuất file Excel: {file_path}")
+            if not file_path:
+                return
+
+            # Create or load workbook
+            if os.path.exists(file_path):
+                wb = load_workbook(file_path)
+                ws = wb.active
+                next_row = ws.max_row + 1  # Get the next available row
+            else:
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Băng Keo"
+                next_row = 1  # Start with first row for new file
+                
+                # Write headers if new file
+                headers = [
+                    'ID', 'Ngày', 'Tên Hàng', 'Tên Khách Hàng', 'Ngày dự kiến',
+                    'Quy cách', 'Số lượng', 'Màu sắc', 'Đơn giá gốc',
+                    'Thành tiền', 'Đơn giá bán', 'Thành tiền bán',
+                    'Công nợ khách', 'CTV', 'Hoa hồng', 'Tiền hoa hồng',
+                    'Lợi nhuận', 'Tiền ship', 'Lợi nhuận ròng'
+                ]
+                for col, header in enumerate(headers, 1):
+                    ws.cell(row=1, column=col, value=header)
+                next_row = 2  # Start data from second row
+            
+            # Prepare data for the current order
+            current_date = datetime.now().strftime('%m/%d/%Y')
+            data = [
+                self.ten_hang_entry.get(),  # ID/Tên hàng for now
+                current_date,
+                self.ten_hang_entry.get(),
+                self.ten_khach_hang_entry.get(),
+                self.ngay_du_kien.get_date().strftime('%m/%d/%Y'),
+                self.quy_cach.get(),
+                self.so_luong.get(),
+                self.mau_sac.get(),
+                self.don_gia_goc.get(),
+                self.thanh_tien.get(),
+                self.don_gia_ban.get(),
+                self.thanh_tien_ban.get(),
+                self.cong_no_khach.get(),
+                self.ctv.get(),
+                self.hoa_hong.get(),
+                self.tien_hoa_hong.get(),
+                self.loi_nhuan.get(),
+                self.tien_ship.get(),
+                self.loi_nhuan_rong.get()
+            ]
+            
+            # Write data to the next available row
+            for col, value in enumerate(data, 1):
+                ws.cell(row=next_row, column=col, value=value)
+            
+            # Save workbook
+            wb.save(file_path)
+            messagebox.showinfo("Thành công", f"Đã xuất file Excel: {file_path}")
         
         except Exception as e:
             messagebox.showerror("Lỗi", f"Lỗi khi xuất Excel: {str(e)}")

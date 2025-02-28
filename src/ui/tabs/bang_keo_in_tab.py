@@ -447,65 +447,86 @@ class BangKeoInTab(TabBase):
     def export_to_excel(self):
         """Export the order details to Excel"""
         try:
-            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_name = f"don_hang_{current_date}.xlsx"
-            
-            # Create workbook and worksheet
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Đơn hàng"
-            
-            # Prepare data
-            data = {
-                'ID': self.ten_hang_entry.get(),
-                'Ngày': current_date,
-                'Tên Hàng': self.ten_hang_entry.get(),
-                'Tên Khách Hàng': self.ten_khach_hang_entry.get(),
-                'Ngày dự kiến': self.ngay_du_kien.get_date().strftime('%d-%m-%Y'),
-                'Quy Cách (mm)': self.quy_cach_mm.get(),
-                'Quy Cách (m)': self.quy_cach_m.get(),
-                'Quy Cách (mic)': self.quy_cach_mic.get(),
-                'Cuộn/Cây': self.cuon_cay.get(),
-                'Số lượng': self.so_luong.get(),
-                'Phí SL': self.phi_sl.get(),
-                'Màu keo': self.mau_keo.get(),
-                'Phí keo': self.phi_keo.get(),
-                'Màu sắc': self.mau_sac.get(),
-                'Phí màu': self.phi_mau.get(),
-                'Phí size': self.phi_size.get(),
-                'Phí cắt': self.phi_cat.get(),
-                'Đơn giá vốn': self.don_gia_von.get(),
-                'Đơn giá gốc': self.don_gia_goc.get(),
-                'Thành tiền gốc': self.thanh_tien_goc.get(),
-                'Đơn giá bán': self.don_gia_ban.get(),
-                'Thành tiền bán': self.thanh_tien_ban.get(),
-                'Tiền cọc': self.tien_coc.get(),
-                'Công nợ khách': self.cong_no_khach.get(),
-                'CTV': self.ctv.get(),
-                'Hoa hồng': self.hoa_hong.get(),
-                'Tiền hoa hồng': self.tien_hoa_hong.get(),
-                'Lỗi giấy': self.loi_giay.get(),
-                'Thùng/Bao': self.thung_bao.get(),
-                'Lợi nhuận': self.loi_nhuan.get(),
-                'Tiền ship': self.tien_ship.get(),
-                'Lợi nhuận ròng': self.loi_nhuan_rong.get()
-            }
-            
-            # Write headers and data
-            for col, (header, value) in enumerate(data.items(), start=1):
-                ws.cell(row=1, column=col, value=header)
-                ws.cell(row=2, column=col, value=value)
-            
-            # Save file
+            # Get the file path
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".xlsx",
                 filetypes=[("Excel files", "*.xlsx")],
-                initialfile=file_name
+                initialfile=f"don_hang_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             )
             
-            if file_path:
-                wb.save(file_path)
-                messagebox.showinfo("Thành công", f"Đã xuất file Excel: {file_path}")
+            if not file_path:
+                return
+
+            # Create or load workbook
+            if os.path.exists(file_path):
+                wb = load_workbook(file_path)
+                ws = wb.active
+                next_row = ws.max_row + 1  # Get the next available row
+            else:
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Đơn hàng"
+                next_row = 1  # Start with first row for new file
+                
+                # Write headers if new file
+                headers = [
+                    'ID', 'Ngày', 'Tên Hàng', 'Tên Khách Hàng', 'Ngày dự kiến',
+                    'Quy Cách (mm)', 'Quy Cách (m)', 'Quy Cách (mic)', 'Cuộn/Cây',
+                    'Số lượng', 'Phí SL', 'Màu keo', 'Phí keo', 'Màu sắc',
+                    'Phí màu', 'Phí size', 'Phí cắt', 'Đơn giá vốn',
+                    'Đơn giá gốc', 'Thành tiền gốc', 'Đơn giá bán',
+                    'Thành tiền bán', 'Tiền cọc', 'Công nợ khách', 'CTV',
+                    'Hoa hồng', 'Tiền hoa hồng', 'Lõi giấy', 'Thùng/Bao',
+                    'Lợi nhuận', 'Tiền ship', 'Lợi nhuận ròng'
+                ]
+                for col, header in enumerate(headers, 1):
+                    ws.cell(row=1, column=col, value=header)
+                next_row = 2  # Start data from second row
+            
+            # Prepare data for the current order
+            current_date = datetime.now().strftime('%m/%d/%Y')
+            data = [
+                self.ten_hang_entry.get(),  # ID/Tên hàng for now
+                current_date,
+                self.ten_hang_entry.get(),
+                self.ten_khach_hang_entry.get(),
+                self.ngay_du_kien.get_date().strftime('%m/%d/%Y'),
+                self.quy_cach_mm.get(),
+                self.quy_cach_m.get(),
+                self.quy_cach_mic.get(),
+                self.cuon_cay.get(),
+                self.so_luong.get(),
+                self.phi_sl.get(),
+                self.mau_keo.get(),
+                self.phi_keo.get(),
+                self.mau_sac.get(),
+                self.phi_mau.get(),
+                self.phi_size.get(),
+                self.phi_cat.get(),
+                self.don_gia_von.get(),
+                self.don_gia_goc.get(),
+                self.thanh_tien_goc.get(),
+                self.don_gia_ban.get(),
+                self.thanh_tien_ban.get(),
+                self.tien_coc.get(),
+                self.cong_no_khach.get(),
+                self.ctv.get(),
+                self.hoa_hong.get(),
+                self.tien_hoa_hong.get(),
+                self.loi_giay.get(),
+                self.thung_bao.get(),
+                self.loi_nhuan.get(),
+                self.tien_ship.get(),
+                self.loi_nhuan_rong.get()
+            ]
+            
+            # Write data to the next available row
+            for col, value in enumerate(data, 1):
+                ws.cell(row=next_row, column=col, value=value)
+            
+            # Save workbook
+            wb.save(file_path)
+            messagebox.showinfo("Thành công", f"Đã xuất file Excel: {file_path}")
         
         except Exception as e:
             messagebox.showerror("Lỗi", f"Lỗi khi xuất Excel: {str(e)}")
