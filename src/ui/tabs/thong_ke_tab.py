@@ -469,19 +469,22 @@ class ThongKeTab(TabBase):
             da_giao_var = tk.BooleanVar(value=order.da_giao)
             da_tat_toan_var = tk.BooleanVar(value=order.da_tat_toan)
             
-            # Style for checkbuttons
-            style = ttk.Style()
-            style.configure("Large.TCheckbutton", font=('Segoe UI', 11))
+            # Use regular tk Checkbuttons instead of ttk to remove highlighting
+            tk.Checkbutton(top_frame, 
+                          text="Đã giao hàng", 
+                          variable=da_giao_var,
+                          font=('Segoe UI', 11),
+                          highlightthickness=0,
+                          bd=0,
+                          bg=top_frame.cget('background')).pack(anchor=tk.W, pady=10)
             
-            ttk.Checkbutton(top_frame, 
-                           text="Đã giao hàng", 
-                           variable=da_giao_var,
-                           style="Large.TCheckbutton").pack(anchor=tk.W, pady=10)
-            
-            ttk.Checkbutton(top_frame, 
-                           text="Đã tất toán", 
-                           variable=da_tat_toan_var,
-                           style="Large.TCheckbutton").pack(anchor=tk.W, pady=10)
+            tk.Checkbutton(top_frame, 
+                          text="Đã tất toán", 
+                          variable=da_tat_toan_var,
+                          font=('Segoe UI', 11),
+                          highlightthickness=0,
+                          bd=0,
+                          bg=top_frame.cget('background')).pack(anchor=tk.W, pady=10)
             
             # Frame cho buttons ở chính giữa cửa sổ
             button_frame = ttk.Frame(main_frame)

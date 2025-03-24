@@ -543,6 +543,7 @@ class BangKeoInTab(TabBase):
             so_luong = self.so_luong.get()
             loi_giay = self.loi_giay.get()
             thung_bao = self.thung_bao.get()
+            cuon_cay = self.cuon_cay.get()
             
             content = f"""
 Chào bác,
@@ -559,6 +560,7 @@ Quy cách: {quy_cach}
 Số lượng: {so_luong}
 Lõi giấy: {loi_giay}
 Thùng/Bao: {thung_bao}
+Cuộn/Cây: {cuon_cay}
 
 Cảm ơn bác!
 Quế

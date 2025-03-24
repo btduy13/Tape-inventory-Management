@@ -131,7 +131,7 @@ class Application:
             logging.error("Report dialog error: %s", str(e))
             messagebox.showerror(
                 "Lỗi",
-                f"Không thể mở cửa sổ xuất đơn: {str(e)}",
+                f"Không thể mở cửa sổ xuất đơn: {str(e)}",  
                 parent=self.root
             )
 
