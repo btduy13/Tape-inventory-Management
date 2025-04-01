@@ -68,24 +68,61 @@ class BangKeoInTab(TabBase):
         self.ten_khach_hang_entry = ttk.Entry(basic_info_frame)
         self.ten_khach_hang_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
 
-        # Row 2: Quy cách
-        ttk.Label(basic_info_frame, text="Quy cách (mm):").grid(row=2, column=0, sticky='e', padx=5, pady=5)
-        self.quy_cach_mm = ttk.Entry(basic_info_frame)
-        self.quy_cach_mm.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
+        # Row 2: Quy cách (mm)
+        ttk.Label(basic_info_frame, text="Quy cách (mm):").grid(row=2, column=0, padx=5, pady=5, sticky='e')
+        self.quy_cach_mm = ttk.Entry(basic_info_frame, width=15)
+        self.quy_cach_mm.grid(row=2, column=1, padx=5, pady=5, sticky='w')
+        
+        # Quy cách (m) - bên phải
+        ttk.Label(basic_info_frame, text="Quy cách (m):").grid(row=2, column=2, padx=5, pady=5, sticky='e')
+        self.quy_cach_m = ttk.Entry(basic_info_frame, width=15)
+        self.quy_cach_m.grid(row=2, column=3, padx=5, pady=5, sticky='w')
 
-        ttk.Label(basic_info_frame, text="Quy cách (m):").grid(row=2, column=2, sticky='e', padx=5, pady=5)
-        self.quy_cach_m = ttk.Entry(basic_info_frame)
-        self.quy_cach_m.grid(row=2, column=3, sticky='ew', padx=5, pady=5)
+        # Quy cách (mic)
+        ttk.Label(basic_info_frame, text="Quy cách (mic):").grid(row=3, column=0, padx=5, pady=5, sticky='e')
+        self.quy_cach_mic = ttk.Entry(basic_info_frame, width=15)
+        self.quy_cach_mic.grid(row=3, column=1, padx=5, pady=5, sticky='w')
 
-        # Row 3: Quy cách mic và cuộn/cây
-        ttk.Label(basic_info_frame, text="Quy cách (mic):").grid(row=3, column=0, sticky='e', padx=5, pady=5)
-        self.quy_cach_mic = ttk.Entry(basic_info_frame)
-        self.quy_cach_mic.grid(row=3, column=1, sticky='ew', padx=5, pady=5)
-
-        ttk.Label(basic_info_frame, text="Cuộn/Cây:").grid(row=3, column=2, sticky='e', padx=5, pady=5)
-        self.cuon_cay = ttk.Entry(basic_info_frame)
-        self.cuon_cay.grid(row=3, column=3, sticky='ew', padx=5, pady=5)
-
+        # Cuộn/Cây - đặt ở cột bên phải, cùng hàng với Quy cách (mic)
+        ttk.Label(basic_info_frame, text="Cuộn/Cây:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
+        
+        # Tạo frame cho cuộn/cây selection
+        self.cuon_cay_frame = ttk.Frame(basic_info_frame)
+        self.cuon_cay_frame.grid(row=3, column=3, padx=5, pady=5, sticky='w')
+        
+        # Biến để lưu lựa chọn
+        self.cuon_cay_var = tk.StringVar(value="cuon")
+        
+        # Tạo các radio buttons
+        ttk.Radiobutton(
+            self.cuon_cay_frame, 
+            text="Cuộn", 
+            value="cuon",
+            variable=self.cuon_cay_var,
+            command=self.toggle_cuon_cay_input
+        ).pack(side='left', padx=2)
+        
+        ttk.Radiobutton(
+            self.cuon_cay_frame, 
+            text="Cây", 
+            value="cay",
+            variable=self.cuon_cay_var,
+            command=self.toggle_cuon_cay_input
+        ).pack(side='left', padx=2)
+        
+        ttk.Radiobutton(
+            self.cuon_cay_frame, 
+            text="Khác", 
+            value="khac",
+            variable=self.cuon_cay_var,
+            command=self.toggle_cuon_cay_input
+        ).pack(side='left', padx=2)
+        
+        # Entry cho tùy chọn khác
+        self.cuon_cay_entry = ttk.Entry(self.cuon_cay_frame, width=10)
+        self.cuon_cay_entry.pack(side='left', padx=2)
+        self.cuon_cay_entry.configure(state='disabled')
+        
         # Price Frame
         price_frame = ttk.LabelFrame(main_frame, text="Giá và Chi phí", padding=10)
         price_frame.grid(row=2, column=0, sticky='nsew', padx=5, pady=5)
@@ -223,7 +260,7 @@ class BangKeoInTab(TabBase):
             self.so_luong, self.phi_sl, self.phi_keo, self.phi_size,
             self.phi_cat, self.don_gia_von, self.don_gia_ban, self.tien_coc,
             self.hoa_hong, self.phi_mau, self.quy_cach_mm,
-            self.quy_cach_m, self.quy_cach_mic, self.cuon_cay,
+            self.quy_cach_m, self.quy_cach_mic, self.cuon_cay_entry,
             self.tien_ship  # Thêm tiền ship
         ]
         for entry in entries_to_bind:
@@ -274,7 +311,7 @@ class BangKeoInTab(TabBase):
             tien_ship = self.validate_float_input(self.tien_ship.get())
 
             # 2. Tính đơn giá gốc
-            cuon_cay = self.validate_float_input(self.cuon_cay.get())
+            cuon_cay = self.validate_float_input(self.cuon_cay_entry.get())
             quy_cach_m = self.validate_float_input(self.quy_cach_m.get())
 
             if cuon_cay == 0 or quy_cach_m == 0:
@@ -333,7 +370,7 @@ class BangKeoInTab(TabBase):
                 'quy_cach_mm': self.parse_float(self.quy_cach_mm.get()),
                 'quy_cach_m': self.parse_float(self.quy_cach_m.get()),
                 'quy_cach_mic': self.parse_float(self.quy_cach_mic.get()),
-                'cuon_cay': self.parse_float(self.cuon_cay.get()),
+                'cuon_cay': self.parse_float(self.cuon_cay_entry.get()),
                 'so_luong': self.parse_float(self.so_luong.get()),
                 'phi_sl': self.parse_float(self.phi_sl.get()),
                 'mau_keo': self.mau_keo.get(),
@@ -390,7 +427,7 @@ class BangKeoInTab(TabBase):
             self.quy_cach_mm.delete(0, tk.END)
             self.quy_cach_m.delete(0, tk.END)
             self.quy_cach_mic.delete(0, tk.END)
-            self.cuon_cay.delete(0, tk.END)
+            self.cuon_cay_entry.delete(0, tk.END)
             
             # Clear quantities and fees
             self.so_luong.delete(0, tk.END)
@@ -494,7 +531,7 @@ class BangKeoInTab(TabBase):
                 self.quy_cach_mm.get(),
                 self.quy_cach_m.get(),
                 self.quy_cach_mic.get(),
-                self.cuon_cay.get(),
+                self.cuon_cay_entry.get(),
                 self.so_luong.get(),
                 self.phi_sl.get(),
                 self.mau_keo.get(),
@@ -539,11 +576,11 @@ class BangKeoInTab(TabBase):
             ten_khach_hang = self.ten_khach_hang_entry.get()
             mau_sac = self.mau_sac.get()
             mau_keo = self.mau_keo.get()
-            quy_cach = f"{self.quy_cach_mm.get()}mm x {self.quy_cach_m.get()}m x {self.quy_cach_mic.get()}mic"
-            so_luong = self.so_luong.get()
+            quy_cach = f"{int(float(self.quy_cach_mm.get()))}mm x {int(float(self.quy_cach_m.get()))}m x {int(float(self.quy_cach_mic.get()))}mic"
+            so_luong = int(float(self.so_luong.get()))
             loi_giay = self.loi_giay.get()
             thung_bao = self.thung_bao.get()
-            cuon_cay = self.cuon_cay.get()
+            cuon_cay = self.cuon_cay_entry.get()
             
             content = f"""
 Chào bác,
@@ -557,10 +594,9 @@ Tên khách hàng: {ten_khach_hang}
 Màu sắc: {mau_sac}
 Màu keo: {mau_keo}
 Quy cách: {quy_cach}
-Số lượng: {so_luong}
+Số lượng: {so_luong} {cuon_cay}
 Lõi giấy: {loi_giay}
 Thùng/Bao: {thung_bao}
-Cuộn/Cây: {cuon_cay}
 
 Cảm ơn bác!
 Quế
@@ -593,3 +629,21 @@ Quế
         except Exception as e:
             messagebox.showerror("Lỗi", f"Lỗi khi xuất file: {str(e)}")
             raise
+
+    def toggle_cuon_cay_input(self):
+        """Enable/disable entry field based on selection"""
+        if self.cuon_cay_var.get() == "khac":
+            self.cuon_cay_entry.configure(state='normal')
+        else:
+            self.cuon_cay_entry.delete(0, tk.END)
+            self.cuon_cay_entry.configure(state='disabled')
+
+    def get_cuon_cay_value(self):
+        """Get the current cuon/cay value"""
+        selection = self.cuon_cay_var.get()
+        if selection == "cuon":
+            return "Cuộn"
+        elif selection == "cay":
+            return "Cây"
+        else:
+            return self.cuon_cay_entry.get()
