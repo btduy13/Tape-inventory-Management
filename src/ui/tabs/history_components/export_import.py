@@ -130,7 +130,8 @@ class ExportImportManager:
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"  # ten_hang
-                    f"Màu sắc: {values[13]} / Màu keo: {values[11]}\n"  # mau_sac, mau_keo
+                    f"Màu sắc: {values[13]}\n"
+                    f"Màu keo: {values[11]}\n"  # mau_sac, mau_keo
                     f"Số lượng: {values[9]} cuộn\n"  # so_luong
                     f"Quy cách: {quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic\n"  # quy_cach
                     f"Lõi giấy: {values[27]} - Thùng bao: {values[28]}\n\n"  # loi_giay, thung_bao
@@ -141,7 +142,8 @@ class ExportImportManager:
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"  # ten_hang
-                    f"Màu sắc: {values[7]} / Màu keo: {values[8]}\n"  # mau_sac, mau_keo
+                    f"Màu sắc: {values[7]}\n"
+                    f"Màu keo: {values[8]}\n"  # mau_sac, mau_keo
                     f"Số lượng: {values[6]} cuộn\n"  # so_luong
                     f"Quy cách: {values[5]}\n\n"  # quy_cach
                     f"Cám ơn bác\n"

@@ -328,10 +328,10 @@ class ThongKeTab(TabBase):
             # Insert data with proper order and formatting
             tree.insert("", "end", values=(
                 order.id,  # ID đơn hàng
-                order.thoi_gian.strftime("%d/%m/%Y"),  # Ngày tạo đơn
+                order.thoi_gian.strftime("%d/%m/%Y") if order.thoi_gian else "",  # Ngày tạo đơn
                 order.ten_hang,  # Tên đơn
                 order.ten_khach_hang,  # Tên khách hàng
-                order.ngay_du_kien.strftime("%d/%m/%Y"),  # Ngày giao
+                order.ngay_du_kien.strftime("%d/%m/%Y") if order.ngay_du_kien else "",  # Ngày giao
                 cong_no,  # Công nợ khách
                 "✓" if order.da_giao else "",  # Đã giao
                 "✓" if order.da_tat_toan else ""  # Đã tất toán
@@ -462,7 +462,7 @@ class ThongKeTab(TabBase):
                      font=('Segoe UI', 11)).pack(anchor=tk.W)
             ttk.Label(top_frame, text=f"Tên hàng: {order.ten_hang}",
                      font=('Segoe UI', 11)).pack(anchor=tk.W, pady=5)
-            ttk.Label(top_frame, text=f"Ngày tạo: {order.thoi_gian.strftime('%d/%m/%Y')}",
+            ttk.Label(top_frame, text=f"Ngày tạo: {order.thoi_gian.strftime('%d/%m/%Y') if order.thoi_gian else 'N/A'}",
                      font=('Segoe UI', 11)).pack(anchor=tk.W)
             
             # Status checkboxes

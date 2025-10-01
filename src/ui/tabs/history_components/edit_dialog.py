@@ -524,9 +524,9 @@ class EditDialogManager:
                 tree_values = [record_id]
                 for column in tree['columns'][1:]:
                     if column in ['thoi_gian']:
-                        tree_values.append(values[column].strftime(self.DATE_FORMAT))
+                        tree_values.append(values[column].strftime(self.DATE_FORMAT) if values[column] else "")
                     elif column in ['ngay_du_kien']:
-                        tree_values.append(values[column].strftime(self.DATE_FORMAT))
+                        tree_values.append(values[column].strftime(self.DATE_FORMAT) if values[column] else "")
                     elif column in ['da_giao', 'da_tat_toan']:
                         tree_values.append(item_values[tree['columns'].index(column)])
                     elif column in numeric_fields:

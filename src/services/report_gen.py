@@ -340,11 +340,24 @@ def convert_order_to_preview_data(order):
         thanh_tien = getattr(order, 'thanh_tien_goc', 0)
         print(f"Using thanh_tien_goc instead: {thanh_tien}")
 
+    # Safe Unicode handling for Vietnamese characters
+    def safe_unicode(value):
+        """Safely handle Unicode characters for Vietnamese text"""
+        if value is None:
+            return ''
+        try:
+            # Ensure the value is properly encoded as UTF-8
+            if isinstance(value, str):
+                return value.encode('utf-8', errors='ignore').decode('utf-8')
+            return str(value)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return str(value).encode('ascii', errors='ignore').decode('ascii')
+
     result = {
-        'product': order.ten_hang,
-        'specs': specs,
-        'text_color': order.mau_sac if hasattr(order, 'mau_sac') else '',
-        'bg_color': order.mau_keo if hasattr(order, 'mau_keo') else '',
+        'product': safe_unicode(order.ten_hang),
+        'specs': safe_unicode(specs),
+        'text_color': safe_unicode(order.mau_sac if hasattr(order, 'mau_sac') else ''),
+        'bg_color': safe_unicode(order.mau_keo if hasattr(order, 'mau_keo') else ''),
         'unit': 'KG' if isinstance(order, BangKeoOrder) else 'cuộn',
         'quantity': str(order.so_luong),
         'price': str(order.don_gia_ban),
@@ -352,7 +365,10 @@ def convert_order_to_preview_data(order):
     }
     print("\nFinal converted data:")
     for key, value in result.items():
-        print(f"{key}: {value}")
+        try:
+            print(f"{key}: {value}")
+        except UnicodeEncodeError:
+            print(f"{key}: [Unicode data]")
     
     return result
 
@@ -597,7 +613,7 @@ class OrderSelectionDialog(tk.Toplevel):
         for order in orders:
             item = self.tree.insert('', 'end', values=(
                 order.id,
-                order.thoi_gian.strftime('%d/%m/%Y'),
+                order.thoi_gian.strftime('%d/%m/%Y') if order.thoi_gian else "",
                 order.ten_hang,
                 order.ten_khach_hang,
                 f"{order.so_luong:,.0f}",

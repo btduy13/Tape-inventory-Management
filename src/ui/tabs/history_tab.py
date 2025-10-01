@@ -492,14 +492,15 @@ class HistoryTab(TabBase):
         """Process each order to update counters and insert into Treeview if it matches the filter."""
         try:
             # Calculate days until due
-            days_until_due = (order.ngay_du_kien - today).days
+            days_until_due = (order.ngay_du_kien - today).days if order.ngay_du_kien else 0
             
             # Update statistical counters based on order status
             if not order.da_giao:
-                if 0 <= days_until_due <= 3:
-                    self.sap_den_han_count += 1
-                elif days_until_due < 0:
-                    self.qua_han_count += 1
+                if order.ngay_du_kien:  # Only calculate if ngay_du_kien is not None
+                    if 0 <= days_until_due <= 3:
+                        self.sap_den_han_count += 1
+                    elif days_until_due < 0:
+                        self.qua_han_count += 1
                     
             if not order.da_tat_toan:
                 self.chua_tat_toan_count += 1
@@ -522,10 +523,10 @@ class HistoryTab(TabBase):
             # Prepare values for display
             values = [
                 order.id,
-                order.thoi_gian.strftime("%d/%m/%Y"),
+                order.thoi_gian.strftime("%d/%m/%Y") if order.thoi_gian else "",
                 order.ten_hang,
                 order.ten_khach_hang,
-                order.ngay_du_kien.strftime("%d/%m/%Y")
+                order.ngay_du_kien.strftime("%d/%m/%Y") if order.ngay_du_kien else ""
             ]
 
             # Add quy_cach based on order type

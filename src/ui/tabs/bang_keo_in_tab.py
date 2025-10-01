@@ -576,8 +576,9 @@ class BangKeoInTab(TabBase):
             ten_khach_hang = self.ten_khach_hang_entry.get()
             mau_sac = self.mau_sac.get()
             mau_keo = self.mau_keo.get()
-            quy_cach = f"{int(float(self.quy_cach_mm.get()))}mm x {int(float(self.quy_cach_m.get()))}m x {int(float(self.quy_cach_mic.get()))}mic"
-            so_luong = int(float(self.so_luong.get()))
+            # Use parse_float method for safe conversion
+            quy_cach = f"{int(self.parse_float(self.quy_cach_mm.get()))}mm x {int(self.parse_float(self.quy_cach_m.get()))}m x {int(self.parse_float(self.quy_cach_mic.get()))}mic"
+            so_luong = int(self.parse_float(self.so_luong.get()))
             loi_giay = self.loi_giay.get()
             thung_bao = self.thung_bao.get()
             cuon_cay = self.cuon_cay_entry.get()
@@ -594,7 +595,7 @@ Tên khách hàng: {ten_khach_hang}
 Màu sắc: {mau_sac}
 Màu keo: {mau_keo}
 Quy cách: {quy_cach}
-Số lượng: {so_luong} {cuon_cay}
+Số lượng: {so_luong} cuộn
 Lõi giấy: {loi_giay}
 Thùng/Bao: {thung_bao}
 
