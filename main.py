@@ -19,6 +19,8 @@ from src.utils.config import (
     APP_NAME,
     UI_STYLES
 )
+from src.utils.version_manager import VersionManager
+from src.utils.auto_update import AutoUpdater
 from src.utils.ui_utils import set_window_icon, center_window
 from src.utils.ui_styles import apply_modern_style
 from src.services.report_gen import OrderSelectionDialog
@@ -29,6 +31,8 @@ class Application:
         self.engine = None
         self.db_session = None
         self.log_file = None
+        self.version_manager = VersionManager("1.0.0")
+        self.auto_updater = AutoUpdater(self.version_manager)
 
     def setup_logging(self):
         """Configure logging system with file and console handlers"""
@@ -119,8 +123,17 @@ class Application:
                     background='#2196F3',
                     foreground='white'
                 )
+                
+                # Add update check button
+                self.donhang_form.menu_bar.add_command(
+                    label="Kiểm tra cập nhật",
+                    command=self.check_for_updates,
+                    font=('Segoe UI', 10),
+                    background='#4CAF50',
+                    foreground='white'
+                )
         except Exception as e:
-            logging.warning("Failed to add report button: %s", str(e))
+            logging.warning("Failed to add menu buttons: %s", str(e))
 
     def open_report_dialog(self):
         """Handle report generation dialog"""
@@ -134,11 +147,55 @@ class Application:
                 f"Không thể mở cửa sổ xuất đơn: {str(e)}",  
                 parent=self.root
             )
+    
+    def check_for_updates(self):
+        """Handle update check"""
+        try:
+            from src.ui.forms.update_dialog import UpdateDialog
+            dialog = UpdateDialog(self.root, self.version_manager)
+            dialog.show_update_check()
+        except Exception as e:
+            logging.error("Update check error: %s", str(e))
+            messagebox.showerror(
+                "Lỗi",
+                f"Không thể kiểm tra cập nhật: {str(e)}",  
+                parent=self.root
+            )
+    
+    def start_auto_updater(self):
+        """Khởi động auto updater"""
+        try:
+            def update_notification():
+                """Callback khi có cập nhật"""
+                try:
+                    from tkinter import messagebox
+                    result = messagebox.askyesno(
+                        "Cập nhật có sẵn",
+                        "Có phiên bản mới của ứng dụng!\n\nBạn có muốn cập nhật ngay bây giờ không?",
+                        parent=self.root
+                    )
+                    
+                    if result:
+                        self.check_for_updates()
+                        
+                except Exception as e:
+                    logging.error(f"Lỗi trong update notification: {e}")
+            
+            self.auto_updater.start_auto_check(update_notification)
+            logging.info("Auto updater đã khởi động")
+            
+        except Exception as e:
+            logging.error(f"Không thể khởi động auto updater: {e}")
 
     def on_closing(self):
         """Handle application shutdown"""
         try:
             logging.info("Application shutdown initiated")
+            
+            # Stop auto updater
+            if hasattr(self, 'auto_updater'):
+                self.auto_updater.stop_auto_check()
+            
             if self.db_session:
                 try:
                     self.db_session.rollback()
@@ -171,6 +228,9 @@ class Application:
             
             # Setup GUI while splash screen is showing
             self.setup_gui()
+            
+            # Start auto updater
+            self.start_auto_updater()
             
             self.root.mainloop()
         except Exception as e:

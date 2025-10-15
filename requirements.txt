@@ -25,6 +25,7 @@ pytz==2025.2
 pywin32-ctypes==0.2.3
 quanlydonhang==1.0.0
 reportlab==4.4.4
+requests==2.31.0
 schedule==1.2.2
 seaborn==0.13.2
 six==1.17.0
