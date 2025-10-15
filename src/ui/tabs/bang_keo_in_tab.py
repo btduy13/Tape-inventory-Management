@@ -83,45 +83,10 @@ class BangKeoInTab(TabBase):
         self.quy_cach_mic = ttk.Entry(basic_info_frame, width=15)
         self.quy_cach_mic.grid(row=3, column=1, padx=5, pady=5, sticky='w')
 
-        # Cuộn/Cây - đặt ở cột bên phải, cùng hàng với Quy cách (mic)
-        ttk.Label(basic_info_frame, text="Cuộn/Cây:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
-        
-        # Tạo frame cho cuộn/cây selection
-        self.cuon_cay_frame = ttk.Frame(basic_info_frame)
-        self.cuon_cay_frame.grid(row=3, column=3, padx=5, pady=5, sticky='w')
-        
-        # Biến để lưu lựa chọn
-        self.cuon_cay_var = tk.StringVar(value="cuon")
-        
-        # Tạo các radio buttons
-        ttk.Radiobutton(
-            self.cuon_cay_frame, 
-            text="Cuộn", 
-            value="cuon",
-            variable=self.cuon_cay_var,
-            command=self.toggle_cuon_cay_input
-        ).pack(side='left', padx=2)
-        
-        ttk.Radiobutton(
-            self.cuon_cay_frame, 
-            text="Cây", 
-            value="cay",
-            variable=self.cuon_cay_var,
-            command=self.toggle_cuon_cay_input
-        ).pack(side='left', padx=2)
-        
-        ttk.Radiobutton(
-            self.cuon_cay_frame, 
-            text="Khác", 
-            value="khac",
-            variable=self.cuon_cay_var,
-            command=self.toggle_cuon_cay_input
-        ).pack(side='left', padx=2)
-        
-        # Entry cho tùy chọn khác
-        self.cuon_cay_entry = ttk.Entry(self.cuon_cay_frame, width=10)
-        self.cuon_cay_entry.pack(side='left', padx=2)
-        self.cuon_cay_entry.configure(state='disabled')
+        # Số lượng cuộn - chỉ có 1 ô để điền số
+        ttk.Label(basic_info_frame, text="Số lượng cuộn:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
+        self.cuon_cay_entry = ttk.Entry(basic_info_frame, width=15)
+        self.cuon_cay_entry.grid(row=3, column=3, padx=5, pady=5, sticky='w')
         
         # Price Frame
         price_frame = ttk.LabelFrame(main_frame, text="Giá và Chi phí", padding=10)
@@ -595,7 +560,7 @@ Tên khách hàng: {ten_khach_hang}
 Màu sắc: {mau_sac}
 Màu keo: {mau_keo}
 Quy cách: {quy_cach}
-Số lượng: {so_luong} cuộn
+Số lượng: {cuon_cay} cuộn
 Lõi giấy: {loi_giay}
 Thùng/Bao: {thung_bao}
 
@@ -631,20 +596,6 @@ Quế
             messagebox.showerror("Lỗi", f"Lỗi khi xuất file: {str(e)}")
             raise
 
-    def toggle_cuon_cay_input(self):
-        """Enable/disable entry field based on selection"""
-        if self.cuon_cay_var.get() == "khac":
-            self.cuon_cay_entry.configure(state='normal')
-        else:
-            self.cuon_cay_entry.delete(0, tk.END)
-            self.cuon_cay_entry.configure(state='disabled')
-
     def get_cuon_cay_value(self):
         """Get the current cuon/cay value"""
-        selection = self.cuon_cay_var.get()
-        if selection == "cuon":
-            return "Cuộn"
-        elif selection == "cay":
-            return "Cây"
-        else:
-            return self.cuon_cay_entry.get()
+        return self.cuon_cay_entry.get()
