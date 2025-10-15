@@ -84,7 +84,7 @@ class BangKeoInTab(TabBase):
         self.quy_cach_mic.grid(row=3, column=1, padx=5, pady=5, sticky='w')
 
         # Số lượng cuộn - chỉ có 1 ô để điền số
-        ttk.Label(basic_info_frame, text="Số lượng cuộn:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
+        ttk.Label(basic_info_frame, text="Cuộn:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
         self.cuon_cay_entry = ttk.Entry(basic_info_frame, width=15)
         self.cuon_cay_entry.grid(row=3, column=3, padx=5, pady=5, sticky='w')
         
@@ -551,16 +551,15 @@ class BangKeoInTab(TabBase):
             content = f"""
 Chào bác,
 
-Bác làm giúp con đơn hàng in logo bên dưới nhé:
+Bác làm giúp con đơn hàng "{ten_hang}" in logo bên dưới nhé:
 
 THÔNG TIN ĐƠN HÀNG BĂNG KEO IN:
 ---------------------------
 Tên hàng: {ten_hang}
-Tên khách hàng: {ten_khach_hang}
 Màu sắc: {mau_sac}
 Màu keo: {mau_keo}
 Quy cách: {quy_cach}
-Số lượng: {cuon_cay} cuộn
+Số lượng: {so_luong} cuộn
 Lõi giấy: {loi_giay}
 Thùng/Bao: {thung_bao}
 
