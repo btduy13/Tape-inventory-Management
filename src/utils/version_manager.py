@@ -24,7 +24,10 @@ class VersionManager:
         """Lấy thông tin phiên bản mới nhất từ GitHub"""
         try:
             url = self.update_url.format(owner=self.owner, repo=self.repo)
-            response = requests.get(url, timeout=10)
+            headers = {}
+            # Uncomment và thêm token nếu repository là private
+            # headers['Authorization'] = 'token YOUR_PERSONAL_ACCESS_TOKEN'
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             
             data = response.json()

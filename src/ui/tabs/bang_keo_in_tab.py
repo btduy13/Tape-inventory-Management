@@ -60,7 +60,7 @@ class BangKeoInTab(TabBase):
         self.ten_hang_entry.grid(row=0, column=1, sticky='ew', padx=5, pady=5)
 
         ttk.Label(basic_info_frame, text="Ngày dự kiến:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
-        self.ngay_du_kien = DateEntry(basic_info_frame, width=20, background='darkblue', foreground='white', borderwidth=2)
+        self.ngay_du_kien = DateEntry(basic_info_frame, width=20, foreground='white', borderwidth=2)
         self.ngay_du_kien.grid(row=0, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 1: Tên khách hàng

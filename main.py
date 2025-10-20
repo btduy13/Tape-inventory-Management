@@ -119,18 +119,14 @@ class Application:
                 self.donhang_form.menu_bar.add_command(
                     label="Xuất Đơn Đặt Hàng / Phiếu Giao Hàng",
                     command=self.open_report_dialog,
-                    font=('Segoe UI', 10),
-                    background='#2196F3',
-                    foreground='white'
+                    font=('Segoe UI', 10)
                 )
                 
                 # Add update check button
                 self.donhang_form.menu_bar.add_command(
                     label="Kiểm tra cập nhật",
                     command=self.check_for_updates,
-                    font=('Segoe UI', 10),
-                    background='#4CAF50',
-                    foreground='white'
+                    font=('Segoe UI', 10)
                 )
         except Exception as e:
             logging.warning("Failed to add menu buttons: %s", str(e))

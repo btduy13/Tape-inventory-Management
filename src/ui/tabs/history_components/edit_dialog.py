@@ -410,8 +410,7 @@ class EditDialogManager:
             
             if field_name in ['thoi_gian', 'ngay_du_kien']:
                 date_value = values[field_index] if values[field_index] else datetime.now()
-                entry = DateEntry(parent, width=15, background='darkblue',
-                                foreground='white', borderwidth=2,
+                entry = DateEntry(parent, width=15, foreground='white', borderwidth=2,
                                 date_pattern='dd/mm/yyyy',
                                 locale='vi_VN',
                                 font=('TkDefaultFont', -12))  # Add auto-scaling font

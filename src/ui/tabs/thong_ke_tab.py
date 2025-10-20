@@ -475,16 +475,14 @@ class ThongKeTab(TabBase):
                           variable=da_giao_var,
                           font=('Segoe UI', 11),
                           highlightthickness=0,
-                          bd=0,
-                          bg=top_frame.cget('background')).pack(anchor=tk.W, pady=10)
+                          bd=0).pack(anchor=tk.W, pady=10)
             
             tk.Checkbutton(top_frame, 
                           text="Đã tất toán", 
                           variable=da_tat_toan_var,
                           font=('Segoe UI', 11),
                           highlightthickness=0,
-                          bd=0,
-                          bg=top_frame.cget('background')).pack(anchor=tk.W, pady=10)
+                          bd=0).pack(anchor=tk.W, pady=10)
             
             # Frame cho buttons ở chính giữa cửa sổ
             button_frame = ttk.Frame(main_frame)

@@ -23,15 +23,13 @@ class FilterManager:
         
         # From date
         ttk.Label(date_frame, text="Từ ngày:").pack(side=tk.LEFT, padx=5)
-        self.from_date = DateEntry(date_frame, width=12, background='darkblue',
-                                 foreground='white', borderwidth=2,
+        self.from_date = DateEntry(date_frame, width=12, foreground='white', borderwidth=2,
                                  date_pattern='dd/mm/yyyy', locale='vi_VN')
         self.from_date.pack(side=tk.LEFT, padx=5)
         
         # To date
         ttk.Label(date_frame, text="Đến ngày:").pack(side=tk.LEFT, padx=5)
-        self.to_date = DateEntry(date_frame, width=12, background='darkblue',
-                               foreground='white', borderwidth=2,
+        self.to_date = DateEntry(date_frame, width=12, foreground='white', borderwidth=2,
                                date_pattern='dd/mm/yyyy', locale='vi_VN')
         self.to_date.pack(side=tk.LEFT, padx=5)
         
