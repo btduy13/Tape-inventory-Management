@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 from openpyxl import Workbook, load_workbook
 import logging
+from src.ui.tabs.history_components.email_dialog import EmailDialog
 
 class ExportImportManager:
     def __init__(self, parent):
@@ -116,78 +117,58 @@ class ExportImportManager:
         try:
             selected_items = tree.selection()
             if not selected_items:
-                messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một dòng để xuất email")
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một dòng để gửi email")
                 return
 
             values = tree.item(selected_items[0])['values']
-            
+
+            # Build subject and body templates
+            subject = "Thông tin đơn hàng"
             if order_type == 'bang_keo_in':
-                # Safely get quy_cach values
                 quy_cach_mm = str(values[5]) if values[5] else "0"
                 quy_cach_m = str(values[6]) if values[6] else "0"
                 quy_cach_mic = str(values[7]) if values[7] else "0"
-                
+                subject = f"Đơn hàng Băng Keo In: {values[2]}"
                 email_content = (
                     f"Chào bác,\n\n"
-                    f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"  # ten_hang
+                    f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"
                     f"Màu sắc: {values[13]}\n"
-                    f"Màu keo: {values[11]}\n"  # mau_sac, mau_keo
-                    f"Số lượng: {values[9]} cuộn\n"  # so_luong
-                    f"Quy cách: {quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic\n"  # quy_cach
-                    f"Lõi giấy: {values[27]} - Thùng bao: {values[28]}\n\n"  # loi_giay, thung_bao
+                    f"Màu keo: {values[11]}\n"
+                    f"Số lượng: {values[9]} cuộn\n"
+                    f"Quy cách: {quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic\n"
+                    f"Lõi giấy: {values[27]} - Thùng bao: {values[28]}\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
             elif order_type == 'truc_in':
+                subject = f"Đơn hàng Trục In: {values[2]}"
                 email_content = (
                     f"Chào bác,\n\n"
-                    f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"  # ten_hang
+                    f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"
                     f"Màu sắc: {values[7]}\n"
-                    f"Màu keo: {values[8]}\n"  # mau_sac, mau_keo
-                    f"Số lượng: {values[6]} cuộn\n"  # so_luong
-                    f"Quy cách: {values[5]}\n\n"  # quy_cach
+                    f"Màu keo: {values[8]}\n"
+                    f"Số lượng: {values[6]} cuộn\n"
+                    f"Quy cách: {values[5]}\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
-            else:  # bang_keo
+            else:
+                subject = f"Đơn hàng Băng Keo: {values[2]}"
                 email_content = (
                     f"Chào bác,\n\n"
-                    f"Bác làm giúp con đơn hàng Băng Keo \"{values[2]}\" này nhé\n"  # ten_hang
-                    f"Màu sắc: {values[7]}\n"  # mau_sac
-                    f"Số lượng: {values[6]} KG\n"  # so_luong
-                    f"Quy cách: {values[5]} KG\n\n"  # quy_cach
+                    f"Bác làm giúp con đơn hàng Băng Keo \"{values[2]}\" này nhé\n"
+                    f"Màu sắc: {values[7]}\n"
+                    f"Số lượng: {values[6]} KG\n"
+                    f"Quy cách: {values[5]} KG\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
 
-            # Create temporary file
-            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_name = f"{order_type}_{current_date}.txt"
-            temp_file = os.path.join(os.environ.get('TEMP') or os.environ.get('TMP') or '/tmp', file_name)
-
-            # Write content to temp file
-            with open(temp_file, 'w', encoding='utf-8') as file:
-                file.write(email_content)
-
-            # Open the file with default text editor
-            os.startfile(temp_file)
-
-            # Also allow saving to custom location
-            file_path = filedialog.asksaveasfilename(
-                defaultextension='.txt',
-                filetypes=[("Text files", "*.txt")],
-                title="Chọn vị trí lưu file văn bản",
-                initialfile=file_name
-            )
-
-            if file_path:
-                with open(file_path, 'w', encoding='utf-8') as file:
-                    file.write(email_content)
-                messagebox.showinfo("Thành công", "Đã xuất nội dung email ra file văn bản thành công!")
-                self.parent.update_status("Đã xuất email thành công")
-            else:
-                self.parent.update_status("Xuất email bị hủy")
+            # Determine order_id from first column
+            order_id = values[0]
+            dlg = EmailDialog(self.parent.root, self.parent.db_session, order_type, order_id, subject, email_content)
+            self.parent.root.wait_window(dlg)
 
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất email: {str(e)}")
-            self.parent.update_status("Lỗi khi xuất email") 
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi chuẩn bị email: {str(e)}")
+            self.parent.update_status("Lỗi khi gửi email") 

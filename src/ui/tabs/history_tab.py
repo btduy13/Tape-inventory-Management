@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 from src.ui.tabs.tab_base import TabBase
 from src.database.database import BangKeoInOrder, TrucInOrder, BangKeoOrder
+from src.ui.tabs.history_components.attachments_dialog import AttachmentsDialog
 import logging
 from src.services.excel_import import export_template, import_data
 from src.ui.tabs.history_components.tree_views import TreeViewManager
@@ -205,8 +206,12 @@ class HistoryTab(TabBase):
         delete_btn.grid(row=0, column=2, padx=5, sticky='ew')
         self.utils.create_tooltip(delete_btn, "Xóa các dòng đã chọn (Delete)")
         
+        attach_btn = ttk.Button(button_frame, text="Đính kèm...", command=self.open_attachments, width=15)
+        attach_btn.grid(row=0, column=3, padx=5, sticky='ew')
+        self.utils.create_tooltip(attach_btn, "Xem/Tải/Xóa tệp đính kèm của đơn hàng")
+
         refresh_btn = ttk.Button(button_frame, text="Làm mới", command=self.refresh_data, width=15)
-        refresh_btn.grid(row=0, column=3, padx=5, sticky='ew')
+        refresh_btn.grid(row=0, column=4, padx=5, sticky='ew')
         self.utils.create_tooltip(refresh_btn, "Làm mới dữ liệu (F5)")
         
         # Status bar
@@ -480,9 +485,37 @@ class HistoryTab(TabBase):
         self.root.bind('<Delete>', lambda e: self.delete_selected())
         self.root.bind('<Control-e>', lambda e: self.export_selected_to_excel())
         self.root.bind('<Control-m>', lambda e: self.export_selected_to_email())
+        self.root.bind('<Control-d>', lambda e: self.open_attachments())
         
     def on_tab_changed(self, event):
         pass
+
+    def open_attachments(self):
+        try:
+            current_tab = self.category_notebook.select()
+            if current_tab == str(self.bang_keo_in_frame):
+                tree = self.bang_keo_in_tree
+                order_type = 'bang_keo_in'
+            elif current_tab == str(self.truc_in_frame):
+                tree = self.truc_in_tree
+                order_type = 'truc_in'
+            else:
+                tree = self.bang_keo_tree
+                order_type = 'bang_keo'
+
+            sel = tree.selection()
+            if not sel:
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn một đơn hàng trong bảng")
+                return
+            record_id = tree.item(sel[0])['values'][0]
+            if not record_id:
+                messagebox.showwarning("Cảnh báo", "Không xác định được ID đơn hàng")
+                return
+
+            dlg = AttachmentsDialog(self.root, self.db_session, order_type, record_id)
+            self.root.wait_window(dlg)
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể mở đính kèm: {e}")
         
     def update_status(self, message):
         self.status_bar.config(text=message)

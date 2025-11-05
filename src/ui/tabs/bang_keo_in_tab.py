@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from tkcalendar import DateEntry
-from src.database.database import BangKeoInOrder
+from src.database.database import BangKeoInOrder, OrderAttachment
 
 class BangKeoInTab(TabBase):
     def __init__(self, notebook, parent_form):
@@ -372,6 +372,12 @@ class BangKeoInTab(TabBase):
             
             # Hiển thị thông báo thành công với mã đơn hàng
             messagebox.showinfo("Thành công", f"Đã lưu đơn hàng thành công!\nMã đơn hàng: {don_hang.id}")
+
+            # Hỏi người dùng có muốn đính kèm tệp không
+            if messagebox.askyesno("Đính kèm", "Bạn có muốn đính kèm tệp vào đơn hàng này?"):
+                file_paths = filedialog.askopenfilenames(title="Chọn tệp đính kèm")
+                if file_paths:
+                    self._save_attachments(order_id=don_hang.id, order_type='bang_keo_in', file_paths=file_paths)
             
             # Cập nhật history tab và thống kê tab
             if hasattr(self.parent_form, 'history_tab'):
@@ -533,6 +539,46 @@ class BangKeoInTab(TabBase):
         except Exception as e:
             messagebox.showerror("Lỗi", f"Lỗi khi xuất Excel: {str(e)}")
             raise
+
+    def _save_attachments(self, order_id, order_type, file_paths):
+        try:
+            saved = 0
+            for path in file_paths:
+                try:
+                    with open(path, 'rb') as f:
+                        data = f.read()
+                    file_name = os.path.basename(path)
+                    # Best-effort content type by extension
+                    ext = os.path.splitext(file_name)[1].lower()
+                    content_type = {
+                        '.pdf': 'application/pdf',
+                        '.png': 'image/png',
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        '.csv': 'text/csv',
+                        '.txt': 'text/plain'
+                    }.get(ext, 'application/octet-stream')
+
+                    att = OrderAttachment(
+                        order_type=order_type,
+                        order_id=order_id,
+                        file_name=file_name,
+                        content_type=content_type,
+                        file_size=len(data),
+                        data=data
+                    )
+                    self.db_session.add(att)
+                    saved += 1
+                except Exception as item_err:
+                    messagebox.showwarning("Cảnh báo", f"Không thể lưu tệp: {path}\nLý do: {item_err}")
+
+            self.db_session.commit()
+            if saved:
+                messagebox.showinfo("Thành công", f"Đã lưu {saved} tệp đính kèm lên cơ sở dữ liệu")
+        except Exception as e:
+            self.db_session.rollback()
+            messagebox.showerror("Lỗi", f"Không thể lưu tệp đính kèm: {str(e)}")
 
     def export_email(self):
         """Export the order details for email"""

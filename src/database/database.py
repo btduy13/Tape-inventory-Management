@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, DateTime, ForeignKey, Boolean
+from sqlalchemy.types import LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, object_session
 from datetime import datetime
@@ -147,6 +148,18 @@ class BangKeoOrder(Base):
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
     da_tat_toan = Column(Boolean, default=False)
+
+class OrderAttachment(Base):
+    __tablename__ = 'order_attachments'
+
+    id = Column(Integer, primary_key=True)
+    order_type = Column(String(50), nullable=False)  # bang_keo_in | truc_in | bang_keo
+    order_id = Column(String(20), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    content_type = Column(String(100))
+    file_size = Column(Integer)
+    data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
 
 # Thêm event listeners để tự động tạo ID
 @event.listens_for(BangKeoInOrder, 'before_insert')

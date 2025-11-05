@@ -78,7 +78,14 @@ class FilterManager:
 
             for item in tree.get_children():
                 tree.delete(item)
-            
+
+            # Nếu ô tìm kiếm trống, hiển thị toàn bộ dữ liệu, KHÔNG áp dụng bộ lọc ngày
+            if not search_text:
+                for _, values in all_items:
+                    tree.insert('', 'end', values=values)
+                self._apply_row_colors(tree)
+                return
+
             from_date = self.from_date.get_date()
             to_date = self.to_date.get_date()
 
@@ -87,19 +94,14 @@ class FilterManager:
                     date_match = True
                     if from_date and to_date:
                         order_date = self.parse_date(values[1])
-                        expected_date = self.parse_date(values[3])
-                        
+                        # Giá trị ngày dự kiến nằm ở cột index 4 theo add_order
+                        expected_date = self.parse_date(values[4])
                         if order_date and expected_date:
-                            date_match = (from_date <= order_date <= to_date or 
-                                        from_date <= expected_date <= to_date)
+                            date_match = (from_date <= order_date <= to_date or
+                                          from_date <= expected_date <= to_date)
 
-                    text_match = True
-                    if search_text:
-                        text_match = False
-                        for value in values:
-                            if str(value).lower().find(search_text) != -1:
-                                text_match = True
-                                break
+                    # Áp dụng tìm kiếm text
+                    text_match = any(search_text in str(v).lower() for v in values)
 
                     if date_match and text_match:
                         tree.insert('', 'end', values=values)
