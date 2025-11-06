@@ -224,6 +224,8 @@ class ThongKeTab(TabBase):
         
         # Bind double-click event
         tree.bind('<Double-1>', lambda e, ot=order_type, t=tree: self.on_double_click(e, ot, t))
+        # Bind right-click for bulk status update
+        tree.bind('<Button-3>', lambda e, ot=order_type, t=tree: self.on_right_click(e, ot, t))
         
         # Store references for later use
         if order_type == "Băng Keo In":
@@ -515,6 +517,86 @@ class ThongKeTab(TabBase):
             
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {str(e)}")
+
+    def on_right_click(self, event, order_type, tree):
+        try:
+            # Ensure item under cursor is selected if no selection
+            iid = tree.identify_row(event.y)
+            if iid and iid not in tree.selection():
+                tree.selection_set(iid)
+
+            if not tree.selection():
+                return
+
+            menu = tk.Menu(self.tab, tearoff=0)
+            menu.add_command(label="Cập nhật trạng thái...", command=lambda: self.open_bulk_status_dialog(order_type, tree))
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            try:
+                menu.grab_release()
+            except Exception:
+                pass
+
+    def open_bulk_status_dialog(self, order_type, tree):
+        dlg = tk.Toplevel(self.tab)
+        dlg.title("Cập nhật trạng thái hàng loạt")
+        center_window(dlg, 300, 150)
+        dlg.transient(self.tab)
+        dlg.grab_set()
+
+        frame = ttk.Frame(dlg, padding=12)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frame, text=f"Áp dụng cho {len(tree.selection())} đơn hàng").grid(row=0, column=0, columnspan=2, sticky='w', pady=(0,6))
+
+        # Chỉ còn 2 tickbox chính
+        da_giao_val = tk.BooleanVar(value=True)
+        da_tt_val = tk.BooleanVar(value=True)
+        ttk.Checkbutton(frame, text="Đã giao", variable=da_giao_val).grid(row=1, column=0, sticky='w')
+        ttk.Checkbutton(frame, text="Đã tất toán", variable=da_tt_val).grid(row=1, column=1, sticky='w')
+
+        # Buttons docked at bottom
+        btns = ttk.Frame(frame)
+        btns.grid(row=2, column=0, columnspan=2, sticky='ew', pady=10)
+        btns.columnconfigure((0,1), weight=1)
+        ttk.Button(btns, text="Áp dụng", command=lambda: self.apply_bulk_status(order_type, tree, da_giao_val.get(), da_tt_val.get(), dlg)).grid(row=0, column=0, sticky='ew', padx=5)
+        ttk.Button(btns, text="Hủy", command=dlg.destroy).grid(row=0, column=1, sticky='ew', padx=5)
+
+    def apply_bulk_status(self, order_type, tree, giao_value, tt_value, dlg):
+        try:
+            if order_type == "Băng Keo In":
+                model = BangKeoInOrder
+            elif order_type == "Trục In":
+                model = TrucInOrder
+            else:
+                model = BangKeoOrder
+
+            selected = tree.selection()
+            if not selected:
+                return
+
+            count = 0
+            for iid in selected:
+                values = tree.item(iid)["values"]
+                order_id = values[0]
+                order = self.parent_form.db_session.query(model).filter_by(id=order_id).first()
+                if not order:
+                    continue
+                # Luôn áp dụng cả hai trạng thái theo yêu cầu
+                order.da_giao = bool(giao_value)
+                order.da_tat_toan = bool(tt_value)
+                if order.da_tat_toan:
+                    order.cong_no_khach = 0
+
+                count += 1
+
+            self.parent_form.db_session.commit()
+            dlg.destroy()
+            self.load_data()
+            messagebox.showinfo("Thành công", f"Đã cập nhật {count} đơn hàng")
+        except Exception as e:
+            self.parent_form.db_session.rollback()
+            messagebox.showerror("Lỗi", f"Không thể cập nhật hàng loạt: {e}")
 
     def create_bang_keo_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 

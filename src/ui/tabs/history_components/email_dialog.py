@@ -27,6 +27,13 @@ class EmailDialog(tk.Toplevel):
         container = ttk.Frame(self, padding=10)
         container.pack(fill=tk.BOTH, expand=True)
 
+        # Action buttons pinned to bottom to keep them always visible
+        actions = ttk.Frame(container)
+        actions.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
+        actions.columnconfigure((0, 1), weight=1)
+        ttk.Button(actions, text="Gửi", command=self._send).grid(row=0, column=0, padx=5, sticky='ew')
+        ttk.Button(actions, text="Hủy", command=self.destroy).grid(row=0, column=1, padx=5, sticky='ew')
+
         form = ttk.Frame(container)
         form.pack(fill=tk.X, pady=(0, 10))
 
@@ -41,7 +48,8 @@ class EmailDialog(tk.Toplevel):
 
         # Body
         ttk.Label(container, text="Nội dung").pack(anchor='w')
-        self.body_text = tk.Text(container, height=12)
+        # Giảm chiều cao để không đẩy nút ra khỏi màn hình nhỏ
+        self.body_text = tk.Text(container, height=10)
         self.body_text.pack(fill=tk.BOTH, expand=True)
         self.body_text.insert('1.0', body)
 
@@ -64,13 +72,6 @@ class EmailDialog(tk.Toplevel):
 
         ttk.Button(attach_frame, text="Thêm tệp...", command=self._add_extra_files).grid(row=1, column=0, sticky='w', pady=5)
         ttk.Button(attach_frame, text="Bỏ chọn", command=self._remove_selected_extra).grid(row=1, column=1, sticky='w', pady=5)
-
-        # Action buttons
-        actions = ttk.Frame(container)
-        actions.pack(fill=tk.X, pady=(10, 0))
-        actions.columnconfigure((0, 1), weight=1)
-        ttk.Button(actions, text="Gửi", command=self._send).grid(row=0, column=0, padx=5, sticky='ew')
-        ttk.Button(actions, text="Hủy", command=self.destroy).grid(row=0, column=1, padx=5, sticky='ew')
 
     def _load_db_attachments(self):
         atts = (
