@@ -10,6 +10,19 @@ class ExportImportManager:
     def __init__(self, parent):
         self.parent = parent
         self.DATE_FORMAT = '%d/%m/%Y'
+    
+    @staticmethod
+    def format_number(value):
+        """Format số: nếu là số nguyên thì không hiển thị .0, chỉ hiển thị phần thập phân nếu có"""
+        if value is None or value == '':
+            return ''
+        try:
+            num = float(value)
+            if num.is_integer():
+                return str(int(num))
+            return str(num)
+        except (ValueError, TypeError):
+            return str(value)
         
     def create_import_export_buttons(self, button_frame):
         button_frame.columnconfigure((0, 1, 2, 3), weight=1)
@@ -125,41 +138,55 @@ class ExportImportManager:
             # Build subject and body templates
             subject = "Thông tin đơn hàng"
             if order_type == 'bang_keo_in':
-                quy_cach_mm = str(values[5]) if values[5] else "0"
-                quy_cach_m = str(values[6]) if values[6] else "0"
-                quy_cach_mic = str(values[7]) if values[7] else "0"
+                quy_cach_mm = self.format_number(values[5]) if values[5] else "0"
+                quy_cach_m = self.format_number(values[6]) if values[6] else "0"
+                quy_cach_mic = self.format_number(values[7]) if values[7] else "0"
+                so_luong = self.format_number(values[9]) if values[9] else "0"
                 subject = f"Đơn hàng Băng Keo In: {values[2]}"
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"
+                    f"Thông tin đơn hàng:\n"
+                    f"________________________________\n"
                     f"Màu sắc: {values[13]}\n"
                     f"Màu keo: {values[11]}\n"
-                    f"Số lượng: {values[9]} cuộn\n"
+                    f"Số lượng: {so_luong} cuộn\n"
                     f"Quy cách: {quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic\n"
-                    f"Lõi giấy: {values[27]} - Thùng bao: {values[28]}\n\n"
+                    f"Lõi giấy: {values[27]}\n"
+                    f"Thùng bao: {values[28]}\n"
+                    f"________________________________\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
             elif order_type == 'truc_in':
+                so_luong = self.format_number(values[6]) if values[6] else "0"
                 subject = f"Đơn hàng Trục In: {values[2]}"
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"
+                    f"Thông tin đơn hàng:\n"
+                    f"________________________________\n"
                     f"Màu sắc: {values[7]}\n"
                     f"Màu keo: {values[8]}\n"
-                    f"Số lượng: {values[6]} cuộn\n"
-                    f"Quy cách: {values[5]}\n\n"
+                    f"Số lượng: {so_luong} cuộn\n"
+                    f"Quy cách: {values[5]}\n"
+                    f"________________________________\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
             else:
+                so_luong = self.format_number(values[6]) if values[6] else "0"
+                quy_cach = self.format_number(values[5]) if values[5] else ""
                 subject = f"Đơn hàng Băng Keo: {values[2]}"
                 email_content = (
                     f"Chào bác,\n\n"
                     f"Bác làm giúp con đơn hàng Băng Keo \"{values[2]}\" này nhé\n"
+                    f"Thông tin đơn hàng:\n"
+                    f"________________________________\n"
                     f"Màu sắc: {values[7]}\n"
-                    f"Số lượng: {values[6]} KG\n"
-                    f"Quy cách: {values[5]} KG\n\n"
+                    f"Số lượng: {so_luong} KG\n"
+                    f"Quy cách: {quy_cach} KG\n\n"
+                    f"________________________________\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )

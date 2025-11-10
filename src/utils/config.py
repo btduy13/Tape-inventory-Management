@@ -98,8 +98,8 @@ CHART_STYLES = {
 EMAIL_CONFIG = {
     'server': 'smtp.gmail.com',  # Update with your SMTP server
     'port': 587,
-    'username': 'your-email@gmail.com',  # Update with your email
-    'password': 'your-app-password',  # Update with your app password
+    'username': 'tque197@gmail.com',  # Update with your email
+    'password': 'otiz qxdn uhul bbfw',  # Update with your app password
     'sender': 'Phần Mềm Quản Lý Đơn Hàng <your-email@gmail.com>'
 }
 

@@ -4,11 +4,12 @@ from typing import List, Tuple
 from src.utils.config import EMAIL_CONFIG
 
 
-def send_email(to_address: str, subject: str, body: str, attachments: List[Tuple[str, bytes, str]] = None):
+def send_email(to_address: str, subject: str, body: str, attachments: List[Tuple[str, bytes, str]] = None, html_body: str = None):
     """
     Gửi email qua SMTP theo cấu hình trong EMAIL_CONFIG.
 
     attachments: list of tuples (file_name, data_bytes, content_type)
+    html_body: Optional HTML version of the email body
     """
     if attachments is None:
         attachments = []
@@ -17,7 +18,11 @@ def send_email(to_address: str, subject: str, body: str, attachments: List[Tuple
     msg["From"] = EMAIL_CONFIG.get("sender") or EMAIL_CONFIG.get("username")
     msg["To"] = to_address
     msg["Subject"] = subject
+    
+    # Set both plain text and HTML if provided
     msg.set_content(body)
+    if html_body:
+        msg.add_alternative(html_body, subtype='html')
 
     for file_name, data, content_type in attachments:
         maintype, _, subtype = (content_type or "application/octet-stream").partition("/")

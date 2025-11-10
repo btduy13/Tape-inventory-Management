@@ -450,10 +450,12 @@ class ThongKeTab(TabBase):
             main_frame = ttk.Frame(update_window, padding="20")
             main_frame.grid(row=0, column=0, sticky="nsew")
             
-            # Configure grid
+            # Configure grid for proper docking
             update_window.grid_columnconfigure(0, weight=1)
             update_window.grid_rowconfigure(0, weight=1)
             main_frame.grid_columnconfigure(0, weight=1)
+            main_frame.rowconfigure(0, weight=1)  # Top frame can expand if needed
+            main_frame.rowconfigure(1, weight=0)  # Buttons fixed at bottom
             
             # Create top frame for order info
             top_frame = ttk.Frame(main_frame)
@@ -486,9 +488,11 @@ class ThongKeTab(TabBase):
                           highlightthickness=0,
                           bd=0).pack(anchor=tk.W, pady=10)
             
-            # Frame cho buttons ở chính giữa cửa sổ
+            # Frame cho buttons - docked at bottom
             button_frame = ttk.Frame(main_frame)
-            button_frame.grid(row=1, column=0)
+            button_frame.grid(row=1, column=0, sticky='ew')
+            button_frame.columnconfigure(0, weight=1)
+            button_frame.columnconfigure(1, weight=1)
             
             def save_changes():
                 try:
@@ -504,16 +508,16 @@ class ThongKeTab(TabBase):
                     self.parent_form.db_session.rollback()
                     messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi cập nhật: {str(e)}")
             
-            # Buttons với style mới
+            # Buttons với style mới - properly docked
             ttk.Button(button_frame, 
                       text="Lưu", 
                       command=save_changes,
-                      style="Action.TButton").pack(side=tk.LEFT, padx=10)
+                      style="Action.TButton").grid(row=0, column=0, padx=5, sticky='ew')
             
             ttk.Button(button_frame,
                       text="Hủy",
                       command=update_window.destroy,
-                      style="Action.TButton").pack(side=tk.LEFT)
+                      style="Action.TButton").grid(row=0, column=1, padx=5, sticky='ew')
             
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {str(e)}")
@@ -543,22 +547,32 @@ class ThongKeTab(TabBase):
         center_window(dlg, 300, 150)
         dlg.transient(self.tab)
         dlg.grab_set()
+        
+        # Configure window to be resizable
+        dlg.columnconfigure(0, weight=1)
+        dlg.rowconfigure(0, weight=1)
 
         frame = ttk.Frame(dlg, padding=12)
-        frame.pack(fill=tk.BOTH, expand=True)
+        frame.grid(row=0, column=0, sticky='nsew')
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
+        frame.rowconfigure(0, weight=0)
+        frame.rowconfigure(1, weight=0)
+        frame.rowconfigure(2, weight=0)
 
         ttk.Label(frame, text=f"Áp dụng cho {len(tree.selection())} đơn hàng").grid(row=0, column=0, columnspan=2, sticky='w', pady=(0,6))
 
         # Chỉ còn 2 tickbox chính
         da_giao_val = tk.BooleanVar(value=True)
         da_tt_val = tk.BooleanVar(value=True)
-        ttk.Checkbutton(frame, text="Đã giao", variable=da_giao_val).grid(row=1, column=0, sticky='w')
-        ttk.Checkbutton(frame, text="Đã tất toán", variable=da_tt_val).grid(row=1, column=1, sticky='w')
+        ttk.Checkbutton(frame, text="Đã giao", variable=da_giao_val).grid(row=1, column=0, sticky='w', padx=5)
+        ttk.Checkbutton(frame, text="Đã tất toán", variable=da_tt_val).grid(row=1, column=1, sticky='w', padx=5)
 
         # Buttons docked at bottom
         btns = ttk.Frame(frame)
-        btns.grid(row=2, column=0, columnspan=2, sticky='ew', pady=10)
-        btns.columnconfigure((0,1), weight=1)
+        btns.grid(row=2, column=0, columnspan=2, sticky='ew', pady=(10, 0))
+        btns.columnconfigure(0, weight=1)
+        btns.columnconfigure(1, weight=1)
         ttk.Button(btns, text="Áp dụng", command=lambda: self.apply_bulk_status(order_type, tree, da_giao_val.get(), da_tt_val.get(), dlg)).grid(row=0, column=0, sticky='ew', padx=5)
         ttk.Button(btns, text="Hủy", command=dlg.destroy).grid(row=0, column=1, sticky='ew', padx=5)
 

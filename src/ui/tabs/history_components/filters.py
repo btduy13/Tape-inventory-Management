@@ -78,7 +78,7 @@ class FilterManager:
 
             for item in tree.get_children():
                 tree.delete(item)
-
+            
             # Nếu ô tìm kiếm trống, hiển thị toàn bộ dữ liệu, KHÔNG áp dụng bộ lọc ngày
             if not search_text:
                 for _, values in all_items:
@@ -97,8 +97,8 @@ class FilterManager:
                         # Giá trị ngày dự kiến nằm ở cột index 4 theo add_order
                         expected_date = self.parse_date(values[4])
                         if order_date and expected_date:
-                            date_match = (from_date <= order_date <= to_date or
-                                          from_date <= expected_date <= to_date)
+                            date_match = (from_date <= order_date <= to_date or 
+                                        from_date <= expected_date <= to_date)
 
                     # Áp dụng tìm kiếm text
                     text_match = any(search_text in str(v).lower() for v in values)

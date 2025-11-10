@@ -19,15 +19,22 @@ class AttachmentsDialog(tk.Toplevel):
         self.minsize(600, 360)
         self.transient(parent)
         self.grab_set()
+        
+        # Configure window to be resizable
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 
         self._build_ui()
         self._load_data()
 
     def _build_ui(self):
         container = ttk.Frame(self, padding=10)
-        container.pack(fill=tk.BOTH, expand=True)
+        container.grid(row=0, column=0, sticky='nsew')
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(0, weight=1)  # Treeview expands
+        container.rowconfigure(1, weight=0)  # Buttons fixed at bottom
 
-        # Treeview
+        # Treeview - expands to fill space
         columns = ("file_name", "content_type", "file_size", "created_at")
         self.tree = ttk.Treeview(container, columns=columns, show='headings')
         self.tree.heading("file_name", text="Tên tệp")
@@ -35,7 +42,8 @@ class AttachmentsDialog(tk.Toplevel):
         self.tree.heading("file_size", text="Dung lượng (bytes)")
         self.tree.heading("created_at", text="Ngày tạo")
 
-        self.tree.column("file_name", width=260, minwidth=160)
+        # Columns with minwidth for proper scaling
+        self.tree.column("file_name", width=260, minwidth=160, stretch=True)
         self.tree.column("content_type", width=140, minwidth=120)
         self.tree.column("file_size", width=120, minwidth=100)
         self.tree.column("created_at", width=140, minwidth=120)
@@ -45,14 +53,13 @@ class AttachmentsDialog(tk.Toplevel):
         self.tree.configure(yscrollcommand=scroll_y.set)
         scroll_y.grid(row=0, column=1, sticky='ns')
 
-        container.rowconfigure(0, weight=1)
-        container.columnconfigure(0, weight=1)
-
-        # Buttons
+        # Buttons - docked at bottom
         btns = ttk.Frame(container)
         btns.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(10, 0))
-        for i in range(4):
-            btns.columnconfigure(i, weight=1)
+        btns.columnconfigure(0, weight=1)
+        btns.columnconfigure(1, weight=1)
+        btns.columnconfigure(2, weight=1)
+        btns.columnconfigure(3, weight=1)
 
         ttk.Button(btns, text="Xem", command=self._open_selected).grid(row=0, column=0, padx=5, sticky='ew')
         ttk.Button(btns, text="Tải về", command=self._download_selected).grid(row=0, column=1, padx=5, sticky='ew')

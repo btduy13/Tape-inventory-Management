@@ -161,6 +161,17 @@ class OrderAttachment(Base):
     data = Column(LargeBinary, nullable=False)
     created_at = Column(DateTime, default=datetime.now)
 
+class EmailHistory(Base):
+    __tablename__ = 'email_history'
+
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String(255), nullable=False, index=True)
+    last_sent_at = Column(DateTime, default=datetime.now, nullable=False)
+    sent_count = Column(Integer, default=1)
+    
+    def __repr__(self):
+        return f"<EmailHistory(email='{self.email_address}', count={self.sent_count})>"
+
 # Thêm event listeners để tự động tạo ID
 @event.listens_for(BangKeoInOrder, 'before_insert')
 def set_bang_keo_in_id(mapper, connection, target):

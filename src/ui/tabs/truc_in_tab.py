@@ -392,8 +392,22 @@ class TrucInTab(TabBase):
             messagebox.showerror("Lỗi", f"Lỗi khi xuất Excel: {str(e)}")
             raise
 
+    def _format_number(self, value):
+        """Format số: nếu là số nguyên thì không hiển thị .0, chỉ hiển thị phần thập phân nếu có"""
+        if value is None or value == '':
+            return ''
+        try:
+            num = float(value)
+            if num.is_integer():
+                return str(int(num))
+            return str(num)
+        except (ValueError, TypeError):
+            return str(value)
+    
     def export_truc_in_email(self):
         try:
+            from src.ui.tabs.history_components.email_dialog import EmailDialog
+            
             ten_hang = self.ten_hang_entry.get()
             ten_khach_hang = self.ten_khach_hang_entry.get()
             mau_sac = self.mau_sac.get()
@@ -401,13 +415,27 @@ class TrucInTab(TabBase):
             
             # Format quy_cach to include unit if not present
             quy_cach = self.quy_cach.get().strip()
-            if quy_cach and not any(unit in quy_cach.lower() for unit in ['mm', 'cm', 'm']):
-                quy_cach = f"{quy_cach}mm"
+            if quy_cach:
+                # Nếu không có đơn vị, thêm mm và format số
+                if not any(unit in quy_cach.lower() for unit in ['mm', 'cm', 'm']):
+                    try:
+                        num = float(quy_cach)
+                        quy_cach = f"{self._format_number(num)}mm"
+                    except (ValueError, TypeError):
+                        quy_cach = f"{quy_cach}mm"
+                else:
+                    # Nếu có đơn vị, thử format số ở đầu chuỗi
+                    import re
+                    match = re.match(r'^(\d+\.?\d*)\s*', quy_cach)
+                    if match:
+                        num_str = match.group(1)
+                        formatted_num = self._format_number(num_str)
+                        quy_cach = quy_cach.replace(num_str, formatted_num, 1)
                 
-            so_luong = self.so_luong.get()
+            so_luong = self._format_number(self.so_luong.get())
 
-            content = f"""
-Chào bác,
+            subject = f"Đơn hàng Trục In: {ten_hang}" if ten_hang else "Đơn hàng Trục In"
+            content = f"""Chào bác,
 
 Bác làm giúp con đơn hàng trục in bên dưới nhé:
 
@@ -423,32 +451,12 @@ Số lượng: {so_luong}
 Cảm ơn bác!
 Quế
 """
-            # Create temporary file
-            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_name = f"truc_in_{current_date}.txt"
-            temp_file = os.path.join(os.environ.get('TEMP') or os.environ.get('TMP') or '/tmp', file_name)
-            
-            # Write content to temp file
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-            
-            # Open the file with default text editor
-            os.startfile(temp_file)
-            
-            # Also allow saving to custom location
-            file_path = filedialog.asksaveasfilename(
-                defaultextension=".txt",
-                filetypes=[("Text files", "*.txt")],
-                initialfile=file_name
-            )
-            
-            if file_path:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                messagebox.showinfo("Thành công", f"Đã xuất file: {file_path}")
+            # Mở dialog email (không có order_id vì đơn chưa lưu)
+            dlg = EmailDialog(self.root, self.db_session, 'truc_in', 'temp', subject, content)
+            self.root.wait_window(dlg)
         
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Lỗi khi xuất file: {str(e)}")
+            messagebox.showerror("Lỗi", f"Lỗi khi mở dialog email: {str(e)}")
             raise
 
     def xoa_form_truc_in(self):
