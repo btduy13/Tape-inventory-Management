@@ -580,65 +580,61 @@ class BangKeoInTab(TabBase):
             self.db_session.rollback()
             messagebox.showerror("Lỗi", f"Không thể lưu tệp đính kèm: {str(e)}")
 
-    def export_email(self):
-        """Export the order details for email"""
+    def _format_number(self, value):
+        """Format số: nếu là số nguyên thì không hiển thị .0, chỉ hiển thị phần thập phân nếu có"""
+        if value is None or value == '':
+            return ''
         try:
+            num = float(value)
+            if num.is_integer():
+                return str(int(num))
+            return str(num)
+        except (ValueError, TypeError):
+            return str(value)
+    
+    def export_email(self):
+        """Export the order details for email using EmailDialog"""
+        try:
+            from src.ui.tabs.history_components.email_dialog import EmailDialog
+            
             ten_hang = self.ten_hang_entry.get()
             ten_khach_hang = self.ten_khach_hang_entry.get()
             mau_sac = self.mau_sac.get()
             mau_keo = self.mau_keo.get()
-            # Use parse_float method for safe conversion
-            quy_cach = f"{int(self.parse_float(self.quy_cach_mm.get()))}mm x {int(self.parse_float(self.quy_cach_m.get()))}m x {int(self.parse_float(self.quy_cach_mic.get()))}mic"
-            so_luong = int(self.parse_float(self.so_luong.get()))
             loi_giay = self.loi_giay.get()
             thung_bao = self.thung_bao.get()
-            cuon_cay = self.cuon_cay_entry.get()
             
-            content = f"""
-Chào bác,
+            # Format quy cách với số đã format
+            quy_cach_mm = self._format_number(self.quy_cach_mm.get())
+            quy_cach_m = self._format_number(self.quy_cach_m.get())
+            quy_cach_mic = self._format_number(self.quy_cach_mic.get())
+            quy_cach = f"{quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic"
+            
+            so_luong = self._format_number(self.so_luong.get())
+            
+            subject = f"Đơn hàng Băng Keo In: {ten_hang}" if ten_hang else "Đơn hàng Băng Keo In"
+            content = f"""Chào bác,
 
-Bác làm giúp con đơn hàng "{ten_hang}" in logo bên dưới nhé:
-
-THÔNG TIN ĐƠN HÀNG BĂNG KEO IN:
----------------------------
-Tên hàng: {ten_hang}
+Bác làm giúp con đơn hàng in logo "{ten_hang}" này nhé
+Thông tin đơn hàng:
+________________________________
 Màu sắc: {mau_sac}
 Màu keo: {mau_keo}
-Quy cách: {quy_cach}
 Số lượng: {so_luong} cuộn
+Quy cách: {quy_cach}
 Lõi giấy: {loi_giay}
-Thùng/Bao: {thung_bao}
+Thùng bao: {thung_bao}
+________________________________
 
-Cảm ơn bác!
+Cám ơn bác
 Quế
 """
-            
-            # Create temporary file
-            current_date = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_name = f"bang_keo_in_{current_date}.txt"
-            temp_file = os.path.join(os.environ.get('TEMP') or os.environ.get('TMP') or '/tmp', file_name)
-            
-            # Write content to temp file
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-            
-            # Open the file with default text editor
-            os.startfile(temp_file)
-            
-            # Also allow saving to custom location
-            file_path = filedialog.asksaveasfilename(
-                defaultextension=".txt",
-                filetypes=[("Text files", "*.txt")],
-                initialfile=file_name
-            )
-            
-            if file_path:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                messagebox.showinfo("Thành công", f"Đã xuất file: {file_path}")
+            # Mở dialog email (không có order_id vì đơn chưa lưu)
+            dlg = EmailDialog(self.root, self.db_session, 'bang_keo_in', 'temp', subject, content)
+            self.root.wait_window(dlg)
         
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Lỗi khi xuất file: {str(e)}")
+            messagebox.showerror("Lỗi", f"Lỗi khi mở dialog email: {str(e)}")
             raise
 
     def get_cuon_cay_value(self):
