@@ -54,8 +54,35 @@ class Builder:
         python = str(self.venv_dir / 'Scripts' / 'python.exe')
         subprocess.run([python, 'build_installer.py'])
 
+    def update_installer_version(self):
+        """Update version in installer.iss from config.py"""
+        logging.info("Updating installer version...")
+        try:
+            from src.utils.config import APP_VERSION
+            
+            iss_path = self.root_dir / 'installer.iss'
+            if not iss_path.exists():
+                logging.warning("installer.iss not found")
+                return
+
+            with open(iss_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+            with open(iss_path, 'w', encoding='utf-8') as f:
+                for line in lines:
+                    if line.startswith('#define MyAppVersion'):
+                        f.write(f'#define MyAppVersion "{APP_VERSION}"\n')
+                    else:
+                        f.write(line)
+            logging.info(f"Updated installer.iss to version {APP_VERSION}")
+        except Exception as e:
+            logging.error(f"Failed to update installer version: {e}")
+
     def build_installer(self):
         """Build installer using Inno Setup"""
+        # First update the version
+        self.update_installer_version()
+        
         logging.info("Building installer...")
         iscc = r'"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"'
         subprocess.run(f'{iscc} installer.iss', shell=True)

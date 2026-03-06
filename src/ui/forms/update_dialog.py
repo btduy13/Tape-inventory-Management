@@ -291,7 +291,7 @@ class UpdateDialog:
         
         if result:
             # Restart application
-            os.system("shutdown /r /t 0")
+            self.version_manager.restart_application()
     
     def cancel_update(self):
         """Hủy cập nhật"""

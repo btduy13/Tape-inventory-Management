@@ -10,9 +10,10 @@ from src.ui.tabs.dashboard_tab import DashboardTab
 from src.services.excel_import import export_template, import_data
 
 class DonHangForm:
-    def __init__(self, root, db_session):
+    def __init__(self, root, db_session, app_instance=None):
         self.root = root
         self.db_session = db_session
+        self.app_instance = app_instance
         
         # Configure the root window
         self.root.title("Phần Mềm Quản Lý Đơn Hàng")
@@ -87,6 +88,7 @@ class DonHangForm:
 
         # Help Menu
         help_menu = tk.Menu(menu_bar, tearoff=0)
+        help_menu.add_command(label="Kiểm tra cập nhật", command=self.check_for_updates)
         help_menu.add_command(label="Giới thiệu", command=self.show_about)
         menu_bar.add_cascade(label="Trợ giúp", menu=help_menu)
 
@@ -94,7 +96,15 @@ class DonHangForm:
         self.menu_bar = menu_bar
 
     def show_about(self):
-        messagebox.showinfo("Giới thiệu", "Ứng dụng Đơn Hàng\nVersion 1.0")
+        from src.utils.config import APP_VERSION
+        messagebox.showinfo("Giới thiệu", f"Ứng dụng Đơn Hàng\nPhiên bản {APP_VERSION}")
+
+    def check_for_updates(self):
+        """Kiểm tra cập nhật thủ công"""
+        if self.app_instance and hasattr(self.app_instance, 'check_for_updates'):
+            self.app_instance.check_for_updates()
+        else:
+            messagebox.showinfo("Cập nhật", "Tính năng cập nhật chưa được khởi tạo.")
 
     def apply_style(self):
         style = ttk.Style()

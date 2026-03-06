@@ -144,3 +144,25 @@ class VersionManager:
         except Exception as e:
             self.logger.error(f"Không thể đọc thông tin phiên bản: {e}")
         return None
+
+    def restart_application(self):
+        """Khởi động lại ứng dụng"""
+        try:
+            import sys
+            import subprocess
+            
+            self.logger.info("Đang khởi động lại ứng dụng...")
+            
+            executable = sys.executable
+            args = sys.argv
+            
+            # Nếu đang chạy từ .exe (PyInstaller)
+            if getattr(sys, 'frozen', False):
+                subprocess.Popen([executable] + args[1:])
+            else:
+                subprocess.Popen([executable] + args)
+                
+            os._exit(0)
+        except Exception as e:
+            self.logger.error(f"Lỗi khi khởi động lại ứng dụng: {e}")
+            os._exit(1)

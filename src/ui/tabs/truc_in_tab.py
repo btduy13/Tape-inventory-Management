@@ -7,6 +7,7 @@ from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from tkcalendar import DateEntry
 from src.database.database import TrucInOrder, OrderAttachment
+from src.utils.autocomplete import AutocompleteEntry
 
 class TrucInTab(TabBase):
     def __init__(self, notebook, parent_form):
@@ -33,6 +34,7 @@ class TrucInTab(TabBase):
         self.bind_events()
         self.bind_currency_format()
         self.bind_shortcuts()
+        self.load_suggestions()
 
         # Checkbox for status
         self.da_giao = tk.BooleanVar(value=False)
@@ -58,7 +60,7 @@ class TrucInTab(TabBase):
 
         # Row 0: Tên hàng và Ngày dự kiến
         ttk.Label(basic_info_frame, text="Tên hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
-        self.ten_hang_entry = ttk.Entry(basic_info_frame)
+        self.ten_hang_entry = AutocompleteEntry(basic_info_frame, callback=self.auto_fill_data)
         self.ten_hang_entry.grid(row=0, column=1, sticky='ew', padx=5, pady=5)
 
         ttk.Label(basic_info_frame, text="Ngày dự kiến:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
@@ -537,3 +539,65 @@ Quế
         except Exception as e:
             self.db_session.rollback()
             messagebox.showerror("Lỗi", f"Không thể lưu tệp đính kèm: {str(e)}")
+
+    def load_suggestions(self):
+        """Load unique item names for autocomplete"""
+        try:
+            suggestions = self.db_session.query(TrucInOrder.ten_hang).distinct().all()
+            suggestion_list = [s[0] for s in suggestions if s[0]]
+            self.ten_hang_entry.set_suggestions(suggestion_list)
+        except Exception as e:
+            print(f"Error loading suggestions: {e}")
+
+    def auto_fill_data(self, ten_hang):
+        """Auto-fill form based on the most recent order of the selected item"""
+        if not ten_hang:
+            return
+            
+        try:
+            last_order = (
+                self.db_session.query(TrucInOrder)
+                .filter(TrucInOrder.ten_hang == ten_hang)
+                .order_by(TrucInOrder.thoi_gian.desc())
+                .first()
+            )
+            
+            if last_order:
+                # Update basic info
+                self.ten_khach_hang_entry.delete(0, tk.END)
+                self.ten_khach_hang_entry.insert(0, last_order.ten_khach_hang or "")
+                
+                self.quy_cach.delete(0, tk.END)
+                self.quy_cach.insert(0, last_order.quy_cach or "")
+                
+                self.so_luong.delete(0, tk.END)
+                self.so_luong.insert(0, self._format_number(last_order.so_luong))
+                
+                self.mau_sac.delete(0, tk.END)
+                self.mau_sac.insert(0, last_order.mau_sac or "")
+                
+                self.mau_keo.delete(0, tk.END)
+                self.mau_keo.insert(0, last_order.mau_keo or "")
+                
+                self.truc_in_don_gia_goc.delete(0, tk.END)
+                self.truc_in_don_gia_goc.insert(0, self.format_currency(last_order.don_gia_goc or 0))
+                
+                self.truc_in_don_gia_ban.delete(0, tk.END)
+                self.truc_in_don_gia_ban.insert(0, self.format_currency(last_order.don_gia_ban or 0))
+                
+                self.truc_in_ctv.delete(0, tk.END)
+                self.truc_in_ctv.insert(0, last_order.ctv or "")
+                
+                self.truc_in_hoa_hong.delete(0, tk.END)
+                self.truc_in_hoa_hong.insert(0, self._format_number(last_order.hoa_hong))
+                
+                self.truc_in_tien_ship.delete(0, tk.END)
+                self.truc_in_tien_ship.insert(0, self.format_currency(last_order.truc_in_tien_ship or 0))
+                
+                # Trigger calculation
+                self.tinh_toan_truc_in()
+                self.update_status(f"Đã tự động điền thông tin từ đơn hàng cũ cho '{ten_hang}'")
+                
+        except Exception as e:
+            print(f"Error auto-filling data: {e}")
+            self.update_status("Lỗi khi tự động điền thông tin")

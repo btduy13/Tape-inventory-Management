@@ -23,15 +23,14 @@ pyparsing==3.2.5
 python-dateutil==2.9.0.post0
 pytz==2025.2
 pywin32-ctypes==0.2.3
-quanlydonhang==1.0.0
+# quanlydonhang==1.0.0
 reportlab==4.4.4
 requests==2.31.0
 schedule==1.2.2
 seaborn==0.13.2
 six==1.17.0
 SQLAlchemy==2.0.44
-# Editable Git install with no remote (tape-inventory-management==1.0.0)
--e d:\bang keo
+# -e .
 tkcalendar==1.6.1
 tomli==2.3.0
 ttkthemes==3.2.2

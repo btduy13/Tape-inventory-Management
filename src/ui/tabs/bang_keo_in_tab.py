@@ -7,6 +7,7 @@ from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from tkcalendar import DateEntry
 from src.database.database import BangKeoInOrder, OrderAttachment
+from src.utils.autocomplete import AutocompleteEntry
 
 class BangKeoInTab(TabBase):
     def __init__(self, notebook, parent_form):
@@ -34,6 +35,7 @@ class BangKeoInTab(TabBase):
         self.bind_events()
         self.bind_currency_format()
         self.bind_shortcuts()
+        self.load_suggestions()
 
         # Checkbox for status
         self.da_giao = tk.BooleanVar(value=False)
@@ -56,7 +58,7 @@ class BangKeoInTab(TabBase):
 
         # Row 0: Tên hàng và Ngày dự kiến
         ttk.Label(basic_info_frame, text="Tên hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
-        self.ten_hang_entry = ttk.Entry(basic_info_frame)
+        self.ten_hang_entry = AutocompleteEntry(basic_info_frame, callback=self.auto_fill_data)
         self.ten_hang_entry.grid(row=0, column=1, sticky='ew', padx=5, pady=5)
 
         ttk.Label(basic_info_frame, text="Ngày dự kiến:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
@@ -640,3 +642,96 @@ Quế
     def get_cuon_cay_value(self):
         """Get the current cuon/cay value"""
         return self.cuon_cay_entry.get()
+
+    def load_suggestions(self):
+        """Load unique item names for autocomplete"""
+        try:
+            suggestions = self.db_session.query(BangKeoInOrder.ten_hang).distinct().all()
+            suggestion_list = [s[0] for s in suggestions if s[0]]
+            self.ten_hang_entry.set_suggestions(suggestion_list)
+        except Exception as e:
+            print(f"Error loading suggestions: {e}")
+
+    def auto_fill_data(self, ten_hang):
+        """Auto-fill form based on the most recent order of the selected item"""
+        if not ten_hang:
+            return
+            
+        try:
+            last_order = (
+                self.db_session.query(BangKeoInOrder)
+                .filter(BangKeoInOrder.ten_hang == ten_hang)
+                .order_by(BangKeoInOrder.thoi_gian.desc())
+                .first()
+            )
+            
+            if last_order:
+                # Update basic info
+                self.ten_khach_hang_entry.delete(0, tk.END)
+                self.ten_khach_hang_entry.insert(0, last_order.ten_khach_hang or "")
+                
+                self.quy_cach_mm.delete(0, tk.END)
+                self.quy_cach_mm.insert(0, self._format_number(last_order.quy_cach_mm))
+                
+                self.quy_cach_m.delete(0, tk.END)
+                self.quy_cach_m.insert(0, self._format_number(last_order.quy_cach_m))
+                
+                self.quy_cach_mic.delete(0, tk.END)
+                self.quy_cach_mic.insert(0, self._format_number(last_order.quy_cach_mic))
+                
+                self.cuon_cay_entry.delete(0, tk.END)
+                self.cuon_cay_entry.insert(0, self._format_number(last_order.cuon_cay))
+                
+                self.mau_keo.delete(0, tk.END)
+                self.mau_keo.insert(0, last_order.mau_keo or "")
+                
+                self.mau_sac.delete(0, tk.END)
+                self.mau_sac.insert(0, last_order.mau_sac or "")
+                
+                self.loi_giay.delete(0, tk.END)
+                self.loi_giay.insert(0, last_order.loi_giay or "")
+                
+                self.thung_bao.delete(0, tk.END)
+                self.thung_bao.insert(0, last_order.thung_bao or "")
+                
+                # Update numeric/price fields (using readonly helper where appropriate)
+                self.so_luong.delete(0, tk.END)
+                self.so_luong.insert(0, self._format_number(last_order.so_luong))
+                
+                self.phi_sl.delete(0, tk.END)
+                self.phi_sl.insert(0, self.format_currency(last_order.phi_sl or 0))
+                
+                self.phi_keo.delete(0, tk.END)
+                self.phi_keo.insert(0, self.format_currency(last_order.phi_keo or 0))
+                
+                self.phi_mau.delete(0, tk.END)
+                self.phi_mau.insert(0, self.format_currency(last_order.phi_mau or 0))
+                
+                self.phi_size.delete(0, tk.END)
+                self.phi_size.insert(0, self.format_currency(last_order.phi_size or 0))
+                
+                self.phi_cat.delete(0, tk.END)
+                self.phi_cat.insert(0, self.format_currency(last_order.phi_cat or 0))
+                
+                self.don_gia_von.delete(0, tk.END)
+                self.don_gia_von.insert(0, self.format_currency(last_order.don_gia_von or 0))
+                
+                self.don_gia_ban.delete(0, tk.END)
+                self.don_gia_ban.insert(0, self.format_currency(last_order.don_gia_ban or 0))
+                
+                self.tien_ship.delete(0, tk.END)
+                self.tien_ship.insert(0, self.format_currency(last_order.tien_ship or 0))
+                
+                self.ctv.delete(0, tk.END)
+                self.ctv.insert(0, last_order.ctv or "")
+                
+                self.hoa_hong.delete(0, tk.END)
+                self.hoa_hong.insert(0, self._format_number(last_order.hoa_hong))
+                
+                # Trigger calculation to update calculated fields
+                self.tinh_toan()
+                self.update_status(f"Đã tự động điền thông tin từ đơn hàng cũ cho '{ten_hang}'")
+                
+        except Exception as e:
+            print(f"Error auto-filling data: {e}")
+            self.update_status("Lỗi khi tự động điền thông tin")

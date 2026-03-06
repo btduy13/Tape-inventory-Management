@@ -17,6 +17,7 @@ from src.utils.config import (
     DATABASE_URL,
     APP_THEME,
     APP_NAME,
+    APP_VERSION,
     UI_STYLES
 )
 from src.utils.version_manager import VersionManager
@@ -31,7 +32,7 @@ class Application:
         self.engine = None
         self.db_session = None
         self.log_file = None
-        self.version_manager = VersionManager("1.0.0")
+        self.version_manager = VersionManager(APP_VERSION)
         self.auto_updater = AutoUpdater(self.version_manager)
 
     def setup_logging(self):
@@ -99,7 +100,7 @@ class Application:
             
             # Initialize main form with session
             self.db_session = get_session(self.engine)
-            self.donhang_form = DonHangForm(self.root, self.db_session)
+            self.donhang_form = DonHangForm(self.root, self.db_session, self)
             
             # Add report button with new style
             self._add_report_button()
