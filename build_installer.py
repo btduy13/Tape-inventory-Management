@@ -21,7 +21,8 @@ def build_exe():
         'sqlalchemy.ext.baked',
         'sqlalchemy.ext.declarative',
         'requests',
-        'psycopg2'
+        'psycopg2',
+        'psycopg2._psycopg'
     ]
     
     # Các data files cần bundle
