@@ -78,8 +78,59 @@ class Builder:
         except Exception as e:
             logging.error(f"Failed to update installer version: {e}")
 
+    def build_onefile_updater(self):
+        """Build a single-file executable for the update process"""
+        logging.info("Building single-file updater...")
+        python = str(self.venv_dir / 'Scripts' / 'python.exe')
+        
+        # We use a custom script for onefile to ensure correct renaming and bundling
+        with open('build_onefile_tmp.py', 'w', encoding='utf-8') as f:
+            f.write(f'''
+import PyInstaller.__main__
+import os
+from src.utils.config import APP_VERSION
+
+def build():
+    icon_path = os.path.join('assets', 'icon.ico')
+    hidden_imports = [
+        'babel.numbers', 'sqlalchemy.sql.default_comparator', 
+        'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked',
+        'sqlalchemy.ext.declarative', 'requests', 'psycopg2'
+    ]
+    datas = [('assets', 'assets'), ('theme', 'theme')]
+    
+    options = [
+        'main.py',
+        f'--name=Bang_Keo_v{{APP_VERSION}}_Setup',
+        '--onefile',
+        '--windowed',
+        f'--icon={{icon_path}}',
+        '--clean',
+        '--noconfirm',
+    ]
+    for hi in hidden_imports: options.append(f'--hidden-import={{hi}}')
+    for src, dst in datas:
+        if os.path.exists(src): options.append(f'--add-data={{src}};{{dst}}')
+    
+    PyInstaller.__main__.run(options)
+
+if __name__ == "__main__":
+    build()
+''')
+        
+        subprocess.run([python, 'build_onefile_tmp.py'], check=True)
+        os.remove('build_onefile_tmp.py')
+        
+        # Copy the onefile result to root for easy access
+        from src.utils.config import APP_VERSION
+        onefile_name = f"Bang_Keo_v{APP_VERSION}_Setup.exe"
+        generated_onefile = self.dist_dir / onefile_name
+        if generated_onefile.exists():
+            shutil.copy2(generated_onefile, self.root_dir / onefile_name)
+            logging.info(f"Successfully created single-file updater: {onefile_name}")
+
     def build_installer(self):
-        """Build installer using Inno Setup"""
+        """Build installer using Inno Setup (or fallback to ZIP)"""
         # First update the version
         self.update_installer_version()
         
@@ -130,10 +181,13 @@ class Builder:
             # Generate requirements.txt
             self.generate_requirements()
             
-            # Build executable
+            # Build executable (onedir)
             self.build_exe()
             
-            # Build installer
+            # Build onefile updater (for clients without Inno Setup installer)
+            self.build_onefile_updater()
+            
+            # Build installer (Inno Setup or Portable ZIP)
             self.build_installer()
             
             logging.info("Build completed successfully!")

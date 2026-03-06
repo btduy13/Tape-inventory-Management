@@ -1,4 +1,12 @@
 import os
+import sys
+
+def get_app_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+APP_PATH = get_app_path()
 
 # Database configuration
 DATABASE_URL = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -6,7 +14,7 @@ DATABASE_URL = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap
 # Application settings
 APP_NAME = "Phần Mềm Quản Lý Đơn Hàng"
 APP_THEME = "azure"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 
 # UI Style configurations
 UI_STYLES = {
@@ -53,9 +61,10 @@ UI_PADDING = {
 }
 
 # Asset paths
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets")
+ASSETS_DIR = os.path.join(APP_PATH, "assets")
 ICON_ICO = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG = os.path.join(ASSETS_DIR, "icon.png")
+THEME_DIR = os.path.join(APP_PATH, "theme")
 
 # Logging configuration
 LOG_DIR = "logs"
