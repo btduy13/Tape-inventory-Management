@@ -1,12 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = [('assets', 'assets'), ('theme', 'theme')]
+binaries = []
+hiddenimports = ['babel.numbers', 'sqlalchemy.sql.default_comparator', 'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked', 'sqlalchemy.ext.declarative', 'requests', 'psycopg2', 'psycopg2._psycopg']
+tmp_ret = collect_all('psycopg2')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('assets', 'assets'), ('theme', 'theme')],
-    hiddenimports=['babel.numbers', 'sqlalchemy.sql.default_comparator', 'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked', 'sqlalchemy.ext.declarative', 'requests', 'psycopg2'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

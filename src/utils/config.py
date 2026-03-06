@@ -1,4 +1,24 @@
 import os
+import sys
+
+# Determined writable base directory
+def get_base_dir():
+    if getattr(sys, 'frozen', False):
+        # Bundled mode: Use LOCALAPPDATA for writable files
+        app_data = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+        base = os.path.join(app_data, "TapeInventoryManagement")
+    else:
+        # Development mode: Use project directory
+        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
+    if not os.path.exists(base):
+        try:
+            os.makedirs(base, exist_ok=True)
+        except:
+            pass
+    return base
+
+BASE_DATA_DIR = get_base_dir()
 
 # Database configuration
 DATABASE_URL = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -53,17 +73,23 @@ UI_PADDING = {
 }
 
 # Asset paths
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets")
+def get_assets_dir():
+    if getattr(sys, 'frozen', False):
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        return os.path.join(sys._MEIPASS, "assets")
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets")
+
+ASSETS_DIR = get_assets_dir()
 ICON_ICO = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG = os.path.join(ASSETS_DIR, "icon.png")
 
 # Logging configuration
-LOG_DIR = "logs"
+LOG_DIR = os.path.join(BASE_DATA_DIR, "logs")
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 LOG_ENCODING = "utf-8"
 
 # Report configuration
-REPORT_DIR = "reports"
+REPORT_DIR = os.path.join(BASE_DATA_DIR, "reports")
 REPORT_FORMATS = {
     'pdf': {
         'mime_type': 'application/pdf',

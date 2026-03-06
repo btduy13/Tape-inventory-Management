@@ -68,7 +68,9 @@ class Application:
             logging.info("Logging system initialized")
 
         except Exception as e:
-            sys.stderr.write(f"Failed to initialize logging: {str(e)}\n")
+            if sys.stderr:
+                sys.stderr.write(f"Failed to initialize logging: {str(e)}\n")
+            messagebox.showerror("Lỗi khởi động", f"Không thể khởi tạo hệ thống Log:\n{str(e)}")
             raise
 
     def setup_database(self):
@@ -231,11 +233,16 @@ class Application:
             
             self.root.mainloop()
         except Exception as e:
-            logging.critical("Critical application error: %s", str(e))
-            traceback.print_exc()
+            if logger and logging.getLogger().handlers:
+                logging.critical("Critical application error: %s", str(e))
+            
+            if sys.stderr:
+                traceback.print_exc()
+            
             messagebox.showerror(
                 "Lỗi nghiêm trọng",
-                f"Không thể khởi động ứng dụng:\n{str(e)}\n\nXem log để biết chi tiết: {self.log_file}"
+                f"Không thể khởi động ứng dụng:\n{str(e)}\n\n" + 
+                (f"Xem log để biết chi tiết: {self.log_file}" if self.log_file else "Ứng dụng sập trước khi tạo được log.")
             )
             self.on_closing()
 

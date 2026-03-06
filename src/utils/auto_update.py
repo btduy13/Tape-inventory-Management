@@ -6,12 +6,14 @@ import time
 import logging
 from datetime import datetime, timedelta
 from src.utils.version_manager import VersionManager
+from src.utils.config import BASE_DATA_DIR
+import os
 
 class AutoUpdater:
     def __init__(self, version_manager: VersionManager, check_interval_hours: int = 24):
         self.version_manager = version_manager
         self.check_interval = timedelta(hours=check_interval_hours)
-        self.last_check_file = "last_update_check.json"
+        self.last_check_file = os.path.join(BASE_DATA_DIR, "last_update_check.json")
         self.logger = logging.getLogger(__name__)
         self.check_thread = None
         self.is_running = False
