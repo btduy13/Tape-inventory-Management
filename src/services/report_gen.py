@@ -400,7 +400,7 @@ class BackgroundTask:
         self.is_cancelled = True
 
 class OrderSelectionDialog(tk.Toplevel):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, session=None):
         super().__init__(parent if parent else tk.Tk())
         self.title("Chọn đơn hàng - Đơn đặt hàng")
         
@@ -420,8 +420,15 @@ class OrderSelectionDialog(tk.Toplevel):
         self.document_type = tk.StringVar(value="don_dat_hang")
         self.sort_column = None
         self.sort_reverse = False
-        self.engine = init_db(DATABASE_URL)
-        self.session = get_session(self.engine)
+        
+        # Use provided session or create new one
+        if session:
+            self.session = session
+            # We don't need to store engine if we use provided session
+        else:
+            self.engine = init_db(DATABASE_URL)
+            self.session = get_session(self.engine)
+            
         self.selected_orders = []
         self.result = False
         
