@@ -60,22 +60,33 @@ class VersionManager:
     def _compare_versions(self, version1: str, version2: str) -> int:
         """So sánh 2 phiên bản. Trả về 1 nếu v1 > v2, -1 nếu v1 < v2, 0 nếu bằng"""
         try:
-            v1_parts = [int(x) for x in version1.split('.') if x.isdigit()]
-            v2_parts = [int(x) for x in version2.split('.') if x.isdigit()]
+            # Chuẩn hóa chuỗi: bỏ qua tiền tố 'v' và khoảng trắng
+            v1_str = version1.lstrip('v').strip()
+            v2_str = version2.lstrip('v').strip()
             
-            if not v1_parts or not v2_parts:
-                return 0
+            # Tách các phần số
+            v1_parts = [int(x) for x in v1_str.split('.') if x.isdigit()]
+            v2_parts = [int(x) for x in v2_str.split('.') if x.isdigit()]
+            
+            # Nếu cả hai đều có phần số, so sánh theo kiểu semantic versioning
+            if v1_parts and v2_parts:
+                max_len = max(len(v1_parts), len(v2_parts))
+                v1_parts.extend([0] * (max_len - len(v1_parts)))
+                v2_parts.extend([0] * (max_len - len(v2_parts)))
                 
-            # Đảm bảo cùng độ dài
-            max_len = max(len(v1_parts), len(v2_parts))
-            v1_parts.extend([0] * (max_len - len(v1_parts)))
-            v2_parts.extend([0] * (max_len - len(v2_parts)))
+                for v1, v2 in zip(v1_parts, v2_parts):
+                    if v1 > v2:
+                        return 1
+                    elif v1 < v2:
+                        return -1
+                return 0
             
-            for v1, v2 in zip(v1_parts, v2_parts):
-                if v1 > v2:
-                    return 1
-                elif v1 < v2:
-                    return -1
+            # Nếu một trong hai không có phần số (ví dụ: 'app'), so sánh chuỗi
+            if v1_str != v2_str:
+                # Nếu remote (v1_str) khác local (v2_str), mặc định xem là có update
+                # để tránh bỏ sót, trừ khi chúng là cùng một chuỗi
+                return 1
+            
             return 0
         except Exception as e:
             self.logger.error(f"Lỗi khi so sánh phiên bản '{version1}' và '{version2}': {e}")

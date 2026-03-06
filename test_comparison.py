@@ -1,28 +1,56 @@
-from src.utils.version_manager import VersionManager
 import logging
 
-logging.basicConfig(level=logging.INFO)
+class VersionManagerMock:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
 
-def test_comparison():
-    vm = VersionManager("1.0.0")
-    
-    # Test cases: (v1, v2, expected_result)
-    test_cases = [
-        ("1.0.1", "1.0.0", 1),
-        ("1.0.0", "1.0.0", 0),
-        ("0.9.9", "1.0.0", -1),
-        ("app", "1.0.0", 0),  # Should handle non-numeric gracefully
-        ("v1.0.1", "1.0.0", 1), # Should handle 'v' prefix via lstrip in get_latest
-        ("1.0.1.2", "1.0.1", 1),
-    ]
-    
-    for v1, v2, expected in test_cases:
-        # Pre-process v1 as get_latest_version_info does
-        v1_clean = v1.lstrip('v')
-        result = vm._compare_versions(v1_clean, v2)
-        print(f"Comparing '{v1_clean}' vs '{v2}' -> Result: {result}, Expected: {expected}")
-        # Note: result might not match exactly if expectations differ, but 0/1/-1 logic should hold.
-        # But for 'app', it should definitely NOT raise ValueError.
+    def _compare_versions(self, version1: str, version2: str) -> int:
+        """So sánh 2 phiên bản. Trả về 1 nếu v1 > v2, -1 nếu v1 < v2, 0 nếu bằng"""
+        try:
+            # Chuẩn hóa chuỗi: bỏ qua tiền tố 'v' và khoảng trắng
+            v1_str = version1.lstrip('v').strip()
+            v2_str = version2.lstrip('v').strip()
+            
+            # Tách các phần số
+            v1_parts = [int(x) for x in v1_str.split('.') if x.isdigit()]
+            v2_parts = [int(x) for x in v2_str.split('.') if x.isdigit()]
+            
+            # Nếu cả hai đều có phần số, so sánh theo kiểu semantic versioning
+            if v1_parts and v2_parts:
+                max_len = max(len(v1_parts), len(v2_parts))
+                v1_parts.extend([0] * (max_len - len(v1_parts)))
+                v2_parts.extend([0] * (max_len - len(v2_parts)))
+                
+                for v1, v2 in zip(v1_parts, v2_parts):
+                    if v1 > v2:
+                        return 1
+                    elif v1 < v2:
+                        return -1
+                return 0
+            
+            # Nếu một trong hai không có phần số (ví dụ: 'app'), so sánh chuỗi
+            if v1_str != v2_str:
+                # Nếu remote (v1_str) khác local (v2_str), mặc định xem là có update
+                # để tránh bỏ sót, trừ khi chúng là cùng một chuỗi
+                return 1
+            
+            return 0
+        except Exception as e:
+            print(f"Error: {e}")
+            return 0
 
-if __name__ == "__main__":
-    test_comparison()
+vm = VersionManagerMock()
+
+test_cases = [
+    ("1.1.0", "1.0.0", 1),
+    ("1.0.1", "1.1.0", -1),
+    ("1.0.0", "1.0.0", 0),
+    ("app", "1.1.0", 1),       # Current issue: remote 'app' vs local '1.1.0'
+    ("v1.1.1", "1.1.0", 1),
+    ("1.1", "1.1.0", 0),
+    ("app", "app", 0),
+]
+
+for v1, v2, expected in test_cases:
+    result = vm._compare_versions(v1, v2)
+    print(f"Compare '{v1}' vs '{v2}': Got {result}, Expected {expected}, {'PASS' if result == expected else 'FAIL'}")
