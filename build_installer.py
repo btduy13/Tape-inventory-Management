@@ -46,6 +46,9 @@ def build_exe():
     for hidden_import in hidden_imports:
         options.append(f'--hidden-import={hidden_import}')
     
+    # Collect all submodules for psycopg2
+    options.append('--collect-all=psycopg2')
+    
     # Thêm data files
     for src, dst in datas:
         if os.path.exists(src):
