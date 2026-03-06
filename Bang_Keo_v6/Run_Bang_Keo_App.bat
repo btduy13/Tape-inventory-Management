@@ -1,0 +1,3 @@
+@echo off
+echo Dang khoi dong Bang Keo App...
+start "" "TapeInventoryManagement.exe"

@@ -6,12 +6,13 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('assets', 'assets'), ('theme', 'theme')],
-    hiddenimports=['babel.numbers', 'sqlalchemy.sql.default_comparator', 'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked', 'sqlalchemy.ext.declarative'],
+    hiddenimports=['babel.numbers', 'sqlalchemy.sql.default_comparator', 'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked', 'sqlalchemy.ext.declarative', 'requests', 'psycopg2'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 

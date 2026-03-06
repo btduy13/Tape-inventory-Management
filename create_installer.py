@@ -53,7 +53,12 @@ def create_installer():
         print("✅ Copy thư mục theme")
     
     # Tạo file README
-    readme_content = """# Băng Keo App v1.0.0
+    try:
+        from src.utils.config import APP_VERSION
+    except ImportError:
+        APP_VERSION = "1.1.0"
+
+    readme_content = f"""# Băng Keo App v{APP_VERSION}
 
 ## Hướng dẫn cài đặt:
 
@@ -88,7 +93,7 @@ start "" "TapeInventoryManagement.exe"
     print("✅ Tạo file batch")
     
     # Tạo file ZIP
-    zip_path = Path("Bang_Keo_App_v1.0.0_Portable.zip")
+    zip_path = Path(f"Bang_Keo_App_v{APP_VERSION}_Portable.zip")
     if zip_path.exists():
         zip_path.unlink()
     
@@ -119,12 +124,16 @@ start "" "TapeInventoryManagement.exe"
 
 def create_simple_installer():
     """Tạo installer đơn giản chỉ copy file"""
-    
+    try:
+        from src.utils.config import APP_VERSION
+    except ImportError:
+        APP_VERSION = "1.1.0"
+
     print("\n🔧 Tạo Simple Installer...")
     
     # Copy file exe ra ngoài
     exe_path = Path("dist/TapeInventoryManagement/TapeInventoryManagement.exe")
-    simple_exe = Path("Bang_Keo_App_v1.0.0.exe")
+    simple_exe = Path(f"Bang_Keo_App_v{APP_VERSION}.exe")
     
     if exe_path.exists():
         shutil.copy2(exe_path, simple_exe)

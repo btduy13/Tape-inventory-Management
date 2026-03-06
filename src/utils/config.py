@@ -6,7 +6,7 @@ DATABASE_URL = "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap
 # Application settings
 APP_NAME = "Phần Mềm Quản Lý Đơn Hàng"
 APP_THEME = "azure"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 # UI Style configurations
 UI_STYLES = {

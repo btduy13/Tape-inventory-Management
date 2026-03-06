@@ -4,10 +4,10 @@ import sys
 import shutil
 
 def build_exe():
-    # Xóa thư mục build và dist cũ nếu tồn tại
-    for dir_name in ['build', 'dist']:
-        if os.path.exists(dir_name):
-            shutil.rmtree(dir_name)
+    # Xóa thư mục build và dist cũ nếu tồn tại (Đã xử lý ở build_release.py)
+    # for dir_name in ['build', 'dist']:
+    #     if os.path.exists(dir_name):
+    #         shutil.rmtree(dir_name)
 
     # Đường dẫn đến icon
     icon_path = os.path.join('assets', 'icon.ico')
@@ -19,7 +19,9 @@ def build_exe():
         'PIL._tkinter_finder',
         'ttkthemes',
         'sqlalchemy.ext.baked',
-        'sqlalchemy.ext.declarative'
+        'sqlalchemy.ext.declarative',
+        'requests',
+        'psycopg2'
     ]
     
     # Các data files cần bundle

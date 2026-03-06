@@ -21,7 +21,7 @@ class Builder:
         self.root_dir = Path.cwd()
         self.build_dir = self.root_dir / 'build'
         self.dist_dir = self.root_dir / 'dist'
-        self.venv_dir = self.build_dir / 'venv'
+        self.venv_dir = self.root_dir / 'venv_build'
         self.installer_dir = self.root_dir / 'installer'
 
     def create_venv(self):
@@ -35,24 +35,24 @@ class Builder:
         pip = str(self.venv_dir / 'Scripts' / 'pip.exe')
         
         # Install basic requirements
-        subprocess.run([pip, 'install', '-U', 'pip', 'wheel', 'setuptools'])
-        subprocess.run([pip, 'install', 'pyinstaller'])
+        subprocess.run([pip, 'install', 'wheel', 'setuptools'], check=True)
+        subprocess.run([pip, 'install', 'pyinstaller'], check=True)
         
         # Install project requirements
-        subprocess.run([pip, 'install', '-e', '.'])
+        subprocess.run([pip, 'install', '-e', '.'], check=True)
 
     def generate_requirements(self):
         """Generate requirements.txt"""
         logging.info("Generating requirements.txt...")
         pip = str(self.venv_dir / 'Scripts' / 'pip.exe')
         with open('requirements.txt', 'w') as f:
-            subprocess.run([pip, 'freeze'], stdout=f)
+            subprocess.run([pip, 'freeze'], stdout=f, check=True)
 
     def build_exe(self):
         """Build executable using PyInstaller"""
         logging.info("Building executable...")
         python = str(self.venv_dir / 'Scripts' / 'python.exe')
-        subprocess.run([python, 'build_installer.py'])
+        subprocess.run([python, 'build_installer.py'], check=True)
 
     def update_installer_version(self):
         """Update version in installer.iss from config.py"""
@@ -84,8 +84,26 @@ class Builder:
         self.update_installer_version()
         
         logging.info("Building installer...")
-        iscc = r'"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"'
-        subprocess.run(f'{iscc} installer.iss', shell=True)
+        iscc_paths = [
+            r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            r"C:\Program Files\Inno Setup 6\ISCC.exe",
+            r"C:\Program Files (x86)\Inno Setup 5\ISCC.exe",
+        ]
+        
+        iscc = None
+        for path in iscc_paths:
+            if os.path.exists(path):
+                iscc = f'"{path}"'
+                break
+        
+        if iscc:
+            logging.info(f"Using ISCC at {iscc}")
+            subprocess.run(f'{iscc} installer.iss', shell=True, check=True)
+        else:
+            logging.warning("ISCC.exe not found. Skipping Inno Setup installer creation.")
+            logging.info("Falling back to ZIP/Portable creator...")
+            python = str(self.venv_dir / 'Scripts' / 'python.exe')
+            subprocess.run([python, 'create_installer.py'], check=True)
 
     def cleanup(self):
         """Clean up temporary files"""
@@ -122,7 +140,7 @@ class Builder:
             
         except Exception as e:
             logging.error(f"Build failed: {str(e)}")
-            self.cleanup()
+            # self.cleanup()  # Don't cleanup on failure to allow debugging
             sys.exit(1)
 
 if __name__ == "__main__":

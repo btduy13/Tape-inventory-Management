@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="tape-inventory-management",
-    version="1.0.0",
+    version="1.1.0",
     packages=find_packages(),
     install_requires=[
         'sqlalchemy',
@@ -15,7 +15,9 @@ setup(
         'seaborn',
         'openpyxl',
         'tkcalendar',
-        'schedule'
+        'schedule',
+        'requests',
+        'psycopg2-binary'
     ],
     entry_points={
         'console_scripts': [

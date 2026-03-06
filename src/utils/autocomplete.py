@@ -41,7 +41,7 @@ class AutocompleteEntry(ttk.Entry):
             self.lb_parent.overrideredirect(True)
             self.lb = tk.Listbox(self.lb_parent, font=self.cget('font'), background='white', borderwidth=1)
             self.lb.pack(fill=tk.BOTH, expand=True)
-            self.lb.bind('<Button-1>', self.on_selection)
+            self.lb.bind('<ButtonRelease-1>', self.on_selection)
             self.lb.bind('<Return>', self.on_selection)
 
         self.lb.delete(0, tk.END)
@@ -63,8 +63,14 @@ class AutocompleteEntry(ttk.Entry):
             self.lb_parent.withdraw()
 
     def on_selection(self, event=None):
-        if self.lb and self.lb.curselection():
+        selection = None
+        if event and hasattr(event, 'y'): # Mouse click
+            index = self.lb.nearest(event.y)
+            selection = self.lb.get(index)
+        elif self.lb and self.lb.curselection(): # Key press or default selection
             selection = self.lb.get(self.lb.curselection())
+        
+        if selection:
             self.var.set(selection)
             self.icursor(tk.END)
             self.hide_lb()
