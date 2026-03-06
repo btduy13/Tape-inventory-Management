@@ -59,20 +59,27 @@ class VersionManager:
     
     def _compare_versions(self, version1: str, version2: str) -> int:
         """So sánh 2 phiên bản. Trả về 1 nếu v1 > v2, -1 nếu v1 < v2, 0 nếu bằng"""
-        v1_parts = [int(x) for x in version1.split('.')]
-        v2_parts = [int(x) for x in version2.split('.')]
-        
-        # Đảm bảo cùng độ dài
-        max_len = max(len(v1_parts), len(v2_parts))
-        v1_parts.extend([0] * (max_len - len(v1_parts)))
-        v2_parts.extend([0] * (max_len - len(v2_parts)))
-        
-        for v1, v2 in zip(v1_parts, v2_parts):
-            if v1 > v2:
-                return 1
-            elif v1 < v2:
-                return -1
-        return 0
+        try:
+            v1_parts = [int(x) for x in version1.split('.') if x.isdigit()]
+            v2_parts = [int(x) for x in version2.split('.') if x.isdigit()]
+            
+            if not v1_parts or not v2_parts:
+                return 0
+                
+            # Đảm bảo cùng độ dài
+            max_len = max(len(v1_parts), len(v2_parts))
+            v1_parts.extend([0] * (max_len - len(v1_parts)))
+            v2_parts.extend([0] * (max_len - len(v2_parts)))
+            
+            for v1, v2 in zip(v1_parts, v2_parts):
+                if v1 > v2:
+                    return 1
+                elif v1 < v2:
+                    return -1
+            return 0
+        except Exception as e:
+            self.logger.error(f"Lỗi khi so sánh phiên bản '{version1}' và '{version2}': {e}")
+            return 0
     
     def download_update(self, download_url: str, progress_callback=None) -> Optional[str]:
         """Download bản cập nhật"""

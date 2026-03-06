@@ -75,9 +75,16 @@ class UpdateDialog:
     
     def check_update_thread(self):
         """Kiểm tra cập nhật trong thread riêng"""
+        import logging
+        logger = logging.getLogger(__name__)
+
         def check_update():
             try:
-                if self.version_manager.is_update_available():
+                logger.debug("Bắt đầu check update thread...")
+                is_available = self.version_manager.is_update_available()
+                logger.debug(f"Kết quả check update: {is_available}")
+                
+                if is_available:
                     latest_info = self.version_manager.get_latest_version_info()
                     if latest_info:
                         self.parent.after(0, lambda: self.show_update_available(latest_info))
@@ -86,6 +93,7 @@ class UpdateDialog:
                 else:
                     self.parent.after(0, lambda: self.show_no_update())
             except Exception as e:
+                logger.error(f"Lỗi trong check_update_thread: {str(e)}", exc_info=True)
                 self.parent.after(0, lambda: self.show_error(f"Lỗi khi kiểm tra cập nhật: {str(e)}"))
         
         thread = threading.Thread(target=check_update, daemon=True)
