@@ -47,10 +47,6 @@
    'D:\\Bang '
    'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_multiprocessing.py',
    'PYSOURCE'),
-  ('pyi_rth_setuptools',
-   'D:\\Bang '
-   'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_setuptools.py',
-   'PYSOURCE'),
   ('pyi_rth_mplconfig',
    'D:\\Bang '
    'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_mplconfig.py',

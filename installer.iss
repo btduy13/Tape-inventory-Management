@@ -1,5 +1,5 @@
 #define MyAppName "Tape Inventory Management"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Your Company"
 #define MyAppExeName "TapeInventoryManagement.exe"
 
@@ -22,7 +22,7 @@ WizardStyle=modern
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "dist\TapeInventoryManagement\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion

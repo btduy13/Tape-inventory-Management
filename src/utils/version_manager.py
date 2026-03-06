@@ -42,22 +42,10 @@ class VersionManager:
             return None
     
     def _get_download_url(self, assets: list) -> Optional[str]:
-        """Tìm URL download của installer (ưu tiên Setup.exe, sau đó tới .zip hoặc .exe)"""
-        # Ưu tiên 1: Installer chính thức
+        """Tìm URL download của installer"""
         for asset in assets:
             if asset['name'].endswith('_Setup.exe'):
                 return asset['browser_download_url']
-        
-        # Ưu tiên 2: Bản Portable ZIP
-        for asset in assets:
-            if asset['name'].endswith('.zip'):
-                return asset['browser_download_url']
-                
-        # Ưu tiên 3: File chạy trực tiếp .exe
-        for asset in assets:
-            if asset['name'].endswith('.exe'):
-                return asset['browser_download_url']
-                
         return None
     
     def is_update_available(self) -> bool:

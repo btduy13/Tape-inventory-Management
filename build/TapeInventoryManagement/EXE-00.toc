@@ -69,10 +69,6 @@
    'D:\\Bang '
    'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_multiprocessing.py',
    'PYSOURCE'),
-  ('pyi_rth_setuptools',
-   'D:\\Bang '
-   'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_setuptools.py',
-   'PYSOURCE'),
   ('pyi_rth_mplconfig',
    'D:\\Bang '
    'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_mplconfig.py',
@@ -85,7 +81,7 @@
  [],
  False,
  False,
- 1772780616,
+ 1772785495,
  [('runw.exe',
    'D:\\Bang '
    'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
