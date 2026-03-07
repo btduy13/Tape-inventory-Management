@@ -10,18 +10,20 @@ from src.database.database import BangKeoInOrder, OrderAttachment
 from src.utils.autocomplete import AutocompleteEntry
 
 class BangKeoInTab(TabBase):
-    def __init__(self, notebook, parent_form):
+    def __init__(self, container, parent_form):
         super().__init__(parent_form)
-        self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Băng Keo In")
+        self.container = container
+        self.parent_form = parent_form
         self.db_session = parent_form.db_session
+        self.COLORS = parent_form.COLORS
+        self.FONTS = parent_form.FONTS
 
-        # Configure tab to expand
-        self.tab.grid_rowconfigure(0, weight=1)
-        self.tab.grid_columnconfigure(0, weight=1)
+        # Configure container to expand
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
 
         # Create main frame with padding
-        main_frame = ttk.Frame(self.tab, padding="10")
+        main_frame = ttk.Frame(self.container, padding="10")
         main_frame.grid(row=0, column=0, sticky='nsew')
 
         # Configure main frame grid weights
@@ -51,147 +53,151 @@ class BangKeoInTab(TabBase):
         basic_info_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
         
         # Configure grid for basic info frame
-        for i in range(4):
-            basic_info_frame.columnconfigure(i, weight=1)
+        basic_info_frame.columnconfigure(0, weight=1, minsize=130)
+        basic_info_frame.columnconfigure(1, weight=3)
+        basic_info_frame.columnconfigure(2, weight=1, minsize=130)
+        basic_info_frame.columnconfigure(3, weight=3)
         for i in range(4):
             basic_info_frame.rowconfigure(i, weight=1)
 
         # Row 0: Tên hàng và Ngày dự kiến
-        ttk.Label(basic_info_frame, text="Tên hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Tên hàng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
         self.ten_hang_entry = AutocompleteEntry(basic_info_frame, callback=self.auto_fill_data)
         self.ten_hang_entry.grid(row=0, column=1, sticky='ew', padx=5, pady=5)
 
-        ttk.Label(basic_info_frame, text="Ngày dự kiến:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Ngày dự kiến:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
         self.ngay_du_kien = DateEntry(basic_info_frame, width=20, foreground='white', borderwidth=2)
         self.ngay_du_kien.grid(row=0, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 1: Tên khách hàng
-        ttk.Label(basic_info_frame, text="Tên khách hàng:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Tên khách hàng:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
         self.ten_khach_hang_entry = ttk.Entry(basic_info_frame)
         self.ten_khach_hang_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
 
         # Row 2: Quy cách (mm)
-        ttk.Label(basic_info_frame, text="Quy cách (mm):").grid(row=2, column=0, padx=5, pady=5, sticky='e')
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Quy cách (mm):").grid(row=2, column=0, padx=5, pady=5, sticky='e')
         self.quy_cach_mm = ttk.Entry(basic_info_frame, width=15)
-        self.quy_cach_mm.grid(row=2, column=1, padx=5, pady=5, sticky='w')
+        self.quy_cach_mm.grid(row=2, column=1, padx=5, pady=5, sticky='ew')
         
         # Quy cách (m) - bên phải
-        ttk.Label(basic_info_frame, text="Quy cách (m):").grid(row=2, column=2, padx=5, pady=5, sticky='e')
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Quy cách (m):").grid(row=2, column=2, padx=5, pady=5, sticky='e')
         self.quy_cach_m = ttk.Entry(basic_info_frame, width=15)
-        self.quy_cach_m.grid(row=2, column=3, padx=5, pady=5, sticky='w')
+        self.quy_cach_m.grid(row=2, column=3, padx=5, pady=5, sticky='ew')
 
         # Quy cách (mic)
-        ttk.Label(basic_info_frame, text="Quy cách (mic):").grid(row=3, column=0, padx=5, pady=5, sticky='e')
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Quy cách (mic):").grid(row=3, column=0, padx=5, pady=5, sticky='e')
         self.quy_cach_mic = ttk.Entry(basic_info_frame, width=15)
-        self.quy_cach_mic.grid(row=3, column=1, padx=5, pady=5, sticky='w')
+        self.quy_cach_mic.grid(row=3, column=1, padx=5, pady=5, sticky='ew')
 
         # Số lượng cuộn - chỉ có 1 ô để điền số
-        ttk.Label(basic_info_frame, text="Cuộn:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
+        ttk.Label(basic_info_frame, style='Form.TLabel', text="Cuộn:").grid(row=3, column=2, padx=5, pady=5, sticky='e')
         self.cuon_cay_entry = ttk.Entry(basic_info_frame, width=15)
-        self.cuon_cay_entry.grid(row=3, column=3, padx=5, pady=5, sticky='w')
+        self.cuon_cay_entry.grid(row=3, column=3, padx=5, pady=5, sticky='ew')
         
         # Price Frame
         price_frame = ttk.LabelFrame(main_frame, text="Giá và Chi phí", padding=10)
         price_frame.grid(row=2, column=0, sticky='nsew', padx=5, pady=5)
         
         # Configure grid for price frame
-        for i in range(4):
-            price_frame.columnconfigure(i, weight=1)
+        price_frame.columnconfigure(0, weight=1, minsize=130)
+        price_frame.columnconfigure(1, weight=3)
+        price_frame.columnconfigure(2, weight=1, minsize=130)
+        price_frame.columnconfigure(3, weight=3)
         for i in range(11):  # Increased to accommodate all rows
             price_frame.rowconfigure(i, weight=1)
 
         # Row 0: Số Lượng và Phí số lượng
-        ttk.Label(price_frame, text="Số Lượng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Số Lượng:").grid(row=0, column=0, sticky='e', padx=5, pady=5)
         self.so_luong = ttk.Entry(price_frame, width=20)
-        self.so_luong.grid(row=0, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Phí số lượng:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
+        self.so_luong.grid(row=0, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Phí số lượng:").grid(row=0, column=2, sticky='e', padx=5, pady=5)
         self.phi_sl = ttk.Entry(price_frame, width=20)
-        self.phi_sl.grid(row=0, column=3, sticky='w', padx=5, pady=5)
+        self.phi_sl.grid(row=0, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 1: Màu Keo và Phí Keo
-        ttk.Label(price_frame, text="Màu Keo:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Màu Keo:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
         self.mau_keo = ttk.Entry(price_frame, width=20)
-        self.mau_keo.grid(row=1, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Phí Keo:").grid(row=1, column=2, sticky='e', padx=5, pady=5)
+        self.mau_keo.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Phí Keo:").grid(row=1, column=2, sticky='e', padx=5, pady=5)
         self.phi_keo = ttk.Entry(price_frame, width=20)
-        self.phi_keo.grid(row=1, column=3, sticky='w', padx=5, pady=5)
+        self.phi_keo.grid(row=1, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 2: Màu Sắc và Phí màu
-        ttk.Label(price_frame, text="Màu Sắc:").grid(row=2, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Màu Sắc:").grid(row=2, column=0, sticky='e', padx=5, pady=5)
         self.mau_sac = ttk.Entry(price_frame, width=20)
-        self.mau_sac.grid(row=2, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Phí màu:").grid(row=2, column=2, sticky='e', padx=5, pady=5)
+        self.mau_sac.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Phí màu:").grid(row=2, column=2, sticky='e', padx=5, pady=5)
         self.phi_mau = ttk.Entry(price_frame, width=20)
-        self.phi_mau.grid(row=2, column=3, sticky='w', padx=5, pady=5)
+        self.phi_mau.grid(row=2, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 3: Phí size và Phí cắt
-        ttk.Label(price_frame, text="Phí size:").grid(row=3, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Phí size:").grid(row=3, column=0, sticky='e', padx=5, pady=5)
         self.phi_size = ttk.Entry(price_frame, width=20)
-        self.phi_size.grid(row=3, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Phí cắt:").grid(row=3, column=2, sticky='e', padx=5, pady=5)
+        self.phi_size.grid(row=3, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Phí cắt:").grid(row=3, column=2, sticky='e', padx=5, pady=5)
         self.phi_cat = ttk.Entry(price_frame, width=20)
-        self.phi_cat.grid(row=3, column=3, sticky='w', padx=5, pady=5)
+        self.phi_cat.grid(row=3, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 4: Đơn giá vốn và Đơn giá bán
-        ttk.Label(price_frame, text="Đơn giá vốn:").grid(row=4, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Đơn giá vốn:").grid(row=4, column=0, sticky='e', padx=5, pady=5)
         self.don_gia_von = ttk.Entry(price_frame, width=20)
-        self.don_gia_von.grid(row=4, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Đơn giá(bán):").grid(row=4, column=2, sticky='e', padx=5, pady=5)
+        self.don_gia_von.grid(row=4, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Đơn giá(bán):").grid(row=4, column=2, sticky='e', padx=5, pady=5)
         self.don_gia_ban = ttk.Entry(price_frame, width=20)
-        self.don_gia_ban.grid(row=4, column=3, sticky='w', padx=5, pady=5)
+        self.don_gia_ban.grid(row=4, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 5: Đơn giá gốc và Thành tiền bán
-        ttk.Label(price_frame, text="Đơn giá gốc:").grid(row=5, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Đơn giá gốc:").grid(row=5, column=0, sticky='e', padx=5, pady=5)
         self.don_gia_goc = ttk.Entry(price_frame, width=20, state='readonly')
-        self.don_gia_goc.grid(row=5, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Thành tiền(bán):").grid(row=5, column=2, sticky='e', padx=5, pady=5)
+        self.don_gia_goc.grid(row=5, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Thành tiền(bán):").grid(row=5, column=2, sticky='e', padx=5, pady=5)
         self.thanh_tien_ban = ttk.Entry(price_frame, width=20, state='readonly')
-        self.thanh_tien_ban.grid(row=5, column=3, sticky='w', padx=5, pady=5)
+        self.thanh_tien_ban.grid(row=5, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 6: Thành tiền gốc và Tiền cọc
-        ttk.Label(price_frame, text="Thành tiền(gốc):").grid(row=6, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Thành tiền(gốc):").grid(row=6, column=0, sticky='e', padx=5, pady=5)
         self.thanh_tien_goc = ttk.Entry(price_frame, width=20, state='readonly')
-        self.thanh_tien_goc.grid(row=6, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Tiền cọc:").grid(row=6, column=2, sticky='e', padx=5, pady=5)
+        self.thanh_tien_goc.grid(row=6, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Tiền cọc:").grid(row=6, column=2, sticky='e', padx=5, pady=5)
         self.tien_coc = ttk.Entry(price_frame, width=20)
-        self.tien_coc.grid(row=6, column=3, sticky='w', padx=5, pady=5)
+        self.tien_coc.grid(row=6, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 7: Công nợ khách và Tiền ship
-        ttk.Label(price_frame, text="Công nợ khách:").grid(row=7, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Công nợ khách:").grid(row=7, column=0, sticky='e', padx=5, pady=5)
         self.cong_no_khach = ttk.Entry(price_frame, width=20, state='readonly')
-        self.cong_no_khach.grid(row=7, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Tiền ship:").grid(row=7, column=2, sticky='e', padx=5, pady=5)
+        self.cong_no_khach.grid(row=7, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Tiền ship:").grid(row=7, column=2, sticky='e', padx=5, pady=5)
         self.tien_ship = ttk.Entry(price_frame, width=20)
-        self.tien_ship.grid(row=7, column=3, sticky='w', padx=5, pady=5)
+        self.tien_ship.grid(row=7, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 8: CTV và Hoa hồng
-        ttk.Label(price_frame, text="CTV:").grid(row=8, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="CTV:").grid(row=8, column=0, sticky='e', padx=5, pady=5)
         self.ctv = ttk.Entry(price_frame, width=20)
-        self.ctv.grid(row=8, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Hoa hồng(%):").grid(row=8, column=2, sticky='e', padx=5, pady=5)
+        self.ctv.grid(row=8, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Hoa hồng(%):").grid(row=8, column=2, sticky='e', padx=5, pady=5)
         self.hoa_hong = ttk.Entry(price_frame, width=20)
-        self.hoa_hong.grid(row=8, column=3, sticky='w', padx=5, pady=5)
+        self.hoa_hong.grid(row=8, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 9: Tiền hoa hồng và Lợi nhuận
-        ttk.Label(price_frame, text="Tiền hoa hồng:").grid(row=9, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Tiền hoa hồng:").grid(row=9, column=0, sticky='e', padx=5, pady=5)
         self.tien_hoa_hong = ttk.Entry(price_frame, width=20, state='readonly')
-        self.tien_hoa_hong.grid(row=9, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Lợi nhuận:").grid(row=9, column=2, sticky='e', padx=5, pady=5)
+        self.tien_hoa_hong.grid(row=9, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Lợi nhuận:").grid(row=9, column=2, sticky='e', padx=5, pady=5)
         self.loi_nhuan = ttk.Entry(price_frame, width=20, state='readonly')
-        self.loi_nhuan.grid(row=9, column=3, sticky='w', padx=5, pady=5)
+        self.loi_nhuan.grid(row=9, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 10: Lõi Giấy và Thùng/Bao
-        ttk.Label(price_frame, text="Lõi Giấy:").grid(row=10, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Lõi Giấy:").grid(row=10, column=0, sticky='e', padx=5, pady=5)
         self.loi_giay = ttk.Entry(price_frame, width=20)
-        self.loi_giay.grid(row=10, column=1, sticky='w', padx=5, pady=5)
-        ttk.Label(price_frame, text="Thùng/Bao:").grid(row=10, column=2, sticky='e', padx=5, pady=5)
+        self.loi_giay.grid(row=10, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Thùng/Bao:").grid(row=10, column=2, sticky='e', padx=5, pady=5)
         self.thung_bao = ttk.Entry(price_frame, width=20)
-        self.thung_bao.grid(row=10, column=3, sticky='w', padx=5, pady=5)
+        self.thung_bao.grid(row=10, column=3, sticky='ew', padx=5, pady=5)
 
         # Row 11: Lợi nhuận ròng
-        ttk.Label(price_frame, text="Lợi nhuận ròng:").grid(row=11, column=0, sticky='e', padx=5, pady=5)
+        ttk.Label(price_frame, style='Form.TLabel', text="Lợi nhuận ròng:").grid(row=11, column=0, sticky='e', padx=5, pady=5)
         self.loi_nhuan_rong = ttk.Entry(price_frame, width=20, state='readonly')
-        self.loi_nhuan_rong.grid(row=11, column=1, sticky='w', padx=5, pady=5)
+        self.loi_nhuan_rong.grid(row=11, column=1, sticky='ew', padx=5, pady=5)
 
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
@@ -211,7 +217,7 @@ class BangKeoInTab(TabBase):
         ]
 
         for i, (text, command) in enumerate(buttons):
-            btn = ttk.Button(button_frame, text=text, command=command, style='Custom.TButton', width=15)
+            btn = ttk.Button(button_frame, text=text, command=command, style='Action.TButton')
             btn.grid(row=0, column=i, padx=5)
 
         # Set focus to the first entry
@@ -735,3 +741,6 @@ Quế
         except Exception as e:
             print(f"Error auto-filling data: {e}")
             self.update_status("Lỗi khi tự động điền thông tin")
+
+
+

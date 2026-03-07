@@ -33,7 +33,7 @@
    'PYMODULE'),
   ('pyiboot01_bootstrap',
    'D:\\Bang '
-   'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
+   'keo\\venv_build\\lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
    'PYSOURCE'),
   ('pyi_rth_inspect',
    'D:\\Bang '
@@ -56,7 +56,7 @@
    'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth__tkinter.py',
    'PYSOURCE'),
   ('main', 'D:\\Bang keo\\main.py', 'PYSOURCE')],
- 'python312.dll',
+ 'python310.dll',
  True,
  False,
  False,

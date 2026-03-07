@@ -233,7 +233,7 @@ class Application:
             
             self.root.mainloop()
         except Exception as e:
-            if logger and logging.getLogger().handlers:
+            if logging.getLogger().handlers:
                 logging.critical("Critical application error: %s", str(e))
             
             if sys.stderr:

@@ -3,125 +3,142 @@ from tkinter import ttk
 from .config import UI_STYLES, UI_PADDING
 
 def apply_modern_style(root):
-    """Apply modern styling to the application"""
+    """Apply modern dashboard styling based on the reference image"""
     style = ttk.Style(root)
     
-    # Configure colors
+    # Configure colors - Flat simple Palette
     COLORS = {
-        'primary': '#2196F3',      # Blue
-        'secondary': '#757575',    # Gray
-        'success': '#4CAF50',      # Green
-        'warning': '#FFC107',      # Yellow
-        'danger': '#F44336',       # Red
-        'background': '#FFFFFF',   # White
-        'text': '#212121',        # Dark Gray
-        'light_bg': '#F5F5F5'     # Light Gray
+        'primary': '#14b8a6',       
+        'secondary': '#64748b',     
+        'success': '#22c55e',       
+        'warning': '#f59e0b',       
+        'danger': '#ef4444',        
+        'background': '#ffffff',    # Flat white
+        'sidebar': '#ffffff',       
+        'card': '#ffffff',          
+        'accent_pink': '#f472b6',
+        'accent_purple': '#a855f7',
+        'text': '#000000',          # Black text
+        'text_light': '#000000',    # Black text
+        'hover': '#f1f5f9'
     }
     
-    # Configure fonts
+    # Configure fonts - Modern Clean Typography
     FONTS = {
-        'header': ('Segoe UI', 16, 'bold'),
-        'subheader': ('Segoe UI', 12, 'bold'),
-        'normal': ('Segoe UI', 10),
+        'header': ('Segoe UI Semibold', 20),
+        'subheader': ('Segoe UI Semibold', 14),
+        'normal': ('Segoe UI', 11),
+        'bold': ('Segoe UI Bold', 11),
         'small': ('Segoe UI', 9)
     }
     
-    # Configure common styles
+    # Base Frame Style
     style.configure('TFrame', background=COLORS['background'])
+    
+    # Sidebar Style
+    style.configure('Sidebar.TFrame', background=COLORS['sidebar'])
+    style.configure('SidebarItem.TLabel',
+                   background=COLORS['sidebar'],
+                   foreground=COLORS['text_light'],
+                   font=FONTS['normal'],
+                   padding=(20, 10))
+    
+    style.configure('SidebarActive.TLabel',
+                   background=COLORS['hover'],
+                   foreground=COLORS['primary'],
+                   font=FONTS['bold'],
+                   padding=(20, 10))
+
+    # Card Style
+    style.configure('Card.TFrame', 
+                   background=COLORS['card'],
+                   relief='flat')
+                   
+    # LabelFrame styling
+    style.configure('TLabelframe', background=COLORS['background'], relief='flat', borderwidth=0)
+    style.configure('TLabelframe.Label', 
+                   background=COLORS['background'], 
+                   foreground=COLORS['text'], 
+                   font=FONTS['bold'])
+    
+    # Modern Labels
     style.configure('TLabel', 
                    background=COLORS['background'],
                    font=FONTS['normal'],
                    foreground=COLORS['text'])
     
-    # Header style
     style.configure('Header.TLabel',
                    font=FONTS['header'],
-                   foreground=COLORS['primary'],
-                   padding=10)
+                   foreground=COLORS['text'],
+                   padding=(0, 0, 0, 5),
+                   background=COLORS['background'])
     
-    # Subheader style
     style.configure('Subheader.TLabel',
-                   font=FONTS['subheader'],
-                   foreground=COLORS['secondary'],
-                   padding=5)
+                   font=FONTS['normal'],
+                   foreground=COLORS['text'],
+                   padding=(0, 0, 0, 20),
+                   background=COLORS['background'])
+
+    style.configure('Form.TLabel', 
+                   background=COLORS['background'],
+                   font=FONTS['normal'],
+                   foreground=COLORS['text'])
     
+    style.configure('FormLight.TLabel', 
+                   background=COLORS['background'],
+                   font=FONTS['small'],
+                   foreground=COLORS['text'])
+    
+    style.configure('DashboardValue.TLabel',
+                   font=('Segoe UI Bold', 24),
+                   foreground=COLORS['text'])
+
     # Entry fields
     style.configure('TEntry',
-                   fieldbackground=COLORS['light_bg'],
-                   padding=5,
-                   font=FONTS['normal'])
+                   fieldbackground='#ffffff',
+                   padding=8,
+                   relief='flat')
+                   
+    style.configure('Modern.TEntry',
+                   fieldbackground='#f8fafc',
+                   padding=8,
+                   bordercolor='#e2e8f0',
+                   lightcolor='#e2e8f0',
+                   darkcolor='#e2e8f0',
+                   borderwidth=1,
+                   relief='solid')
     
     # Buttons
     style.configure('TButton',
-                   font=FONTS['normal'],
-                   padding=10)
+                   font=FONTS['bold'],
+                   padding=(15, 8),
+                   borderwidth=0)
     
-    # Primary button
     style.configure('Primary.TButton',
                    background=COLORS['primary'],
                    foreground='white')
     
-    # Success button
-    style.configure('Success.TButton',
-                   background=COLORS['success'],
-                   foreground='white')
-    
-    # Warning button
-    style.configure('Warning.TButton',
-                   background=COLORS['warning'],
-                   foreground='black')
-    
-    # Danger button
-    style.configure('Danger.TButton',
-                   background=COLORS['danger'],
-                   foreground='white')
-    
-    # Notebook (tabs)
-    style.configure('TNotebook',
-                   background=COLORS['background'],
-                   tabmargins=[2, 5, 2, 0])
-    
-    style.configure('TNotebook.Tab',
-                   background=COLORS['background'],
-                   padding=[15, 5],
-                   font=('Segoe UI', -12),  # Negative size for auto-scaling
-                   borderwidth=0,
-                   foreground=COLORS['text'])
-    
-    # Selected tab
-    style.map('TNotebook.Tab',
-             background=[('selected', COLORS['background']),
-                        ('active', '#E8E8E8')],
-             foreground=[('selected', COLORS['primary']),
-                        ('active', COLORS['primary'])],
-             borderwidth=[('selected', 0)],
-             font=[('selected', ('Segoe UI', -12, 'bold'))],  # Negative size for auto-scaling
-             padding=[('selected', [15, 5])])
-    
+    # Custom map for button hover
+    style.map('Primary.TButton',
+             background=[('active', '#0d9488')])
+
     # Treeview (for tables/lists)
     style.configure('Treeview',
-                   background=COLORS['background'],
-                   fieldbackground=COLORS['background'],
+                   background=COLORS['card'],
+                   fieldbackground=COLORS['card'],
                    font=FONTS['normal'],
-                   rowheight=30)
+                   rowheight=35,
+                   borderwidth=0)
     
     style.configure('Treeview.Heading',
-                   background=COLORS['light_bg'],
-                   font=FONTS['subheader'])
+                   background='#f8fafc',
+                   font=FONTS['bold'],
+                   foreground=COLORS['secondary'],
+                   relief='flat')
     
     style.map('Treeview',
              background=[('selected', COLORS['primary'])],
              foreground=[('selected', 'white')])
-    
-    # LabelFrame
-    style.configure('TLabelframe',
-                   background=COLORS['background'],
-                   font=FONTS['subheader'])
-    
-    style.configure('TLabelframe.Label',
-                   background=COLORS['background'],
-                   font=FONTS['subheader'],
-                   foreground=COLORS['primary'])
     
     return COLORS, FONTS
 

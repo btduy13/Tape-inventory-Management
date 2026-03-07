@@ -105,8 +105,9 @@ def build():
         '--onefile',
         '--windowed',
         f'--icon={{icon_path}}',
-        '--clean',
         '--noconfirm',
+        '--collect-all=numpy',
+        '--collect-all=pandas'
     ]
     for hi in hidden_imports: options.append(f'--hidden-import={{hi}}')
     for src, dst in datas:

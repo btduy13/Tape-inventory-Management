@@ -9,11 +9,12 @@ from src.database.database import get_session
 from src.utils.ui_utils import set_window_icon, center_window
 
 class ThongKeTab(TabBase):
-    def __init__(self, notebook, parent):
+    def __init__(self, container, parent):
         super().__init__(parent)
-        self.parent_form = parent  # Assuming parent is the main form with db_session
-        self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Thống kê")
+        self.container = container
+        self.parent_form = parent
+        self.COLORS = parent.COLORS
+        self.FONTS = parent.FONTS
         
         # Add sort tracking variables
         self.bang_keo_in_sort = {'column': None, 'reverse': False}
@@ -31,7 +32,7 @@ class ThongKeTab(TabBase):
         
         # Load data into the interface
         self.load_data()
-        
+
     def reset_counters(self):
         """Initialize/reset all counters to zero."""
         self.sap_den_han_count = 0
@@ -40,79 +41,80 @@ class ThongKeTab(TabBase):
         self.hoan_thanh_count = 0
         self.tong_cong_no = 0
         self.tong_doanh_thu = 0
-        self.tong_loi_nhuan_rong = 0  # Add total net profit counter
-        
+        self.tong_loi_nhuan_rong = 0
+
     def create_dashboard(self):
-        """Create the dashboard displaying summary information."""
-        dashboard_frame = ttk.LabelFrame(self.tab, text="Tổng quan")
-        dashboard_frame.pack(fill=tk.X, padx=5, pady=5)
+        """Create the dashboard displaying summary information with modern cards."""
+        from src.ui.components.modern_card import ModernCard
         
-        # Frame for statistical information
-        stats_frame = ttk.Frame(dashboard_frame)
-        stats_frame.pack(fill=tk.X, padx=5, pady=5)
+        dashboard_frame = tk.Frame(self.container, background=self.COLORS['background'])
+        dashboard_frame.pack(fill=tk.X, pady=(0, 20))
         
-        # Warning Frame
-        warning_frame = ttk.LabelFrame(stats_frame, text="Cảnh báo")
-        warning_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        # Header for this section
+        tk.Label(
+            dashboard_frame, text="Tổng quan thống kê", 
+            font=self.FONTS['subheader'],
+            background=self.COLORS['background']
+        ).pack(anchor='w', pady=(0, 15))
         
-        # Orders nearing deadline
-        self.sap_den_han_label = ttk.Label(warning_frame, text="Đơn hàng sắp đến hạn: 0")
-        self.sap_den_han_label.pack(anchor=tk.W, padx=5, pady=2)
+        # Grid for cards
+        cards_grid = tk.Frame(dashboard_frame, background=self.COLORS['background'])
+        cards_grid.pack(fill=tk.X)
+        cards_grid.columnconfigure((0, 1, 2, 3), weight=1)
         
-        # Overdue orders
-        self.qua_han_label = ttk.Label(warning_frame, text="Đơn hàng quá hạn: 0", foreground="red")
-        self.qua_han_label.pack(anchor=tk.W, padx=5, pady=2)
+        # Warning Cards
+        self.card_warning = ModernCard(cards_grid, "Cảnh báo", "0", "⚠️", "Sắp đến hạn / Quá hạn", accent_color=self.COLORS['danger'])
+        self.card_warning.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
         
-        # Status Frame
-        status_frame = ttk.LabelFrame(stats_frame, text="Trạng thái")
-        status_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        self.card_status = ModernCard(cards_grid, "Trạng thái", "0", "🔄", "Chưa tất toán", accent_color=self.COLORS['warning'])
+        self.card_status.grid(row=0, column=1, sticky='nsew', padx=10)
         
-        # Unsettled orders
-        self.chua_tat_toan_label = ttk.Label(status_frame, text="Chưa tất toán: 0")
-        self.chua_tat_toan_label.pack(anchor=tk.W, padx=5, pady=2)
+        self.card_debt = ModernCard(cards_grid, "Công nợ", "0đ", "💳", "Tổng cộng nợ", accent_color=self.COLORS['accent_purple'])
+        self.card_debt.grid(row=0, column=2, sticky='nsew', padx=10)
         
-        # Completed orders
-        self.hoan_thanh_label = ttk.Label(status_frame, text="Đã hoàn thành: 0", foreground="green")
-        self.hoan_thanh_label.pack(anchor=tk.W, padx=5, pady=2)
+        self.card_profit = ModernCard(cards_grid, "Lợi nhuận ròng", "0đ", "💎", "Ước tính", accent_color=self.COLORS['success'])
+        self.card_profit.grid(row=0, column=3, sticky='nsew', padx=(10, 0))
+
+        # Action Button Frame
+        actions_frame = tk.Frame(dashboard_frame, background=self.COLORS['background'])
+        actions_frame.pack(fill=tk.X, pady=(15, 0))
         
-        # Financial Info Frame
-        finance_frame = ttk.LabelFrame(stats_frame, text="Tài chính")
-        finance_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
-        
-        # Total debt
-        self.tong_cong_no_label = ttk.Label(finance_frame, text="Tổng công nợ: 0")
-        self.tong_cong_no_label.pack(anchor=tk.W, padx=5, pady=2)
-        
-        # Total revenue
-        self.tong_doanh_thu_label = ttk.Label(finance_frame, text="Tổng doanh thu: 0")
-        self.tong_doanh_thu_label.pack(anchor=tk.W, padx=5, pady=2)
-        
-        # Total net profit
-        self.tong_loi_nhuan_rong_label = ttk.Label(finance_frame, text="Tổng lợi nhuận ròng: 0", foreground="blue")
-        self.tong_loi_nhuan_rong_label.pack(anchor=tk.W, padx=5, pady=2)
-        
-        # Add Actions Frame
-        actions_frame = ttk.LabelFrame(dashboard_frame, text="Thao tác")
-        actions_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Style for large button
-        style = ttk.Style()
-        style.configure('Action.TButton', 
-                       padding=(20, 10),
-                       font=('TkDefaultFont', 11))
-        
-        # Add Export Order button
-        export_btn = ttk.Button(
+        # Export Order button with modern styling using tk.Button for visibility
+        self.export_btn = tk.Button(
             actions_frame, 
-            text="Xuất Đơn Đặt Hàng / Phiếu Giao Hàng", 
-            style='Action.TButton',
-            command=self.open_order_export
+            text="➕ Xuất Đơn Đặt Hàng / Phiếu Giao Hàng", 
+            command=self.open_order_export,
+            background=self.COLORS['primary'],
+            foreground='white',
+            font=self.FONTS['bold'],
+            relief='flat',
+            padx=20,
+            pady=8,
+            cursor='hand2',
+            activebackground='#0d9488',
+            activeforeground='white'
         )
-        export_btn.pack(pady=5)
+        self.export_btn.pack(side='left')
+        
+        # Add manual hover effect
+        self.export_btn.bind("<Enter>", lambda e: self.export_btn.configure(background='#0d9488'))
+        self.export_btn.bind("<Leave>", lambda e: self.export_btn.configure(background=self.COLORS['primary']))
+
+    def update_dashboard_labels(self):
+        """Update all labels/cards in the dashboard with the latest counts and sums."""
+        warning_text = f"{self.sap_den_han_count} sắp hạn, {self.qua_han_count} quá hạn"
+        self.card_warning.set_value(str(self.sap_den_han_count + self.qua_han_count))
+        self.card_warning.set_subtitle(warning_text)
+        
+        self.card_status.set_value(str(self.chua_tat_toan_count))
+        self.card_status.set_subtitle(f"{self.hoan_thanh_count} đã hoàn thành")
+        
+        self.card_debt.set_value(f"{self.tong_cong_no:,.0f}đ")
+        self.card_profit.set_value(f"{self.tong_loi_nhuan_rong:,.0f}đ")
         
     def create_order_tabs(self):
         # Create notebook for order lists
-        self.order_notebook = ttk.Notebook(self.tab)
+        self.order_notebook = ttk.Notebook(self.container)
         self.order_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Create frames for each order type
@@ -295,7 +297,7 @@ class ThongKeTab(TabBase):
                                "Có lỗi xảy ra khi tải dữ liệu. Hệ thống sẽ thử tải lại.\n" + 
                                f"Chi tiết lỗi: {str(e)}")
             # Thử tải lại dữ liệu một lần nữa sau 1 giây
-            self.tab.after(1000, self.load_data)
+            self.container.after(1000, self.load_data)
         
     def process_order(self, order, order_type, today, tree):
         """Process each order to update counters and insert into Treeview if it matches the filter."""
@@ -385,16 +387,7 @@ class ThongKeTab(TabBase):
             
         return True
         
-    def update_dashboard_labels(self):
-        """Update all labels in the dashboard with the latest counts and sums."""
-        self.sap_den_han_label.config(text=f"Đơn hàng sắp đến hạn: {self.sap_den_han_count}")
-        self.qua_han_label.config(text=f"Đơn hàng quá hạn: {self.qua_han_count}")
-        self.chua_tat_toan_label.config(text=f"Chưa tất toán: {self.chua_tat_toan_count}")
-        self.hoan_thanh_label.config(text=f"Đã hoàn thành: {self.hoan_thanh_count}")
-        self.tong_cong_no_label.config(text=f"Tổng công nợ: {self.tong_cong_no:,.0f}")
-        self.tong_doanh_thu_label.config(text=f"Tổng doanh thu: {self.tong_doanh_thu:,.0f}")
-        self.tong_loi_nhuan_rong_label.config(text=f"Tổng lợi nhuận ròng: {self.tong_loi_nhuan_rong:,.0f}")  # Update net profit label
-        
+
     def on_double_click(self, event, order_type, tree):
         """Handle double-click event on a Treeview item to open the update status window."""
         # Ensure that an item is selected
@@ -432,7 +425,7 @@ class ThongKeTab(TabBase):
                 return
             
             # Create update window
-            update_window = tk.Toplevel(self.tab)
+            update_window = tk.Toplevel(self.root)
             update_window.title("Cập nhật trạng thái đơn hàng")
             
             # Set window icon
@@ -443,7 +436,7 @@ class ThongKeTab(TabBase):
             window_height = 300
             center_window(update_window, window_width, window_height)
             
-            update_window.transient(self.tab)
+            update_window.transient(self.root)
             update_window.grab_set()
             
             # Create main frame with padding
@@ -532,7 +525,7 @@ class ThongKeTab(TabBase):
             if not tree.selection():
                 return
 
-            menu = tk.Menu(self.tab, tearoff=0)
+            menu = tk.Menu(self.root, tearoff=0)
             menu.add_command(label="Cập nhật trạng thái...", command=lambda: self.open_bulk_status_dialog(order_type, tree))
             menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -542,10 +535,10 @@ class ThongKeTab(TabBase):
                 pass
 
     def open_bulk_status_dialog(self, order_type, tree):
-        dlg = tk.Toplevel(self.tab)
+        dlg = tk.Toplevel(self.root)
         dlg.title("Cập nhật trạng thái hàng loạt")
         center_window(dlg, 300, 150)
-        dlg.transient(self.tab)
+        dlg.transient(self.root)
         dlg.grab_set()
         
         # Configure window to be resizable
@@ -710,8 +703,8 @@ class ThongKeTab(TabBase):
     def open_order_export(self):
         """Open the order export dialog"""
         try:
-            export_dialog = OrderSelectionDialog(parent=self.tab)
-            self.tab.wait_window(export_dialog)
+            export_dialog = OrderSelectionDialog(parent=self.container)
+            self.container.wait_window(export_dialog)
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể mở cửa sổ xuất đơn: {str(e)}")
 

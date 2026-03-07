@@ -13,17 +13,17 @@ from src.ui.tabs.history_components.export_import import ExportImportManager
 from src.ui.tabs.history_components.utils import HistoryUtils
 
 class HistoryTab(TabBase):
-    def __init__(self, notebook, parent_form):
+    def __init__(self, container, parent_form):
         super().__init__(parent_form)
-        self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Lịch sử")
+        self.container = container
+        self.parent_form = parent_form
         self.db_session = parent_form.db_session
         
         # Define standard date formats
         self.DATE_FORMAT = '%d/%m/%Y'
         
         # Create main frame with padding
-        main_frame = ttk.Frame(self.tab, padding="15 15 15 15")
+        main_frame = ttk.Frame(self.container, padding="15 15 15 15")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Initialize data storage

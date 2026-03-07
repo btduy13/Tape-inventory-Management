@@ -48,6 +48,8 @@ def build_exe():
     
     # Collect all submodules for psycopg2
     options.append('--collect-all=psycopg2')
+    options.append('--collect-all=numpy')
+    options.append('--collect-all=pandas')
     
     # Thêm data files
     for src, dst in datas:

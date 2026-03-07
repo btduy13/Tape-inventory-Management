@@ -55,7 +55,7 @@
    'PYMODULE'),
   ('pyiboot01_bootstrap',
    'D:\\Bang '
-   'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
+   'keo\\venv_build\\lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
    'PYSOURCE'),
   ('pyi_rth_inspect',
    'D:\\Bang '
@@ -81,9 +81,10 @@
  [],
  False,
  False,
- 1772789537,
+ 1772856537,
  [('runw.exe',
    'D:\\Bang '
-   'keo\\venv_build\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
+   'keo\\venv_build\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
- 'C:\\Users\\USER\\AppData\\Local\\Programs\\Python\\Python312\\python312.dll')
+ 'C:\\Program '
+ 'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\\python310.dll')

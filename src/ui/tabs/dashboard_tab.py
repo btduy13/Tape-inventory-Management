@@ -11,174 +11,129 @@ import pandas as pd
 import numpy as np
 
 class DashboardTab(TabBase):
-    def __init__(self, notebook, parent_form):
+    def __init__(self, container, parent_form):
         """Initialize dashboard tab"""
         super().__init__(parent_form)
-        self.tab = ttk.Frame(notebook)
-        notebook.add(self.tab, text="Dashboard")
+        self.container = container
+        self.COLORS = parent_form.COLORS
+        self.FONTS = parent_form.FONTS
         self.dashboard_service = DashboardService(self.db_session)
         self.setup_ui()
         
     def setup_ui(self):
         """Setup dashboard UI"""
-        # Main container with padding
-        self.container = ttk.Frame(self.tab, style='Content.TFrame')
-        self.container.pack(fill='both', expand=True, padx=UI_PADDING['medium'], 
-                          pady=UI_PADDING['medium'])
+        from src.ui.components.modern_card import ModernCard
         
-        # Control panel
-        self.setup_control_panel()
+        # Main Scrollable Area (optional, but good for dashboard)
+        self.main_scroll = tk.Frame(self.container, background=self.COLORS['background'])
+        self.main_scroll.pack(fill='both', expand=True)
         
-        # Charts container
-        self.charts_container = ttk.Frame(self.container, style='Content.TFrame')
-        self.charts_container.pack(fill='both', expand=True, pady=UI_PADDING['medium'])
+        # Welcome Header
+        header_frame = tk.Frame(self.main_scroll, background=self.COLORS['background'])
+        header_frame.pack(fill='x', pady=(0, 30))
         
-        # Initialize charts
-        self.setup_charts()
+        tk.Label(
+            header_frame, text="Chào mừng trở lại! 👋", 
+            font=self.FONTS['normal'],
+            background=self.COLORS['background'],
+            foreground=self.COLORS['text_light']
+        ).pack(anchor='w')
         
-        # Report generation panel
-        self.setup_report_panel()
+        tk.Label(
+            header_frame, text="Bảng điều khiển", 
+            font=self.FONTS['header'],
+            background=self.COLORS['background']
+        ).pack(anchor='w')
         
-    def setup_control_panel(self):
-        """Setup control panel with filters"""
-        control_frame = ttk.Frame(self.container, style='Content.TFrame')
-        control_frame.pack(fill='x', pady=(0, UI_PADDING['medium']))
+        # Metrics Grid (Top Row)
+        metrics_frame = tk.Frame(self.main_scroll, background=self.COLORS['background'])
+        metrics_frame.pack(fill='x', pady=(0, 30))
+        metrics_frame.columnconfigure((0, 1, 2, 3), weight=1, pad=20)
         
-        # Date range selector
-        date_frame = ttk.Frame(control_frame, style='Content.TFrame')
-        date_frame.pack(side='left', padx=UI_PADDING['medium'])
+        self.card_total_orders = ModernCard(metrics_frame, "Đơn hàng", "0", "📦", "Tháng này")
+        self.card_total_orders.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
         
-        ttk.Label(date_frame, text="Thời gian:", 
-                 style='Content.TLabel').pack(side='left')
+        self.card_revenue = ModernCard(metrics_frame, "Doanh thu", "0đ", "💰", "Tháng này", accent_color=self.COLORS['success'])
+        self.card_revenue.grid(row=0, column=1, sticky='nsew', padx=10)
+        
+        self.card_avg_value = ModernCard(metrics_frame, "Giá trị TB", "0đ", "📈", "Mỗi đơn", accent_color=self.COLORS['accent_purple'])
+        self.card_avg_value.grid(row=0, column=2, sticky='nsew', padx=10)
+        
+        self.card_top_cust = ModernCard(metrics_frame, "Khách hàng", "N/A", "👤", "Top tháng", accent_color=self.COLORS['accent_pink'])
+        self.card_top_cust.grid(row=0, column=3, sticky='nsew', padx=(10, 0))
+        
+        # Middle Section: Charts
+        charts_row = tk.Frame(self.main_scroll, background=self.COLORS['background'])
+        charts_row.pack(fill='both', expand=True)
+        charts_row.columnconfigure(0, weight=2) # Main chart
+        charts_row.columnconfigure(1, weight=1) # Pie chart
+        
+        # Left: Sales Line Chart
+        sales_card = tk.Frame(charts_row, background=self.COLORS['card'], padx=20, pady=20)
+        sales_card.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
+        
+        tk.Label(sales_card, text="Thống kê doanh số", font=self.FONTS['subheader'], background=self.COLORS['card']).pack(anchor='w')
+        
+        self.sales_figure = plt.Figure(figsize=(6, 4), dpi=100, facecolor=self.COLORS['card'])
+        self.sales_canvas = FigureCanvasTkAgg(self.sales_figure, sales_card)
+        self.sales_canvas.get_tk_widget().pack(fill='both', expand=True)
+        self.sales_canvas.get_tk_widget().configure(background=self.COLORS['card'])
+
+        # Right: Product Distribution
+        product_card = tk.Frame(charts_row, background=self.COLORS['card'], padx=20, pady=20)
+        product_card.grid(row=0, column=1, sticky='nsew', padx=(10, 0))
+        
+        tk.Label(product_card, text="Phân bố sản phẩm", font=self.FONTS['subheader'], background=self.COLORS['card']).pack(anchor='w')
+        
+        self.product_figure = plt.Figure(figsize=(4, 4), dpi=100, facecolor=self.COLORS['card'])
+        self.product_canvas = FigureCanvasTkAgg(self.product_figure, product_card)
+        self.product_canvas.get_tk_widget().pack(fill='both', expand=True)
+        self.product_canvas.get_tk_widget().configure(background=self.COLORS['card'])
+        
+        # Period Selector (Floating in top right of sales card or header)
+        period_frame = tk.Frame(header_frame, background=self.COLORS['background'])
+        period_frame.place(relx=1.0, rely=1.0, anchor='se')
         
         self.period_var = tk.StringVar(value='daily')
-        periods = [
-            ('Ngày', 'daily'),
-            ('Tuần', 'weekly'),
-            ('Tháng', 'monthly')
-        ]
+        for text, val in [('Ngày', 'daily'), ('Tuần', 'weekly'), ('Tháng', 'monthly')]:
+            rb = tk.Radiobutton(
+                period_frame, text=text, value=val, 
+                variable=self.period_var,
+                command=self.update_charts,
+                background=self.COLORS['background'],
+                activebackground=self.COLORS['background'],
+                font=self.FONTS['small']
+            )
+            rb.pack(side='left', padx=10)
+
+        # Initial data load
+        self.refresh_data()
         
-        for text, value in periods:
-            ttk.Radiobutton(date_frame, text=text, value=value,
-                          variable=self.period_var,
-                          command=self.update_charts).pack(side='left', 
-                                                         padx=UI_PADDING['small'])
-        
-        # Refresh button with modern style
-        refresh_btn = ttk.Button(
-            control_frame,
-            text="🔄 Làm mới",
-            command=self.update_charts,
-            style='Modern.TButton'
-        )
-        style = ttk.Style()
-        style.configure('Modern.TButton', foreground='black')
-        refresh_btn.pack(side='right', padx=UI_PADDING['medium'])
-        create_tooltip(refresh_btn, "Cập nhật biểu đồ")
-        
-    def setup_charts(self):
-        """Setup charts area"""
-        # Sales chart
-        sales_frame = ttk.LabelFrame(
-            self.charts_container,
-            text="Thống kê doanh số",
-            style='Content.TLabelframe'
-        )
-        sales_frame.pack(fill='both', expand=True, pady=(0, UI_PADDING['medium']))
-        
-        self.sales_figure = plt.Figure(figsize=(10, 4), dpi=100)
-        self.sales_canvas = FigureCanvasTkAgg(self.sales_figure, sales_frame)
-        self.sales_canvas.get_tk_widget().pack(fill='both', expand=True, 
-                                             padx=UI_PADDING['small'],
-                                             pady=UI_PADDING['small'])
-        
-        # Product distribution chart
-        product_frame = ttk.LabelFrame(
-            self.charts_container,
-            text="Phân bố sản phẩm",
-            style='Content.TLabelframe'
-        )
-        product_frame.pack(fill='both', expand=True)
-        
-        self.product_figure = plt.Figure(figsize=(8, 4), dpi=100)
-        self.product_canvas = FigureCanvasTkAgg(self.product_figure, product_frame)
-        self.product_canvas.get_tk_widget().pack(fill='both', expand=True,
-                                               padx=UI_PADDING['small'],
-                                               pady=UI_PADDING['small'])
-        
-        # Initial update
+    def refresh_data(self):
+        """Update metrics and charts"""
+        self.update_metrics()
         self.update_charts()
-        
-    def setup_report_panel(self):
-        """Setup report generation panel"""
-        report_frame = ttk.LabelFrame(
-            self.container,
-            text="Xuất báo cáo",
-            style='Content.TLabelframe'
-        )
-        report_frame.pack(fill='x', pady=UI_PADDING['medium'])
-        
-        # Report controls
-        controls_frame = ttk.Frame(report_frame, style='Content.TFrame')
-        controls_frame.pack(fill='x', padx=UI_PADDING['medium'], 
-                          pady=UI_PADDING['medium'])
-        
-        # Format selector
-        format_frame = ttk.Frame(controls_frame, style='Content.TFrame')
-        format_frame.pack(side='left')
-        
-        ttk.Label(format_frame, text="Định dạng:",
-                 style='Content.TLabel').pack(side='left')
-        
-        self.format_var = tk.StringVar(value='pdf')
-        formats = [('PDF', 'pdf'), ('Excel', 'excel'), ('CSV', 'csv')]
-        
-        for text, value in formats:
-            ttk.Radiobutton(format_frame, text=text, value=value,
-                          variable=self.format_var).pack(side='left',
-                                                       padx=UI_PADDING['small'])
-        
-        # Email input
-        email_frame = ttk.Frame(controls_frame, style='Content.TFrame')
-        email_frame.pack(side='left', padx=UI_PADDING['large'])
-        
-        ttk.Label(email_frame, text="Email:",
-                 style='Content.TLabel').pack(side='left')
-        
-        self.email_var = tk.StringVar()
-        email_entry = ttk.Entry(email_frame, textvariable=self.email_var,
-                              width=30)
-        email_entry.pack(side='left', padx=UI_PADDING['small'])
-        
-        # Generate button
-        generate_btn = ModernButton(
-            controls_frame,
-            text="📊 Tạo báo cáo",
-            command=self.generate_report
-        )
-        generate_btn.pack(side='right')
-        
-        # Schedule frame
-        schedule_frame = ttk.Frame(report_frame, style='Content.TFrame')
-        schedule_frame.pack(fill='x', padx=UI_PADDING['medium'],
-                          pady=UI_PADDING['medium'])
-        
-        ttk.Label(schedule_frame, text="Lập lịch:",
-                 style='Content.TLabel').pack(side='left')
-        
-        self.schedule_var = tk.StringVar(value='none')
-        schedules = [
-            ('Không', 'none'),
-            ('Hàng ngày', 'daily'),
-            ('Hàng tuần', 'weekly'),
-            ('Hàng tháng', 'monthly')
-        ]
-        
-        for text, value in schedules:
-            ttk.Radiobutton(schedule_frame, text=text, value=value,
-                          variable=self.schedule_var,
-                          command=self.update_schedule).pack(side='left',
-                                                           padx=UI_PADDING['small'])
+
+    def update_metrics(self):
+        """Fetch and update total metrics"""
+        try:
+            sales_data = self.dashboard_service.get_sales_by_period(period='monthly')
+            if not sales_data.empty:
+                total_qty = sales_data['quantity'].sum()
+                total_rev = sales_data['amount'].sum()
+                avg_val = total_rev / len(sales_data) if len(sales_data) > 0 else 0
+                
+                self.card_total_orders.set_value(f"{int(total_qty):,}")
+                self.card_revenue.set_value(f"{int(total_rev):,}đ")
+                self.card_avg_value.set_value(f"{int(avg_val):,}đ")
+                
+                dist = self.dashboard_service.get_product_distribution()
+                if not dist.empty:
+                    top_prod = dist.iloc[0]['ten_hang']
+                    self.card_top_cust.title_label.configure(text="  SẢN PHẨM CHỦ LỰC")
+                    self.card_top_cust.set_value(top_prod[:15] + "..." if len(top_prod) > 15 else top_prod)
+        except Exception as e:
+            print(f"Error updating metrics: {e}")
     
     def update_charts(self):
         """Update all charts"""
