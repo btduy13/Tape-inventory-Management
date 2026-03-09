@@ -26,11 +26,17 @@ class Builder:
 
     def create_venv(self):
         """Create a virtual environment for building"""
+        if '--skip-venv' in sys.argv and self.venv_dir.exists():
+            logging.info("Skipping virtual environment creation...")
+            return
         logging.info("Creating virtual environment...")
         venv.create(self.venv_dir, with_pip=True)
 
     def install_requirements(self):
         """Install all required packages"""
+        if '--skip-venv' in sys.argv:
+            logging.info("Skipping requirements installation...")
+            return
         logging.info("Installing requirements...")
         pip = str(self.venv_dir / 'Scripts' / 'pip.exe')
         
@@ -39,6 +45,7 @@ class Builder:
         subprocess.run([pip, 'install', 'pyinstaller'], check=True)
         
         # Install project requirements
+        subprocess.run([pip, 'install', 'numpy<2.0.0'], check=True)
         subprocess.run([pip, 'install', '-e', '.'], check=True)
 
     def generate_requirements(self):
@@ -52,6 +59,7 @@ class Builder:
         """Build executable using PyInstaller"""
         logging.info("Building executable...")
         python = str(self.venv_dir / 'Scripts' / 'python.exe')
+        # Use existing build_installer.py which has psycopg2 fixes
         subprocess.run([python, 'build_installer.py'], check=True)
 
     def update_installer_version(self):
@@ -88,16 +96,36 @@ class Builder:
             f.write(f'''
 import PyInstaller.__main__
 import os
+import sys
+import site
 from src.utils.config import APP_VERSION
 
+def get_site_packages():
+    try:
+        sp = site.getsitepackages()
+        for p in sp:
+            if 'site-packages' in p and os.path.isdir(p):
+                return p
+    except:
+        pass
+    return os.path.join(sys.prefix, 'Lib', 'site-packages')
+
 def build():
+    site_packages = get_site_packages()
     icon_path = os.path.join('assets', 'icon.ico')
+    
     hidden_imports = [
         'babel.numbers', 'sqlalchemy.sql.default_comparator', 
         'PIL._tkinter_finder', 'ttkthemes', 'sqlalchemy.ext.baked',
-        'sqlalchemy.ext.declarative', 'requests', 'psycopg2'
+        'sqlalchemy.ext.declarative', 'requests', 'psycopg2',
+        'psycopg2._psycopg', 'psycopg2.extensions', 'psycopg2.extras'
     ]
+    
     datas = [('assets', 'assets'), ('theme', 'theme')]
+    
+    psycopg2_libs = os.path.join(site_packages, 'psycopg2_binary.libs')
+    if os.path.isdir(psycopg2_libs):
+        datas.append((psycopg2_libs, 'psycopg2_binary.libs'))
     
     options = [
         'main.py',
@@ -106,6 +134,8 @@ def build():
         '--windowed',
         f'--icon={{icon_path}}',
         '--noconfirm',
+        '--collect-all=psycopg2',
+        '--collect-binaries=psycopg2',
         '--collect-all=numpy',
         '--collect-all=pandas'
     ]
@@ -131,11 +161,16 @@ if __name__ == "__main__":
             logging.info(f"Successfully created single-file updater: {onefile_name}")
 
     def build_installer(self):
-        """Build installer using Inno Setup (or fallback to ZIP)"""
+        """Build installer using Inno Setup and Portable ZIP"""
         # First update the version
         self.update_installer_version()
         
-        logging.info("Building installer...")
+        # Always create Portable ZIP
+        logging.info("Creating Portable ZIP...")
+        python = str(self.venv_dir / 'Scripts' / 'python.exe')
+        subprocess.run([python, 'create_installer.py'], check=True)
+        
+        logging.info("Building Inno Setup installer...")
         iscc_paths = [
             r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
             r"C:\Program Files\Inno Setup 6\ISCC.exe",
@@ -153,9 +188,6 @@ if __name__ == "__main__":
             subprocess.run(f'{iscc} installer.iss', shell=True, check=True)
         else:
             logging.warning("ISCC.exe not found. Skipping Inno Setup installer creation.")
-            logging.info("Falling back to ZIP/Portable creator...")
-            python = str(self.venv_dir / 'Scripts' / 'python.exe')
-            subprocess.run([python, 'create_installer.py'], check=True)
 
     def cleanup(self):
         """Clean up temporary files"""
