@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from src.ui.tabs.tab_base import TabBase
 from src.services.dashboard_service import DashboardService
@@ -152,9 +153,16 @@ class DashboardTab(TabBase):
             color1, color2 = '#1976D2', '#FF4081'
             
             # Plot quantity
-            line1 = ax1.plot(sales_data['period'], sales_data['quantity'],
+            # Ensure period is datetime for mdates
+            df_dates = pd.to_datetime(sales_data['period'])
+            line1 = ax1.plot(df_dates, sales_data['quantity'],
                             color=color1, label='Số lượng')
             ax1.set_xlabel('Thời gian')
+            
+            # Format X-axis to show only day and month (DD/MM)
+            ax1.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+            self.sales_figure.autofmt_xdate(rotation=45)
+            
             ax1.set_ylabel('Số lượng', color=color1)
             ax1.tick_params(axis='y', labelcolor=color1)
             

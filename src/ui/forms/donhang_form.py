@@ -16,19 +16,6 @@ class DonHangForm:
         self.db_session = db_session
         self.app_instance = app_instance
         
-        # Configure the root window
-        self.root.title("Phần Mềm Quản Lý Đơn Hàng")
-        window_width = 1200
-        window_height = 850
-        
-        # Center the window
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        center_x = int((screen_width - window_width) / 2)
-        center_y = int((screen_height - window_height) / 2)
-        self.root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-        self.root.minsize(1000, 700)
-        
         # Apply style first to get COLORS
         self.COLORS, self.FONTS = apply_modern_style(self.root)
         self.root.configure(background=self.COLORS['background'])

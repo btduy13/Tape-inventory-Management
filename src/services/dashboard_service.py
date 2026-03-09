@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import seaborn as sns
 from sqlalchemy import func, and_, text, extract
@@ -150,6 +151,10 @@ class DashboardService:
         ax1.set_ylabel('Số lượng', color=color)
         ax1.plot(df['period'], df['quantity'], color=color)
         ax1.tick_params(axis='y', labelcolor=color)
+        
+        # Format X-axis to show only day and month (DD/MM)
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+        fig.autofmt_xdate(rotation=45) # Rotate for better visibility
         
         ax2 = ax1.twinx()
         color = 'tab:red'
