@@ -242,7 +242,7 @@ class TrucInTab(TabBase):
             self.update_readonly_field(self.truc_in_loi_nhuan, loi_nhuan)
             self.update_readonly_field(self.truc_in_loi_nhuan_rong, loi_nhuan_rong)
 
-            self.update_status("Tính toán Trục In thành công")
+            # self.update_status("Tính toán Trục In thành công")
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán Trục In: {str(e)}")
             self.update_status("Lỗi khi tính toán Trục In")

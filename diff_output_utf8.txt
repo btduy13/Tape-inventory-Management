@@ -1,0 +1,74 @@
+﻿diff --git a/src/ui/tabs/bang_keo_tab.py b/src/ui/tabs/bang_keo_tab.py
+index 87523d0..de15d36 100644
+--- a/src/ui/tabs/bang_keo_tab.py
++++ b/src/ui/tabs/bang_keo_tab.py
+@@ -196,7 +196,12 @@ class BangKeoTab(TabBase):
+             entry.config(validate='key', validatecommand=vcmd)
+ 
+     def auto_calculate(self, event):
+-        self.tinh_toan_bang_keo()
++        """Debounced auto-calculation triggered by key release"""
++        if self._calculation_timer:
++            self.root.after_cancel(self._calculation_timer)
++        
++        # Debounce for 300ms
++        self._calculation_timer = self.root.after(300, self.tinh_toan_bang_keo)
+ 
+     def bind_currency_format(self):
+         currency_fields = [
+@@ -230,12 +235,12 @@ class BangKeoTab(TabBase):
+             loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship
+ 
+             # Update readonly fields
+-            self.update_readonly_field(self.thanh_tien, thanh_tien)
+-            self.update_readonly_field(self.thanh_tien_ban, thanh_tien_ban)
+-            self.update_readonly_field(self.cong_no_khach, cong_no_khach)
+-            self.update_readonly_field(self.tien_hoa_hong, tien_hoa_hong)
+-            self.update_readonly_field(self.loi_nhuan, loi_nhuan)
+-            self.update_readonly_field(self.loi_nhuan_rong, loi_nhuan_rong)
++            self.update_calculated_field(self.thanh_tien, thanh_tien)
++            self.update_calculated_field(self.thanh_tien_ban, thanh_tien_ban)
++            self.update_calculated_field(self.cong_no_khach, cong_no_khach)
++            self.update_calculated_field(self.tien_hoa_hong, tien_hoa_hong)
++            self.update_calculated_field(self.loi_nhuan, loi_nhuan)
++            self.update_calculated_field(self.loi_nhuan_rong, loi_nhuan_rong)
+ 
+             self.update_status("T├¡nh to├ín B─âng Keo th├ánh c├┤ng")
+         except Exception as e:
+diff --git a/src/ui/tabs/truc_in_tab.py b/src/ui/tabs/truc_in_tab.py
+index 841ee83..9a9660f 100644
+--- a/src/ui/tabs/truc_in_tab.py
++++ b/src/ui/tabs/truc_in_tab.py
+@@ -201,7 +201,12 @@ class TrucInTab(TabBase):
+             entry.config(validate='key', validatecommand=vcmd)
+ 
+     def auto_calculate(self, event):
+-        self.tinh_toan_truc_in()
++        """Debounced auto-calculation triggered by key release"""
++        if self._calculation_timer:
++            self.root.after_cancel(self._calculation_timer)
++        
++        # Debounce for 300ms
++        self._calculation_timer = self.root.after(300, self.tinh_toan_truc_in)
+ 
+     def bind_currency_format(self):
+         currency_fields = [
+@@ -235,12 +240,12 @@ class TrucInTab(TabBase):
+             loi_nhuan_rong = loi_nhuan - tien_hoa_hong - tien_ship  # Lß╗úi nhuß║¡n r├▓ng = lß╗úi nhuß║¡n - tiß╗ün hoa hß╗ông - tiß╗ün ship
+ 
+             # Update fields
+-            self.update_readonly_field(self.truc_in_thanh_tien, thanh_tien)
+-            self.update_readonly_field(self.truc_in_thanh_tien_ban, thanh_tien_ban)
+-            self.update_readonly_field(self.truc_in_cong_no_khach, cong_no_khach)
+-            self.update_readonly_field(self.truc_in_tien_hoa_hong, tien_hoa_hong)
+-            self.update_readonly_field(self.truc_in_loi_nhuan, loi_nhuan)
+-            self.update_readonly_field(self.truc_in_loi_nhuan_rong, loi_nhuan_rong)
++            self.update_calculated_field(self.truc_in_thanh_tien, thanh_tien)
++            self.update_calculated_field(self.truc_in_thanh_tien_ban, thanh_tien_ban)
++            self.update_calculated_field(self.truc_in_cong_no_khach, cong_no_khach)
++            self.update_calculated_field(self.truc_in_tien_hoa_hong, tien_hoa_hong)
++            self.update_calculated_field(self.truc_in_loi_nhuan, loi_nhuan)
++            self.update_calculated_field(self.truc_in_loi_nhuan_rong, loi_nhuan_rong)
+ 
+             self.update_status("T├¡nh to├ín Trß╗Ñc In th├ánh c├┤ng")
+         except Exception as e:

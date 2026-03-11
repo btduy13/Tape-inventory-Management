@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_dynamic_libs
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('assets', 'assets'), ('theme', 'theme')]
+datas = [('assets', 'assets'), ('theme', 'theme'), ('D:\\Bang keo\\venv_build\\lib\\site-packages\\psycopg2_binary.libs', 'psycopg2_binary.libs')]
 binaries = []
 hiddenimports = ['babel.numbers', 'sqlalchemy.sql.default_comparator', 'sqlalchemy.ext.baked', 'sqlalchemy.ext.declarative', 'PIL._tkinter_finder', 'ttkthemes', 'requests', 'psycopg2', 'psycopg2._psycopg', 'psycopg2.extensions', 'psycopg2.extras', 'psycopg2.pool', 'psycopg2.sql', 'psycopg2.tz', 'psycopg2._json', 'psycopg2._range', 'psycopg2._ipaddress', 'psycopg2.errorcodes', 'psycopg2.errors']
 binaries += collect_dynamic_libs('psycopg2')
@@ -21,6 +21,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 

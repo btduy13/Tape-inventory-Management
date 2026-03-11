@@ -237,7 +237,7 @@ class BangKeoTab(TabBase):
             self.update_readonly_field(self.loi_nhuan, loi_nhuan)
             self.update_readonly_field(self.loi_nhuan_rong, loi_nhuan_rong)
 
-            self.update_status("Tính toán Băng Keo thành công")
+            # self.update_status("Tính toán Băng Keo thành công")
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi tính toán Băng Keo: {str(e)}")
             self.update_status("Lỗi khi tính toán Băng Keo")

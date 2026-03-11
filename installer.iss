@@ -1,6 +1,6 @@
 #define MyAppName "Tape Inventory Management"
-#define MyAppVersion "1.2.0"
-#define MyAppPublisher "Your Company"
+#define MyAppVersion "1.2.2"
+#define MyAppPublisher "Vinh Thinh"
 #define MyAppExeName "TapeInventoryManagement.exe"
 
 [Setup]
