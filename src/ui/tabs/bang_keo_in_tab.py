@@ -723,6 +723,9 @@ Quế
                 self.don_gia_ban.delete(0, tk.END)
                 self.don_gia_ban.insert(0, self.format_currency(last_order.don_gia_ban or 0))
                 
+                self.tien_coc.delete(0, tk.END)
+                self.tien_coc.insert(0, self.format_currency(last_order.tien_coc or 0))
+                
                 self.tien_ship.delete(0, tk.END)
                 self.tien_ship.insert(0, self.format_currency(last_order.tien_ship or 0))
                 
@@ -734,8 +737,7 @@ Quế
                 
                 # Trigger calculation to update calculated fields
                 self.tinh_toan()
-                self.update_status(f"Đã tự động điền thông tin từ đơn hàng cũ cho '{ten_hang}'")
-                
+              
         except Exception as e:
             print(f"Error auto-filling data: {e}")
             self.update_status("Lỗi khi tự động điền thông tin")

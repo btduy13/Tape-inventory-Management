@@ -9,14 +9,16 @@ class AutocompleteEntry(ttk.Entry):
         self.lb_parent = None
         self.lb = None
         self.var = tk.StringVar()
+        self._last_callback_value = ""
         self.config(textvariable=self.var)
         
         self.var.trace_add('write', self.on_write)
         self.bind('<Down>', self.on_down_arrow)
         self.bind('<Up>', self.on_up_arrow)
         self.bind('<Return>', self.on_selection)
+        self.bind('<Tab>', self.on_selection)
         self.bind('<Escape>', self.hide_lb)
-        self.bind('<FocusOut>', lambda e: self.after(200, self.hide_lb))
+        self.bind('<FocusOut>', self.on_focus_out)
 
     def set_suggestions(self, suggestions):
         self.suggestions = suggestions
@@ -62,24 +64,34 @@ class AutocompleteEntry(ttk.Entry):
         if self.lb_parent:
             self.lb_parent.withdraw()
 
+    def on_focus_out(self, event=None):
+        self.after(200, self.hide_lb)
+        val = self.var.get()
+        if self.callback and val != getattr(self, '_last_callback_value', ""):
+            self.callback(val)
+            self._last_callback_value = val
+
     def on_selection(self, event=None):
         selection = None
         if event and hasattr(event, 'y'): # Mouse click
             index = self.lb.nearest(event.y)
             selection = self.lb.get(index)
-        elif self.lb and self.lb.curselection(): # Key press or default selection
+        elif self.lb and hasattr(self, 'lb_parent') and self.lb_parent and self.lb_parent.state() == 'normal' and self.lb.curselection(): # Key press or default selection
             selection = self.lb.get(self.lb.curselection())
         
         if selection:
             self.var.set(selection)
             self.icursor(tk.END)
             self.hide_lb()
-            if self.callback:
+            if self.callback and selection != getattr(self, '_last_callback_value', ""):
                 self.callback(selection)
-        elif event and event.keysym == 'Return':
+                self._last_callback_value = selection
+        elif event and event.keysym in ('Return', 'Tab'):
             self.hide_lb()
-            if self.callback:
-                self.callback(self.var.get())
+            val = self.var.get()
+            if self.callback and val != getattr(self, '_last_callback_value', ""):
+                self.callback(val)
+                self._last_callback_value = val
 
     def on_down_arrow(self, event):
         if self.lb_parent and self.lb_parent.state() == 'normal':
