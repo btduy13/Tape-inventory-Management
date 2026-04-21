@@ -212,7 +212,7 @@ class BangKeoInTab(TabBase):
             ("Tính toán", self.tinh_toan),
             ("Lưu", self.luu_don_hang),
             ("Xuất Excel", self.export_to_excel),
-            ("Xuất Email", self.export_email),
+            ("Gửi Email", self.export_email),
             ("Xóa", self.xoa_form)
         ]
 

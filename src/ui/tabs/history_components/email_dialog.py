@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox, filedialog
 from typing import List, Tuple
 import os
 from datetime import datetime
-from src.database.database import OrderAttachment, EmailHistory
+from src.database.database import OrderAttachment, EmailHistory, BangKeoInOrder, TrucInOrder, BangKeoOrder
 from src.services.email_service import send_email
 
 
@@ -25,11 +25,18 @@ class EmailDialog(tk.Toplevel):
         self.attach_choices: List[Tuple[int, str, str, int]] = []  # (id, file_name, content_type, size)
         self.extra_files: List[Tuple[str, bytes, str]] = []  # local-picked attachments
         self.email_suggestions: List[str] = []  # List of email addresses from history
+        
+        # New axis checkbox state and base subject
+        self.base_subject = subject
+        self.is_axis_new_var = tk.BooleanVar(value=True)
 
         self._build_ui(subject, body)
         self._ensure_email_history_table()
         self._load_db_attachments()
         self._load_email_suggestions()
+        
+        # Initial subject update
+        self._update_subject()
 
     def _build_ui(self, subject: str, body: str):
         # Main container with better padding - use grid for proper docking
@@ -57,6 +64,12 @@ class EmailDialog(tk.Toplevel):
         self.subject_entry.insert(0, subject)
         self.subject_entry.grid(row=1, column=1, sticky='ew', padx=(0, 0), pady=8)
         self.subject_entry.bind('<FocusIn>', lambda e: self.subject_entry.select_range(0, tk.END))
+
+        # New Axis checkbox
+        self.axis_checkbox = ttk.Checkbutton(form_frame, text="Trục mới", 
+                                            variable=self.is_axis_new_var,
+                                            command=self._update_subject)
+        self.axis_checkbox.grid(row=2, column=1, sticky='w', pady=(0, 8))
 
         # Body section with formatting toolbar - expands to fill space
         body_frame = ttk.LabelFrame(container, text="Nội dung", padding=10)
@@ -604,6 +617,25 @@ class EmailDialog(tk.Toplevel):
 </html>"""
         return html
     
+    def _update_subject(self):
+        """Update subject entry based on checkbox state"""
+        prefix = "TRỤC MỚI - " if self.is_axis_new_var.get() else "TRỤC CŨ - "
+        
+        # Current text in entry
+        current_text = self.subject_entry.get()
+        
+        # If it already starts with one of the prefixes, replace it
+        if current_text.startswith("TRỤC MỚI - "):
+            new_subject = current_text.replace("TRỤC MỚI - ", prefix, 1)
+        elif current_text.startswith("TRỤC CŨ - "):
+            new_subject = current_text.replace("TRỤC CŨ - ", prefix, 1)
+        else:
+            # Otherwise, prepend it to what's there
+            new_subject = prefix + self.base_subject
+            
+        self.subject_entry.delete(0, tk.END)
+        self.subject_entry.insert(0, new_subject)
+
     def _send(self):
         to_addr = self.to_entry.get().strip()
         subject = self.subject_entry.get().strip()
@@ -625,6 +657,25 @@ class EmailDialog(tk.Toplevel):
             attachments = self._collect_attachments()
             send_email(to_addr, subject, body, attachments, html_body=html_body if html_body else None)
             
+            # Update order status in database if valid order_id
+            if self.order_id and self.order_id != 'temp':
+                try:
+                    order = None
+                    if self.order_type == 'bang_keo_in':
+                        order = self.session.query(BangKeoInOrder).filter_by(id=self.order_id).first()
+                    elif self.order_type == 'truc_in':
+                        order = self.session.query(TrucInOrder).filter_by(id=self.order_id).first()
+                    elif self.order_type == 'bang_keo':
+                        order = self.session.query(BangKeoOrder).filter_by(id=self.order_id).first()
+                    
+                    if order:
+                        order.da_gui_email = True
+                        self.session.commit()
+                        logging.info(f"Updated da_gui_email status for {self.order_type} order {self.order_id}")
+                except Exception as db_err:
+                    logging.error(f"Error updating da_gui_email status: {db_err}")
+                    self.session.rollback()
+
             # Save email to history after successful send
             self._save_email_to_history(to_addr)
             

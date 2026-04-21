@@ -81,6 +81,7 @@ class BangKeoInOrder(Base):
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
     da_tat_toan = Column(Boolean, default=False)
+    da_gui_email = Column(Boolean, default=False)
 
 class TrucInOrder(Base):
     __tablename__ = 'truc_in_orders'
@@ -115,6 +116,7 @@ class TrucInOrder(Base):
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
     da_tat_toan = Column(Boolean, default=False)
+    da_gui_email = Column(Boolean, default=False)
 
 class BangKeoOrder(Base):
     __tablename__ = 'bang_keo_orders'
@@ -148,6 +150,7 @@ class BangKeoOrder(Base):
     # Trạng thái đơn hàng
     da_giao = Column(Boolean, default=False)
     da_tat_toan = Column(Boolean, default=False)
+    da_gui_email = Column(Boolean, default=False)
 
 class OrderAttachment(Base):
     __tablename__ = 'order_attachments'

@@ -197,10 +197,10 @@ class HistoryTab(TabBase):
         export_excel_btn.grid(row=0, column=0, padx=5, sticky='ew')
         self.utils.create_tooltip(export_excel_btn, "Xuất dữ liệu đã chọn ra file Excel (Ctrl+E)")
         
-        export_email_btn = ttk.Button(button_frame, text="Xuất Email", 
+        export_email_btn = ttk.Button(button_frame, text="Gửi Email", 
                                     command=self.export_selected_to_email, width=15)
         export_email_btn.grid(row=0, column=1, padx=5, sticky='ew')
-        self.utils.create_tooltip(export_email_btn, "Xuất dữ liệu đã chọn thành email (Ctrl+M)")
+        self.utils.create_tooltip(export_email_btn, "Gửi dữ liệu đã chọn thành email (Ctrl+M)")
         
         delete_btn = ttk.Button(button_frame, text="Xóa", command=self.delete_selected, width=15)
         delete_btn.grid(row=0, column=2, padx=5, sticky='ew')

@@ -166,7 +166,7 @@ class BangKeoTab(TabBase):
         btn_tinh_toan = ttk.Button(button_frame, text="Tính toán", command=self.tinh_toan_bang_keo, style='CustomButton.TButton', width=12)
         btn_luu = ttk.Button(button_frame, text="Lưu", command=self.luu_bang_keo, style='CustomButton.TButton', width=12)
         btn_xuat_excel = ttk.Button(button_frame, text="Xuất Excel", command=self.export_to_excel, style='CustomButton.TButton', width=12)
-        btn_xuat_email = ttk.Button(button_frame, text="Xuất Email", command=self.export_bang_keo_email, style='CustomButton.TButton', width=12)
+        btn_xuat_email = ttk.Button(button_frame, text="Gửi Email", command=self.export_bang_keo_email, style='CustomButton.TButton', width=12)
         btn_xoa = ttk.Button(button_frame, text="Xóa", command=self.xoa_form_bang_keo, style='CustomButton.TButton', width=12)
 
         # Pack buttons to the right with consistent padding

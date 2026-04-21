@@ -173,6 +173,7 @@ class ThongKeTab(TabBase):
         # Refresh Button
         ttk.Button(control_frame, text="Làm mới", command=lambda ot=order_type: self.load_data(order_type=ot)).pack(side=tk.LEFT, padx=5)
         
+        
         # Create frame for treeview and scrollbar
         tree_frame = ttk.Frame(list_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -184,7 +185,7 @@ class ThongKeTab(TabBase):
         # Treeview to display order data
         tree = ttk.Treeview(tree_frame, columns=(
             "id", "thoi_gian", "ten_hang", "ten_khach_hang", "ngay_du_kien", 
-            "cong_no_khach", "da_giao", "da_tat_toan"
+            "cong_no_khach", "da_giao", "da_tat_toan", "da_gui_email"
         ), show="headings")
         
         # Define columns with sort commands
@@ -196,7 +197,8 @@ class ThongKeTab(TabBase):
             "ngay_du_kien": ("Ngày giao", 150),
             "cong_no_khach": ("Công nợ khách", 150),
             "da_giao": ("Đã giao", 100),
-            "da_tat_toan": ("Đã tất toán", 100)
+            "da_tat_toan": ("Đã tất toán", 100),
+            "da_gui_email": ("Đã gửi email", 100)
         }
         
         # Calculate total fixed width
@@ -223,6 +225,9 @@ class ThongKeTab(TabBase):
         tree.grid(row=0, column=0, sticky='nsew')
         y_scrollbar.grid(row=0, column=1, sticky='ns')
         x_scrollbar.grid(row=1, column=0, sticky='ew')
+        
+        # Gửi Email Button
+        ttk.Button(control_frame, text="Gửi Email", command=lambda ot=order_type, t=tree: self.send_email_selected(ot, t)).pack(side=tk.LEFT, padx=5)
         
         # Bind double-click event
         tree.bind('<Double-1>', lambda e, ot=order_type, t=tree: self.on_double_click(e, ot, t))
@@ -338,7 +343,8 @@ class ThongKeTab(TabBase):
                 order.ngay_du_kien.strftime("%d/%m/%Y") if order.ngay_du_kien else "",  # Ngày giao
                 cong_no,  # Công nợ khách
                 "✓" if order.da_giao else "",  # Đã giao
-                "✓" if order.da_tat_toan else ""  # Đã tất toán
+                "✓" if order.da_tat_toan else "",  # Đã tất toán
+                "✓" if order.da_gui_email else ""  # Đã gửi email
             ), tags=(tag, str(order.id)))
         
         # After inserting data, apply sort if a column is selected
@@ -431,62 +437,71 @@ class ThongKeTab(TabBase):
             # Set window icon
             set_window_icon(update_window)
             
-            # Center window
-            window_width = 400
-            window_height = 300
+            # Center window with better size for content
+            window_width = 450
+            window_height = 420
             center_window(update_window, window_width, window_height)
             
             update_window.transient(self.root)
             update_window.grab_set()
-            
-            # Create main frame with padding
-            main_frame = ttk.Frame(update_window, padding="20")
-            main_frame.grid(row=0, column=0, sticky="nsew")
-            
-            # Configure grid for proper docking
+            update_window.configure(bg='#ffffff')
+
+            # --- Layout Configuration ---
             update_window.grid_columnconfigure(0, weight=1)
-            update_window.grid_rowconfigure(0, weight=1)
-            main_frame.grid_columnconfigure(0, weight=1)
-            main_frame.rowconfigure(0, weight=1)  # Top frame can expand if needed
-            main_frame.rowconfigure(1, weight=0)  # Buttons fixed at bottom
+            update_window.grid_rowconfigure(1, weight=1)
+
+            # --- Header Section ---
+            header_frame = tk.Frame(update_window, bg='#14b8a6', height=60)
+            header_frame.grid(row=0, column=0, sticky="ew")
+            header_frame.grid_propagate(False)
             
-            # Create top frame for order info
-            top_frame = ttk.Frame(main_frame)
-            top_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 20))
-            
-            # Order info
-            ttk.Label(top_frame, text=f"ID đơn hàng: {order.id}",
-                     font=('Segoe UI', 11)).pack(anchor=tk.W)
-            ttk.Label(top_frame, text=f"Tên hàng: {order.ten_hang}",
-                     font=('Segoe UI', 11)).pack(anchor=tk.W, pady=5)
-            ttk.Label(top_frame, text=f"Ngày tạo: {order.thoi_gian.strftime('%d/%m/%Y') if order.thoi_gian else 'N/A'}",
-                     font=('Segoe UI', 11)).pack(anchor=tk.W)
-            
-            # Status checkboxes
+            tk.Label(header_frame, 
+                     text="Cập nhật trạng thái đơn hàng", 
+                     bg='#14b8a6', 
+                     fg='white', 
+                     font=('Segoe UI Semibold', 14)).pack(pady=15)
+
+            # --- Main Content Section ---
+            content_frame = tk.Frame(update_window, bg='#ffffff', padx=30, pady=20)
+            content_frame.grid(row=1, column=0, sticky="nsew")
+            content_frame.grid_columnconfigure(0, weight=1)
+
+            # Order Details Group
+            details_frame = tk.LabelFrame(content_frame, text=" Thông tin chi tiết ", 
+                                         font=('Segoe UI Bold', 10), 
+                                         bg='#ffffff', fg='#64748b',
+                                         padx=15, pady=10)
+            details_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
+            details_frame.grid_columnconfigure(1, weight=1)
+
+            def add_detail_row(parent, row, label, value):
+                tk.Label(parent, text=label, bg='#ffffff', fg='#64748b', font=('Segoe UI', 10)).grid(row=row, column=0, sticky='w', pady=2)
+                tk.Label(parent, text=value, bg='#ffffff', fg='#1e293b', font=('Segoe UI Semibold', 10)).grid(row=row, column=1, sticky='w', padx=(10, 0), pady=2)
+
+            add_detail_row(details_frame, 0, "ID đơn hàng:", order.id)
+            add_detail_row(details_frame, 1, "Tên hàng:", order.ten_hang)
+            add_detail_row(details_frame, 2, "Ngày tạo:", order.thoi_gian.strftime('%d/%m/%Y') if order.thoi_gian else 'N/A')
+
+            # Status Group
+            status_frame = tk.LabelFrame(content_frame, text=" Trạng thái đơn hàng ", 
+                                        font=('Segoe UI Bold', 10), 
+                                        bg='#ffffff', fg='#64748b',
+                                        padx=15, pady=10)
+            status_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
+
             da_giao_var = tk.BooleanVar(value=order.da_giao)
             da_tat_toan_var = tk.BooleanVar(value=order.da_tat_toan)
+
+            check_style = {'bg': '#ffffff', 'activebackground': '#ffffff', 'font': ('Segoe UI', 11), 'highlightthickness': 0, 'bd': 0}
             
-            # Use regular tk Checkbuttons instead of ttk to remove highlighting
-            tk.Checkbutton(top_frame, 
-                          text="Đã giao hàng", 
-                          variable=da_giao_var,
-                          font=('Segoe UI', 11),
-                          highlightthickness=0,
-                          bd=0).pack(anchor=tk.W, pady=10)
-            
-            tk.Checkbutton(top_frame, 
-                          text="Đã tất toán", 
-                          variable=da_tat_toan_var,
-                          font=('Segoe UI', 11),
-                          highlightthickness=0,
-                          bd=0).pack(anchor=tk.W, pady=10)
-            
-            # Frame cho buttons - docked at bottom
-            button_frame = ttk.Frame(main_frame)
-            button_frame.grid(row=1, column=0, sticky='ew')
-            button_frame.columnconfigure(0, weight=1)
-            button_frame.columnconfigure(1, weight=1)
-            
+            tk.Checkbutton(status_frame, text="Đã giao hàng", variable=da_giao_var, **check_style).pack(anchor=tk.W, pady=5)
+            tk.Checkbutton(status_frame, text="Đã tất toán", variable=da_tat_toan_var, **check_style).pack(anchor=tk.W, pady=5)
+
+            # --- Footer / Buttons Section ---
+            footer_frame = tk.Frame(update_window, bg='#f8fafc', pady=15, padx=30)
+            footer_frame.grid(row=2, column=0, sticky="ew")
+            footer_frame.columnconfigure((0, 1), weight=1)
+
             def save_changes():
                 try:
                     order.da_giao = da_giao_var.get()
@@ -500,17 +515,31 @@ class ThongKeTab(TabBase):
                 except Exception as e:
                     self.parent_form.db_session.rollback()
                     messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi cập nhật: {str(e)}")
+
+            # Better style buttons - using tk.Button for reliability with custom colors
+            save_btn = tk.Button(footer_frame, 
+                                text="Lưu thay đổi", 
+                                command=save_changes,
+                                bg='#14b8a6', fg='white',
+                                font=('Segoe UI Bold', 10),
+                                relief='flat',
+                                padx=20, pady=8,
+                                activebackground='#0d9488',
+                                activeforeground='white',
+                                cursor='hand2')
+            save_btn.grid(row=0, column=0, padx=(0, 5), sticky='ew')
             
-            # Buttons với style mới - properly docked
-            ttk.Button(button_frame, 
-                      text="Lưu", 
-                      command=save_changes,
-                      style="Action.TButton").grid(row=0, column=0, padx=5, sticky='ew')
-            
-            ttk.Button(button_frame,
-                      text="Hủy",
-                      command=update_window.destroy,
-                      style="Action.TButton").grid(row=0, column=1, padx=5, sticky='ew')
+            cancel_btn = tk.Button(footer_frame,
+                                  text="Đóng",
+                                  command=update_window.destroy,
+                                  bg='#e2e8f0', fg='#475569',
+                                  font=('Segoe UI Bold', 10),
+                                  relief='flat',
+                                  padx=20, pady=8,
+                                  activebackground='#cbd5e1',
+                                  activeforeground='#475569',
+                                  cursor='hand2')
+            cancel_btn.grid(row=0, column=1, padx=(5, 0), sticky='ew')
             
         except Exception as e:
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {str(e)}")
@@ -526,6 +555,7 @@ class ThongKeTab(TabBase):
                 return
 
             menu = tk.Menu(self.root, tearoff=0)
+            menu.add_command(label="Gửi Email...", command=lambda: self.send_email_selected(order_type, tree))
             menu.add_command(label="Cập nhật trạng thái...", command=lambda: self.open_bulk_status_dialog(order_type, tree))
             menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -536,38 +566,86 @@ class ThongKeTab(TabBase):
 
     def open_bulk_status_dialog(self, order_type, tree):
         dlg = tk.Toplevel(self.root)
-        dlg.title("Cập nhật trạng thái hàng loạt")
-        center_window(dlg, 300, 150)
+        dlg.title("Cập nhật hàng loạt")
+        
+        # Set window icon
+        set_window_icon(dlg)
+        
+        # Center window
+        window_width = 400
+        window_height = 320
+        center_window(dlg, window_width, window_height)
+        
         dlg.transient(self.root)
         dlg.grab_set()
+        dlg.configure(bg='#ffffff')
+
+        # --- Layout ---
+        dlg.grid_columnconfigure(0, weight=1)
+        dlg.grid_rowconfigure(1, weight=1)
+
+        # --- Header ---
+        header_frame = tk.Frame(dlg, bg='#64748b', height=50) # Grayish header for bulk
+        header_frame.grid(row=0, column=0, sticky="ew")
+        header_frame.grid_propagate(False)
         
-        # Configure window to be resizable
-        dlg.columnconfigure(0, weight=1)
-        dlg.rowconfigure(0, weight=1)
+        tk.Label(header_frame, 
+                 text="Cập nhật hàng loạt", 
+                 bg='#64748b', 
+                 fg='white', 
+                 font=('Segoe UI Semibold', 12)).pack(pady=12)
 
-        frame = ttk.Frame(dlg, padding=12)
-        frame.grid(row=0, column=0, sticky='nsew')
-        frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=1)
-        frame.rowconfigure(0, weight=0)
-        frame.rowconfigure(1, weight=0)
-        frame.rowconfigure(2, weight=0)
+        # --- Content ---
+        content_frame = tk.Frame(dlg, bg='#ffffff', padx=25, pady=20)
+        content_frame.grid(row=1, column=0, sticky="nsew")
+        content_frame.grid_columnconfigure(0, weight=1)
 
-        ttk.Label(frame, text=f"Áp dụng cho {len(tree.selection())} đơn hàng").grid(row=0, column=0, columnspan=2, sticky='w', pady=(0,6))
+        info_text = f"Đang chọn {len(tree.selection())} đơn hàng"
+        tk.Label(content_frame, text=info_text, bg='#ffffff', fg='#1e293b', font=('Segoe UI Bold', 11)).pack(anchor=tk.W, pady=(0, 15))
 
-        # Chỉ còn 2 tickbox chính
+        # Status Group
+        status_frame = tk.LabelFrame(content_frame, text=" Chọn trạng thái áp dụng ", 
+                                    font=('Segoe UI Bold', 10), 
+                                    bg='#ffffff', fg='#64748b',
+                                    padx=15, pady=10)
+        status_frame.pack(fill=tk.X, pady=(0, 10))
+
         da_giao_val = tk.BooleanVar(value=True)
         da_tt_val = tk.BooleanVar(value=True)
-        ttk.Checkbutton(frame, text="Đã giao", variable=da_giao_val).grid(row=1, column=0, sticky='w', padx=5)
-        ttk.Checkbutton(frame, text="Đã tất toán", variable=da_tt_val).grid(row=1, column=1, sticky='w', padx=5)
 
-        # Buttons docked at bottom
-        btns = ttk.Frame(frame)
-        btns.grid(row=2, column=0, columnspan=2, sticky='ew', pady=(10, 0))
-        btns.columnconfigure(0, weight=1)
-        btns.columnconfigure(1, weight=1)
-        ttk.Button(btns, text="Áp dụng", command=lambda: self.apply_bulk_status(order_type, tree, da_giao_val.get(), da_tt_val.get(), dlg)).grid(row=0, column=0, sticky='ew', padx=5)
-        ttk.Button(btns, text="Hủy", command=dlg.destroy).grid(row=0, column=1, sticky='ew', padx=5)
+        check_style = {'bg': '#ffffff', 'activebackground': '#ffffff', 'font': ('Segoe UI', 11), 'highlightthickness': 0, 'bd': 0}
+        tk.Checkbutton(status_frame, text="Đã giao hàng", variable=da_giao_val, **check_style).pack(anchor=tk.W, pady=5)
+        tk.Checkbutton(status_frame, text="Đã tất toán", variable=da_tt_val, **check_style).pack(anchor=tk.W, pady=5)
+
+        # --- Footer ---
+        footer_frame = tk.Frame(dlg, bg='#f8fafc', pady=15, padx=25)
+        footer_frame.grid(row=2, column=0, sticky="ew")
+        footer_frame.columnconfigure((0, 1), weight=1)
+
+        # Apply Button Logic - explicitly styled tk.Buttons
+        apply_btn = tk.Button(footer_frame, 
+                             text="Áp dụng ngay", 
+                             command=lambda: self.apply_bulk_status(order_type, tree, da_giao_val.get(), da_tt_val.get(), dlg),
+                             bg='#14b8a6', fg='white',
+                             font=('Segoe UI Bold', 10),
+                             relief='flat',
+                             padx=20, pady=8,
+                             activebackground='#0d9488',
+                             activeforeground='white',
+                             cursor='hand2')
+        apply_btn.grid(row=0, column=0, padx=(0, 5), sticky='ew')
+        
+        cancel_btn = tk.Button(footer_frame, 
+                              text="Hủy bỏ", 
+                              command=dlg.destroy,
+                              bg='#e2e8f0', fg='#475569',
+                              font=('Segoe UI Bold', 10),
+                              relief='flat',
+                              padx=20, pady=8,
+                              activebackground='#cbd5e1',
+                              activeforeground='#475569',
+                              cursor='hand2')
+        cancel_btn.grid(row=0, column=1, padx=(5, 0), sticky='ew')
 
     def apply_bulk_status(self, order_type, tree, giao_value, tt_value, dlg):
         try:
@@ -604,6 +682,29 @@ class ThongKeTab(TabBase):
         except Exception as e:
             self.parent_form.db_session.rollback()
             messagebox.showerror("Lỗi", f"Không thể cập nhật hàng loạt: {e}")
+
+    def send_email_selected(self, order_type_display, tree):
+        """Send email for the selected order using ExportImportManager logic"""
+        try:
+            # Map display name to internal name
+            order_type_map = {
+                "Băng Keo In": "bang_keo_in",
+                "Trục In": "truc_in",
+                "Băng Keo": "bang_keo"
+            }
+            order_type = order_type_map.get(order_type_display)
+            if not order_type:
+                return
+
+            from src.ui.tabs.history_components.export_import import ExportImportManager
+            # Mock or use actual ExportImportManager
+            export_manager = ExportImportManager(self.parent_form)
+            export_manager.export_selected_to_email(tree, order_type)
+            
+            # Refresh data to show the checkmark if it was updated
+            self.load_data(order_type_display)
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể gửi email: {e}")
 
     def create_bang_keo_tree(self):
         columns = ('id', 'thoi_gian', 'ten_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
