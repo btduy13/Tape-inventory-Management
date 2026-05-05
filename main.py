@@ -95,7 +95,7 @@ class Application:
             # Window configuration
             set_window_icon(self.root)
             center_window(self.root, 1400, 900)  # Increased window size
-            # self.root.minsize(1100, 1200)  # Increased minimum size
+            self.root.minsize(1000, 700)  # Set reasonable minimum size
             
             # Set window background
             self.root.configure(background=COLORS['background'])

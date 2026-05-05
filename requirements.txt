@@ -32,7 +32,7 @@ schedule==1.2.2
 seaborn==0.13.2
 six==1.17.0
 SQLAlchemy==2.0.48
--e git+https://github.com/btduy13/Tape-inventory-Management.git@eab354dc5add505048d22eccb2cb57ff15a5448d#egg=tape_inventory_management
+-e git+https://github.com/btduy13/Tape-inventory-Management.git@1fb0b8a640fd394e0ca740c074ede7ee0a597807#egg=tape_inventory_management
 tkcalendar==1.6.1
 tomli==2.4.0
 ttkthemes==3.3.0

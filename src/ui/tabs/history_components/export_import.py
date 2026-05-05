@@ -134,56 +134,72 @@ class ExportImportManager:
                 return
 
             values = tree.item(selected_items[0])['values']
+            order_id = values[0]
+
+            # Fetch order from database to ensure we have all fields
+            order = None
+            if order_type == 'bang_keo_in':
+                from src.database.database import BangKeoInOrder
+                order = self.parent.db_session.query(BangKeoInOrder).filter_by(id=order_id).first()
+            elif order_type == 'truc_in':
+                from src.database.database import TrucInOrder
+                order = self.parent.db_session.query(TrucInOrder).filter_by(id=order_id).first()
+            elif order_type == 'bang_keo':
+                from src.database.database import BangKeoOrder
+                order = self.parent.db_session.query(BangKeoOrder).filter_by(id=order_id).first()
+                
+            if not order:
+                messagebox.showerror("Lỗi", "Không tìm thấy thông tin đơn hàng trong cơ sở dữ liệu.")
+                return
 
             # Build subject and body templates
-            subject = "Thông tin đơn hàng"
             if order_type == 'bang_keo_in':
-                quy_cach_mm = self.format_number(values[5]) if values[5] else "0"
-                quy_cach_m = self.format_number(values[6]) if values[6] else "0"
-                quy_cach_mic = self.format_number(values[7]) if values[7] else "0"
-                so_luong = self.format_number(values[9]) if values[9] else "0"
-                subject = f"Đơn hàng Băng Keo In: {values[2]}"
+                quy_cach_mm = self.format_number(order.quy_cach_mm) if order.quy_cach_mm else "0"
+                quy_cach_m = self.format_number(order.quy_cach_m) if order.quy_cach_m else "0"
+                quy_cach_mic = self.format_number(order.quy_cach_mic) if order.quy_cach_mic else "0"
+                so_luong = self.format_number(order.so_luong) if order.so_luong else "0"
+                subject = f"Băng keo in {order.ten_hang}"
                 email_content = (
                     f"Chào bác,\n\n"
-                    f"Bác làm giúp con đơn hàng in logo \"{values[2]}\" này nhé\n"
+                    f"Bác làm giúp con đơn hàng in logo \"{order.ten_hang}\" này nhé\n"
                     f"Thông tin đơn hàng:\n"
                     f"________________________________\n"
-                    f"Màu sắc: {values[13]}\n"
-                    f"Màu keo: {values[11]}\n"
+                    f"Màu sắc: {order.mau_sac}\n"
+                    f"Màu keo: {order.mau_keo}\n"
                     f"Số lượng: {so_luong} cuộn\n"
                     f"Quy cách: {quy_cach_mm}mm * {quy_cach_m}m * {quy_cach_mic}mic\n"
-                    f"Lõi giấy: {values[27]}\n"
-                    f"Thùng bao: {values[28]}\n"
+                    f"Lõi giấy: {order.loi_giay}\n"
+                    f"Thùng bao: {order.thung_bao}\n"
                     f"________________________________\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
             elif order_type == 'truc_in':
-                so_luong = self.format_number(values[6]) if values[6] else "0"
-                subject = f"Đơn hàng Trục In: {values[2]}"
+                so_luong = self.format_number(order.so_luong) if order.so_luong else "0"
+                subject = f"Trục in {order.ten_hang}"
                 email_content = (
                     f"Chào bác,\n\n"
-                    f"Bác làm giúp con đơn hàng Trục In \"{values[2]}\" này nhé\n"
+                    f"Bác làm giúp con đơn hàng Trục In \"{order.ten_hang}\" này nhé\n"
                     f"Thông tin đơn hàng:\n"
                     f"________________________________\n"
-                    f"Màu sắc: {values[7]}\n"
-                    f"Màu keo: {values[8]}\n"
+                    f"Màu sắc: {order.mau_sac}\n"
+                    f"Màu keo: {order.mau_keo}\n"
                     f"Số lượng: {so_luong} cuộn\n"
-                    f"Quy cách: {values[5]}\n"
+                    f"Quy cách: {order.quy_cach}\n"
                     f"________________________________\n\n"
                     f"Cám ơn bác\n"
                     f"Quế"
                 )
             else:
-                so_luong = self.format_number(values[6]) if values[6] else "0"
-                quy_cach = self.format_number(values[5]) if values[5] else ""
-                subject = f"Đơn hàng Băng Keo: {values[2]}"
+                so_luong = self.format_number(order.so_luong) if order.so_luong else "0"
+                quy_cach = self.format_number(order.quy_cach) if order.quy_cach else ""
+                subject = f"Băng keo {order.ten_hang}"
                 email_content = (
                     f"Chào bác,\n\n"
-                    f"Bác làm giúp con đơn hàng Băng Keo \"{values[2]}\" này nhé\n"
+                    f"Bác làm giúp con đơn hàng Băng Keo \"{order.ten_hang}\" này nhé\n"
                     f"Thông tin đơn hàng:\n"
                     f"________________________________\n"
-                    f"Màu sắc: {values[7]}\n"
+                    f"Màu sắc: {order.mau_sac}\n"
                     f"Số lượng: {so_luong} KG\n"
                     f"Quy cách: {quy_cach} KG\n\n"
                     f"________________________________\n\n"
@@ -191,8 +207,6 @@ class ExportImportManager:
                     f"Quế"
                 )
 
-            # Determine order_id from first column
-            order_id = values[0]
             dlg = EmailDialog(self.parent.root, self.parent.db_session, order_type, order_id, subject, email_content)
             self.parent.root.wait_window(dlg)
 

@@ -90,8 +90,22 @@ class DonHangForm:
             frame = tk.Frame(self.content_area, background=self.COLORS['background'])
             frame.pack(fill=tk.BOTH, expand=True)
             frame.pack_forget()  # Hide all initially
-            cls(frame, self)
+            tab_instance = cls(frame, self)
             self.frames[name] = frame  # Store the frame itself for show/hide
+            
+            # Store tab instances for cross-communication
+            if name == "Dashboard":
+                self.dashboard_tab = tab_instance
+            elif name == "Thống kê":
+                self.thong_ke_tab = tab_instance
+            elif name == "Băng Keo In":
+                self.bang_keo_in_tab = tab_instance
+            elif name == "Băng Keo":
+                self.bang_keo_tab = tab_instance
+            elif name == "Trục In":
+                self.truc_in_tab = tab_instance
+            elif name == "Lịch sử":
+                self.history_tab = tab_instance
 
     def create_sidebar_menu(self):
         """Create the sidebar navigation items"""

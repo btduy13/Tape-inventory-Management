@@ -303,6 +303,8 @@ class BangKeoTab(TabBase):
                 self.parent_form.history_tab.refresh_data()
             if hasattr(self.parent_form, 'thong_ke_tab'):
                 self.parent_form.thong_ke_tab.load_data()
+            if hasattr(self.parent_form, 'dashboard_tab'):
+                self.parent_form.dashboard_tab.refresh_data()
                 
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể lưu đơn hàng: {str(e)}")
@@ -402,7 +404,7 @@ class BangKeoTab(TabBase):
             quy_cach = self._format_number(self.quy_cach.get())
             so_luong = self._format_number(self.so_luong.get())
             
-            subject = f"Đơn hàng Băng Keo: {ten_hang}" if ten_hang else "Đơn hàng Băng Keo"
+            subject = f"Băng keo {ten_hang}" if ten_hang else "Băng keo"
             content = f"""Chào bác,
 
 Bác làm giúp con đơn hàng băng keo bên dưới nhé:
