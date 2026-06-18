@@ -1,0 +1,53 @@
+{
+  "name": "tape-inventory-management",
+  "version": "1.2.0",
+  "description": "Phần mềm quản lý đơn hàng Băng Keo",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package-win": "electron-packager . tape-inventory-management --platform=win32 --arch=x64 --out=dist --overwrite --ignore=dist",
+    "build-win": "electron-builder build --win --x64"
+  },
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "pg": "^8.11.5",
+    "nodemailer": "^6.9.13",
+    "exceljs": "^4.4.0",
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0"
+  },
+  "build": {
+    "appId": "com.bangkeo.inventory",
+    "productName": "Quản lý Đơn hàng Băng Keo",
+    "directories": {
+      "output": "dist-installer"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quản lý Băng Keo",
+      "uninstallDisplayName": "Quản lý Băng Keo",
+      "runAfterFinish": true
+    },
+    "files": [
+      "index.html",
+      "js/**/*.js",
+      "styles.css",
+      "main.js",
+      "preload.js",
+      "icon.ico",
+      "package.json"
+    ]
+  }
+}
