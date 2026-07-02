@@ -15,12 +15,30 @@ const columnHeaders = {
   'loi_nhuan_rong': 'Lợi Nhuận Ròng', 'da_giao': 'Đã Giao', 'da_tat_toan': 'Đã Tất Toán', 'thanh_tien': 'Thành Tiền'
 };
 
+Object.assign(columnHeaders, {
+  loai_truc: 'Loại Trục',
+  ten_truc: 'Tên Trục',
+  truc_chu_vi: 'Chu Vi Trục',
+  truc_so_luong: 'SL Trục',
+  truc_gia_goc: 'Giá Gốc Trục',
+  truc_gia_ban: 'Giá Bán Trục',
+  truc_thanh_tien_goc: 'Tiền Gốc Trục',
+  truc_thanh_tien_ban: 'Tiền Bán Trục',
+  truc_ctv: 'CTV Trục',
+  truc_hoa_hong: 'HH Trục (%)',
+  truc_loi_nhuan: 'Lãi Trục',
+  truc_loi_nhuan_rong: 'Lãi Ròng Trục'
+});
+
 const historyColumnsMap = {
   'bang_keo_in': [
     'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 
     'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat', 
     'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 
-    'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'da_giao', 'da_tat_toan'
+    'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loai_truc', 'ten_truc', 'truc_chu_vi',
+    'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
+    'truc_ctv', 'truc_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'loi_nhuan', 'tien_ship',
+    'loi_nhuan_rong', 'da_giao', 'da_tat_toan'
   ],
   'truc_in': [
     'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 
@@ -41,7 +59,14 @@ async function loadHistoryData() {
     if (historyActiveTab === 'truc_in') tableName = 'truc_in_orders';
     if (historyActiveTab === 'bang_keo') tableName = 'bang_keo_orders';
 
-    const sql = `SELECT * FROM ${tableName} ORDER BY thoi_gian DESC`;
+    const sql = `
+      SELECT * FROM ${tableName}
+      WHERE (is_quote = FALSE OR is_quote IS NULL)
+      ORDER BY
+        split_part(id, '-', 3) DESC,
+        split_part(id, '-', 2) DESC,
+        split_part(id, '-', 4) DESC
+    `;
     const res = await window.electronAPI.dbQuery(sql);
     
     if (res.ok) {
@@ -109,7 +134,7 @@ function renderHistoryTable(rows) {
         td.innerHTML = val ? '<span class="badge badge-success">Rồi</span>' : '<span class="badge badge-gray">Chưa</span>';
       } else if (col === 'da_tat_toan') {
         td.innerHTML = val ? '<span class="badge badge-success">Xong</span>' : '<span class="badge badge-warning">Chưa</span>';
-      } else if (['phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'thanh_tien'].includes(col)) {
+      } else if (['phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_loi_nhuan', 'truc_loi_nhuan_rong'].includes(col)) {
         td.innerText = utils.formatCurrency(val) + "đ";
         td.style.textAlign = "right";
       } else {

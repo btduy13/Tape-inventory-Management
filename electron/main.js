@@ -66,12 +66,34 @@ function initDatabase() {
           writeLogToFile('info', 'Đã kiểm tra/khởi tạo bảng email_history thành công.');
           
           // Chạy migration thêm cột is_quote nếu chưa có
+          // Đặt lock_timeout để tránh treo ứng dụng nếu có giao dịch khác đang khóa bảng
+          await dbPool.query(`SET lock_timeout = 2000`);
           await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
           await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
           await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+          await dbPool.query(`
+            ALTER TABLE bang_keo_in_orders
+              ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
+              ADD COLUMN IF NOT EXISTS ten_truc TEXT,
+              ADD COLUMN IF NOT EXISTS truc_chu_vi NUMERIC,
+              ADD COLUMN IF NOT EXISTS truc_so_luong NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_gia_goc NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_gia_ban NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_thanh_tien_goc NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_thanh_tien_ban NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_ctv TEXT,
+              ADD COLUMN IF NOT EXISTS truc_hoa_hong NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_loi_nhuan NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_loi_nhuan_rong NUMERIC DEFAULT 0
+          `);
+          await dbPool.query(`SET lock_timeout = 0`); // Reset timeout về mặc định
           writeLogToFile('info', 'Đã kiểm tra/thêm cột is_quote vào các bảng order.');
         } catch (dbErr) {
-          writeLogToFile('error', 'Lỗi khởi tạo bảng email_history: ' + dbErr.message);
+          writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + dbErr.message);
+          // Đảm bảo reset lock_timeout nếu có lỗi xảy ra
+          try {
+            await dbPool.query(`SET lock_timeout = 0`);
+          } catch (e) {}
         }
       }
     });

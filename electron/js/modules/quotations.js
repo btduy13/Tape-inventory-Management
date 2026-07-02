@@ -136,7 +136,21 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
     }
 
     const typeLabel = type === 'bang_keo_in' ? 'Băng Keo In Logo' : (type === 'bang_keo' ? 'Băng Keo thường' : 'Trục In');
-    const totalWords = convertNumberToVietnameseWords(data.thanh_tien_ban || 0) + " đồng chẵn";
+    const hasNewAxis = type === 'bang_keo_in' && data.loai_truc === 'moi';
+    const axisTotal = hasNewAxis ? parseFloat(data.truc_thanh_tien_ban || 0) : 0;
+    const quoteTotal = parseFloat(data.thanh_tien_ban || 0) + axisTotal;
+    const quoteRemaining = quoteTotal - parseFloat(data.tien_coc || 0);
+    const totalWords = convertNumberToVietnameseWords(quoteTotal || 0) + " đồng chẵn";
+    const axisQuoteRow = hasNewAxis ? `
+            <tr>
+              <td style="text-align: center;">2</td>
+              <td><strong>${data.ten_truc || 'Trục mới'}</strong><br><small style="color:#64748b;">Trục mới</small></td>
+              <td>Chu vi: ${data.truc_chu_vi || '-'}</td>
+              <td style="text-align: right;">${data.truc_so_luong || 0}</td>
+              <td style="text-align: right;">${utils.formatCurrency(data.truc_gia_ban || 0)}đ</td>
+              <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(axisTotal)}đ</td>
+            </tr>
+    ` : '';
 
     // Xây dựng template HTML
     const htmlContent = `
@@ -227,13 +241,14 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
               <td style="text-align: right;">${utils.formatCurrency(data.don_gia_ban)}đ</td>
               <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(data.thanh_tien_ban)}đ</td>
             </tr>
+            ${axisQuoteRow}
           </tbody>
         </table>
         
         <table class="summary-table">
           <tr>
             <td class="label">Tổng tiền hàng:</td>
-            <td class="value">${utils.formatCurrency(data.thanh_tien_ban)}đ</td>
+            <td class="value">${utils.formatCurrency(quoteTotal)}đ</td>
           </tr>
           <tr>
             <td class="label">Đặt cọc trước:</td>
@@ -241,7 +256,7 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
           </tr>
           <tr class="grand-total">
             <td class="label">Còn lại cần thu:</td>
-            <td class="value">${utils.formatCurrency(data.cong_no_khach || data.thanh_tien_ban)}đ</td>
+            <td class="value">${utils.formatCurrency(quoteRemaining)}đ</td>
           </tr>
         </table>
         
@@ -299,33 +314,55 @@ async function convertQuoteToOrder(quoteId, type) {
     // 1. Tạo mã ID đơn hàng mới
     const newOrderId = await generateOrderId(idPrefix, tableName);
 
-    // 2. Cập nhật polymorphic attachments liên quan
-    const updateAttachSql = `
-      UPDATE order_attachments 
-      SET order_id = $1, order_type = $2 
-      WHERE order_id = $3 AND order_type = $4
-    `;
-    await window.electronAPI.dbRun(updateAttachSql, [newOrderId, type, quoteId, type]);
+    // 2. Thực hiện chuyển đổi trong transaction với lock_timeout để tránh treo UI
+    await window.electronAPI.dbRun('BEGIN');
+    try {
+      // Đặt lock_timeout 3 giây — nếu bị khóa bởi giao dịch khác thì tự hủy
+      await window.electronAPI.dbRun('SET LOCAL lock_timeout = 3000');
 
-    // 3. Cập nhật báo giá thành đơn hàng chính thức
-    const updateOrderSql = `
-      UPDATE ${tableName} 
-      SET id = $1, is_quote = FALSE, thoi_gian = NOW() 
-      WHERE id = $2
-    `;
-    const res = await window.electronAPI.dbRun(updateOrderSql, [newOrderId, quoteId]);
+      // Cập nhật polymorphic attachments liên quan
+      const updateAttachSql = `
+        UPDATE order_attachments
+        SET order_id = $1, order_type = $2
+        WHERE order_id = $3 AND order_type = $4
+      `;
+      await window.electronAPI.dbRun(updateAttachSql, [newOrderId, type, quoteId, type]);
 
-    if (res.ok) {
+      // Cập nhật báo giá thành đơn hàng chính thức
+      const updateOrderSql = `
+        UPDATE ${tableName}
+        SET id = $1, is_quote = FALSE, thoi_gian = NOW()
+        WHERE id = $2
+      `;
+      const res = await window.electronAPI.dbRun(updateOrderSql, [newOrderId, quoteId]);
+
+      if (!res.ok) {
+        throw new Error(res.error || 'Lỗi cập nhật đơn hàng');
+      }
+
+      await window.electronAPI.dbRun('COMMIT');
+
       utils.showToast(`Chuyển đơn thành công! Mã đơn mới: ${newOrderId}`, "success");
-      
-      // Reload danh sách báo giá
-      await loadQuotationsData();
-    } else {
-      utils.showToast("Lỗi chuyển đổi: " + res.error, "danger");
+
+      // Chuyển sang tab Lịch sử để user thấy đơn hàng mới ngay lập tức
+      if (typeof switchTab === 'function') {
+        await switchTab('history');
+      }
+    } catch (txErr) {
+      // Rollback transaction nếu có lỗi
+      await window.electronAPI.dbRun('ROLLBACK');
+      throw txErr;
     }
 
   } catch (err) {
     console.error("Lỗi chuyển báo giá thành đơn hàng:", err);
-    utils.showToast("Không thể chuyển báo giá thành đơn hàng", "danger");
+    const errMsg = err.message || '';
+    if (errMsg.includes('lock') || errMsg.includes('timeout')) {
+      utils.showToast("Hệ thống đang bận, vui lòng thử lại sau vài giây", "danger");
+    } else if (errMsg.includes('duplicate') || errMsg.includes('unique')) {
+      utils.showToast("Mã đơn hàng bị trùng, vui lòng thử lại", "danger");
+    } else {
+      utils.showToast("Không thể chuyển báo giá thành đơn hàng: " + errMsg, "danger");
+    }
   }
 }

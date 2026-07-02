@@ -2,6 +2,8 @@
 let activeTab = 'dashboard';
 let editOrderIdGlobal = null;
 let editOrderTypeGlobal = null;
+let commandPaletteFilteredActions = [];
+let commandPaletteSelectedIndex = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Kích hoạt định dạng tiền tệ
@@ -9,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 2. Điền ngày mặc định vào các form (Ngày mai)
   setDefaultDates();
+  initializeUiEnhancements();
 
   // 3. Tải dữ liệu cho Dashboard mặc định
   await switchTab('dashboard');
@@ -496,6 +499,18 @@ async function exportCurrentFormToExcel() {
       'Tiền hoa hồng': utils.parseCurrency(document.getElementById(`${prefix}bki-tien-hoa-hong`).value),
       'Lõi Giấy': document.getElementById(`${prefix}bki-loi-giay`).value.trim(),
       'Thùng/Bao bì': document.getElementById(`${prefix}bki-thung-bao`).value.trim(),
+      'Loại trục': document.getElementById(`${prefix}bki-loai-truc`)?.value === 'moi' ? 'Trục mới' : 'Trục cũ',
+      'Tên Trục': document.getElementById(`${prefix}bki-truc-ten`)?.value.trim() || '',
+      'Chu vi Trục': parseFloat(document.getElementById(`${prefix}bki-truc-chu-vi`)?.value) || '',
+      'Số lượng Trục': parseFloat(document.getElementById(`${prefix}bki-truc-so-luong`)?.value) || '',
+      'Giá gốc Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-gia-goc`)?.value),
+      'Giá bán Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-gia-ban`)?.value),
+      'Thành tiền gốc Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-thanh-tien-goc`)?.value),
+      'Thành tiền bán Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-thanh-tien-ban`)?.value),
+      'CTV Trục': document.getElementById(`${prefix}bki-truc-ctv`)?.value.trim() || '',
+      'Hoa hồng Trục (%)': parseFloat(document.getElementById(`${prefix}bki-truc-hoa-hong-percent`)?.value) || 0,
+      'Lãi Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-loi-nhuan`)?.value),
+      'Lãi ròng Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-loi-nhuan-rong`)?.value),
       'Lợi nhuận': utils.parseCurrency(document.getElementById(`${prefix}bki-loi-nhuan`).value),
       'Tiền ship': utils.parseCurrency(document.getElementById(`${prefix}bki-tien-ship`).value),
       'Lợi nhuận ròng': utils.parseCurrency(document.getElementById(`${prefix}bki-loi-nhuan-rong`).value)
@@ -548,9 +563,141 @@ async function exportCurrentFormToExcel() {
 }
 
 // Lắng nghe phím tắt toàn cục
+const commandPaletteActions = [
+  { title: 'Tổng quan', description: 'Mở dashboard và biểu đồ doanh số', group: 'Trang', run: () => switchTab('dashboard') },
+  { title: 'Tạo đơn Băng Keo In', description: 'Mở form bán hàng Băng Keo In Logo', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-bang-keo-in') },
+  { title: 'Tạo đơn Băng Keo thường', description: 'Mở form bán hàng Băng Keo thường', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-bang-keo') },
+  { title: 'Tạo đơn Trục In', description: 'Mở form gia công Trục In', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-truc-in') },
+  { title: 'Tạo báo giá', description: 'Mở khu vực báo giá đơn hàng', group: 'Báo giá', run: () => switchTab('quotes-creation') },
+  { title: 'Danh sách báo giá', description: 'Xem và chuyển báo giá thành đơn hàng', group: 'Báo giá', run: () => switchTab('quotes-list') },
+  { title: 'Thống kê', description: 'Theo dõi giao hàng, công nợ và lợi nhuận', group: 'Báo cáo', run: () => switchTab('thong-ke') },
+  { title: 'Đơn quá hạn', description: 'Lọc nhanh các đơn chưa giao đã quá hạn', group: 'Báo cáo', run: () => jumpToStatsFilter('overdue') },
+  { title: 'Đơn sắp hạn', description: 'Lọc nhanh các đơn cần giao trong 3 ngày', group: 'Báo cáo', run: () => jumpToStatsFilter('near-due') },
+  { title: 'Công nợ chưa tất toán', description: 'Lọc các đơn còn công nợ mở', group: 'Báo cáo', run: () => jumpToStatsFilter('unsettled') },
+  { title: 'Lịch sử đơn hàng', description: 'Tra cứu, gửi email, đính kèm và xuất Excel', group: 'Dữ liệu', run: () => switchTab('history') },
+  { title: 'Xuất đơn / phiếu giao', description: 'Mở trình chọn nhiều đơn để in chứng từ', group: 'Chứng từ', run: () => openMultiOrderExportDialog() },
+  { title: 'Xuất Excel form hiện tại', description: 'Xuất dữ liệu từ form hoặc lịch sử đang mở', group: 'Xuất file', run: () => exportCurrentFormToExcel() },
+  { title: 'Làm mới dữ liệu', description: 'Tải lại dữ liệu của trang hiện tại', group: 'Hệ thống', run: () => refreshCurrentPage() },
+  { title: 'Phím tắt', description: 'Xem danh sách phím tắt thao tác nhanh', group: 'Hệ thống', run: () => openShortcutsModal() }
+];
+
+function initializeUiEnhancements() {
+  updateFooterClock();
+  setInterval(updateFooterClock, 30000);
+  renderCommandResults();
+}
+
+function updateFooterClock() {
+  const el = document.getElementById('footer-db-time');
+  if (!el) return;
+
+  const now = new Date();
+  el.innerText = `Cập nhật: ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function setConnectionStatus(isConnected, label) {
+  const badge = document.getElementById('connection-status-badge');
+  const text = document.getElementById('connection-status-text');
+  const footer = document.getElementById('footer-status-text');
+
+  if (badge) badge.classList.toggle('offline', !isConnected);
+  if (text) text.innerText = label || (isConnected ? 'Mây: Kết nối' : 'Mây: Mất kết nối');
+  if (footer) footer.innerText = isConnected ? 'Đã sẵn sàng' : 'Không thể tải dữ liệu mới';
+}
+
+function openCommandPalette() {
+  const modal = document.getElementById('modal-command-palette');
+  const input = document.getElementById('command-palette-input');
+  if (!modal || !input) return;
+
+  modal.classList.add('active');
+  input.value = '';
+  commandPaletteSelectedIndex = 0;
+  renderCommandResults();
+  setTimeout(() => input.focus(), 30);
+}
+
+function renderCommandResults() {
+  const input = document.getElementById('command-palette-input');
+  const results = document.getElementById('command-palette-results');
+  if (!input || !results) return;
+
+  const query = input.value.toLowerCase().trim();
+  commandPaletteFilteredActions = commandPaletteActions.filter(action => {
+    const haystack = `${action.title} ${action.description} ${action.group}`.toLowerCase();
+    return !query || haystack.includes(query);
+  });
+
+  if (commandPaletteSelectedIndex >= commandPaletteFilteredActions.length) {
+    commandPaletteSelectedIndex = Math.max(0, commandPaletteFilteredActions.length - 1);
+  }
+  if (commandPaletteSelectedIndex < 0) {
+    commandPaletteSelectedIndex = 0;
+  }
+
+  if (commandPaletteFilteredActions.length === 0) {
+    results.innerHTML = '<div class="command-empty">Không tìm thấy thao tác phù hợp</div>';
+    return;
+  }
+
+  results.innerHTML = commandPaletteFilteredActions.map((action, index) => `
+    <button class="command-result ${index === commandPaletteSelectedIndex ? 'active' : ''}" onclick="executeCommandPaletteAction(${index})">
+      <span>
+        <strong>${action.title}</strong>
+        <small>${action.description}</small>
+      </span>
+      <span class="badge badge-gray">${action.group}</span>
+    </button>
+  `).join('');
+}
+
+function handleCommandPaletteKey(e) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    commandPaletteSelectedIndex = Math.max(0, Math.min(commandPaletteSelectedIndex + 1, commandPaletteFilteredActions.length - 1));
+    renderCommandResults();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    commandPaletteSelectedIndex = Math.max(commandPaletteSelectedIndex - 1, 0);
+    renderCommandResults();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    executeCommandPaletteAction(commandPaletteSelectedIndex);
+  }
+}
+
+async function executeCommandPaletteAction(index) {
+  const action = commandPaletteFilteredActions[index];
+  if (!action) return;
+
+  closeModal('modal-command-palette');
+  await action.run();
+}
+
+async function jumpToSalesForm(formId) {
+  await switchTab('sales');
+  switchSalesForm(formId);
+}
+
+async function jumpToStatsFilter(statusFilter) {
+  await switchTab('thong-ke');
+
+  const filter = document.getElementById('stats-status-filter');
+  if (filter) {
+    filter.value = statusFilter;
+    filterStatsTable();
+  }
+}
+
+function openShortcutsModal() {
+  const modal = document.getElementById('modal-shortcuts');
+  if (modal) modal.classList.add('active');
+}
+
 window.addEventListener('keydown', async (e) => {
   const isCtrl = e.ctrlKey || e.metaKey;
   const key = e.key;
+  const lowerKey = key.toLowerCase();
 
   // 1. Phím Escape - Đóng Modal
   if (key === 'Escape') {
@@ -567,6 +714,18 @@ window.addEventListener('keydown', async (e) => {
   }
 
   // 2. Phím F5 - Làm mới dữ liệu theo tab
+  if (isCtrl && lowerKey === 'k') {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
+
+  if (isCtrl && key === '/') {
+    e.preventDefault();
+    openShortcutsModal();
+    return;
+  }
+
   if (key === 'F5') {
     e.preventDefault();
     if (activeTab === 'history') {
@@ -601,7 +760,6 @@ window.addEventListener('keydown', async (e) => {
 
   // 4. Tổ hợp phím có Ctrl
   if (isCtrl) {
-    const lowerKey = key.toLowerCase();
 
     // Ctrl + S: Lưu / Gửi / Cập nhật
     if (lowerKey === 's') {

@@ -85,7 +85,10 @@ async function loadStatsTableData() {
   const sql = `
     SELECT id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien, cong_no_khach, da_giao, da_tat_toan, da_gui_email 
     FROM ${tableName} 
-    ORDER BY thoi_gian DESC
+    ORDER BY 
+      split_part(id, '-', 3) DESC, 
+      split_part(id, '-', 2) DESC, 
+      split_part(id, '-', 4) DESC
   `;
 
   const res = await window.electronAPI.dbQuery(sql);

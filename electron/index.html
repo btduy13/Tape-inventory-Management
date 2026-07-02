@@ -103,16 +103,30 @@
         </div>
 
         <div class="header-actions">
+          <button class="command-trigger" onclick="openCommandPalette()" title="Mở lệnh nhanh (Ctrl+K)">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.1-5.4a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"></path>
+            </svg>
+            <span>Tìm nhanh / mở lệnh</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+
           <div class="header-company-badge">
             <div class="pulse-indicator"></div>
             <span>NHÀ MÁY BĂNG KEO</span>
           </div>
 
           <!-- SUPABASE STATUS INDICATOR -->
-          <div class="header-company-badge" style="background-color: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2);">
-            <div class="pulse-indicator" style="background-color: #10b981; box-shadow: 0 0 8px #10b981;"></div>
-            <span style="font-size: 11px;">Mây: Kết nối</span>
+          <div class="header-company-badge connection-badge" id="connection-status-badge">
+            <div class="pulse-indicator" id="connection-status-dot"></div>
+            <span id="connection-status-text" style="font-size: 11px;">Mây: Kết nối</span>
           </div>
+
+          <button class="icon-btn" onclick="openShortcutsModal()" title="Phím tắt (Ctrl+/)">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.88 9.88a3 3 0 1 1 4.24 4.24M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"></path>
+            </svg>
+          </button>
           
           <button class="icon-btn" onclick="refreshCurrentPage()" title="Làm mới trang (F5)">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
@@ -161,6 +175,42 @@
               </div>
               <div class="card-icon" style="color:var(--color-warning)">👤</div>
             </div>
+          </div>
+
+          <div class="dashboard-action-panel">
+            <div>
+              <span class="section-eyebrow">Thao tác nhanh</span>
+              <h2>Điều hành đơn hàng hôm nay</h2>
+            </div>
+            <div class="quick-actions">
+              <button class="btn btn-primary" onclick="jumpToSalesForm('sales-form-bang-keo-in')">Tạo đơn Băng Keo In</button>
+              <button class="btn btn-secondary" onclick="switchTab('quotes-creation')">Tạo báo giá</button>
+              <button class="btn btn-secondary" onclick="openMultiOrderExportDialog()">Xuất đơn / phiếu giao</button>
+              <button class="btn btn-secondary" onclick="openCommandPalette()">Mở lệnh nhanh</button>
+            </div>
+          </div>
+
+          <div class="attention-grid">
+            <button class="attention-card danger" onclick="jumpToStatsFilter('overdue')">
+              <span class="attention-label">Quá hạn giao</span>
+              <strong id="dash-overdue-count">0</strong>
+              <small>Cần xử lý ngay</small>
+            </button>
+            <button class="attention-card warning" onclick="jumpToStatsFilter('near-due')">
+              <span class="attention-label">Giao trong 3 ngày</span>
+              <strong id="dash-due-soon-count">0</strong>
+              <small>Đơn chưa giao</small>
+            </button>
+            <button class="attention-card info" onclick="jumpToStatsFilter('unsettled')">
+              <span class="attention-label">Công nợ mở</span>
+              <strong id="dash-open-debt">0đ</strong>
+              <small>Chưa tất toán</small>
+            </button>
+            <button class="attention-card success" onclick="switchTab('quotes-list')">
+              <span class="attention-label">Báo giá chờ</span>
+              <strong id="dash-pending-quotes">0</strong>
+              <small>Có thể chuyển đơn</small>
+            </button>
           </div>
 
           <!-- BIỂU ĐỒ TRỰC QUAN -->
@@ -234,6 +284,64 @@
                 <div class="form-group">
                   <label class="form-label">Cuộn/Cây</label>
                   <input type="number" step="any" id="bki-cuon-cay" class="form-control" placeholder="Ví dụ: 6">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Loại trục</label>
+                  <input type="hidden" id="bki-loai-truc" value="cu">
+                  <div class="radio-pill-group axis-toggle-group">
+                    <button type="button" class="btn btn-pill active" id="bki-axis-old" onclick="setBangKeoInAxisMode('order', 'cu')">Trục cũ</button>
+                    <button type="button" class="btn btn-pill" id="bki-axis-new" onclick="setBangKeoInAxisMode('order', 'moi')">Trục mới</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-card bki-new-axis-card" id="bki-new-axis-card" style="display:none;">
+              <h3 class="form-section-title">Thông tin Trục mới</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Tên Trục</label>
+                  <input type="text" id="bki-truc-ten" class="form-control" placeholder="Tên trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Chu vi</label>
+                  <input type="number" step="any" id="bki-truc-chu-vi" class="form-control" placeholder="Chu vi trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Số lượng</label>
+                  <input type="number" step="any" id="bki-truc-so-luong" class="form-control" placeholder="Số lượng trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Giá gốc (đ)</label>
+                  <input type="text" id="bki-truc-gia-goc" class="form-control currency-format" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Giá bán (đ)</label>
+                  <input type="text" id="bki-truc-gia-ban" class="form-control currency-format" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Thành tiền gốc (đ)</label>
+                  <input type="text" id="bki-truc-thanh-tien-goc" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Thành tiền bán (đ)</label>
+                  <input type="text" id="bki-truc-thanh-tien-ban" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">CTV</label>
+                  <input type="text" id="bki-truc-ctv" class="form-control" placeholder="CTV trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Hoa hồng (%)</label>
+                  <input type="number" step="any" id="bki-truc-hoa-hong-percent" class="form-control" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Lãi (đ)</label>
+                  <input type="text" id="bki-truc-loi-nhuan" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Lãi ròng (đ)</label>
+                  <input type="text" id="bki-truc-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
                 </div>
               </div>
             </div>
@@ -576,6 +684,64 @@
                   <label class="form-label">Cuộn/Cây</label>
                   <input type="number" step="any" id="q-bki-cuon-cay" class="form-control" placeholder="Ví dụ: 6">
                 </div>
+                <div class="form-group">
+                  <label class="form-label">Loại trục</label>
+                  <input type="hidden" id="q-bki-loai-truc" value="cu">
+                  <div class="radio-pill-group axis-toggle-group">
+                    <button type="button" class="btn btn-pill active" id="q-bki-axis-old" onclick="setBangKeoInAxisMode('quote', 'cu')">Trục cũ</button>
+                    <button type="button" class="btn btn-pill" id="q-bki-axis-new" onclick="setBangKeoInAxisMode('quote', 'moi')">Trục mới</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-card bki-new-axis-card" id="q-bki-new-axis-card" style="display:none;">
+              <h3 class="form-section-title">Thông tin Trục mới</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Tên Trục</label>
+                  <input type="text" id="q-bki-truc-ten" class="form-control" placeholder="Tên trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Chu vi</label>
+                  <input type="number" step="any" id="q-bki-truc-chu-vi" class="form-control" placeholder="Chu vi trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Số lượng</label>
+                  <input type="number" step="any" id="q-bki-truc-so-luong" class="form-control" placeholder="Số lượng trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Giá gốc (đ)</label>
+                  <input type="text" id="q-bki-truc-gia-goc" class="form-control currency-format" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Giá bán (đ)</label>
+                  <input type="text" id="q-bki-truc-gia-ban" class="form-control currency-format" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Thành tiền gốc (đ)</label>
+                  <input type="text" id="q-bki-truc-thanh-tien-goc" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Thành tiền bán (đ)</label>
+                  <input type="text" id="q-bki-truc-thanh-tien-ban" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">CTV</label>
+                  <input type="text" id="q-bki-truc-ctv" class="form-control" placeholder="CTV trục...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Hoa hồng (%)</label>
+                  <input type="number" step="any" id="q-bki-truc-hoa-hong-percent" class="form-control" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Lãi (đ)</label>
+                  <input type="text" id="q-bki-truc-loi-nhuan" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Lãi ròng (đ)</label>
+                  <input type="text" id="q-bki-truc-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                </div>
               </div>
             </div>
 
@@ -908,7 +1074,7 @@
                   <option value="12">Tháng 12</option>
                 </select>
               </div>
-              <div class="form-group" style="display: flex; align-items: flex-end;">
+              <div class="form-group" style="justify-content: flex-end;">
                 <button class="btn btn-primary btn-sm" onclick="loadQuotationsData()" style="height: 32px; width: 100%; font-size: 12px;">Làm mới</button>
               </div>
             </div>
@@ -1438,6 +1604,47 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="goBackToExportSelection()">⮌ Quay lại</button>
         <button class="btn btn-primary" onclick="generateCombinedPrintInvoice()">🖨️ Xem trước phiếu in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== G. MODAL: LENH NHANH (COMMAND PALETTE) ==================== -->
+  <div id="modal-command-palette" class="modal-overlay command-overlay">
+    <div class="command-modal">
+      <div class="command-search-row">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.1-5.4a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"></path>
+        </svg>
+        <input type="text" id="command-palette-input" placeholder="Nhập tên trang, thao tác, hoặc phím tắt..." autocomplete="off" oninput="renderCommandResults()" onkeydown="handleCommandPaletteKey(event)">
+        <button class="modal-close" onclick="closeModal('modal-command-palette')">×</button>
+      </div>
+      <div class="command-results" id="command-palette-results"></div>
+      <div class="command-footer">
+        <span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span>
+        <span><kbd>Enter</kbd> Mở</span>
+        <span><kbd>Esc</kbd> Đóng</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== H. MODAL: PHIM TAT ==================== -->
+  <div id="modal-shortcuts" class="modal-overlay">
+    <div class="modal-content shortcuts-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Phím tắt & thao tác nhanh</h3>
+        <button class="modal-close" onclick="closeModal('modal-shortcuts')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="shortcut-grid">
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>K</kbd><span>Mở lệnh nhanh</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>S</kbd><span>Lưu / gửi / cập nhật</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>T</kbd><span>Tính toán form hiện tại</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>E</kbd><span>Xuất Excel</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>F</kbd><span>Tìm trong trang hiện tại</span></div>
+          <div class="shortcut-item"><kbd>F5</kbd><span>Làm mới dữ liệu</span></div>
+          <div class="shortcut-item"><kbd>Delete</kbd><span>Xóa dòng đã chọn trong lịch sử</span></div>
+          <div class="shortcut-item"><kbd>Esc</kbd><span>Đóng hộp thoại đang mở</span></div>
+        </div>
       </div>
     </div>
   </div>

@@ -6,6 +6,7 @@ async function loadDashboardData() {
   try {
     // 1. Cập nhật thẻ chỉ số (Metrics) tháng này
     await loadDashboardMetrics();
+    await loadDashboardAttentionMetrics();
 
     // 2. Cập nhật biểu đồ doanh số (mặc định là 'daily')
     await updateDashboardCharts('daily');
@@ -13,7 +14,14 @@ async function loadDashboardData() {
     // 3. Cập nhật biểu đồ phân bố sản phẩm
     await loadProductDistributionChart();
 
+    if (typeof setConnectionStatus === 'function') {
+      setConnectionStatus(true);
+    }
+
   } catch (err) {
+    if (typeof setConnectionStatus === 'function') {
+      setConnectionStatus(false, 'Mây: Mất kết nối');
+    }
     window.electronAPI.writeLog('error', 'Lỗi tải trang tổng quan: ' + err.message);
   }
 }
@@ -73,6 +81,42 @@ async function loadDashboardMetrics() {
 }
 
 // Cập nhật biểu đồ đường biểu diễn doanh số
+async function loadDashboardAttentionMetrics() {
+  const sql = `
+    SELECT
+      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= CURRENT_DATE AND ngay_du_kien <= CURRENT_DATE + INTERVAL '3 days' THEN 1 ELSE 0 END) AS due_soon,
+      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < CURRENT_DATE THEN 1 ELSE 0 END) AS overdue,
+      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_khach, 0) ELSE 0 END) AS open_debt,
+      SUM(CASE WHEN COALESCE(is_quote, FALSE) THEN 1 ELSE 0 END) AS pending_quotes
+    FROM (
+      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, is_quote FROM bang_keo_in_orders
+      UNION ALL
+      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, is_quote FROM truc_in_orders
+      UNION ALL
+      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, is_quote FROM bang_keo_orders
+    ) AS combined;
+  `;
+
+  const res = await window.electronAPI.dbQuery(sql);
+  if (!res.ok || res.rows.length === 0) return;
+
+  const data = res.rows[0];
+  const dueSoon = parseInt(data.due_soon || 0);
+  const overdue = parseInt(data.overdue || 0);
+  const openDebt = parseFloat(data.open_debt || 0);
+  const pendingQuotes = parseInt(data.pending_quotes || 0);
+
+  const overdueEl = document.getElementById('dash-overdue-count');
+  const dueSoonEl = document.getElementById('dash-due-soon-count');
+  const debtEl = document.getElementById('dash-open-debt');
+  const quotesEl = document.getElementById('dash-pending-quotes');
+
+  if (overdueEl) overdueEl.innerText = overdue.toLocaleString();
+  if (dueSoonEl) dueSoonEl.innerText = dueSoon.toLocaleString();
+  if (debtEl) debtEl.innerText = utils.formatCurrency(openDebt) + "đ";
+  if (quotesEl) quotesEl.innerText = pendingQuotes.toLocaleString();
+}
+
 async function updateDashboardCharts(period = 'daily') {
   // Thay đổi trạng thái các nút lọc
   document.querySelectorAll('.chart-filters button').forEach(btn => btn.classList.remove('active'));
