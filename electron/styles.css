@@ -1134,20 +1134,22 @@ kbd {
   max-height: 360px;
   overflow: hidden;
   padding: 10px;
-  border: 1px solid var(--border-strong, var(--border-color));
+  border: 1px solid #3a4152;
   border-radius: var(--radius-md);
-  background: #1e2430;
+  background-color: #20252f;
+  background-image: none;
   color: var(--text-primary);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.35);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   isolation: isolate;
+  opacity: 1;
 }
 
 body.light-theme .column-filter-menu {
-  background: #ffffff;
-  border-color: rgba(16, 24, 40, 0.14);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14);
+  background-color: #ffffff;
+  border-color: #d3d9e2;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
 }
 
 .column-filter-title {
@@ -1159,16 +1161,17 @@ body.light-theme .column-filter-menu {
 .column-filter-search {
   width: 100%;
   height: 32px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #3a4152;
   border-radius: var(--radius-sm);
-  background: #151a24;
+  background-color: #151a24;
   color: var(--text-primary);
   padding: 0 10px;
   margin-bottom: 8px;
 }
 
 body.light-theme .column-filter-search {
-  background: #f8fafc;
+  background-color: #f4f6f9;
+  border-color: #d3d9e2;
 }
 
 .column-filter-actions {
@@ -1180,9 +1183,9 @@ body.light-theme .column-filter-search {
 .column-filter-actions button {
   flex: 1;
   height: 28px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #3a4152;
   border-radius: var(--radius-sm);
-  background: #252b38;
+  background-color: #2a303c;
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 12px;
@@ -1190,7 +1193,8 @@ body.light-theme .column-filter-search {
 }
 
 body.light-theme .column-filter-actions button {
-  background: #f1f5f9;
+  background-color: #eef1f5;
+  border-color: #d3d9e2;
 }
 
 .column-filter-actions button:hover {
@@ -1201,9 +1205,13 @@ body.light-theme .column-filter-actions button {
 .column-filter-values {
   max-height: 220px;
   overflow-y: auto;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #3a4152;
   padding-top: 6px;
-  background: inherit;
+  background-color: transparent;
+}
+
+body.light-theme .column-filter-values {
+  border-top-color: #d3d9e2;
 }
 
 .column-filter-value {
