@@ -559,6 +559,85 @@ async function exportCurrentFormToExcel() {
   }
 }
 
+// ==========================================
+// TIỆN ÍCH TƯƠNG TÁC BẢNG BẰNG BÀN PHÍM
+// ==========================================
+
+// Lấy ngữ cảnh bảng dữ liệu của trang đang mở (nếu có)
+function getActiveTableContext() {
+  if (activeTab === 'history') {
+    return {
+      tbody: document.getElementById('history-table-body'),
+      getType: () => historyActiveTab,
+      afterChange: () => updateHistorySelectionSummary(),
+      selectAll: () => selectAllHistoryRows()
+    };
+  }
+  if (activeTab === 'thong-ke') {
+    return {
+      tbody: document.getElementById('stats-table-body'),
+      getType: () => statsActiveSubtab,
+      afterChange: () => updateStatsSelectionSummary(),
+      selectAll: () => {
+        document.querySelectorAll('#stats-table-body tr').forEach(tr => {
+          if (tr.dataset.id) tr.classList.add('selected');
+        });
+        updateStatsSelectionSummary();
+      }
+    };
+  }
+  if (activeTab === 'quotes-list') {
+    return {
+      tbody: document.getElementById('quotes-list-tbody'),
+      getType: (tr) => tr?.dataset.type,
+      afterChange: () => {},
+      selectAll: () => {
+        document.querySelectorAll('#quotes-list-tbody tr').forEach(tr => {
+          if (tr.dataset.id) tr.classList.add('selected');
+        });
+      }
+    };
+  }
+  return null;
+}
+
+// Kiểm tra người dùng có đang gõ trong ô nhập liệu không
+function isTypingInField() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+}
+
+// Enter trong form nhập liệu = chuyển sang ô kế tiếp (thay vì submit nhầm)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  if (e.defaultPrevented) return; // Autocomplete đang mở đã tự xử lý Enter
+
+  const target = e.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (['checkbox', 'radio', 'file', 'button', 'submit'].includes(target.type)) return;
+
+  const form = target.closest('form');
+  if (!form || !target.closest('.form-grid')) return;
+
+  e.preventDefault();
+
+  const fields = Array.from(form.querySelectorAll('input, select')).filter(el =>
+    !el.disabled && el.type !== 'hidden' && !el.readOnly && el.offsetParent !== null
+  );
+  const idx = fields.indexOf(target);
+
+  if (idx > -1 && idx < fields.length - 1) {
+    const next = fields[idx + 1];
+    next.focus();
+    if (typeof next.select === 'function') next.select();
+  } else {
+    // Ô cuối cùng: blur để kích hoạt định dạng tiền tệ, không submit nhầm
+    target.blur();
+  }
+});
+
 // Lắng nghe phím tắt toàn cục
 const commandPaletteActions = [
   { title: 'Tổng quan', description: 'Mở dashboard và biểu đồ doanh số', group: 'Trang', run: () => switchTab('dashboard') },
@@ -584,6 +663,21 @@ function initializeUiEnhancements() {
   updateFooterClock();
   setInterval(updateFooterClock, 30000);
   renderCommandResults();
+  setupKeyboardFocusableControls();
+}
+
+// Cho phép điều hướng sidebar / breadcrumb bằng Tab + Enter/Space
+function setupKeyboardFocusableControls() {
+  document.querySelectorAll('.sidebar-menu a, .breadcrumb-item').forEach(el => {
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.click();
+      }
+    });
+  });
 }
 
 function updateFooterClock() {
@@ -698,8 +792,20 @@ window.addEventListener('keydown', async (e) => {
   const key = e.key;
   const lowerKey = key.toLowerCase();
 
-  // 1. Phím Escape - Đóng Modal
+  // 1. Phím Escape - Đóng menu ngữ cảnh / Modal
   if (key === 'Escape') {
+    // Ưu tiên đóng menu chuột phải hoặc menu lọc cột nếu đang mở
+    const openMenus = [
+      document.getElementById('custom-context-menu'),
+      document.getElementById('stats-column-filter-menu')
+    ].filter(m => m && m.style.display === 'block');
+
+    if (openMenus.length > 0) {
+      e.preventDefault();
+      openMenus.forEach(m => m.style.display = 'none');
+      return;
+    }
+
     const activeModal = document.querySelector('.modal-overlay.active');
     if (activeModal) {
       e.preventDefault();
@@ -709,6 +815,53 @@ window.addEventListener('keydown', async (e) => {
         closeModal(activeModal.id);
       }
       return;
+    }
+  }
+
+  // 1b. Alt + 1..6: Chuyển nhanh giữa các trang chính
+  if (e.altKey && !isCtrl && !e.shiftKey) {
+    const tabOrder = ['dashboard', 'sales', 'quotes-creation', 'quotes-list', 'thong-ke', 'history'];
+    const num = parseInt(key, 10);
+    if (num >= 1 && num <= tabOrder.length) {
+      e.preventDefault();
+      switchTab(tabOrder[num - 1]);
+      return;
+    }
+  }
+
+  // 1c. Điều hướng bảng dữ liệu bằng bàn phím (khi không gõ chữ và không mở modal)
+  if (!isTypingInField() && !document.querySelector('.modal-overlay.active')) {
+    const tableCtx = getActiveTableContext();
+
+    if (tableCtx && tableCtx.tbody) {
+      // Ctrl + A: chọn tất cả dòng đang hiển thị
+      if (isCtrl && lowerKey === 'a') {
+        e.preventDefault();
+        tableCtx.selectAll();
+        return;
+      }
+
+      // Mũi tên / Home / End: di chuyển dòng chọn (Shift để mở rộng vùng chọn)
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key) && !isCtrl) {
+        e.preventDefault();
+        const direction = key === 'ArrowDown' ? 'down' : key === 'ArrowUp' ? 'up' : key === 'Home' ? 'first' : 'last';
+        utils.moveRowSelection(tableCtx.tbody, direction, e.shiftKey);
+        tableCtx.afterChange();
+        return;
+      }
+
+      // Enter: mở form sửa cho dòng đang chọn (bỏ qua nếu đang focus nút/link)
+      if (key === 'Enter' && !e.defaultPrevented) {
+        const focusTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (focusTag !== 'button' && focusTag !== 'a') {
+          const selected = tableCtx.tbody.querySelector('tr.selected');
+          if (selected && selected.dataset.id) {
+            e.preventDefault();
+            openEditOrderDialog(selected.dataset.id, tableCtx.getType(selected));
+            return;
+          }
+        }
+      }
     }
   }
 
@@ -745,13 +898,18 @@ window.addEventListener('keydown', async (e) => {
     return;
   }
 
-  // 3. Phím Delete - Xóa các dòng lịch sử đã chọn
+  // 3. Phím Delete - Xóa các dòng đã chọn (Lịch sử / Báo giá)
   if (key === 'Delete') {
-    const activeEl = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-    if (activeEl !== 'input' && activeEl !== 'textarea' && !document.activeElement.isContentEditable) {
+    if (!isTypingInField() && !document.querySelector('.modal-overlay.active')) {
       if (activeTab === 'history') {
         e.preventDefault();
         deleteSelectedHistory();
+      } else if (activeTab === 'quotes-list') {
+        const selected = document.querySelector('#quotes-list-tbody tr.selected');
+        if (selected && selected.dataset.id) {
+          e.preventDefault();
+          deleteQuotation(selected.dataset.id, selected.dataset.type);
+        }
       }
     }
     return;

@@ -41,6 +41,8 @@ function renderQuotationsTable(rows) {
 
   rows.forEach(row => {
     const tr = document.createElement('tr');
+    tr.dataset.id = row.id;
+    tr.dataset.type = row.type;
     
     let typeLabel = "Băng Keo In";
     if (row.type === 'bang_keo') typeLabel = "Băng Keo thường";
@@ -61,8 +63,72 @@ function renderQuotationsTable(rows) {
       </td>
     `;
 
+    // Click chọn dòng (Ctrl/Shift hỗ trợ chọn nhiều)
+    tr.addEventListener('click', function(e) {
+      if (e.target.closest('button')) return;
+      utils.handleRowSelection(tbody, this, e);
+    });
+
+    // Double-click mở form chỉnh sửa báo giá
+    tr.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button')) return;
+      openEditOrderDialog(row.id, row.type);
+    });
+
+    // Chuột phải mở menu thao tác nhanh
+    tr.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      if (!this.classList.contains('selected')) {
+        tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+        this.classList.add('selected');
+      }
+      showQuoteContextMenu(e, row);
+    });
+
     tbody.appendChild(tr);
   });
+}
+
+// Menu chuột phải cho bảng Báo giá
+function showQuoteContextMenu(e, row) {
+  const menu = document.getElementById('custom-context-menu');
+  if (!menu) return;
+
+  menu.innerHTML = `
+    <div class="context-menu-item" onclick="downloadQuotePDFById('${row.id}', '${row.type}')">
+      <span>🖨️</span> <span>Xuất báo giá PDF</span>
+    </div>
+    <div class="context-menu-item" onclick="convertQuoteToOrder('${row.id}', '${row.type}')">
+      <span>🔄</span> <span>Chuyển thành đơn hàng</span>
+    </div>
+    <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
+    <div class="context-menu-item" onclick="openEditOrderDialog('${row.id}', '${row.type}')">
+      <span>✏️</span> <span>Sửa báo giá</span>
+    </div>
+    <div class="context-menu-item context-menu-danger" onclick="deleteQuotation('${row.id}', '${row.type}')">
+      <span>🗑️</span> <span>Xóa báo giá</span>
+    </div>
+  `;
+
+  utils.openContextMenu(menu, e.clientX, e.clientY);
+}
+
+// Xóa một báo giá khỏi hệ thống
+async function deleteQuotation(quoteId, type) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa báo giá ${quoteId} không?\nHành động này không thể hoàn tác!`)) return;
+
+  let tableName = 'bang_keo_in_orders';
+  if (type === 'bang_keo') tableName = 'bang_keo_orders';
+  if (type === 'truc_in') tableName = 'truc_in_orders';
+
+  const res = await window.electronAPI.dbRun(`DELETE FROM ${tableName} WHERE id = $1 AND is_quote = TRUE`, [quoteId]);
+  if (res.ok) {
+    await window.electronAPI.dbRun(`DELETE FROM order_attachments WHERE order_id = $1 AND order_type = $2`, [quoteId, type]);
+    utils.showToast(`Đã xóa báo giá ${quoteId}`, "success");
+    loadQuotationsData();
+  } else {
+    utils.showToast("Không thể xóa báo giá: " + res.error, "danger");
+  }
 }
 
 // 3. Lọc danh sách báo giá offline

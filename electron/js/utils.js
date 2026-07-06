@@ -58,6 +58,91 @@ const utils = {
     return 'bang_keo_in_orders';
   },
 
+  // Chọn dòng bảng kiểu Excel: click = chọn 1, Ctrl+click = thêm/bớt, Shift+click = chọn dải
+  handleRowSelection: function(tbody, tr, event) {
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.dataset.id);
+    const clickedIndex = rows.indexOf(tr);
+    if (clickedIndex === -1) return;
+
+    if (event.shiftKey && tbody._lastSelectedIndex !== undefined && tbody._lastSelectedIndex !== null) {
+      const start = Math.min(tbody._lastSelectedIndex, clickedIndex);
+      const end = Math.max(tbody._lastSelectedIndex, clickedIndex);
+      if (!event.ctrlKey && !event.metaKey) {
+        rows.forEach(r => r.classList.remove('selected'));
+      }
+      for (let i = start; i <= end; i++) {
+        rows[i].classList.add('selected');
+      }
+    } else if (event.ctrlKey || event.metaKey) {
+      tr.classList.toggle('selected');
+      tbody._lastSelectedIndex = clickedIndex;
+    } else {
+      const wasOnlySelected = tr.classList.contains('selected') &&
+        tbody.querySelectorAll('tr.selected').length === 1;
+      rows.forEach(r => r.classList.remove('selected'));
+      if (!wasOnlySelected) tr.classList.add('selected');
+      tbody._lastSelectedIndex = clickedIndex;
+    }
+  },
+
+  // Di chuyển lựa chọn bảng bằng bàn phím (ArrowUp/ArrowDown/Home/End)
+  moveRowSelection: function(tbody, direction, extend = false) {
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.dataset.id);
+    if (rows.length === 0) return null;
+
+    const selectedRows = rows.filter(r => r.classList.contains('selected'));
+    let anchorIndex = selectedRows.length > 0 ? rows.indexOf(selectedRows[selectedRows.length - 1]) : -1;
+
+    let nextIndex;
+    if (direction === 'first') nextIndex = 0;
+    else if (direction === 'last') nextIndex = rows.length - 1;
+    else if (anchorIndex === -1) nextIndex = direction === 'down' ? 0 : rows.length - 1;
+    else nextIndex = Math.max(0, Math.min(rows.length - 1, anchorIndex + (direction === 'down' ? 1 : -1)));
+
+    if (!extend) {
+      rows.forEach(r => r.classList.remove('selected'));
+    }
+    rows[nextIndex].classList.add('selected');
+    rows[nextIndex].scrollIntoView({ block: 'nearest' });
+    tbody._lastSelectedIndex = nextIndex;
+    return rows[nextIndex];
+  },
+
+  // Mở context menu tại vị trí chuột, tự kẹp trong màn hình và tự đóng
+  openContextMenu: function(menuEl, clientX, clientY) {
+    if (!menuEl) return;
+
+    menuEl.style.display = 'block';
+    menuEl.style.visibility = 'hidden';
+
+    const rect = menuEl.getBoundingClientRect();
+    const x = Math.max(8, Math.min(clientX, window.innerWidth - rect.width - 8));
+    const y = Math.max(8, Math.min(clientY, window.innerHeight - rect.height - 8));
+
+    menuEl.style.left = `${x}px`;
+    menuEl.style.top = `${y}px`;
+    menuEl.style.visibility = 'visible';
+
+    function closeMenu() {
+      menuEl.style.display = 'none';
+      document.removeEventListener('click', closeMenu);
+      window.removeEventListener('keydown', escCloseMenu, true);
+    }
+
+    function escCloseMenu(ev) {
+      if (ev.key === 'Escape') {
+        ev.stopPropagation();
+        ev.preventDefault();
+        closeMenu();
+      }
+    }
+
+    setTimeout(() => {
+      document.addEventListener('click', closeMenu);
+      window.addEventListener('keydown', escCloseMenu, true);
+    }, 50);
+  },
+
   showToast: function(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -69,6 +154,7 @@ const utils = {
     if (type === 'success') icon = "✔️";
     if (type === 'warning') icon = "⚠️";
     if (type === 'danger') icon = "❌";
+    if (type === 'info') icon = "ℹ️";
 
     toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
     container.appendChild(toast);

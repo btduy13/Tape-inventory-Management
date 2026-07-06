@@ -1,6 +1,8 @@
 // JS/MODULES/HISTORY.JS - LOGIC XỬ LÝ TRANG LỊCH SỬ ĐƠN HÀNG CHI TIẾT
 let historyActiveTab = 'bang_keo_in';
 let historyAllOrders = [];
+let historyVisibleOrders = [];
+let historySortState = { column: null, direction: 'asc' };
 let selectedOrderIdForAttachments = null;
 
 const columnHeaders = {
@@ -95,20 +97,79 @@ function switchHistoryTab(type) {
   loadHistoryData();
 }
 
+// Cột dạng tiền tệ dùng chung cho hiển thị và sắp xếp
+const historyCurrencyColumns = [
+  'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc',
+  'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
+  'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
+  'truc_loi_nhuan', 'truc_loi_nhuan_rong'
+];
+
+const historyNumericColumns = historyCurrencyColumns.concat([
+  'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 'hoa_hong',
+  'tien_hoa_hong', 'truc_so_luong', 'truc_hoa_hong'
+]);
+
+// Sắp xếp bảng lịch sử khi click tiêu đề cột
+function sortHistoryByColumn(col) {
+  if (historySortState.column === col) {
+    historySortState.direction = historySortState.direction === 'asc' ? 'desc' : 'asc';
+  } else {
+    historySortState.column = col;
+    historySortState.direction = 'asc';
+  }
+
+  const dir = historySortState.direction === 'asc' ? 1 : -1;
+  const sorted = [...historyVisibleOrders].sort((a, b) => {
+    let va = a[col];
+    let vb = b[col];
+
+    if (col === 'thoi_gian' || col === 'ngay_du_kien') {
+      va = new Date(va || 0).getTime();
+      vb = new Date(vb || 0).getTime();
+    } else if (historyNumericColumns.includes(col)) {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+    } else {
+      va = String(va ?? '').toLowerCase();
+      vb = String(vb ?? '').toLowerCase();
+      return va.localeCompare(vb, 'vi') * dir;
+    }
+
+    return (va - vb) * dir;
+  });
+
+  renderHistoryTable(sorted, { keepSort: true });
+}
+
 // Render dữ liệu bảng lịch sử động
-function renderHistoryTable(rows) {
+function renderHistoryTable(rows, options = {}) {
   const header = document.getElementById('history-table-header');
   const body = document.getElementById('history-table-body');
   
   if (!header || !body) return;
 
+  if (!options.keepSort) {
+    historySortState = { column: null, direction: 'asc' };
+  }
+  historyVisibleOrders = rows;
+
   const cols = historyColumnsMap[historyActiveTab];
 
-  // 1. Render Headers
+  // 1. Render Headers (click để sắp xếp)
   header.innerHTML = "";
   cols.forEach(col => {
     const th = document.createElement('th');
-    th.innerText = columnHeaders[col] || col;
+    th.classList.add('sortable');
+    th.title = 'Bấm để sắp xếp';
+
+    let indicator = '';
+    if (historySortState.column === col) {
+      th.classList.add('sorted');
+      indicator = historySortState.direction === 'asc' ? ' ▲' : ' ▼';
+    }
+    th.innerHTML = `<span>${columnHeaders[col] || col}</span><span class="sort-indicator">${indicator}</span>`;
+    th.addEventListener('click', () => sortHistoryByColumn(col));
     header.appendChild(th);
   });
 
@@ -134,7 +195,7 @@ function renderHistoryTable(rows) {
         td.innerHTML = val ? '<span class="badge badge-success">Rồi</span>' : '<span class="badge badge-gray">Chưa</span>';
       } else if (col === 'da_tat_toan') {
         td.innerHTML = val ? '<span class="badge badge-success">Xong</span>' : '<span class="badge badge-warning">Chưa</span>';
-      } else if (['phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_loi_nhuan', 'truc_loi_nhuan_rong'].includes(col)) {
+      } else if (historyCurrencyColumns.includes(col)) {
         td.innerText = utils.formatCurrency(val) + "đ";
         td.style.textAlign = "right";
       } else {
@@ -144,9 +205,10 @@ function renderHistoryTable(rows) {
       tr.appendChild(td);
     });
 
-    // Sự kiện Click chọn nhiều dòng bằng cách Click (Toggle class selected)
+    // Click chọn dòng kiểu Excel: click = 1 dòng, Ctrl = thêm/bớt, Shift = dải
     tr.addEventListener('click', function(e) {
-      this.classList.toggle('selected');
+      utils.handleRowSelection(body, this, e);
+      updateHistorySelectionSummary();
     });
 
     // Double-click mở form chỉnh sửa
@@ -154,8 +216,76 @@ function renderHistoryTable(rows) {
       openEditOrderDialog(row.id, historyActiveTab);
     });
 
+    // Chuột phải mở menu thao tác nhanh
+    tr.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      if (!this.classList.contains('selected')) {
+        body.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+        this.classList.add('selected');
+        body._lastSelectedIndex = Array.from(body.querySelectorAll('tr')).filter(r => r.dataset.id).indexOf(this);
+      }
+      updateHistorySelectionSummary();
+      showHistoryContextMenu(e, row);
+    });
+
     body.appendChild(tr);
   });
+
+  updateHistorySelectionSummary();
+}
+
+// Cập nhật tiêu đề bảng theo số dòng đang chọn
+function updateHistorySelectionSummary() {
+  const title = document.getElementById('hist-table-title');
+  if (!title) return;
+
+  const typeLabel = historyActiveTab === 'bang_keo_in' ? 'Băng Keo In' : (historyActiveTab === 'truc_in' ? 'Trục In' : 'Băng Keo');
+  const selectedCount = document.querySelectorAll('#history-table-body tr.selected').length;
+
+  title.innerText = selectedCount > 0
+    ? `Lịch sử đơn hàng: ${typeLabel} — đã chọn ${selectedCount} đơn`
+    : `Lịch sử đơn hàng: ${typeLabel}`;
+}
+
+// Chọn toàn bộ dòng đang hiển thị (Ctrl+A)
+function selectAllHistoryRows() {
+  document.querySelectorAll('#history-table-body tr').forEach(tr => {
+    if (tr.dataset.id) tr.classList.add('selected');
+  });
+  updateHistorySelectionSummary();
+}
+
+// Menu chuột phải cho bảng Lịch sử
+function showHistoryContextMenu(e, row) {
+  const menu = document.getElementById('custom-context-menu');
+  if (!menu) return;
+
+  const selectedCount = document.querySelectorAll('#history-table-body tr.selected').length;
+
+  menu.innerHTML = `
+    <div class="context-menu-item" onclick="openEditOrderDialog('${row.id}', '${historyActiveTab}')">
+      <span>✏️</span> <span>Sửa đơn hàng</span>
+    </div>
+    <div class="context-menu-item" onclick="sendOrderNotificationEmail('${row.id}', '${historyActiveTab}')">
+      <span>📧</span> <span>Gửi email thông báo</span>
+    </div>
+    <div class="context-menu-item" onclick="openAttachmentsManager()">
+      <span>📎</span> <span>Quản lý đính kèm</span>
+    </div>
+    <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
+    <div class="context-menu-item" onclick="openOrderExportDialog('${row.id}', '${historyActiveTab}')">
+      <span>🖨️</span> <span>Xem & In phiếu giao hàng</span>
+    </div>
+    <div class="context-menu-item" onclick="exportHistoryExcel()">
+      <span>📊</span> <span>Xuất Excel (${selectedCount > 0 ? selectedCount + ' đơn chọn' : 'tất cả'})</span>
+    </div>
+    <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
+    <div class="context-menu-item context-menu-danger" onclick="deleteSelectedHistory()">
+      <span>🗑️</span> <span>Xóa ${selectedCount > 1 ? selectedCount + ' đơn đã chọn' : 'đơn này'}</span>
+    </div>
+  `;
+
+  utils.openContextMenu(menu, e.clientX, e.clientY);
 }
 
 // Áp dụng bộ lọc lịch sử (Tìm kiếm, Ngày tháng, Trạng thái giao, CTV)
@@ -240,8 +370,8 @@ async function exportHistoryExcel() {
   let rowsToExport = [];
   
   if (selectedRows.length === 0) {
-    // Nếu không chọn dòng nào, xuất toàn bộ bảng hiện tại
-    rowsToExport = historyAllOrders;
+    // Nếu không chọn dòng nào, xuất đúng những dòng đang hiển thị (theo bộ lọc/sắp xếp)
+    rowsToExport = historyVisibleOrders.length > 0 ? historyVisibleOrders : historyAllOrders;
   } else {
     const ids = Array.from(selectedRows).map(tr => tr.dataset.id);
     rowsToExport = historyAllOrders.filter(r => ids.includes(r.id));

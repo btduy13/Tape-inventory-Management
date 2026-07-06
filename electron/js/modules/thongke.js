@@ -209,14 +209,9 @@ function renderStatsTable(rows) {
       <td>${daGuiEmailBadge}</td>
     `;
 
-    // Sự kiện Click chọn dòng
+    // Click chọn dòng kiểu Excel: click = 1 dòng, Ctrl = thêm/bớt, Shift = dải
     tr.addEventListener('click', function(e) {
-      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-        document.querySelectorAll('#stats-table-body tr').forEach(r => {
-          if (r !== this) r.classList.remove('selected');
-        });
-      }
-      this.classList.toggle('selected');
+      utils.handleRowSelection(body, this, e);
       updateStatsSelectionSummary();
     });
 
@@ -231,6 +226,7 @@ function renderStatsTable(rows) {
       if (!this.classList.contains('selected')) {
         document.querySelectorAll('#stats-table-body tr').forEach(r => r.classList.remove('selected'));
         this.classList.add('selected');
+        body._lastSelectedIndex = Array.from(body.querySelectorAll('tr')).filter(r => r.dataset.id).indexOf(this);
       }
       updateStatsSelectionSummary();
       showStatsContextMenu(e, row);
@@ -379,8 +375,8 @@ function showStatsContextMenu(e, row) {
   const menu = document.getElementById('custom-context-menu');
   if (!menu) return;
 
-  const typeLabel = statsActiveSubtab === 'bang-keo-in' ? 'Băng Keo In' : (statsActiveSubtab === 'truc-in' ? 'Trục In' : 'Băng Keo');
-  
+  const selectedCount = getSelectedStatsOrderIds().length;
+
   menu.innerHTML = `
     <div class="context-menu-item" onclick="toggleDeliveryStatus('${row.id}', ${row.da_giao})">
       <span>🚚</span> <span>Đánh dấu ${row.da_giao ? 'Chưa giao' : 'Đã giao'}</span>
@@ -388,6 +384,11 @@ function showStatsContextMenu(e, row) {
     <div class="context-menu-item" onclick="toggleSettlementStatus('${row.id}', ${row.da_tat_toan})">
       <span>💳</span> <span>Đánh dấu ${row.da_tat_toan ? 'Chưa tất toán' : 'Đã tất toán'}</span>
     </div>
+    ${selectedCount > 1 ? `
+    <div class="context-menu-item" onclick="openBulkStatsStatusDialog()">
+      <span>✅</span> <span>Cập nhật trạng thái ${selectedCount} đơn đã chọn</span>
+    </div>
+    ` : ''}
     <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
     <div class="context-menu-item" onclick="openOrderExportDialog('${row.id}', '${statsActiveSubtab}')">
       <span>🖨️</span> <span>Xem & In phiếu giao hàng</span>
@@ -400,16 +401,7 @@ function showStatsContextMenu(e, row) {
     </div>
   `;
 
-  menu.style.display = 'block';
-  menu.style.left = `${e.pageX}px`;
-  menu.style.top = `${e.pageY}px`;
-
-  // Tự động đóng menu khi click ra ngoài
-  function closeMenu() {
-    menu.style.display = 'none';
-    document.removeEventListener('click', closeMenu);
-  }
-  setTimeout(() => document.addEventListener('click', closeMenu), 100);
+  utils.openContextMenu(menu, e.clientX, e.clientY);
 }
 
 // 9. Thực hiện thay đổi trạng thái giao hàng từ chuột phải

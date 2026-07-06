@@ -3,6 +3,8 @@
 var activeExportDocType = 'don_dat_hang';
 var selectedExportOrderIds = new Set();
 var exportAllOrders = [];
+var exportFilteredOrders = [];
+var exportLastClickedIndex = null;
 var exportPreviewData = null;
 
 function escapeExportHtml(value) {
@@ -47,8 +49,9 @@ async function openMultiOrderExportDialog() {
     // Tải toàn bộ đơn hàng để phục vụ lọc offline
     await loadExportAllOrdersFromDb();
 
-    // Mở modal
+    // Mở modal và focus vào ô tìm kiếm để gõ được ngay
     document.getElementById('modal-order-export').classList.add('active');
+    setTimeout(() => document.getElementById('export-filter-search')?.focus(), 60);
   } catch (err) {
     utils.showToast("Lỗi khởi tạo hộp thoại xuất đơn: " + err.message, "danger");
   }
@@ -118,20 +121,23 @@ function loadExportOrdersTable() {
     return matchYear && matchMonth && matchType && matchSearch;
   });
 
+  exportFilteredOrders = filtered;
+  exportLastClickedIndex = null;
+
   // Render bảng
   const tbody = document.getElementById('export-orders-tbody');
   tbody.innerHTML = "";
 
-  document.getElementById('export-orders-select-all').checked = false;
-
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Không tìm thấy đơn hàng nào khớp bộ lọc</td></tr>`;
+    updateExportSelectionSummary();
     return;
   }
 
-  filtered.forEach(row => {
+  filtered.forEach((row, index) => {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    if (selectedExportOrderIds.has(row.id)) tr.classList.add('selected');
 
     // Phân biệt ký hiệu số lượng
     const qtyLabel = row.type === 'bang_keo' ? ' KG' : ' cuộn';
@@ -148,19 +154,66 @@ function loadExportOrdersTable() {
       <td style="text-align: right;">${utils.formatCurrency(row.don_gia_ban)}đ</td>
     `;
     tr.addEventListener('click', (event) => {
-      if (event.target.tagName === 'INPUT') return;
+      if (event.target.tagName === 'INPUT') {
+        exportLastClickedIndex = index;
+        return;
+      }
+
+      // Shift+Click: chọn cả dải từ dòng bấm trước đó
+      if (event.shiftKey && exportLastClickedIndex !== null) {
+        const start = Math.min(exportLastClickedIndex, index);
+        const end = Math.max(exportLastClickedIndex, index);
+        for (let i = start; i <= end; i++) {
+          toggleSelectOrder(exportFilteredOrders[i].id, true);
+        }
+        syncExportRowsWithSelection();
+        return;
+      }
+
       const checkbox = tr.querySelector('input[type="checkbox"]');
       checkbox.checked = !checkbox.checked;
       toggleSelectOrder(row.id, checkbox.checked);
+      exportLastClickedIndex = index;
     });
-    tr.addEventListener('dblclick', () => {
-      const checkbox = tr.querySelector('input[type="checkbox"]');
-      checkbox.checked = true;
+    tr.addEventListener('dblclick', (event) => {
+      if (event.target.tagName === 'INPUT') return;
       toggleSelectOrder(row.id, true);
+      syncExportRowsWithSelection();
       proceedToExportPreview();
     });
     tbody.appendChild(tr);
   });
+
+  updateExportSelectionSummary();
+}
+
+// Đồng bộ checkbox + highlight của các dòng theo Set lựa chọn
+function syncExportRowsWithSelection() {
+  document.querySelectorAll('#export-orders-tbody tr').forEach(tr => {
+    if (!tr.dataset.id) return;
+    const isSelected = selectedExportOrderIds.has(tr.dataset.id);
+    tr.classList.toggle('selected', isSelected);
+    const cb = tr.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = isSelected;
+  });
+  updateExportSelectionSummary();
+}
+
+// Cập nhật bộ đếm lựa chọn + trạng thái checkbox "chọn tất cả"
+function updateExportSelectionSummary() {
+  const label = document.getElementById('export-selected-count');
+  if (label) {
+    const count = selectedExportOrderIds.size;
+    label.innerText = count > 0 ? `Đã chọn ${count} đơn hàng` : 'Chưa chọn đơn hàng nào';
+    label.classList.toggle('has-selection', count > 0);
+  }
+
+  const selectAll = document.getElementById('export-orders-select-all');
+  if (selectAll) {
+    const visibleSelected = exportFilteredOrders.filter(row => selectedExportOrderIds.has(row.id)).length;
+    selectAll.checked = exportFilteredOrders.length > 0 && visibleSelected === exportFilteredOrders.length;
+    selectAll.indeterminate = visibleSelected > 0 && visibleSelected < exportFilteredOrders.length;
+  }
 }
 
 function toggleSelectOrder(id, checked) {
@@ -169,17 +222,25 @@ function toggleSelectOrder(id, checked) {
   } else {
     selectedExportOrderIds.delete(id);
   }
+
+  const tr = document.querySelector(`#export-orders-tbody tr[data-id="${id}"]`);
+  if (tr) {
+    tr.classList.toggle('selected', checked);
+    const cb = tr.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = checked;
+  }
+  updateExportSelectionSummary();
 }
 
 function toggleAllExportOrders(checked) {
-  const checkboxes = document.querySelectorAll('#export-orders-tbody input[type="checkbox"]');
-  checkboxes.forEach(cb => {
-    cb.checked = checked;
-    const tr = cb.closest('tr');
-    if (tr && tr.dataset.id) {
-      toggleSelectOrder(tr.dataset.id, checked);
+  exportFilteredOrders.forEach(row => {
+    if (checked) {
+      selectedExportOrderIds.add(row.id);
+    } else {
+      selectedExportOrderIds.delete(row.id);
     }
   });
+  syncExportRowsWithSelection();
 }
 
 // Bấm Tiếp tục sang modal Review Preview
@@ -322,6 +383,28 @@ function updatePreviewProductNumeric(idx, field, value) {
 function deletePreviewProduct(idx) {
   exportPreviewData.products.splice(idx, 1);
   renderPreviewProductsTable();
+}
+
+// Thêm dòng sản phẩm trống để bổ sung thủ công vào chứng từ
+function addPreviewProductRow() {
+  exportPreviewData.products.push({
+    id: `MANUAL-${Date.now()}`,
+    product: '',
+    specs: '',
+    text_color: '',
+    bg_color: '',
+    unit: 'cuộn',
+    quantity: 1,
+    price: 0,
+    vat: 0,
+    total: 0
+  });
+  renderPreviewProductsTable();
+
+  // Focus ngay vào ô tên sản phẩm của dòng mới
+  const tbody = document.getElementById('preview-products-tbody');
+  const lastRowInput = tbody?.lastElementChild?.querySelector('input[type="text"]');
+  if (lastRowInput) lastRowInput.focus();
 }
 
 // Tính toán lại tổng tiền hàng, VAT, cọc và còn lại
