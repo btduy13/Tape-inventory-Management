@@ -664,6 +664,7 @@ function initializeUiEnhancements() {
   setInterval(updateFooterClock, 30000);
   renderCommandResults();
   setupKeyboardFocusableControls();
+  setupDatabaseStatusWatcher();
 }
 
 // Cho phép điều hướng sidebar / breadcrumb bằng Tab + Enter/Space
@@ -696,6 +697,66 @@ function setConnectionStatus(isConnected, label) {
   if (badge) badge.classList.toggle('offline', !isConnected);
   if (text) text.innerText = label || (isConnected ? 'Mây: Kết nối' : 'Mây: Mất kết nối');
   if (footer) footer.innerText = isConnected ? 'Đã sẵn sàng' : 'Không thể tải dữ liệu mới';
+}
+
+let lastDbStatus = null;
+
+async function applyDbStatusPayload(payload) {
+  if (!payload) return;
+
+  const previousStatus = lastDbStatus;
+  lastDbStatus = payload.status;
+
+  if (payload.status === 'connected') {
+    setConnectionStatus(true, payload.message || 'Mây: Kết nối');
+    if (previousStatus && previousStatus !== 'connected') {
+      await switchTab(activeTab);
+    }
+    return;
+  }
+
+  if (payload.status === 'connecting') {
+    const badge = document.getElementById('connection-status-badge');
+    const text = document.getElementById('connection-status-text');
+    const footer = document.getElementById('footer-status-text');
+    if (badge) badge.classList.add('offline');
+    if (text) text.innerText = payload.message || 'Mây: Đang kết nối...';
+    if (footer) footer.innerText = 'Đang kết nối database...';
+    return;
+  }
+
+  setConnectionStatus(false, payload.message || 'Mây: Mất kết nối');
+}
+
+async function retryDatabaseConnection() {
+  if (!window.electronAPI?.retryDbConnection) return;
+
+  utils.showToast('Đang thử kết nối lại database...', 'info');
+  const res = await window.electronAPI.retryDbConnection();
+  if (res.ok) {
+    utils.showToast('Đã kết nối lại database thành công!', 'success');
+    await switchTab(activeTab);
+  } else {
+    utils.showToast('Vẫn chưa kết nối được database. Kiểm tra mạng và thử lại.', 'danger');
+  }
+}
+
+async function setupDatabaseStatusWatcher() {
+  if (!window.electronAPI?.getDbStatus) return;
+
+  const initial = await window.electronAPI.getDbStatus();
+  await applyDbStatusPayload(initial);
+
+  if (window.electronAPI.onDbStatusChange) {
+    window.electronAPI.onDbStatusChange(applyDbStatusPayload);
+  }
+
+  const badge = document.getElementById('connection-status-badge');
+  if (badge) {
+    badge.style.cursor = 'pointer';
+    badge.title = 'Bấm để thử kết nối lại database';
+    badge.addEventListener('click', retryDatabaseConnection);
+  }
 }
 
 function openCommandPalette() {
