@@ -14,6 +14,7 @@ const statsColumnDefs = [
   { key: 'da_gui_email', label: 'Đã Email', value: row => row.da_gui_email ? 'Rồi' : 'Chưa' }
 ];
 let statsAllOrders = []; // Lưu trữ để tìm kiếm filter offline nhanh chóng
+let bulkStatsPendingIds = [];
 
 function getStatsTableName() {
   if (statsActiveSubtab === 'truc-in') return 'truc_in_orders';
@@ -168,6 +169,7 @@ function renderStatsTable(rows) {
   rows.forEach(row => {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    tr.dataset.orderType = statsActiveSubtab;
     
     // Đánh giá cảnh báo thời hạn
     const today = new Date();
@@ -382,10 +384,10 @@ function showStatsContextMenu(e, row) {
   const typeLabel = statsActiveSubtab === 'bang-keo-in' ? 'Băng Keo In' : (statsActiveSubtab === 'truc-in' ? 'Trục In' : 'Băng Keo');
   
   menu.innerHTML = `
-    <div class="context-menu-item" onclick="toggleDeliveryStatus('${row.id}', ${row.da_giao})">
+    <div class="context-menu-item" onclick="toggleDeliveryStatus('${row.id}', ${row.da_giao === true})">
       <span>🚚</span> <span>Đánh dấu ${row.da_giao ? 'Chưa giao' : 'Đã giao'}</span>
     </div>
-    <div class="context-menu-item" onclick="toggleSettlementStatus('${row.id}', ${row.da_tat_toan})">
+    <div class="context-menu-item" onclick="toggleSettlementStatus('${row.id}', ${row.da_tat_toan === true})">
       <span>💳</span> <span>Đánh dấu ${row.da_tat_toan ? 'Chưa tất toán' : 'Đã tất toán'}</span>
     </div>
     <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
@@ -422,7 +424,7 @@ async function toggleDeliveryStatus(orderId, currentStatus) {
   const sql = `UPDATE ${tableName} SET da_giao = $1 WHERE id = $2`;
   const res = await window.electronAPI.dbRun(sql, [newStatus, orderId]);
   
-  if (res.ok) {
+  if (res.ok && res.rowCount > 0) {
     utils.showToast(`Đã chuyển trạng thái giao hàng đơn ${orderId}`, "success");
     loadStatsData();
   } else {
@@ -437,10 +439,12 @@ async function toggleSettlementStatus(orderId, currentStatus) {
   if (statsActiveSubtab === 'bang-keo') tableName = 'bang_keo_orders';
 
   const newStatus = !currentStatus;
-  const sql = `UPDATE ${tableName} SET da_tat_toan = $1 WHERE id = $2`;
+  const sql = newStatus
+    ? `UPDATE ${tableName} SET da_tat_toan = $1, cong_no_khach = 0 WHERE id = $2`
+    : `UPDATE ${tableName} SET da_tat_toan = $1 WHERE id = $2`;
   const res = await window.electronAPI.dbRun(sql, [newStatus, orderId]);
   
-  if (res.ok) {
+  if (res.ok && res.rowCount > 0) {
     utils.showToast(`Đã cập nhật trạng thái tất toán đơn ${orderId}`, "success");
     loadStatsData();
   } else {
@@ -461,6 +465,7 @@ function openBulkStatsStatusDialog() {
     return;
   }
 
+  bulkStatsPendingIds = [...selectedIds];
   const label = document.getElementById('bulk-stats-status-label');
   if (label) label.innerText = `${selectedIds.length} đơn đã chọn`;
   document.getElementById('bulk-stats-da-giao').checked = true;
@@ -469,7 +474,9 @@ function openBulkStatsStatusDialog() {
 }
 
 async function applyBulkStatsStatus() {
-  const selectedIds = getSelectedStatsOrderIds();
+  const selectedIds = bulkStatsPendingIds.length > 0
+    ? [...bulkStatsPendingIds]
+    : getSelectedStatsOrderIds();
   if (selectedIds.length === 0) {
     utils.showToast("Không còn đơn nào được chọn", "warning");
     closeModal('modal-bulk-stats-status');
@@ -483,12 +490,13 @@ async function applyBulkStatsStatus() {
   let successCount = 0;
   for (const id of selectedIds) {
     const res = await window.electronAPI.dbRun(
-      `UPDATE ${tableName} SET da_giao = $1, da_tat_toan = $2 WHERE id = $3`,
+      `UPDATE ${tableName} SET da_giao = $1, da_tat_toan = $2, cong_no_khach = CASE WHEN $2 THEN 0 ELSE cong_no_khach END WHERE id = $3`,
       [daGiao, daTatToan, id]
     );
-    if (res.ok) successCount++;
+    if (res.ok && res.rowCount > 0) successCount++;
   }
 
+  bulkStatsPendingIds = [];
   closeModal('modal-bulk-stats-status');
   utils.showToast(`Đã cập nhật ${successCount}/${selectedIds.length} đơn`, successCount === selectedIds.length ? "success" : "warning");
   loadStatsData();

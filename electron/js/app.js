@@ -5,6 +5,11 @@ let editOrderTypeGlobal = null;
 let commandPaletteFilteredActions = [];
 let commandPaletteSelectedIndex = 0;
 
+// UI Enhancement state
+let activeAutocompleteElements = [];
+let activeContextMenu = null;
+let lastClickedElement = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Kích hoạt định dạng tiền tệ
   utils.setupCurrencyInputs();
@@ -584,6 +589,12 @@ function initializeUiEnhancements() {
   updateFooterClock();
   setInterval(updateFooterClock, 30000);
   renderCommandResults();
+
+  // Initialize global mouse and keyboard enhancements
+  setupGlobalMouseInteractions();
+  setupGlobalKeyboardShortcuts();
+  setupClickOutsideHandlers();
+  setupTooltipSystem();
 }
 
 function updateFooterClock() {
@@ -673,6 +684,415 @@ async function executeCommandPaletteAction(index) {
   await action.run();
 }
 
+// ==========================================
+// UI ENHANCEMENTS: Global Mouse & Keyboard
+// ==========================================
+
+// 1. Global ESC handler - closes all modals, dropdowns, autocomplete, context menus
+function handleGlobalEscape() {
+  // Close active modal
+  const activeModal = document.querySelector('.modal-overlay.active');
+  if (activeModal) {
+    if (activeModal.id === 'modal-email-dialog') {
+      closeEmailDialogModal();
+    } else {
+      closeModal(activeModal.id);
+    }
+    return true;
+  }
+
+  // Close autocomplete suggestions
+  let closedAutocomplete = false;
+  document.querySelectorAll('.autocomplete-suggestions').forEach(el => {
+    if (el.style.display === 'block' || el.style.display === '') {
+      el.style.display = 'none';
+      el.innerHTML = '';
+      closedAutocomplete = true;
+    }
+  });
+  if (closedAutocomplete) return true;
+
+  // Close context menu
+  const contextMenu = document.getElementById('custom-context-menu');
+  if (contextMenu && contextMenu.style.display !== 'none') {
+    contextMenu.style.display = 'none';
+    return true;
+  }
+
+  // Close column filter menu
+  const columnFilterMenu = document.getElementById('stats-column-filter-menu');
+  if (columnFilterMenu && columnFilterMenu.style.display !== 'none') {
+    columnFilterMenu.style.display = 'none';
+    return true;
+  }
+
+  // Close command palette
+  const commandPalette = document.getElementById('modal-command-palette');
+  if (commandPalette && commandPalette.classList.contains('active')) {
+    closeModal('modal-command-palette');
+    return true;
+  }
+
+  return false;
+}
+
+// 2. Global mouse interactions - double-click, right-click, middle-click
+function setupGlobalMouseInteractions() {
+  // Double-click on table rows to edit
+  document.addEventListener('dblclick', (e) => {
+    const row = e.target.closest('.data-table tbody tr');
+    if (row && !row.classList.contains('no-dblclick')) {
+      const orderId = row.dataset.orderId || row.dataset.id;
+      const orderType = row.dataset.orderType;
+      if (orderId && orderType) {
+        e.preventDefault();
+        openEditOrderDialog(orderId, orderType);
+      }
+    }
+  });
+
+  // Right-click context menu on table rows (stats table has its own menu)
+  document.addEventListener('contextmenu', (e) => {
+    const row = e.target.closest('.data-table tbody tr');
+    if (row && row.closest('#stats-table-body')) return;
+    if (row) {
+      e.preventDefault();
+      showRowContextMenu(e, row);
+    }
+  });
+
+  // Middle-click to open in new window (for links with data-new-tab)
+  document.addEventListener('mousedown', (e) => {
+    if (e.button === 1) { // Middle click
+      const link = e.target.closest('a[data-new-tab]');
+      if (link) {
+        e.preventDefault();
+        window.open(link.href, '_blank');
+      }
+    }
+  });
+
+  // Click outside to close dropdowns/menus
+  document.addEventListener('click', (e) => {
+    lastClickedElement = e.target;
+  });
+}
+
+// 3. Click outside handlers
+function setupClickOutsideHandlers() {
+  document.addEventListener('click', (e) => {
+    // Close autocomplete if clicking outside
+    if (!e.target.closest('.form-group') && !e.target.closest('.autocomplete-suggestions')) {
+      document.querySelectorAll('.autocomplete-suggestions').forEach(el => {
+        el.style.display = 'none';
+        el.innerHTML = '';
+      });
+    }
+
+    // Close context menu if clicking outside
+    const contextMenu = document.getElementById('custom-context-menu');
+    if (contextMenu && !contextMenu.contains(e.target) && !e.target.closest('.data-table tbody tr')) {
+      contextMenu.style.display = 'none';
+    }
+
+    // Close column filter menu
+    const columnFilterMenu = document.getElementById('stats-column-filter-menu');
+    if (columnFilterMenu && !columnFilterMenu.contains(e.target) && !e.target.closest('.table-filter-button')) {
+      columnFilterMenu.style.display = 'none';
+    }
+
+    // Close shortcuts modal
+    const shortcutsModal = document.getElementById('modal-shortcuts');
+    if (shortcutsModal && shortcutsModal.classList.contains('active') && !shortcutsModal.contains(e.target)) {
+      closeModal('modal-shortcuts');
+    }
+  });
+}
+
+// 4. Show context menu for table rows
+function showRowContextMenu(event, row) {
+  const contextMenu = document.getElementById('custom-context-menu');
+  if (!contextMenu) return;
+
+  const orderId = row.dataset.orderId || row.dataset.id;
+  const orderType = row.dataset.orderType;
+  const isSelected = row.classList.contains('selected');
+
+  // Build context menu based on current tab and row data
+  let menuItems = [
+    {
+      label: isSelected ? '✓ Bỏ chọn' : '☐ Chọn dòng này',
+      action: () => toggleRowSelection(row)
+    },
+    { type: 'separator' },
+    {
+      label: '✏️ Sửa đơn hàng',
+      action: () => openEditOrderDialog(orderId, orderType),
+      disabled: !orderId || !orderType
+    },
+    {
+      label: '👁️ Xem chi tiết',
+      action: () => viewOrderDetails(orderId, orderType),
+      disabled: !orderId || !orderType
+    },
+    {
+      label: '📋 Sao chép mã đơn',
+      action: () => copyToClipboard(orderId),
+      disabled: !orderId
+    },
+    { type: 'separator' },
+    {
+      label: '📧 Gửi email',
+      action: () => sendSelectedHistoryEmail(),
+      visible: activeTab === 'history'
+    },
+    {
+      label: '📎 Quản lý đính kèm',
+      action: () => openAttachmentsManager(),
+      visible: activeTab === 'history'
+    },
+    { type: 'separator' },
+    {
+      label: '🗑️ Xóa đơn hàng',
+      action: () => confirmDeleteOrder(orderId, orderType),
+      disabled: !orderId || !orderType,
+      danger: true
+    }
+  ];
+
+  // Filter visible items
+  menuItems = menuItems.filter(item => item.visible !== false);
+
+  contextMenu.innerHTML = menuItems.map(item => {
+    if (item.type === 'separator') {
+      return '<div class="context-menu-separator" style="height: 1px; background: var(--border-color); margin: 4px 0;"></div>';
+    }
+    return `
+      <div class="context-menu-item ${item.danger ? 'danger' : ''} ${item.disabled ? 'disabled' : ''}"
+           data-action="${item.action ? item.action.toString().match(/\(\) => (.*?)\(/)?.[1] || '' : ''}"
+           onclick="${item.disabled ? '' : item.action?.toString().replace(/\(\) => /, '').replace(/\{.*\}/, '()') || ''}"
+           style="${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : 'cursor: pointer;'}">
+        ${item.label}
+      </div>
+    `;
+  }).join('');
+
+  // Position menu
+  contextMenu.style.left = `${event.pageX}px`;
+  contextMenu.style.top = `${event.pageY}px`;
+  contextMenu.style.display = 'block';
+
+  // Ensure menu stays within viewport
+  setTimeout(() => {
+    const rect = contextMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      contextMenu.style.left = `${window.innerWidth - rect.width - 10}px`;
+    }
+    if (rect.bottom > window.innerHeight) {
+      contextMenu.style.top = `${window.innerHeight - rect.height - 10}px`;
+    }
+  }, 0);
+
+  activeContextMenu = contextMenu;
+}
+
+// 5. Tooltip system
+function setupTooltipSystem() {
+  // Create tooltip container
+  if (!document.getElementById('global-tooltip')) {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'global-tooltip';
+    tooltip.className = 'global-tooltip';
+    tooltip.style.cssText = `
+      position: fixed;
+      z-index: 10000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-md);
+      white-space: nowrap;
+      max-width: 300px;
+      text-align: center;
+    `;
+    document.body.appendChild(tooltip);
+  }
+
+  // Add tooltip listeners to elements with data-tooltip
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+      showTooltip(target, target.getAttribute('data-tooltip'));
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+      hideTooltip();
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    const tooltip = document.getElementById('global-tooltip');
+    if (tooltip && tooltip.style.opacity === '1') {
+      positionTooltip(e);
+    }
+  });
+}
+
+function showTooltip(element, text) {
+  const tooltip = document.getElementById('global-tooltip');
+  if (!tooltip) return;
+
+  tooltip.textContent = text;
+  tooltip.style.opacity = '1';
+  positionTooltip({ clientX: element.getBoundingClientRect().left + element.offsetWidth / 2, clientY: element.getBoundingClientRect().top });
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById('global-tooltip');
+  if (tooltip) {
+    tooltip.style.opacity = '0';
+  }
+}
+
+function positionTooltip(event) {
+  const tooltip = document.getElementById('global-tooltip');
+  if (!tooltip) return;
+
+  const padding = 8;
+  let left = event.clientX - tooltip.offsetWidth / 2;
+  let top = event.clientY - tooltip.offsetHeight - padding;
+
+  // Keep within viewport
+  if (left < padding) left = padding;
+  if (left + tooltip.offsetWidth > window.innerWidth - padding) {
+    left = window.innerWidth - tooltip.offsetWidth - padding;
+  }
+  if (top < padding) {
+    top = event.clientY + padding;
+  }
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+// 6. Global keyboard shortcuts enhancement
+function setupGlobalKeyboardShortcuts() {
+  // Already handled in the main keydown listener, but we add extra handlers here
+  document.addEventListener('keydown', (e) => {
+    // Handle autocomplete keyboard navigation
+    if (e.target.closest('.autocomplete-suggestions')) {
+      handleAutocompleteKeydown(e);
+    }
+  });
+}
+
+function handleAutocompleteKeydown(e) {
+  const suggestions = e.target.closest('.autocomplete-suggestions');
+  if (!suggestions) return;
+
+  const items = suggestions.querySelectorAll('.autocomplete-suggestion');
+  if (items.length === 0) return;
+
+  let activeIndex = Array.from(items).findIndex(item => item.classList.contains('autocomplete-active'));
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeIndex = Math.min(activeIndex + 1, items.length - 1);
+    updateAutocompleteActive(items, activeIndex);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeIndex = Math.max(activeIndex - 1, 0);
+    updateAutocompleteActive(items, activeIndex);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (activeIndex >= 0 && items[activeIndex]) {
+      items[activeIndex].click();
+    } else if (items[0]) {
+      items[0].click();
+    }
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    suggestions.style.display = 'none';
+    suggestions.innerHTML = '';
+  }
+}
+
+function updateAutocompleteActive(items, activeIndex) {
+  items.forEach((item, i) => {
+    item.classList.toggle('autocomplete-active', i === activeIndex);
+  });
+  if (items[activeIndex]) {
+    items[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+// 7. Utility functions for context menu actions
+function toggleRowSelection(row) {
+  row.classList.toggle('selected');
+  updateSelectionSummary();
+}
+
+function viewOrderDetails(orderId, orderType) {
+  // Open edit dialog in view-only mode or show a preview modal
+  openEditOrderDialog(orderId, orderType);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    utils.showToast('Đã sao chép: ' + text, 'success');
+  }).catch(() => {
+    utils.showToast('Không thể sao chép', 'danger');
+  });
+}
+
+function confirmDeleteOrder(orderId, orderType) {
+  if (confirm(`Bạn có chắc chắn muốn xóa đơn ${orderId}?`)) {
+    deleteOrderById(orderId, orderType);
+  }
+}
+
+async function deleteOrderById(orderId, orderType) {
+  try {
+    const tableName = utils.getOrderTableName(orderType);
+    const res = await window.electronAPI.dbRun(`DELETE FROM ${tableName} WHERE id = $1`, [orderId]);
+    if (res.ok) {
+      utils.showToast(`Đã xóa đơn ${orderId}`, 'success');
+      await switchTab(activeTab);
+    } else {
+      utils.showToast('Lỗi xóa đơn: ' + res.error, 'danger');
+    }
+  } catch (err) {
+    utils.showToast('Không thể xóa đơn hàng', 'danger');
+  }
+}
+
+function updateSelectionSummary() {
+  if (typeof updateStatsSelectionSummary === 'function') {
+    updateStatsSelectionSummary();
+    return;
+  }
+  const summary = document.getElementById('stats-selection-summary');
+  if (summary && summary.style.display !== 'none') {
+    const selectedRows = document.querySelectorAll('.data-table tbody tr.selected');
+    const count = selectedRows.length;
+    let totalDebt = 0;
+    selectedRows.forEach(row => {
+      const debtCell = row.querySelector('[data-debt]');
+      if (debtCell) totalDebt += parseFloat(debtCell.dataset.debt) || 0;
+    });
+    document.getElementById('stats-selected-count').textContent = `${count} đơn`;
+    document.getElementById('stats-selected-debt').textContent = utils.formatCurrency(totalDebt) + 'đ';
+  }
+}
+
 async function jumpToSalesForm(formId) {
   await switchTab('sales');
   switchSalesForm(formId);
@@ -698,16 +1118,9 @@ window.addEventListener('keydown', async (e) => {
   const key = e.key;
   const lowerKey = key.toLowerCase();
 
-  // 1. Phím Escape - Đóng Modal
+  // 1. Phím Escape - Đóng Modal (sử dụng hàm tập trung)
   if (key === 'Escape') {
-    const activeModal = document.querySelector('.modal-overlay.active');
-    if (activeModal) {
-      e.preventDefault();
-      if (activeModal.id === 'modal-email-dialog') {
-        closeEmailDialogModal();
-      } else {
-        closeModal(activeModal.id);
-      }
+    if (handleGlobalEscape(e)) {
       return;
     }
   }
