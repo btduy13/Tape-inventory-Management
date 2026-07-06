@@ -71,6 +71,9 @@ function initDatabase() {
           await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
           await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
           await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+          await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+          await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+          await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
           await dbPool.query(`
             ALTER TABLE bang_keo_in_orders
               ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
@@ -304,6 +307,16 @@ function setupIpcHandlers() {
   });
 
   // --- IN ẤN PDF BÁO GIÁ ---
+  ipcMain.handle('write-file-base64', async (event, filePath, base64Data) => {
+    try {
+      await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
+      return { ok: true };
+    } catch (err) {
+      writeLogToFile('error', 'Loi ghi file base64: ' + err.message);
+      return { ok: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('print-to-pdf', async (event, htmlContent, savePath) => {
     try {
       writeLogToFile('info', 'Đang tạo cửa sổ in PDF báo giá...');

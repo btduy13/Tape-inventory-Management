@@ -108,9 +108,18 @@ async function downloadQuotePDFById(quoteId, type) {
 }
 
 // 5. Hàm tạo HTML và lưu PDF
+function escapeQuoteHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
 async function generateAndSaveQuotePDF(quoteId, type, data) {
   try {
-    // Hỏi đường dẫn lưu file trước
     const savePath = await window.electronAPI.showSaveDialog({
       title: "Lưu file báo giá PDF",
       defaultPath: `bao_gia_${quoteId}.pdf`,
@@ -124,7 +133,6 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
 
     utils.showToast("Đang tạo file PDF báo giá...", "warning");
 
-    // Xác định Specs hiển thị
     let specsText = "";
     if (type === 'bang_keo_in') {
       const mm = data.quy_cach_mm || '-';
@@ -136,107 +144,119 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
     }
 
     const typeLabel = type === 'bang_keo_in' ? 'Băng Keo In Logo' : (type === 'bang_keo' ? 'Băng Keo thường' : 'Trục In');
+    const company = utils.companyInfo || {};
     const hasNewAxis = type === 'bang_keo_in' && data.loai_truc === 'moi';
     const axisTotal = hasNewAxis ? parseFloat(data.truc_thanh_tien_ban || 0) : 0;
-    const quoteTotal = parseFloat(data.thanh_tien_ban || 0) + axisTotal;
-    const quoteRemaining = quoteTotal - parseFloat(data.tien_coc || 0);
-    const totalWords = convertNumberToVietnameseWords(quoteTotal || 0) + " đồng chẵn";
+    const quoteSubtotal = parseFloat(data.thanh_tien_ban || 0) + axisTotal;
+    const vatAmount = parseFloat(data.vat || 0);
+    const quoteTotal = quoteSubtotal + vatAmount;
+    const deposit = parseFloat(data.tien_coc || 0);
+    const quoteRemaining = quoteTotal - deposit;
+    const totalWords = convertNumberToVietnameseWords(quoteRemaining || 0) + " đồng chẵn";
     const axisQuoteRow = hasNewAxis ? `
             <tr>
               <td style="text-align: center;">2</td>
-              <td><strong>${data.ten_truc || 'Trục mới'}</strong><br><small style="color:#64748b;">Trục mới</small></td>
-              <td>Chu vi: ${data.truc_chu_vi || '-'}</td>
+              <td><strong>${escapeQuoteHtml(data.ten_truc || 'Trục mới')}</strong><br><small>Trục mới</small></td>
+              <td>Chu vi: ${escapeQuoteHtml(data.truc_chu_vi || '-')}</td>
               <td style="text-align: right;">${data.truc_so_luong || 0}</td>
               <td style="text-align: right;">${utils.formatCurrency(data.truc_gia_ban || 0)}đ</td>
               <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(axisTotal)}đ</td>
             </tr>
     ` : '';
+    const vatRow = vatAmount > 0 ? `
+          <tr>
+            <td>VAT theo yêu cầu:</td>
+            <td>${utils.formatCurrency(vatAmount)}đ</td>
+          </tr>
+    ` : '';
 
-    // Xây dựng template HTML
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <style>
-          body { font-family: Arial, sans-serif; padding: 30px; line-height: 1.6; color: #1e293b; background-color: #fff; }
-          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          .header-table td { vertical-align: top; }
-          .title { font-size: 26px; color: #0284c7; font-weight: bold; margin: 0; }
-          .company-name { font-size: 16px; font-weight: bold; color: #0f172a; margin: 0; text-transform: uppercase; }
-          .info-text { font-size: 11px; color: #64748b; margin: 2px 0 0 0; }
-          .meta-text { font-size: 12px; margin: 2px 0; text-align: right; }
-          
-          .divider { border-top: 2px solid #0284c7; margin-bottom: 25px; }
-          
-          .customer-table { width: 100%; margin-bottom: 20px; font-size: 13px; }
-          .customer-table td { padding: 4px 0; }
-          
-          .data-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 13px; }
-          .data-table th { background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 10px; font-weight: bold; text-align: left; }
-          .data-table td { border: 1px solid #cbd5e1; padding: 10px; }
-          
-          .summary-table { width: 45%; margin-left: auto; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
-          .summary-table td { padding: 6px 8px; }
-          .summary-table .label { font-weight: bold; text-align: left; }
-          .summary-table .value { text-align: right; font-weight: 600; }
-          .summary-table .grand-total { font-size: 15px; color: #0284c7; font-weight: 800; border-top: 1px double #cbd5e1; }
-          
-          .words-text { font-style: italic; font-size: 12px; color: #475569; margin-bottom: 40px; }
-          
-          .signatures { width: 100%; margin-top: 60px; font-size: 13px; text-align: center; }
+          @page { size: A4; margin: 24mm 18mm 18mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; margin: 0; color: #172033; background: #fff; font-size: 12px; line-height: 1.45; }
+          .accent { height: 8px; background: #2563eb; border-radius: 999px; margin-bottom: 18px; }
+          .header { display: table; width: 100%; margin-bottom: 18px; }
+          .company, .quote-meta { display: table-cell; vertical-align: top; }
+          .company { width: 63%; }
+          .quote-meta { width: 37%; text-align: right; }
+          .company-name { margin: 0 0 6px; font-size: 15px; line-height: 1.35; font-weight: 800; color: #0f172a; text-transform: uppercase; }
+          .info-text { margin: 2px 0; color: #475569; }
+          .title { margin: 0 0 8px; font-size: 26px; font-weight: 800; color: #1d4ed8; }
+          .meta-pill { display: inline-block; min-width: 180px; padding: 8px 10px; border: 1px solid #dbeafe; border-radius: 8px; background: #eff6ff; text-align: left; }
+          .meta-row { display: table; width: 100%; margin: 2px 0; }
+          .meta-row span, .meta-row strong { display: table-cell; }
+          .meta-row strong { text-align: right; }
+          .section-title { margin: 18px 0 8px; font-size: 12px; font-weight: 800; color: #1d4ed8; text-transform: uppercase; }
+          .info-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; background: #f8fafc; margin-bottom: 16px; }
+          .info-grid { width: 100%; border-collapse: collapse; }
+          .info-grid td { padding: 3px 0; vertical-align: top; }
+          .info-grid .label { width: 120px; color: #64748b; font-weight: 700; }
+          .data-table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 10px 0 16px; overflow: hidden; border: 1px solid #dbe4f0; border-radius: 10px; }
+          .data-table th { background: #1d4ed8; color: #fff; padding: 10px 9px; font-size: 11px; text-align: left; text-transform: uppercase; }
+          .data-table td { border-top: 1px solid #e5edf6; padding: 10px 9px; vertical-align: top; }
+          .data-table small { color: #64748b; }
+          .data-table tbody tr:nth-child(even) td { background: #f8fbff; }
+          .totals { width: 45%; margin-left: auto; border-collapse: collapse; font-size: 12px; }
+          .totals td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+          .totals td:first-child { color: #475569; font-weight: 700; }
+          .totals td:last-child { text-align: right; font-weight: 800; }
+          .totals .grand td { border-bottom: 0; background: #eff6ff; color: #1d4ed8; font-size: 15px; }
+          .words-text { margin: 16px 0 34px; padding: 10px 12px; border-left: 4px solid #2563eb; background: #f8fafc; color: #334155; font-style: italic; }
+          .note { margin-top: 18px; color: #64748b; font-size: 11px; }
+          .signatures { width: 100%; margin-top: 48px; text-align: center; border-collapse: collapse; }
           .signatures td { width: 50%; vertical-align: top; }
+          .sign-name { margin-top: 64px; font-weight: 800; color: #0f172a; }
         </style>
       </head>
       <body>
-        <table class="header-table">
-          <tr>
-            <td style="width: 60%;">
-              <p class="company-name">CÔNG TY TNHH SX TM BĂNG KEO LÊ THANH</p>
-              <p class="info-text">Địa chỉ: D15/26/1A Võ Văn Vân, Ấp 4B, Vĩnh Lộc B, Bình Chánh, TP.HCM</p>
-              <p class="info-text">Hotline: 0907.273.367 - Email: bangkeolethanh@gmail.com</p>
-            </td>
-            <td style="width: 40%; text-align: right;">
-              <p class="title">BẢNG BÁO GIÁ</p>
-              <p class="meta-text"><strong>Số:</strong> ${quoteId}</p>
-              <p class="meta-text"><strong>Ngày:</strong> ${new Date(data.thoi_gian).toLocaleDateString('vi-VN')}</p>
-            </td>
-          </tr>
-        </table>
-        
-        <div class="divider"></div>
-        
-        <table class="customer-table">
-          <tr>
-            <td style="width: 15%;"><strong>Khách hàng:</strong></td>
-            <td>${data.ten_khach_hang}</td>
-          </tr>
-          <tr>
-            <td><strong>Ngày giao hàng:</strong></td>
-            <td>${new Date(data.ngay_du_kien).toLocaleDateString('vi-VN')}</td>
-          </tr>
-          <tr>
-            <td><strong>Liên hệ CTV:</strong></td>
-            <td>${data.ctv || 'Trực tiếp'}</td>
-          </tr>
-        </table>
-        
+        <div class="accent"></div>
+        <div class="header">
+          <div class="company">
+            <p class="company-name">${escapeQuoteHtml(company.name)}</p>
+            <p class="info-text"><strong>Địa chỉ:</strong> ${escapeQuoteHtml(company.address)}</p>
+            <p class="info-text"><strong>Hotline:</strong> ${escapeQuoteHtml(company.hotline)}</p>
+          </div>
+          <div class="quote-meta">
+            <p class="title">BẢNG BÁO GIÁ</p>
+            <div class="meta-pill">
+              <div class="meta-row"><span>Số</span><strong>${escapeQuoteHtml(quoteId)}</strong></div>
+              <div class="meta-row"><span>Ngày</span><strong>${new Date(data.thoi_gian).toLocaleDateString('vi-VN')}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Thông tin khách hàng</div>
+        <div class="info-card">
+          <table class="info-grid">
+            <tr><td class="label">Khách hàng</td><td><strong>${escapeQuoteHtml(data.ten_khach_hang)}</strong></td></tr>
+            <tr><td class="label">Ngày giao hàng</td><td>${new Date(data.ngay_du_kien).toLocaleDateString('vi-VN')}</td></tr>
+            <tr><td class="label">Loại hàng</td><td>${escapeQuoteHtml(typeLabel)}</td></tr>
+            <tr><td class="label">Liên hệ CTV</td><td>${escapeQuoteHtml(data.ctv || 'Trực tiếp')}</td></tr>
+          </table>
+        </div>
+
+        <div class="section-title">Chi tiết báo giá</div>
         <table class="data-table">
           <thead>
             <tr>
               <th style="width: 8%; text-align: center;">STT</th>
-              <th style="width: 40%;">Tên Sản Phẩm</th>
-              <th style="width: 18%;">Quy Cách</th>
-              <th style="width: 10%; text-align: right;">Số Lượng</th>
-              <th style="width: 12%; text-align: right;">Đơn Giá</th>
-              <th style="width: 12%; text-align: right;">Thành Tiền</th>
+              <th style="width: 40%;">Tên sản phẩm</th>
+              <th style="width: 18%;">Quy cách</th>
+              <th style="width: 10%; text-align: right;">Số lượng</th>
+              <th style="width: 12%; text-align: right;">Đơn giá</th>
+              <th style="width: 12%; text-align: right;">Thành tiền</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td style="text-align: center;">1</td>
-              <td><strong>${data.ten_hang}</strong><br><small style="color:#64748b;">Màu keo/sắc: ${data.mau_keo || ''} ${data.mau_sac || ''}</small></td>
-              <td>${specsText}</td>
+              <td><strong>${escapeQuoteHtml(data.ten_hang)}</strong><br><small>Màu keo/sắc: ${escapeQuoteHtml(`${data.mau_keo || ''} ${data.mau_sac || ''}`.trim() || '-')}</small></td>
+              <td>${escapeQuoteHtml(specsText)}</td>
               <td style="text-align: right;">${data.so_luong}</td>
               <td style="text-align: right;">${utils.formatCurrency(data.don_gia_ban)}đ</td>
               <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(data.thanh_tien_ban)}đ</td>
@@ -244,33 +264,36 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
             ${axisQuoteRow}
           </tbody>
         </table>
-        
-        <table class="summary-table">
+
+        <table class="totals">
           <tr>
-            <td class="label">Tổng tiền hàng:</td>
-            <td class="value">${utils.formatCurrency(quoteTotal)}đ</td>
+            <td>Tổng tiền hàng:</td>
+            <td>${utils.formatCurrency(quoteSubtotal)}đ</td>
           </tr>
+          ${vatRow}
           <tr>
-            <td class="label">Đặt cọc trước:</td>
-            <td class="value">${utils.formatCurrency(data.tien_coc || 0)}đ</td>
+            <td>Đặt cọc trước:</td>
+            <td>${utils.formatCurrency(deposit)}đ</td>
           </tr>
-          <tr class="grand-total">
-            <td class="label">Còn lại cần thu:</td>
-            <td class="value">${utils.formatCurrency(quoteRemaining)}đ</td>
+          <tr class="grand">
+            <td>Còn lại cần thu:</td>
+            <td>${utils.formatCurrency(quoteRemaining)}đ</td>
           </tr>
         </table>
-        
-        <p class="words-text"><strong>Bằng chữ:</strong> ${totalWords}</p>
-        
+
+        <p class="words-text"><strong>Bằng chữ:</strong> ${escapeQuoteHtml(totalWords)}</p>
+        <p class="note">Báo giá có hiệu lực theo thỏa thuận tại thời điểm xác nhận đơn hàng. VAT chỉ được thể hiện khi khách hàng yêu cầu.</p>
+
         <table class="signatures">
           <tr>
             <td>
-              <p style="margin-bottom: 70px;"><strong>ĐẠI DIỆN KHÁCH HÀNG</strong></p>
-              <p style="color: #64748b; font-size: 11px;">(Ký, ghi rõ họ tên)</p>
+              <p><strong>ĐẠI DIỆN KHÁCH HÀNG</strong></p>
+              <p class="sign-name">(Ký, ghi rõ họ tên)</p>
             </td>
             <td>
-              <p style="margin-bottom: 70px;"><strong>NGƯỜI BÁO GIÁ</strong></p>
-              <p><strong>LÊ THANH CO., LTD</strong></p>
+              <p><strong>NGƯỜI BÁO GIÁ</strong></p>
+              <p class="sign-name">${escapeQuoteHtml(company.representative || '')}</p>
+              <p style="margin: 4px 0 0; color:#64748b;">HP: ${escapeQuoteHtml(company.representativePhone || '')}</p>
             </td>
           </tr>
         </table>
@@ -290,7 +313,6 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
     utils.showToast("Lỗi in PDF báo giá", "danger");
   }
 }
-
 // 6. Chuyển Báo giá thành Đơn đặt hàng
 async function convertQuoteToOrder(quoteId, type) {
   try {

@@ -273,6 +273,7 @@ async function saveBangKeoIn(event, mode = 'order') {
       loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
       tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
+      vat: mode === 'quote' ? utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value) : 0,
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,
@@ -306,12 +307,12 @@ async function saveBangKeoIn(event, mode = 'order') {
         loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
         loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
         truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
-        truc_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong
+        truc_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, vat
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
         $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 
         $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-        $42, $43, $44, $45, $46, $47, $48
+        $42, $43, $44, $45, $46, $47, $48, $49
       )
     `;
 
@@ -325,7 +326,7 @@ async function saveBangKeoIn(event, mode = 'order') {
       data.loi_nhuan_rong, data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote,
       data.loai_truc, data.ten_truc, data.truc_chu_vi, data.truc_so_luong, data.truc_gia_goc,
       data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
-      data.truc_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong
+      data.truc_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong, data.vat
     ];
 
     const res = await window.electronAPI.dbRun(sql, params);

@@ -35,6 +35,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Đọc file ra base64
   readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-base64', filePath),
 
+  writeFileBase64: (filePath, base64Data) => ipcRenderer.invoke('write-file-base64', filePath, base64Data),
+
   // Xuất file PDF báo giá
   printToPdf: (htmlContent, savePath) => ipcRenderer.invoke('print-to-pdf', htmlContent, savePath)
 });

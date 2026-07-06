@@ -36,6 +36,28 @@ const utils = {
   },
 
   // 5. Hiển thị thông báo Toast nhanh góc dưới màn hình
+  companyInfo: {
+    name: 'CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI BĂNG KEO IN VĨNH THỊNH',
+    address: '90E đường số 18B, P. Bình Hưng Hòa A, Q. Bình Tân, TP. HCM, Việt Nam',
+    hotline: '0903003882 - 0936380405',
+    representative: 'LÝ THANH QUẾ',
+    representativePhone: '090 300 3882'
+  },
+
+  normalizeOrderType: function(orderType) {
+    const normalized = String(orderType || '').replace(/-/g, '_');
+    if (normalized === 'truc_in') return 'truc_in';
+    if (normalized === 'bang_keo') return 'bang_keo';
+    return 'bang_keo_in';
+  },
+
+  getOrderTableName: function(orderType) {
+    const normalized = utils.normalizeOrderType(orderType);
+    if (normalized === 'truc_in') return 'truc_in_orders';
+    if (normalized === 'bang_keo') return 'bang_keo_orders';
+    return 'bang_keo_in_orders';
+  },
+
   showToast: function(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;

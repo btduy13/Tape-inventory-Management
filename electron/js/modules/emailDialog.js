@@ -9,14 +9,13 @@ let emailSuggestions = [];
 // Khởi tạo và mở email dialog
 async function openEmailDialog(orderId, orderType) {
   try {
+    orderType = utils.normalizeOrderType(orderType);
     activeEmailOrderId = orderId;
     activeEmailOrderType = orderType;
     emailAttachments = [];
 
     // 1. Tải thông tin đơn hàng để sinh mẫu email
-    let tableName = 'bang_keo_in_orders';
-    if (orderType === 'truc_in') tableName = 'truc_in_orders';
-    if (orderType === 'bang_keo') tableName = 'bang_keo_orders';
+    const tableName = utils.getOrderTableName(orderType);
 
     const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
     if (!res.ok || res.rows.length === 0) {
@@ -310,9 +309,7 @@ async function submitSendEmail() {
     utils.showToast("Đã gửi email thành công!", "success");
 
     // 1. Cập nhật da_gui_email = TRUE trong database
-    let tableName = 'bang_keo_in_orders';
-    if (activeEmailOrderType === 'truc_in') tableName = 'truc_in_orders';
-    if (activeEmailOrderType === 'bang_keo') tableName = 'bang_keo_orders';
+    const tableName = utils.getOrderTableName(activeEmailOrderType);
 
     await window.electronAPI.dbRun(`UPDATE ${tableName} SET da_gui_email = TRUE WHERE id = $1`, [activeEmailOrderId]);
 

@@ -141,6 +141,7 @@ async function saveBangKeo(event, mode = 'order') {
       loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
       tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
+      vat: mode === 'quote' ? utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value) : 0,
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,
@@ -157,10 +158,10 @@ async function saveBangKeo(event, mode = 'order') {
         quy_cach, so_luong, mau_sac, don_gia_goc, thanh_tien, 
         don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong, 
         tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong, 
-        da_giao, da_tat_toan, da_gui_email, is_quote
+        da_giao, da_tat_toan, da_gui_email, is_quote, vat
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
-        $16, $17, $18, $19, $20, $21, $22, $23
+        $16, $17, $18, $19, $20, $21, $22, $23, $24
       )
     `;
 
@@ -169,7 +170,7 @@ async function saveBangKeo(event, mode = 'order') {
       data.quy_cach, data.so_luong, data.mau_sac, data.don_gia_goc, data.thanh_tien,
       data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
       data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote
+      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat
     ];
 
     const res = await window.electronAPI.dbRun(sql, params);

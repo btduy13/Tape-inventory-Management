@@ -46,6 +46,7 @@
       "styles.css",
       "main.js",
       "preload.js",
+      "assets/**/*",
       "icon.ico",
       "package.json"
     ]

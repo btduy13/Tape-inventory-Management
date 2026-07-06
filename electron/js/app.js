@@ -162,12 +162,11 @@ function closeModal(modalId) {
 
 // --- LOGIC DIALOG CHỈNH SỬA ĐƠN HÀNG ĐỘNG (EDIT DIALOG CONTROL) ---
 async function openEditOrderDialog(orderId, orderType) {
+  orderType = utils.normalizeOrderType(orderType);
   editOrderIdGlobal = orderId;
   editOrderTypeGlobal = orderType;
 
-  let tableName = 'bang_keo_in_orders';
-  if (orderType === 'truc_in') tableName = 'truc_in_orders';
-  if (orderType === 'bang_keo') tableName = 'bang_keo_orders';
+  const tableName = utils.getOrderTableName(orderType);
 
   const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
   if (!res.ok || res.rows.length === 0) {
@@ -320,9 +319,7 @@ async function submitEditOrder() {
       return;
     }
 
-    let tableName = 'bang_keo_in_orders';
-    if (editOrderTypeGlobal === 'truc_in') tableName = 'truc_in_orders';
-    if (editOrderTypeGlobal === 'bang_keo') tableName = 'bang_keo_orders';
+    const tableName = utils.getOrderTableName(editOrderTypeGlobal);
 
     const tenHang = document.getElementById('edit-ten-hang').value.trim();
     const tenKhachHang = document.getElementById('edit-ten-khach-hang').value.trim();
@@ -575,6 +572,8 @@ const commandPaletteActions = [
   { title: 'Đơn sắp hạn', description: 'Lọc nhanh các đơn cần giao trong 3 ngày', group: 'Báo cáo', run: () => jumpToStatsFilter('near-due') },
   { title: 'Công nợ chưa tất toán', description: 'Lọc các đơn còn công nợ mở', group: 'Báo cáo', run: () => jumpToStatsFilter('unsettled') },
   { title: 'Lịch sử đơn hàng', description: 'Tra cứu, gửi email, đính kèm và xuất Excel', group: 'Dữ liệu', run: () => switchTab('history') },
+  { title: 'Tải mẫu nhập Excel', description: 'Tạo file mẫu theo loại đơn đang chọn trong Lịch sử', group: 'Dữ liệu', run: () => exportImportTemplate() },
+  { title: 'Nhập đơn từ Excel', description: 'Nhập nhiều đơn hàng và tự tính tiền', group: 'Dữ liệu', run: () => importOrdersFromExcel() },
   { title: 'Xuất đơn / phiếu giao', description: 'Mở trình chọn nhiều đơn để in chứng từ', group: 'Chứng từ', run: () => openMultiOrderExportDialog() },
   { title: 'Xuất Excel form hiện tại', description: 'Xuất dữ liệu từ form hoặc lịch sử đang mở', group: 'Xuất file', run: () => exportCurrentFormToExcel() },
   { title: 'Làm mới dữ liệu', description: 'Tải lại dữ liệu của trang hiện tại', group: 'Hệ thống', run: () => refreshCurrentPage() },

@@ -23,7 +23,7 @@
     <!-- THANH ĐIỀU HƯỚNG TRÁI (SIDEBAR) -->
     <aside class="sidebar" aria-label="Thanh điều hướng chính">
       <div class="sidebar-brand">
-        <div class="brand-icon">📦</div>
+        <img class="brand-logo" src="assets/logo.svg" alt="Vĩnh Thịnh">
         <div class="brand-info">
           <span class="brand-name">QUẢN LÝ BĂNG KEO</span>
           <span class="brand-subtitle" id="app-version-display">Phiên bản v1.2.0</span>
@@ -806,6 +806,10 @@
                   <input type="text" id="q-bki-tien-coc" class="form-control currency-format" value="0">
                 </div>
                 <div class="form-group">
+                  <label class="form-label">VAT báo giá (đ)</label>
+                  <input type="text" id="q-bki-vat" class="form-control currency-format" value="0">
+                </div>
+                <div class="form-group">
                   <label class="form-label">Công nợ khách (đ)</label>
                   <input type="text" id="q-bki-cong-no-khach" class="form-control" value="0" readonly>
                 </div>
@@ -908,6 +912,10 @@
                   <input type="text" id="q-bk-cong-no-khach" class="form-control" value="0" readonly>
                 </div>
                 <div class="form-group">
+                  <label class="form-label">VAT báo giá (đ)</label>
+                  <input type="text" id="q-bk-vat" class="form-control currency-format" value="0">
+                </div>
+                <div class="form-group">
                   <label class="form-label">Cộng tác viên (CTV)</label>
                   <input type="text" id="q-bk-ctv" class="form-control" placeholder="CTV môi giới...">
                 </div>
@@ -1000,6 +1008,10 @@
                 <div class="form-group">
                   <label class="form-label">Công nợ khách (đ)</label>
                   <input type="text" id="q-ti-cong-no-khach" class="form-control" value="0" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">VAT báo giá (đ)</label>
+                  <input type="text" id="q-ti-vat" class="form-control currency-format" value="0">
                 </div>
                 <div class="form-group">
                   <label class="form-label">Cộng tác viên (CTV)</label>
@@ -1184,7 +1196,13 @@
                 </select>
               </div>
 
+              <div class="selection-summary" id="stats-selection-summary" style="display:none;">
+                <span id="stats-selected-count">0 đơn</span>
+                <strong id="stats-selected-debt">0đ</strong>
+              </div>
+
               <div>
+                <button class="btn btn-secondary btn-sm" onclick="openBulkStatsStatusDialog()" style="padding: 4px 12px; font-size:12px;">Cập nhật trạng thái</button>
                 <button class="btn btn-secondary btn-sm" onclick="openMultiOrderExportDialog()" style="padding: 4px 12px; font-size:12px;">➕ Xuất Đơn / Phiếu Giao</button>
                 <button class="btn btn-primary btn-sm" onclick="loadStatsData()" style="padding: 4px 12px; font-size:12px;">Làm mới</button>
               </div>
@@ -1251,6 +1269,8 @@
             <div class="table-controls">
               <span style="font-weight:700;" id="hist-table-title">Lịch sử đơn hàng: Băng Keo In</span>
               <div>
+                <button class="btn btn-secondary btn-sm" onclick="exportImportTemplate()" title="Tải mẫu nhập Excel" style="padding: 4px 12px; font-size:12px;">Tải mẫu</button>
+                <button class="btn btn-secondary btn-sm" onclick="importOrdersFromExcel()" title="Nhập đơn hàng từ Excel" style="padding: 4px 12px; font-size:12px;">Nhập Excel</button>
                 <button class="btn btn-secondary btn-sm" onclick="exportHistoryExcel()" title="Xuất dữ liệu Excel" style="padding: 4px 12px; font-size:12px;">Xuất Excel</button>
                 <button class="btn btn-secondary btn-sm" onclick="sendSelectedHistoryEmail()" title="Gửi Email" style="padding: 4px 12px; font-size:12px;">Gửi Email</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteSelectedHistory()" title="Xóa các đơn đã chọn" style="padding: 4px 12px; font-size:12px;">Xóa đơn</button>
@@ -1337,6 +1357,32 @@
     </div>
   </div>
 
+  <div id="modal-bulk-stats-status" class="modal-overlay">
+    <div class="modal-content" style="width: 420px; max-width: 92vw;">
+      <div class="modal-header">
+        <h3 class="modal-title">Cập nhật trạng thái</h3>
+        <button class="modal-close" onclick="closeModal('modal-bulk-stats-status')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-card" style="padding: 16px; margin-bottom: 16px;">
+          <div id="bulk-stats-status-label" style="font-weight:700; margin-bottom: 12px;">0 đơn đã chọn</div>
+          <label style="display:flex; align-items:center; gap:10px; margin-bottom: 10px;">
+            <input type="checkbox" id="bulk-stats-da-giao" checked>
+            <span>Đã giao hàng</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="bulk-stats-da-tat-toan" checked>
+            <span>Đã tất toán</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-bulk-stats-status')">Hủy</button>
+        <button class="btn btn-primary" onclick="applyBulkStatsStatus()">Áp dụng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== C. MODAL: XEM VÀ IN PHIẾU GIAO HÀNG (TIMES NEW ROMAN A4 PREVIEW) ==================== -->
   <div id="modal-view-voucher" class="modal-overlay">
     <div class="modal-content" style="max-width: 850px; background-color:#fff; color:#000;">
@@ -1344,6 +1390,7 @@
         <h3 class="modal-title">Xem trước Đơn đặt hàng / Phiếu giao hàng</h3>
         <div style="display:flex; gap: 8px;">
           <button class="btn btn-secondary" onclick="closeModal('modal-view-voucher')" style="color:var(--text-primary);">Đóng</button>
+          <button class="btn btn-secondary" onclick="saveCurrentVoucherPdf()">Lưu PDF</button>
           <button class="btn btn-primary" onclick="triggerPrint()">In chứng từ</button>
         </div>
       </div>
@@ -1461,18 +1508,18 @@
         <h3 class="modal-title" id="order-export-title">Xuất Đơn Đặt Hàng / Phiếu Giao Hàng</h3>
         <button class="modal-close" onclick="closeModal('modal-order-export')">×</button>
       </div>
-      <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; overflow: hidden;">
+      <div class="modal-body export-selector-body" style="display: flex; flex-direction: column; gap: 15px; overflow: hidden;">
         
         <!-- Loại chứng từ & Bộ lọc -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <div class="export-selector-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
           <!-- Loại chứng từ -->
-          <div class="radio-pill-group" style="display: flex; gap: 5px; background: var(--bg-primary); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div class="radio-pill-group export-document-switch" style="display: flex; gap: 5px; background: var(--bg-primary); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
             <button class="btn btn-pill active" id="export-doc-order" onclick="setExportDocumentType('don_dat_hang')">Đơn đặt hàng</button>
             <button class="btn btn-pill" id="export-doc-delivery" onclick="setExportDocumentType('phieu_giao_hang')">Phiếu giao hàng</button>
           </div>
 
           <!-- Filters -->
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="export-filter-row" style="display: flex; gap: 8px; align-items: center;">
             <select id="export-filter-year" class="form-control" style="width: 90px; height: 32px; font-size:12px; background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" onchange="loadExportOrdersTable()">
               <!-- JS nạp danh sách năm -->
             </select>
@@ -1502,7 +1549,7 @@
         </div>
 
         <!-- Bảng danh sách đơn hàng -->
-        <div class="scroll-wrapper" style="flex: 1; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+        <div class="scroll-wrapper export-orders-panel" style="flex: 1; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
           <table class="data-table" id="export-orders-table">
             <thead>
               <tr>
@@ -1567,6 +1614,7 @@
                   <th style="width: 60px;">Đơn vị</th>
                   <th style="width: 80px; text-align: right;">Số lượng</th>
                   <th style="width: 100px; text-align: right;">Đơn giá</th>
+                  <th style="width: 90px; text-align: right;">VAT</th>
                   <th style="width: 110px; text-align: right;">Thành tiền</th>
                   <th style="width: 50px; text-align: center;">Xóa</th>
                 </tr>
@@ -1580,14 +1628,10 @@
 
         <!-- Tiền nong -->
         <div class="form-card" style="padding: 15px; margin-bottom: 0;">
-          <div class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 0;">
+          <div class="form-grid" style="grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 0;">
             <div class="form-group">
               <label class="form-label">Tổng tiền hàng</label>
               <input type="text" id="preview-total-sum" class="form-control" readonly style="background-color: var(--bg-primary);">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Thuế VAT (đồng)</label>
-              <input type="number" id="preview-vat" class="form-control" value="0" oninput="recalculatePreviewTotals()">
             </div>
             <div class="form-group">
               <label class="form-label">Đặt cọc trước (đồng)</label>
@@ -1652,6 +1696,7 @@
   <!-- THỰC THỂ KHÁC -->
   <div class="toast-container" id="toast-container"></div>
   <div class="context-menu" id="custom-context-menu"></div>
+  <div class="column-filter-menu" id="stats-column-filter-menu"></div>
 
   <!-- SCRIPTS GIAO DIỆN -->
   <!-- Copy xlsx và exceljs từ thư mục RD -->
@@ -1665,6 +1710,7 @@
   <script src="js/modules/trucin.js"></script>
   <script src="js/modules/thongke.js"></script>
   <script src="js/modules/history.js"></script>
+  <script src="js/modules/excelImport.js"></script>
   <script src="js/modules/emailDialog.js"></script>
   <script src="js/modules/exportManager.js"></script>
   <script src="js/modules/quotations.js"></script>

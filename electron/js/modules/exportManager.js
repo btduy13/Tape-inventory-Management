@@ -5,6 +5,21 @@ var selectedExportOrderIds = new Set();
 var exportAllOrders = [];
 var exportPreviewData = null;
 
+function escapeExportHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getExportTableNameByOrderId(orderId) {
+  if (orderId.startsWith('BK-')) return 'bang_keo_in_orders';
+  if (orderId.startsWith('TI-')) return 'truc_in_orders';
+  return 'bang_keo_orders';
+}
+
 // Khởi động Modal chọn đơn hàng để xuất
 async function openMultiOrderExportDialog() {
   try {
@@ -58,11 +73,11 @@ function setExportDocumentType(docType) {
 // Tải tất cả đơn hàng từ database
 async function loadExportAllOrdersFromDb() {
   const sql = `
-    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo_in' as type FROM bang_keo_in_orders
+    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo_in' as type FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
     UNION ALL
-    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'truc_in' as type FROM truc_in_orders
+    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'truc_in' as type FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
     UNION ALL
-    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo' as type FROM bang_keo_orders
+    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo' as type FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
     ORDER BY thoi_gian DESC;
   `;
   const res = await window.electronAPI.dbQuery(sql);
@@ -95,9 +110,9 @@ function loadExportOrdersTable() {
     
     // Tìm kiếm từ khóa
     const matchSearch = !searchQuery ? true : (
-      row.id.toLowerCase().includes(searchQuery) ||
-      row.ten_hang.toLowerCase().includes(searchQuery) ||
-      row.ten_khach_hang.toLowerCase().includes(searchQuery)
+      String(row.id || '').toLowerCase().includes(searchQuery) ||
+      String(row.ten_hang || '').toLowerCase().includes(searchQuery) ||
+      String(row.ten_khach_hang || '').toLowerCase().includes(searchQuery)
     );
 
     return matchYear && matchMonth && matchType && matchSearch;
@@ -127,11 +142,23 @@ function loadExportOrdersTable() {
       </td>
       <td><strong>${row.id}</strong></td>
       <td>${utils.formatDate(row.thoi_gian)}</td>
-      <td>${row.ten_hang}</td>
-      <td>${row.ten_khach_hang}</td>
-      <td style="text-align: right;">${row.so_luong.toLocaleString()}${qtyLabel}</td>
+      <td>${escapeExportHtml(row.ten_hang)}</td>
+      <td>${escapeExportHtml(row.ten_khach_hang)}</td>
+      <td style="text-align: right;">${Number(row.so_luong || 0).toLocaleString()}${qtyLabel}</td>
       <td style="text-align: right;">${utils.formatCurrency(row.don_gia_ban)}đ</td>
     `;
+    tr.addEventListener('click', (event) => {
+      if (event.target.tagName === 'INPUT') return;
+      const checkbox = tr.querySelector('input[type="checkbox"]');
+      checkbox.checked = !checkbox.checked;
+      toggleSelectOrder(row.id, checkbox.checked);
+    });
+    tr.addEventListener('dblclick', () => {
+      const checkbox = tr.querySelector('input[type="checkbox"]');
+      checkbox.checked = true;
+      toggleSelectOrder(row.id, true);
+      proceedToExportPreview();
+    });
     tbody.appendChild(tr);
   });
 }
@@ -169,9 +196,7 @@ async function proceedToExportPreview() {
   let firstOrder = null;
 
   for (const orderId of selectedExportOrderIds) {
-    let tableName = 'bang_keo_orders';
-    if (orderId.startsWith('BK')) tableName = 'bang_keo_in_orders';
-    else if (orderId.startsWith('TI')) tableName = 'truc_in_orders';
+    const tableName = getExportTableNameByOrderId(orderId);
 
     const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
     if (res.ok && res.rows.length > 0) {
@@ -199,8 +224,24 @@ async function proceedToExportPreview() {
         unit: unit,
         quantity: order.so_luong || 0,
         price: order.don_gia_ban || 0,
+        vat: order.vat || 0,
         total: order.thanh_tien_ban || order.thanh_tien_goc || 0
       });
+
+      if (tableName === 'bang_keo_in_orders' && order.loai_truc === 'moi') {
+        products.push({
+          id: `${order.id}-TRUC`,
+          product: order.ten_truc || 'Trục mới',
+          specs: order.truc_chu_vi ? `Chu vi ${order.truc_chu_vi}` : '',
+          text_color: '',
+          bg_color: 'Trục mới',
+          unit: 'trục',
+          quantity: order.truc_so_luong || 0,
+          price: order.truc_gia_ban || 0,
+          vat: 0,
+          total: order.truc_thanh_tien_ban || ((order.truc_so_luong || 0) * (order.truc_gia_ban || 0))
+        });
+      }
     }
   }
 
@@ -208,14 +249,12 @@ async function proceedToExportPreview() {
     customer_name: firstOrder ? firstOrder.ten_khach_hang : "",
     address: "",
     products: products,
-    vat: 0,
     deposit: 0
   };
 
   // Prefill form review
   document.getElementById('preview-customer-name').value = exportPreviewData.customer_name;
   document.getElementById('preview-customer-address').value = "";
-  document.getElementById('preview-vat').value = "0";
   document.getElementById('preview-deposit').value = "0";
 
   // Vẽ bảng review các dòng đơn hàng
@@ -238,20 +277,21 @@ function renderPreviewProductsTable() {
   tbody.innerHTML = "";
 
   if (exportPreviewData.products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Không có dữ liệu dòng hàng</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-muted);">Không có dữ liệu dòng hàng</td></tr>`;
     return;
   }
 
   exportPreviewData.products.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" class="preview-input" value="${p.product}" oninput="updatePreviewProduct(${idx}, 'product', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${p.specs}" oninput="updatePreviewProduct(${idx}, 'specs', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${p.bg_color}" oninput="updatePreviewProduct(${idx}, 'bg_color', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${p.text_color}" oninput="updatePreviewProduct(${idx}, 'text_color', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${p.unit}" oninput="updatePreviewProduct(${idx}, 'unit', this.value)"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.product)}" oninput="updatePreviewProduct(${idx}, 'product', this.value)"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.specs)}" oninput="updatePreviewProduct(${idx}, 'specs', this.value)"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.bg_color)}" oninput="updatePreviewProduct(${idx}, 'bg_color', this.value)"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.text_color)}" oninput="updatePreviewProduct(${idx}, 'text_color', this.value)"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.unit)}" oninput="updatePreviewProduct(${idx}, 'unit', this.value)"></td>
       <td><input type="number" class="preview-input" style="text-align: right;" value="${p.quantity}" oninput="updatePreviewProductNumeric(${idx}, 'quantity', this.value)"></td>
       <td><input type="number" class="preview-input" style="text-align: right;" value="${p.price}" oninput="updatePreviewProductNumeric(${idx}, 'price', this.value)"></td>
+      <td><input type="number" class="preview-input" style="text-align: right;" value="${p.vat || 0}" oninput="updatePreviewProductNumeric(${idx}, 'vat', this.value)"></td>
       <td style="text-align: right; font-weight: 500;" id="preview-product-total-${idx}">${utils.formatCurrency(p.total)}đ</td>
       <td style="text-align: center;">
         <button class="btn btn-danger btn-sm" onclick="deletePreviewProduct(${idx})" style="padding: 2px 6px;">×</button>
@@ -285,14 +325,68 @@ function deletePreviewProduct(idx) {
 }
 
 // Tính toán lại tổng tiền hàng, VAT, cọc và còn lại
+function buildVoucherPdfHtml() {
+  const content = document.getElementById('voucher-print-area')?.innerHTML || '';
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { margin: 0; background: #fff; }
+        @page { size: A4; margin: 12mm; }
+      </style>
+    </head>
+    <body>${content}</body>
+    </html>
+  `;
+}
+
+async function saveCurrentVoucherPdf() {
+  const printArea = document.getElementById('voucher-print-area');
+  if (!printArea || !printArea.innerHTML.trim()) {
+    utils.showToast("Chưa có chứng từ để lưu PDF", "warning");
+    return;
+  }
+
+  const prefix = activeExportDocType === 'phieu_giao_hang' ? 'phieu_giao_hang' : 'don_dat_hang';
+  const savePath = await window.electronAPI.showSaveDialog({
+    title: "Lưu chứng từ PDF",
+    defaultPath: `${prefix}_${new Date().toISOString().split('T')[0]}.pdf`,
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+  });
+
+  if (!savePath || savePath.canceled || !savePath.filePath) return;
+
+  const res = await window.electronAPI.printToPdf(buildVoucherPdfHtml(), savePath.filePath);
+  if (res.ok) {
+    utils.showToast("Đã lưu chứng từ PDF", "success");
+  } else {
+    utils.showToast("Không thể lưu PDF: " + res.error, "danger");
+  }
+}
+
+async function triggerPrint() {
+  const printArea = document.getElementById('voucher-print-area');
+  if (!printArea || !printArea.innerHTML.trim()) {
+    utils.showToast("Chưa có chứng từ để in", "warning");
+    return;
+  }
+
+  const res = await window.electronAPI.printWindow();
+  if (!res || !res.ok) {
+    utils.showToast("Không thể mở hộp thoại in", "danger");
+  }
+}
+
 function recalculatePreviewTotals() {
   const totalSum = exportPreviewData.products.reduce((acc, curr) => acc + curr.total, 0);
-  const vat = parseFloat(document.getElementById('preview-vat').value) || 0;
+  const vat = exportPreviewData.products.reduce((acc, curr) => acc + (parseFloat(curr.vat) || 0), 0);
   const deposit = parseFloat(document.getElementById('preview-deposit').value) || 0;
   
   const remaining = totalSum + vat - deposit;
 
-  document.getElementById('preview-total-sum').value = utils.formatCurrency(totalSum) + "đ";
+  document.getElementById('preview-total-sum').value = `${utils.formatCurrency(totalSum)}đ + VAT ${utils.formatCurrency(vat)}đ`;
   document.getElementById('preview-remaining').value = utils.formatCurrency(remaining) + "đ";
 }
 
@@ -300,7 +394,7 @@ function recalculatePreviewTotals() {
 function generateCombinedPrintInvoice() {
   const customerName = document.getElementById('preview-customer-name').value.trim();
   const address = document.getElementById('preview-customer-address').value.trim();
-  const vat = parseFloat(document.getElementById('preview-vat').value) || 0;
+  const vat = exportPreviewData.products.reduce((acc, curr) => acc + (parseFloat(curr.vat) || 0), 0);
   const deposit = parseFloat(document.getElementById('preview-deposit').value) || 0;
   
   const totalSum = exportPreviewData.products.reduce((acc, curr) => acc + curr.total, 0);
@@ -314,19 +408,21 @@ function generateCombinedPrintInvoice() {
 
   const printArea = document.getElementById('voucher-print-area');
   const title = activeExportDocType === 'phieu_giao_hang' ? 'PHIẾU GIAO HÀNG' : 'ĐƠN ĐẶT HÀNG';
+  const company = utils.companyInfo || {};
 
   // Render rows
   let rowsHtml = "";
   exportPreviewData.products.forEach((p, idx) => {
     rowsHtml += `
       <tr>
-        <td style="border: 0.5px solid #000; padding: 4px; text-align: left;">${p.product}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${p.specs}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${p.text_color || ""}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${p.bg_color || ""}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${p.unit}</td>
+        <td style="border: 0.5px solid #000; padding: 4px; text-align: left;">${escapeExportHtml(p.product)}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.specs)}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.text_color || "")}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.bg_color || "")}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.unit)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${parseFloat(p.quantity).toLocaleString()}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.price)}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.vat || 0)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.total)}</td>
       </tr>
     `;
@@ -359,7 +455,7 @@ function generateCombinedPrintInvoice() {
             NGƯỜI NHẬN HÀNG
           </td>
           <td style="width: 50%; text-align: right; font-weight: bold; vertical-align: top; padding-right: 20px; line-height: 1.4;">
-            CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI<br>BĂNG KEO IN VĨNH THỊNH<br>
+            ${escapeExportHtml(company.name || '')}<br>
             <span style="font-weight: normal; font-size: 8pt; display: block; margin-top: 2px;">ĐẠI DIỆN THƯƠNG MẠI</span>
           </td>
         </tr>
@@ -370,8 +466,8 @@ function generateCombinedPrintInvoice() {
         <tr>
           <td></td>
           <td style="text-align: right; font-weight: bold; padding-right: 20px; line-height: 1.3;">
-            LÝ THANH QUẾ<br>
-            <span style="font-weight: normal; font-size: 8pt; font-style: italic;">HP:090 300 3882</span>
+            ${escapeExportHtml(company.representative || '')}<br>
+            <span style="font-weight: normal; font-size: 8pt; font-style: italic;">HP:${escapeExportHtml(company.representativePhone || '')}</span>
           </td>
         </tr>
       </table>
@@ -383,12 +479,12 @@ function generateCombinedPrintInvoice() {
   const dateStr = utils.formatDate(new Date());
 
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; color: #000; line-height: 1.4; font-size: 10pt; padding: 10px;">
+    <div style="font-family: Arial, sans-serif; color: #172033; line-height: 1.4; font-size: 10pt; padding: 10px;">
       <!-- Header -->
-      <div style="text-align: center; margin-bottom: 15px;">
-        <div style="color: #ff0000; font-size: 15pt; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI BĂNG KEO IN VĨNH THỊNH</div>
-        <div style="font-size: 10pt; color: #000; margin-bottom: 2px;">90E đường số 18B, P. Bình Hưng Hòa A, Q. Bình Tân, TP. HCM, Việt Nam</div>
-        <div style="font-size: 10pt; color: #000; margin-bottom: 10px;">Hotline: 0903003882 - 0936380405</div>
+      <div style="border-top: 6px solid #2563eb; border-bottom: 1px solid #dbe4f0; text-align: center; padding: 12px 0 14px; margin-bottom: 18px;">
+        <div style="color: #1d4ed8; font-size: 15pt; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${escapeExportHtml(company.name || '')}</div>
+        <div style="font-size: 10pt; color: #334155; margin-bottom: 2px;">${escapeExportHtml(company.address || '')}</div>
+        <div style="font-size: 10pt; color: #334155;">Hotline: ${escapeExportHtml(company.hotline || '')}</div>
       </div>
 
       <!-- Title -->
@@ -400,12 +496,12 @@ function generateCombinedPrintInvoice() {
       <table style="width: 100%; border-collapse: collapse; border: none; font-size: 10pt; margin-bottom: 15px;">
         <tr style="height: 24px;">
           <td style="width: 12%; font-weight: bold; padding: 2px 0;">Kính gửi:</td>
-          <td style="width: 68%; padding: 2px 0; font-size: 11pt;">${customerName || '................................................................................'}</td>
+          <td style="width: 68%; padding: 2px 0; font-size: 11pt;">${customerName ? escapeExportHtml(customerName) : '................................................................................'}</td>
           <td style="width: 20%; padding: 2px 0; text-align: right; font-weight: bold;">Ngày: ${dateStr}</td>
         </tr>
         <tr style="height: 24px;">
           <td style="font-weight: bold; padding: 2px 0;">Địa chỉ:</td>
-          <td colspan="2" style="padding: 2px 0;">${address || '................................................................................'}</td>
+          <td colspan="2" style="padding: 2px 0;">${address ? escapeExportHtml(address) : '................................................................................'}</td>
         </tr>
       </table>
 
@@ -417,35 +513,36 @@ function generateCombinedPrintInvoice() {
             <th rowspan="2" style="border: 0.5px solid #000; padding: 4px; width: 10.3%;">Quy Cách</th>
             <th colspan="2" style="border: 0.5px solid #000; padding: 4px; width: 20.6%;">In Ấn</th>
             <th rowspan="2" style="border: 0.5px solid #000; padding: 4px; width: 10.3%;">Đơn Vị Tính</th>
-            <th colspan="2" style="border: 0.5px solid #000; padding: 4px; width: 22.6%;">Đơn Giá Theo Số Lượng</th>
-            <th rowspan="2" style="border: 0.5px solid #000; padding: 4px; width: 13%;">Tổng Cộng</th>
+            <th colspan="3" style="border: 0.5px solid #000; padding: 4px; width: 28.6%;">Đơn Giá Theo Số Lượng</th>
+            <th rowspan="2" style="border: 0.5px solid #000; padding: 4px; width: 11%;">Tổng Cộng</th>
           </tr>
           <tr style="background-color: #d3d3d3; font-weight: bold;">
             <th style="border: 0.5px solid #000; padding: 4px; width: 10.3%;">Màu Sắc</th>
             <th style="border: 0.5px solid #000; padding: 4px; width: 10.3%;">Màu Keo</th>
             <th style="border: 0.5px solid #000; padding: 4px; width: 11.3%;">Số lượng</th>
             <th style="border: 0.5px solid #000; padding: 4px; width: 11.3%;">Đơn Giá</th>
+            <th style="border: 0.5px solid #000; padding: 4px; width: 6%;">VAT</th>
           </tr>
         </thead>
         <tbody>
           ${rowsHtml}
           <tr>
-            <td colspan="6" style="border: none;"></td>
+            <td colspan="7" style="border: none;"></td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">VAT</td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">${utils.formatCurrency(vat)}</td>
           </tr>
           <tr>
-            <td colspan="6" style="border: none;"></td>
+            <td colspan="7" style="border: none;"></td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">Tổng Cộng</td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">${utils.formatCurrency(totalPayable)}</td>
           </tr>
           <tr>
-            <td colspan="6" style="border: none;"></td>
+            <td colspan="7" style="border: none;"></td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-style: italic;">Cọc</td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right; color: red;">-${utils.formatCurrency(deposit)}</td>
           </tr>
           <tr style="background-color: #f9f9f9; font-weight: bold;">
-            <td colspan="6" style="border: none;"></td>
+            <td colspan="7" style="border: none;"></td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">Còn Lại</td>
             <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-size:11pt; color: #1e3a8a;">${utils.formatCurrency(remaining)}</td>
           </tr>
