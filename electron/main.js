@@ -11,6 +11,8 @@ app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 
 let mainWindow;
 let dbPool;
+let dbConnectionState = 'connecting'; // connecting | connected | disconnected
+let dbReconnectTimer = null;
 const LOG_DIR = path.join(app.getPath('userData'), 'logs');
 
 // 1. KHỞI TẠO LOGGING SYSTEM
@@ -34,75 +36,161 @@ function writeLogToFile(level, message) {
   }
 }
 
-// 2. KHỞI TẠO KẾT NỐI SUPABASE POSTGRESQL
-function initDatabase() {
-  try {
-    writeLogToFile('info', 'Đang khởi tạo Pool kết nối tới PostgreSQL Supabase...');
-    dbPool = new Pool({
-      connectionString: config.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false // Hỗ trợ kết nối SSL qua Supabase pooler
-      },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000
-    });
-    
-    // Test thử kết nối và khởi tạo bảng
-    dbPool.query('SELECT NOW()', async (err, res) => {
-      if (err) {
-        writeLogToFile('error', 'Lỗi kiểm tra kết nối database: ' + err.message);
-      } else {
-        writeLogToFile('info', 'Kết nối thành công tới database Supabase! Thời gian: ' + res.rows[0].now);
-        try {
-          await dbPool.query(`
-            CREATE TABLE IF NOT EXISTS email_history (
-              id SERIAL PRIMARY KEY,
-              email_address VARCHAR(255) NOT NULL,
-              last_sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              sent_count INTEGER DEFAULT 1
-            )
-          `);
-          writeLogToFile('info', 'Đã kiểm tra/khởi tạo bảng email_history thành công.');
-          
-          // Chạy migration thêm cột is_quote nếu chưa có
-          // Đặt lock_timeout để tránh treo ứng dụng nếu có giao dịch khác đang khóa bảng
-          await dbPool.query(`SET lock_timeout = 2000`);
-          await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
-          await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
-          await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
-          await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
-          await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
-          await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
-          await dbPool.query(`
-            ALTER TABLE bang_keo_in_orders
-              ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
-              ADD COLUMN IF NOT EXISTS ten_truc TEXT,
-              ADD COLUMN IF NOT EXISTS truc_chu_vi NUMERIC,
-              ADD COLUMN IF NOT EXISTS truc_so_luong NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_gia_goc NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_gia_ban NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_thanh_tien_goc NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_thanh_tien_ban NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_ctv TEXT,
-              ADD COLUMN IF NOT EXISTS truc_hoa_hong NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_loi_nhuan NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_loi_nhuan_rong NUMERIC DEFAULT 0
-          `);
-          await dbPool.query(`SET lock_timeout = 0`); // Reset timeout về mặc định
-          writeLogToFile('info', 'Đã kiểm tra/thêm cột is_quote vào các bảng order.');
-        } catch (dbErr) {
-          writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + dbErr.message);
-          // Đảm bảo reset lock_timeout nếu có lỗi xảy ra
-          try {
-            await dbPool.query(`SET lock_timeout = 0`);
-          } catch (e) {}
-        }
-      }
-    });
-  } catch (err) {
-    writeLogToFile('critical', 'Lỗi khởi tạo Database Pool: ' + err.message);
+function notifyDbStatus(status, message) {
+  dbConnectionState = status;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('db-status-changed', { status, message });
   }
+}
+
+function createDbPool() {
+  if (dbPool) {
+    dbPool.end().catch(() => {});
+    dbPool = null;
+  }
+
+  dbPool = new Pool({
+    connectionString: config.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: config.DB_CONNECTION_TIMEOUT_MS || 15000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000
+  });
+
+  dbPool.on('error', (err) => {
+    writeLogToFile('error', 'Lỗi pool database (idle client): ' + err.message);
+    dbConnectionState = 'disconnected';
+    notifyDbStatus('disconnected', err.message);
+    scheduleDbReconnect();
+  });
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function runDatabaseMigrations() {
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS email_history (
+      id SERIAL PRIMARY KEY,
+      email_address VARCHAR(255) NOT NULL,
+      last_sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      sent_count INTEGER DEFAULT 1
+    )
+  `);
+  writeLogToFile('info', 'Đã kiểm tra/khởi tạo bảng email_history thành công.');
+
+  await dbPool.query(`SET lock_timeout = 2000`);
+  await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+  await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+  await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+  await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+  await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+  await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+  await dbPool.query(`
+    ALTER TABLE bang_keo_in_orders
+      ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
+      ADD COLUMN IF NOT EXISTS ten_truc TEXT,
+      ADD COLUMN IF NOT EXISTS truc_chu_vi NUMERIC,
+      ADD COLUMN IF NOT EXISTS truc_so_luong NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_gia_goc NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_gia_ban NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_thanh_tien_goc NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_thanh_tien_ban NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_ctv TEXT,
+      ADD COLUMN IF NOT EXISTS truc_hoa_hong NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_loi_nhuan NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS truc_loi_nhuan_rong NUMERIC DEFAULT 0
+  `);
+  await dbPool.query(`SET lock_timeout = 0`);
+  writeLogToFile('info', 'Đã kiểm tra/thêm cột is_quote vào các bảng order.');
+}
+
+async function verifyDatabaseConnection() {
+  const res = await dbPool.query('SELECT NOW() AS now');
+  return res.rows[0].now;
+}
+
+// 2. KHỞI TẠO KẾT NỐI SUPABASE POSTGRESQL (có thử lại khi timeout)
+async function initDatabase() {
+  const maxRetries = config.DB_CONNECT_RETRIES || 4;
+  const retryDelay = config.DB_CONNECT_RETRY_DELAY_MS || 2500;
+
+  writeLogToFile('info', 'Đang khởi tạo Pool kết nối tới PostgreSQL Supabase...');
+  notifyDbStatus('connecting', 'Đang kết nối...');
+
+  createDbPool();
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const startedAt = Date.now();
+      const serverTime = await verifyDatabaseConnection();
+      writeLogToFile(
+        'info',
+        `Kết nối thành công tới database Supabase! (lần ${attempt}/${maxRetries}, ${Date.now() - startedAt}ms) Thời gian: ${serverTime}`
+      );
+
+      try {
+        await runDatabaseMigrations();
+      } catch (dbErr) {
+        writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + dbErr.message);
+        try {
+          await dbPool.query(`SET lock_timeout = 0`);
+        } catch (e) {}
+      }
+
+      notifyDbStatus('connected', 'Mây: Kết nối');
+      if (dbReconnectTimer) {
+        clearTimeout(dbReconnectTimer);
+        dbReconnectTimer = null;
+      }
+      return true;
+    } catch (err) {
+      const isLastAttempt = attempt === maxRetries;
+      writeLogToFile(
+        'error',
+        `Lỗi kiểm tra kết nối database (lần ${attempt}/${maxRetries}): ${err.message}`
+      );
+
+      if (!isLastAttempt) {
+        notifyDbStatus('connecting', `Thử lại kết nối (${attempt}/${maxRetries})...`);
+        await sleep(retryDelay * attempt);
+        createDbPool();
+      } else {
+        notifyDbStatus('disconnected', 'Mây: Mất kết nối');
+        scheduleDbReconnect();
+        return false;
+      }
+    }
+  }
+
+  return false;
+}
+
+function scheduleDbReconnect() {
+  if (dbReconnectTimer) return;
+
+  dbReconnectTimer = setTimeout(async () => {
+    dbReconnectTimer = null;
+    if (dbConnectionState === 'connected') return;
+
+    writeLogToFile('info', 'Đang thử kết nối lại database...');
+    await initDatabase();
+  }, 30000);
+}
+
+function ensureDbReady() {
+  if (!dbPool) {
+    return { ok: false, error: 'Database chưa được khởi tạo' };
+  }
+  if (dbConnectionState !== 'connected') {
+    return { ok: false, error: 'Không có kết nối database. Vui lòng kiểm tra mạng và thử lại.' };
+  }
+  return { ok: true };
 }
 
 // 3. TẠO CỬA SỔ CHÍNH
@@ -161,6 +249,24 @@ function setupIpcHandlers() {
   // Lấy phiên bản
   ipcMain.handle('get-version', () => config.APP_VERSION);
 
+  ipcMain.handle('get-db-status', () => ({
+    status: dbConnectionState,
+    connected: dbConnectionState === 'connected',
+    message: dbConnectionState === 'connected'
+      ? 'Mây: Kết nối'
+      : dbConnectionState === 'connecting'
+        ? 'Mây: Đang kết nối...'
+        : 'Mây: Mất kết nối'
+  }));
+
+  ipcMain.handle('retry-db-connection', async () => {
+    if (dbConnectionState === 'connected') {
+      return { ok: true, status: dbConnectionState };
+    }
+    const ok = await initDatabase();
+    return { ok, status: dbConnectionState };
+  });
+
   // Mở URL ngoài trình duyệt
   ipcMain.handle('open-external', async (event, url) => {
     try {
@@ -205,16 +311,27 @@ function setupIpcHandlers() {
 
   // --- TRUY VẤN CƠ SỞ DỮ LIỆU POSTGRESQL ---
   ipcMain.handle('db-query', async (event, sql, params) => {
+    const ready = ensureDbReady();
+    if (!ready.ok) return ready;
+
     try {
       const res = await dbPool.query(sql, params);
       return { ok: true, rows: res.rows };
     } catch (err) {
       writeLogToFile('error', `Lỗi DB Query: ${sql} | Lỗi: ${err.message}`);
+      if (/timeout|terminated|ECONNRESET|ENOTFOUND|ECONNREFUSED/i.test(err.message)) {
+        dbConnectionState = 'disconnected';
+        notifyDbStatus('disconnected', 'Mây: Mất kết nối');
+        scheduleDbReconnect();
+      }
       return { ok: false, error: err.message };
     }
   });
 
   ipcMain.handle('db-run', async (event, sql, params) => {
+    const ready = ensureDbReady();
+    if (!ready.ok) return ready;
+
     try {
       const res = await dbPool.query(sql, params);
       return { 
@@ -225,6 +342,11 @@ function setupIpcHandlers() {
       };
     } catch (err) {
       writeLogToFile('error', `Lỗi DB Run: ${sql} | Lỗi: ${err.message}`);
+      if (/timeout|terminated|ECONNRESET|ENOTFOUND|ECONNREFUSED/i.test(err.message)) {
+        dbConnectionState = 'disconnected';
+        notifyDbStatus('disconnected', 'Mây: Mất kết nối');
+        scheduleDbReconnect();
+      }
       return { ok: false, error: err.message };
     }
   });
@@ -372,11 +494,11 @@ function setupIpcHandlers() {
 }
 
 // 5. VÒNG ĐỜI HỆ THỐNG
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   writeLogToFile('info', 'Ứng dụng đã khởi động.');
-  initDatabase();
   setupIpcHandlers();
   createWindow();
+  await initDatabase();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

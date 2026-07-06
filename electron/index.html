@@ -1569,9 +1569,12 @@
         </div>
 
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('modal-order-export')">Hủy bỏ</button>
-        <button class="btn btn-primary" onclick="proceedToExportPreview()">Tiếp tục ➔</button>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <span id="export-selected-count" class="export-selection-count">Chưa chọn đơn hàng nào</span>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn-secondary" onclick="closeModal('modal-order-export')">Hủy bỏ</button>
+          <button class="btn btn-primary" onclick="proceedToExportPreview()" title="Tiếp tục sang bước điều chỉnh (Ctrl+S)">Tiếp tục ➔</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1602,7 +1605,10 @@
 
         <!-- Chi tiết sản phẩm -->
         <div class="form-card" style="padding: 15px; margin-bottom: 0; display: flex; flex-direction: column; gap: 8px;">
-          <h4 style="margin-top: 0; margin-bottom: 0; font-size: 13px; color: var(--color-primary);">Chi tiết đơn hàng</h4>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h4 style="margin: 0; font-size: 13px; color: var(--color-primary);">Chi tiết đơn hàng</h4>
+            <button class="btn btn-secondary btn-sm" onclick="addPreviewProductRow()" title="Thêm dòng sản phẩm thủ công" style="padding: 3px 10px; font-size: 12px;">➕ Thêm dòng</button>
+          </div>
           <div class="scroll-wrapper" style="max-height: 250px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
             <table class="data-table" id="preview-products-table" style="font-size: 12px;">
               <thead>
@@ -1679,15 +1685,42 @@
         <button class="modal-close" onclick="closeModal('modal-shortcuts')">×</button>
       </div>
       <div class="modal-body">
+        <h4 class="shortcut-group-title">Điều hướng</h4>
         <div class="shortcut-grid">
           <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>K</kbd><span>Mở lệnh nhanh</span></div>
+          <div class="shortcut-item"><kbd>Alt</kbd><kbd>1..6</kbd><span>Chuyển nhanh giữa các trang</span></div>
+          <div class="shortcut-item"><kbd>F5</kbd><span>Làm mới dữ liệu</span></div>
+          <div class="shortcut-item"><kbd>Esc</kbd><span>Đóng hộp thoại / menu đang mở</span></div>
+        </div>
+
+        <h4 class="shortcut-group-title">Form nhập liệu</h4>
+        <div class="shortcut-grid">
+          <div class="shortcut-item"><kbd>Enter</kbd><span>Sang ô nhập tiếp theo</span></div>
           <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>S</kbd><span>Lưu / gửi / cập nhật</span></div>
           <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>T</kbd><span>Tính toán form hiện tại</span></div>
           <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>E</kbd><span>Xuất Excel</span></div>
-          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>F</kbd><span>Tìm trong trang hiện tại</span></div>
-          <div class="shortcut-item"><kbd>F5</kbd><span>Làm mới dữ liệu</span></div>
+        </div>
+
+        <h4 class="shortcut-group-title">Bảng dữ liệu</h4>
+        <div class="shortcut-grid">
+          <div class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd><span>Di chuyển dòng đang chọn</span></div>
+          <div class="shortcut-item"><kbd>Shift</kbd><kbd>↑↓</kbd><span>Mở rộng vùng chọn</span></div>
+          <div class="shortcut-item"><kbd>Enter</kbd><span>Mở sửa dòng đang chọn</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>A</kbd><span>Chọn tất cả dòng hiển thị</span></div>
           <div class="shortcut-item"><kbd>Delete</kbd><span>Xóa dòng đã chọn trong lịch sử</span></div>
-          <div class="shortcut-item"><kbd>Esc</kbd><span>Đóng hộp thoại đang mở</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>F</kbd><span>Tìm trong trang hiện tại</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>M</kbd><span>Gửi email đơn đã chọn</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>D</kbd><span>Quản lý đính kèm đơn đã chọn</span></div>
+        </div>
+
+        <h4 class="shortcut-group-title">Thao tác chuột</h4>
+        <div class="shortcut-grid">
+          <div class="shortcut-item"><kbd>Click</kbd><span>Chọn một dòng</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>Click</kbd><span>Thêm / bớt dòng vào vùng chọn</span></div>
+          <div class="shortcut-item"><kbd>Shift</kbd><kbd>Click</kbd><span>Chọn cả dải dòng liên tiếp</span></div>
+          <div class="shortcut-item"><kbd>2×Click</kbd><span>Mở sửa đơn hàng</span></div>
+          <div class="shortcut-item"><kbd>Chuột phải</kbd><span>Mở menu thao tác nhanh</span></div>
+          <div class="shortcut-item"><kbd>Click tiêu đề</kbd><span>Sắp xếp cột (Lịch sử)</span></div>
         </div>
       </div>
     </div>

@@ -1134,11 +1134,22 @@ kbd {
   max-height: 360px;
   overflow: hidden;
   padding: 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #3a4152;
   border-radius: var(--radius-md);
-  background: var(--bg-secondary);
+  background-color: #20252f;
+  background-image: none;
   color: var(--text-primary);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate;
+  opacity: 1;
+}
+
+body.light-theme .column-filter-menu {
+  background-color: #ffffff;
+  border-color: #d3d9e2;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
 }
 
 .column-filter-title {
@@ -1150,12 +1161,17 @@ kbd {
 .column-filter-search {
   width: 100%;
   height: 32px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #3a4152;
   border-radius: var(--radius-sm);
-  background: var(--bg-primary);
+  background-color: #151a24;
   color: var(--text-primary);
   padding: 0 10px;
   margin-bottom: 8px;
+}
+
+body.light-theme .column-filter-search {
+  background-color: #f4f6f9;
+  border-color: #d3d9e2;
 }
 
 .column-filter-actions {
@@ -1167,13 +1183,18 @@ kbd {
 .column-filter-actions button {
   flex: 1;
   height: 28px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #3a4152;
   border-radius: var(--radius-sm);
-  background: var(--bg-tertiary);
+  background-color: #2a303c;
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+}
+
+body.light-theme .column-filter-actions button {
+  background-color: #eef1f5;
+  border-color: #d3d9e2;
 }
 
 .column-filter-actions button:hover {
@@ -1184,8 +1205,13 @@ kbd {
 .column-filter-values {
   max-height: 220px;
   overflow-y: auto;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #3a4152;
   padding-top: 6px;
+  background-color: transparent;
+}
+
+body.light-theme .column-filter-values {
+  border-top-color: #d3d9e2;
 }
 
 .column-filter-value {
@@ -2308,5 +2334,115 @@ body.light-theme .table-container {
   background: rgba(255, 255, 255, 0.9);
   color: #20242b;
   border-color: rgba(16, 24, 40, 0.13);
+}
+
+/* ==========================================================================
+   12. INTERACTION & ACCESSIBILITY PASS (KEYBOARD + MOUSE)
+   ========================================================================== */
+
+/* Toast kiểu "info" */
+.toast.toast-info {
+  border-left-color: var(--color-info);
+}
+
+/* Trạng thái focus rõ ràng khi điều hướng bằng bàn phím */
+.btn:focus-visible,
+.pill:focus-visible,
+.icon-btn:focus-visible,
+.command-trigger:focus-visible,
+.menu-item a:focus-visible,
+.attention-card:focus-visible,
+.modal-close:focus-visible,
+.table-filter-button:focus-visible,
+.radio-pill-group .btn-pill:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Hiệu ứng nhấn nút phản hồi tức thì */
+.btn:active,
+.pill:active,
+.icon-btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Chống bôi đen chữ khi Shift+Click chọn dải dòng */
+.data-table tbody tr {
+  user-select: none;
+}
+
+/* Tiêu đề cột sắp xếp được (bảng Lịch sử) */
+.data-table th.sortable {
+  cursor: pointer;
+}
+
+.data-table th.sortable > span:first-child {
+  pointer-events: none;
+}
+
+.data-table th .sort-indicator {
+  display: inline-block;
+  min-width: 14px;
+  color: var(--color-primary);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.data-table th.sorted {
+  color: var(--color-primary);
+  box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+/* Menu chuột phải: mục nguy hiểm + phím tắt gợi ý */
+.context-menu-item.context-menu-danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item.context-menu-danger:hover {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Bộ đếm lựa chọn trong hộp thoại xuất chứng từ */
+.export-selection-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #737b89;
+  align-self: center;
+}
+
+.export-selection-count.has-selection {
+  color: #0067c0;
+}
+
+/* Nhóm tiêu đề trong modal phím tắt */
+.shortcut-group-title {
+  margin: 14px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.shortcut-group-title:first-child {
+  margin-top: 0;
+}
+
+/* Checkbox nhất quán theo màu chủ đạo */
+input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Con trỏ giữ nguyên dạng khi hover các nút hành động trong bảng */
+.data-table td button {
+  cursor: pointer;
 }
 

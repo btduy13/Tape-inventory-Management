@@ -5,6 +5,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Trả về phiên bản hiện tại của app
   getVersion: () => ipcRenderer.invoke('get-version'),
 
+  getDbStatus: () => ipcRenderer.invoke('get-db-status'),
+
+  retryDbConnection: () => ipcRenderer.invoke('retry-db-connection'),
+
+  onDbStatusChange: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('db-status-changed', listener);
+    return () => ipcRenderer.removeListener('db-status-changed', listener);
+  },
+
   // Mở liên kết ngoài trình duyệt
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
