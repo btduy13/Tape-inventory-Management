@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="tape-inventory-management",
-    version="1.1.0",
+    version="1.5.2",
     packages=find_packages(),
     install_requires=[
         'sqlalchemy',

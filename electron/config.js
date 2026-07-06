@@ -14,5 +14,5 @@ module.exports = {
 
   // Tên ứng dụng và phiên bản
   APP_NAME: "Quản lý Đơn hàng Băng Keo",
-  APP_VERSION: "1.5.1"
+  APP_VERSION: "1.5.2"
 };
