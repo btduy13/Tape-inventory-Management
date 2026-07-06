@@ -3,7 +3,7 @@ import os
 from src.database.database import BangKeoInOrder, TrucInOrder, get_session, init_db
 from datetime import datetime, timedelta
 import numpy as np
-import logging
+from src.utils.helpers import apply_settlement_debt
 
 def export_template(file_path, order_type):
     """Export an Excel template for data entry."""
@@ -135,6 +135,7 @@ def import_data(file_path, order_type, db_session):
                         da_giao=convert_to_bool(row.get('Đã giao')),
                         da_tat_toan=convert_to_bool(row.get('Đã tất toán'))
                     )
+                    apply_settlement_debt(order)
                     db_session.add(order)
                 except Exception as e:
                     errors.append(f"Error in row {idx + 2}: {str(e)}")
@@ -187,6 +188,7 @@ def import_data(file_path, order_type, db_session):
                         da_giao=convert_to_bool(row.get('Đã giao')),
                         da_tat_toan=convert_to_bool(row.get('Đã tất toán'))
                     )
+                    apply_settlement_debt(order)
                     db_session.add(order)
                 except Exception as e:
                     errors.append(f"Error in row {idx + 2}: {str(e)}")

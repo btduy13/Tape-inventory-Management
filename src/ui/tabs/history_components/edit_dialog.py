@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 from tkcalendar import DateEntry
 from src.database.database import BangKeoInOrder, TrucInOrder, BangKeoOrder
+from src.utils.helpers import apply_settlement_debt
 
 class EditDialogManager:
     def __init__(self, parent):
@@ -513,6 +514,12 @@ class EditDialogManager:
                     for field, value in values.items():
                         if field not in ['id', 'da_giao', 'da_tat_toan']:
                             setattr(order, field, value)
+
+                    if 'da_giao' in self.edit_entries:
+                        order.da_giao = bool(self.edit_entries['da_giao'].get())
+                    if 'da_tat_toan' in self.edit_entries:
+                        order.da_tat_toan = bool(self.edit_entries['da_tat_toan'].get())
+                    apply_settlement_debt(order)
                 
                 if not order:
                     raise Exception("Không tìm thấy đơn hàng trong database")
@@ -527,7 +534,8 @@ class EditDialogManager:
                     elif column in ['ngay_du_kien']:
                         tree_values.append(values[column].strftime(self.DATE_FORMAT) if values[column] else "")
                     elif column in ['da_giao', 'da_tat_toan']:
-                        tree_values.append(item_values[tree['columns'].index(column)])
+                        checked = bool(self.edit_entries.get(column).get()) if column in self.edit_entries else False
+                        tree_values.append("✓" if checked else "")
                     elif column in numeric_fields:
                         # Format numeric values with commas for display
                         tree_values.append(self.format_currency(values.get(column, 0)))

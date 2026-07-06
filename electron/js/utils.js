@@ -58,6 +58,14 @@ const utils = {
     return 'bang_keo_in_orders';
   },
 
+  applySettlementDebtRules: function(data) {
+    if (!data) return data;
+    if (data.da_tat_toan === true) {
+      data.cong_no_khach = 0;
+    }
+    return data;
+  },
+
   showToast: function(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;

@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from src.database.database import BangKeoInOrder, TrucInOrder, BangKeoOrder
-from src.ui.tabs.tab_base import TabBase
+from src.utils.helpers import apply_settlement_debt
 import logging
+from src.ui.tabs.tab_base import TabBase
 from src.services.report_gen import OrderSelectionDialog
 from src.database.database import get_session
 from src.utils.ui_utils import set_window_icon, center_window
@@ -506,8 +507,7 @@ class ThongKeTab(TabBase):
                 try:
                     order.da_giao = da_giao_var.get()
                     order.da_tat_toan = da_tat_toan_var.get()
-                    if order.da_tat_toan:
-                        order.cong_no_khach = 0
+                    apply_settlement_debt(order)
                     self.parent_form.db_session.commit()
                     messagebox.showinfo("Thành công", "Cập nhật trạng thái đơn hàng thành công.")
                     update_window.destroy()
@@ -670,8 +670,7 @@ class ThongKeTab(TabBase):
                 # Luôn áp dụng cả hai trạng thái theo yêu cầu
                 order.da_giao = bool(giao_value)
                 order.da_tat_toan = bool(tt_value)
-                if order.da_tat_toan:
-                    order.cong_no_khach = 0
+                apply_settlement_debt(order)
 
                 count += 1
 

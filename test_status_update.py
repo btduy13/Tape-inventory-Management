@@ -25,6 +25,9 @@ def get_stats_table_name(subtab: str) -> str:
     return "bang_keo_in_orders"
 
 
+from src.utils.helpers import apply_settlement_debt, repair_settled_orders_debt
+
+
 def update_order_status(conn, table_name: str, order_id: str, da_giao: bool, da_tat_toan: bool):
     sql = (
         f"UPDATE {table_name} SET da_giao = %s, da_tat_toan = %s, "
@@ -48,7 +51,6 @@ def read_order_status(conn, table_name: str, order_id: str):
 
 
 class StatusUpdateTests(unittest.TestCase):
-    conn = None
     sample_order = None
     sample_table = None
     original = None
@@ -134,6 +136,52 @@ class StatusUpdateTests(unittest.TestCase):
         row_count = 1
         success = res_ok and row_count > 0
         self.assertTrue(success)
+
+
+class SettlementHelperTests(unittest.TestCase):
+    def test_apply_settlement_debt_clears_when_settled(self):
+        class Order:
+            da_tat_toan = True
+            cong_no_khach = 1_500_000
+
+        order = Order()
+        apply_settlement_debt(order)
+        self.assertEqual(order.cong_no_khach, 0)
+
+    def test_apply_settlement_debt_keeps_debt_when_unsettled(self):
+        class Order:
+            da_tat_toan = False
+            cong_no_khach = 1_500_000
+
+        order = Order()
+        apply_settlement_debt(order)
+        self.assertEqual(order.cong_no_khach, 1_500_000)
+
+
+class InconsistentDataTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.conn:
+            cls.conn.close()
+
+    def test_no_settled_orders_with_open_debt(self):
+        repaired = repair_settled_orders_debt(self.conn)
+        if repaired:
+            print(f"Repaired {repaired} settled orders with stale debt")
+
+        total = 0
+        with self.conn.cursor() as cur:
+            for table in TABLE_MAP.values():
+                cur.execute(
+                    f"SELECT COUNT(*) FROM {table} "
+                    "WHERE COALESCE(da_tat_toan, FALSE) = TRUE AND COALESCE(cong_no_khach, 0) > 0"
+                )
+                total += cur.fetchone()[0]
+        self.assertEqual(total, 0, f"Found {total} settled orders still carrying debt")
 
 
 if __name__ == "__main__":

@@ -78,6 +78,11 @@ class Application:
         try:
             logging.info("Initializing database connection...")
             self.engine = init_db(DATABASE_URL)
+            from src.utils.helpers import repair_settled_orders_debt
+            with self.engine.raw_connection() as conn:
+                repaired = repair_settled_orders_debt(conn)
+            if repaired:
+                logging.info("Repaired %s settled orders with stale debt", repaired)
             logging.info("Database connection established successfully")
         except Exception as e:
             logging.error("Database connection failed: %s", str(e))

@@ -91,6 +91,19 @@ function initDatabase() {
           `);
           await dbPool.query(`SET lock_timeout = 0`); // Reset timeout về mặc định
           writeLogToFile('info', 'Đã kiểm tra/thêm cột is_quote vào các bảng order.');
+
+          const orderTables = ['bang_keo_in_orders', 'truc_in_orders', 'bang_keo_orders'];
+          let repairedCount = 0;
+          for (const tableName of orderTables) {
+            const repairResult = await dbPool.query(
+              `UPDATE ${tableName} SET cong_no_khach = 0
+               WHERE COALESCE(da_tat_toan, FALSE) = TRUE AND COALESCE(cong_no_khach, 0) > 0`
+            );
+            repairedCount += repairResult.rowCount || 0;
+          }
+          if (repairedCount > 0) {
+            writeLogToFile('info', `Đã sửa ${repairedCount} đơn đã tất toán nhưng còn công nợ.`);
+          }
         } catch (dbErr) {
           writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + dbErr.message);
           // Đảm bảo reset lock_timeout nếu có lỗi xảy ra

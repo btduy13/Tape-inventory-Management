@@ -47,4 +47,31 @@ def sort_treeview_items(tree, col, reverse=False):
     for index, (val, item) in enumerate(items):
         tree.move(item, '', index)
     
-    return items 
+    return items
+
+
+def apply_settlement_debt(order) -> None:
+    """When an order is marked settled, customer debt must be zero."""
+    if getattr(order, 'da_tat_toan', False):
+        order.cong_no_khach = 0
+
+
+def repair_settled_orders_debt(connection) -> int:
+    """Fix legacy rows where da_tat_toan=True but cong_no_khach > 0. Returns rows repaired."""
+    tables = ('bang_keo_in_orders', 'truc_in_orders', 'bang_keo_orders')
+    repaired = 0
+    cursor = connection.cursor()
+    try:
+        for table in tables:
+            cursor.execute(
+                f"UPDATE {table} SET cong_no_khach = 0 "
+                "WHERE COALESCE(da_tat_toan, FALSE) = TRUE AND COALESCE(cong_no_khach, 0) > 0"
+            )
+            repaired += cursor.rowcount
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        cursor.close()
+    return repaired

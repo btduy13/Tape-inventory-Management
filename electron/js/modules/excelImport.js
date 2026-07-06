@@ -162,7 +162,7 @@ function calculateSimpleImport(data) {
   data.loi_nhuan = data.thanh_tien_ban - data.thanh_tien;
   data.tien_hoa_hong = data.loi_nhuan * (data.hoa_hong / 100);
   data.loi_nhuan_rong = data.loi_nhuan - data.tien_hoa_hong - data.tien_ship;
-  return data;
+  return utils.applySettlementDebtRules(data);
 }
 
 function mapBangKeoInImport(row) {
@@ -224,7 +224,7 @@ function mapBangKeoInImport(row) {
   data.truc_loi_nhuan = data.truc_thanh_tien_ban - data.truc_thanh_tien_goc;
   data.truc_loi_nhuan_rong = data.truc_loi_nhuan - (data.truc_loi_nhuan * data.truc_hoa_hong / 100);
 
-  return data;
+  return utils.applySettlementDebtRules(data);
 }
 
 function mapSimpleImport(row, type) {
