@@ -1,4 +1,6 @@
 // CẤU HÌNH HỆ THỐNG PHẦN MỀM BĂNG KEO (CONFIG.JS)
+const pkg = require('./package.json');
+
 module.exports = {
   // Chuỗi kết nối tới cơ sở dữ liệu Supabase PostgreSQL
   DATABASE_URL: "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres",
@@ -14,5 +16,5 @@ module.exports = {
 
   // Tên ứng dụng và phiên bản
   APP_NAME: "Quản lý Đơn hàng Băng Keo",
-  APP_VERSION: "1.2.0"
+  APP_VERSION: pkg.version
 };

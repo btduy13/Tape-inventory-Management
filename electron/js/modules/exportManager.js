@@ -481,10 +481,20 @@ function generateCombinedPrintInvoice() {
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; color: #172033; line-height: 1.4; font-size: 10pt; padding: 10px;">
       <!-- Header -->
-      <div style="border-top: 6px solid #2563eb; border-bottom: 1px solid #dbe4f0; text-align: center; padding: 12px 0 14px; margin-bottom: 18px;">
-        <div style="color: #1d4ed8; font-size: 15pt; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${escapeExportHtml(company.name || '')}</div>
-        <div style="font-size: 10pt; color: #334155; margin-bottom: 2px;">${escapeExportHtml(company.address || '')}</div>
-        <div style="font-size: 10pt; color: #334155;">Hotline: ${escapeExportHtml(company.hotline || '')}</div>
+      <div style="border-top: 6px solid #2563eb; border-bottom: 1px solid #dbe4f0; padding: 12px 16px 14px; margin-bottom: 18px;">
+        <table style="width: 100%; border-collapse: collapse; border: none;">
+          <tr>
+            <td style="width: 72px; vertical-align: middle;">
+              <img src="assets/logo.png" alt="Logo" style="width: 64px; height: 64px; object-fit: contain; display: block;">
+            </td>
+            <td style="text-align: center; vertical-align: middle;">
+              <div style="color: #1d4ed8; font-size: 15pt; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${escapeExportHtml(company.name || '')}</div>
+              <div style="font-size: 10pt; color: #334155; margin-bottom: 2px;">${escapeExportHtml(company.address || '')}</div>
+              <div style="font-size: 10pt; color: #334155;">Hotline: ${escapeExportHtml(company.hotline || '')}</div>
+            </td>
+            <td style="width: 72px;"></td>
+          </tr>
+        </table>
       </div>
 
       <!-- Title -->

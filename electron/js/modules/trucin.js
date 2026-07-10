@@ -31,7 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 1. Tìm gợi ý tên hàng từ lịch sử đơn Trục In
 async function queryTrucInSuggestions(query) {
-  const sql = "SELECT DISTINCT ten_hang FROM truc_in_orders WHERE ten_hang ILIKE $1 LIMIT 5";
+  const sql = `
+    SELECT ten_hang
+    FROM truc_in_orders
+    WHERE ten_hang ILIKE $1 AND (is_quote = FALSE OR is_quote IS NULL)
+    GROUP BY ten_hang
+    ORDER BY MAX(thoi_gian) DESC
+    LIMIT 8
+  `;
   const res = await window.electronAPI.dbQuery(sql, [`%${query}%`]);
   if (res.ok) {
     return res.rows.map(r => r.ten_hang);
@@ -45,7 +52,7 @@ async function autofillTrucInData(tenHang, mode = 'order') {
     const prefix = (mode === 'quote') ? 'q-ti-' : 'ti-';
     const sql = `
       SELECT * FROM truc_in_orders 
-      WHERE ten_hang = $1 
+      WHERE ten_hang ILIKE $1 AND (is_quote = FALSE OR is_quote IS NULL)
       ORDER BY thoi_gian DESC 
       LIMIT 1
     `;
@@ -83,21 +90,21 @@ function calculateTrucIn(mode = 'order') {
     const hoaHongPercent = parseFloat(document.getElementById(`${prefix}hoa-hong-percent`).value) || 0;
     const tienShip = utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value);
 
-    // Tính toán phái sinh
-    const thanhTienGoc = donGiaGoc * soLuong;
-    const thanhTienBan = donGiaBan * soLuong;
-    const loiNhuan = thanhTienBan - thanhTienGoc;
-    const tienHoaHong = loiNhuan * (hoaHongPercent / 100);
-    const congNoKhach = thanhTienBan; // Trục in không cọc mặc định, tính hết công nợ
-    const loiNhuanRòng = loiNhuan - tienHoaHong - tienShip;
+    const result = orderMath.calculateStandardOrder({
+      quantity: soLuong,
+      costPrice: donGiaGoc,
+      salePrice: donGiaBan,
+      commissionPercent: hoaHongPercent,
+      shipping: tienShip
+    });
 
     // Cập nhật giao diện
-    document.getElementById(`${prefix}thanh-tien-goc`).value = utils.formatCurrency(thanhTienGoc);
-    document.getElementById(`${prefix}thanh-tien-ban`).value = utils.formatCurrency(thanhTienBan);
-    document.getElementById(`${prefix}cong-no-khach`).value = utils.formatCurrency(congNoKhach);
-    document.getElementById(`${prefix}tien-hoa-hong`).value = utils.formatCurrency(tienHoaHong);
-    document.getElementById(`${prefix}loi-nhuan`).value = utils.formatCurrency(loiNhuan);
-    document.getElementById(`${prefix}loi-nhuan-rong`).value = utils.formatCurrency(loiNhuanRòng);
+    document.getElementById(`${prefix}thanh-tien-goc`).value = utils.formatCurrency(result.costTotal);
+    document.getElementById(`${prefix}thanh-tien-ban`).value = utils.formatCurrency(result.saleTotal);
+    document.getElementById(`${prefix}cong-no-khach`).value = utils.formatCurrency(result.outstanding);
+    document.getElementById(`${prefix}tien-hoa-hong`).value = utils.formatCurrency(result.commission);
+    document.getElementById(`${prefix}loi-nhuan`).value = utils.formatCurrency(result.profit);
+    document.getElementById(`${prefix}loi-nhuan-rong`).value = utils.formatCurrency(result.netProfit);
 
   } catch (err) {
     console.error('Lỗi tính toán Trục in:', err);
@@ -107,6 +114,7 @@ function calculateTrucIn(mode = 'order') {
 // 4. Lưu đơn Trục In mới
 async function saveTrucIn(event, mode = 'order') {
   if (event) event.preventDefault();
+  if (!utils.beginFormSubmit(event)) return;
 
   try {
     const prefix = (mode === 'quote') ? 'q-ti-' : 'ti-';
@@ -209,6 +217,8 @@ async function saveTrucIn(event, mode = 'order') {
   } catch (err) {
     window.electronAPI.writeLog('error', 'Lỗi lưu đơn Trục In: ' + err.message);
     utils.showToast("Không thể lưu đơn hàng", "danger");
+  } finally {
+    utils.endFormSubmit(event);
   }
 }
 

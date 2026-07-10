@@ -5,6 +5,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Trả về phiên bản hiện tại của app
   getVersion: () => ipcRenderer.invoke('get-version'),
 
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  onUpdateStatus: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('update-status', listener);
+    return () => ipcRenderer.removeListener('update-status', listener);
+  },
+
   // Mở liên kết ngoài trình duyệt
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
@@ -20,6 +28,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // INSERT/UPDATE/DELETE query trả về số bản ghi thay đổi
   dbRun: (sql, params) => ipcRenderer.invoke('db-run', sql, params),
+  dbTransaction: (statements) => ipcRenderer.invoke('db-transaction', statements),
 
   // --- GỬI EMAIL ---
   sendEmail: (toAddress, subject, body, htmlBody, attachments, dbAttachmentIds) => 

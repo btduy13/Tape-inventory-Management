@@ -33,11 +33,11 @@ async function loadDashboardMetrics() {
       COUNT(id) AS total_orders,
       COALESCE(SUM(thanh_tien_ban), 0) AS total_revenue
     FROM (
-      SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW())
+      SELECT id, thoi_gian, COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END AS thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT id, thoi_gian, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW())
+      SELECT id, thoi_gian, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW())
+      SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined;
   `;
 
@@ -46,11 +46,11 @@ async function loadDashboardMetrics() {
       ten_hang,
       SUM(so_luong) AS total_qty
     FROM (
-      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW())
+      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT ten_hang, thoi_gian, so_luong FROM truc_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW())
+      SELECT ten_hang, thoi_gian, so_luong FROM truc_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW())
+      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined
     GROUP BY ten_hang
     ORDER BY total_qty DESC
@@ -143,11 +143,11 @@ async function updateDashboardCharts(period = 'daily') {
       SUM(so_luong) AS quantity,
       SUM(thanh_tien_ban) AS amount
     FROM (
-      SELECT thoi_gian, so_luong, thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= $2
+      SELECT thoi_gian, so_luong, COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END AS thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= $2 AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT thoi_gian, so_luong, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $2
+      SELECT thoi_gian, so_luong, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $2 AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT thoi_gian, so_luong, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $2
+      SELECT thoi_gian, so_luong, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $2 AND (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined
     GROUP BY period
     ORDER BY period;
@@ -252,11 +252,11 @@ async function loadProductDistributionChart() {
       ten_hang,
       SUM(so_luong) AS total_quantity
     FROM (
-      SELECT ten_hang, so_luong FROM bang_keo_in_orders
+      SELECT ten_hang, so_luong FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT ten_hang, so_luong FROM truc_in_orders
+      SELECT ten_hang, so_luong FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT ten_hang, so_luong FROM bang_keo_orders
+      SELECT ten_hang, so_luong FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined
     GROUP BY ten_hang
     ORDER BY total_quantity DESC;

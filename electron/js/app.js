@@ -2,6 +2,7 @@
 let activeTab = 'dashboard';
 let editOrderIdGlobal = null;
 let editOrderTypeGlobal = null;
+let editOrderDataGlobal = null;
 let commandPaletteFilteredActions = [];
 let commandPaletteSelectedIndex = 0;
 
@@ -11,7 +12,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 2. Điền ngày mặc định vào các form (Ngày mai)
   setDefaultDates();
+  initializeTheme();
   initializeUiEnhancements();
+  initializeAppVersion();
+  initializeUpdateListeners();
 
   // 3. Tải dữ liệu cho Dashboard mặc định
   await switchTab('dashboard');
@@ -58,8 +62,7 @@ async function switchTab(tabId) {
     'sales': 'Quản Lý Bán Hàng',
     'quotes-creation': 'Báo Giá Đơn Hàng',
     'quotes-list': 'Các Đơn Báo Giá',
-    'thong-ke': 'Báo Cáo Thống Kê',
-    'history': 'Lịch Sử Đơn Hàng'
+    'thong-ke': 'Báo Cáo Thống Kê'
   };
   
   const title = menuTitles[tabId] || 'Hệ Thống';
@@ -71,8 +74,6 @@ async function switchTab(tabId) {
     await loadDashboardData();
   } else if (tabId === 'thong-ke') {
     await loadStatsData();
-  } else if (tabId === 'history') {
-    await loadHistoryData();
   } else if (tabId === 'quotes-list') {
     await loadQuotationsData();
   }
@@ -139,14 +140,27 @@ async function refreshCurrentPage() {
 }
 
 // Bật/Tắt Chế độ Sáng/Tối (Light/Dark Theme Toggle)
-function toggleTheme() {
-  const isLight = document.body.classList.toggle('light-theme');
+const THEME_STORAGE_KEY = 'bang-keo-ui-theme';
+
+function applyTheme(isLight) {
+  document.body.classList.toggle('light-theme', isLight);
   const btn = document.getElementById('theme-toggle-btn');
-  
   if (btn) {
-    btn.innerText = isLight ? "Sáng" : "Tối";
+    btn.innerText = isLight ? 'Sáng' : 'Tối';
     btn.classList.toggle('active', !isLight);
   }
+}
+
+function initializeTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY);
+  const isLight = saved ? saved === 'light' : true;
+  applyTheme(isLight);
+}
+
+function toggleTheme() {
+  const isLight = !document.body.classList.contains('light-theme');
+  applyTheme(isLight);
+  localStorage.setItem(THEME_STORAGE_KEY, isLight ? 'light' : 'dark');
 
   // Vẽ lại biểu đồ theo màu chữ mới của theme
   if (activeTab === 'dashboard') {
@@ -175,6 +189,7 @@ async function openEditOrderDialog(orderId, orderType) {
   }
 
   const order = res.rows[0];
+  editOrderDataGlobal = order;
   const modalBody = document.getElementById('edit-modal-body');
   
   // Nạp form động dựa theo loại đơn hàng
@@ -188,119 +203,120 @@ async function openEditOrderDialog(orderId, orderType) {
 
   // Khởi chạy định dạng tiền tệ cho form edit
   utils.setupCurrencyInputs();
+  if (orderType === 'bang_keo_in') toggleEditAxisFields();
   
   // Bật modal
   document.getElementById('modal-edit-order').classList.add('active');
 }
 
 // HTML Generator cho form sửa Băng Keo In
+function escapeAppHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildEditInput(label, id, value, options = {}) {
+  const type = options.type || 'text';
+  const classes = `form-control${options.currency ? ' currency-format' : ''}`;
+  const required = options.required ? ' required' : '';
+  const min = options.min !== undefined ? ` min="${options.min}"` : '';
+  const max = options.max !== undefined ? ` max="${options.max}"` : '';
+  const readonly = options.readonly ? ' readonly' : '';
+  const step = type === 'number' ? ' step="any"' : '';
+  return `
+    <div class="form-group">
+      <label class="form-label" for="${id}">${label}${options.required ? ' *' : ''}</label>
+      <input type="${type}" id="${id}" class="${classes}" value="${escapeAppHtml(value)}"${step}${min}${max}${required}${readonly}>
+    </div>
+  `;
+}
+
 function generateBangKeoInEditForm(o) {
   return `
-    <form id="edit-order-form" class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
+    <form id="edit-order-form" class="form-grid edit-order-grid">
+      <h4 class="edit-section-title">Thông tin đơn hàng</h4>
+      ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
+      ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
+      ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
+      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', o.ngay_du_kien ? new Date(o.ngay_du_kien).toISOString().split('T')[0] : '', { type: 'date', required: true })}
+      ${buildEditInput('Quy cách (mm)', 'edit-qc-mm', o.quy_cach_mm, { type: 'number' })}
+      ${buildEditInput('Quy cách (m)', 'edit-qc-m', o.quy_cach_m, { type: 'number' })}
+      ${buildEditInput('Quy cách (mic)', 'edit-qc-mic', o.quy_cach_mic, { type: 'number' })}
+      ${buildEditInput('Cuộn / cây', 'edit-cuon-cay', o.cuon_cay, { type: 'number' })}
+      ${buildEditInput('Màu keo', 'edit-mau-keo', o.mau_keo)}
+      ${buildEditInput('Màu sắc', 'edit-mau-sac', o.mau_sac)}
+      ${buildEditInput('Lõi giấy', 'edit-loi-giay', o.loi_giay)}
+      ${buildEditInput('Thùng / bao', 'edit-thung-bao', o.thung_bao)}
+
+      <h4 class="edit-section-title">Giá và chi phí</h4>
+      ${buildEditInput('Số lượng', 'edit-so-luong', o.so_luong, { type: 'number', min: 0, required: true })}
+      ${buildEditInput('Phí số lượng', 'edit-phi-sl', utils.formatCurrency(o.phi_sl), { currency: true })}
+      ${buildEditInput('Phí keo', 'edit-phi-keo', utils.formatCurrency(o.phi_keo), { currency: true })}
+      ${buildEditInput('Phí màu', 'edit-phi-mau', utils.formatCurrency(o.phi_mau), { currency: true })}
+      ${buildEditInput('Phí size', 'edit-phi-size', utils.formatCurrency(o.phi_size), { currency: true })}
+      ${buildEditInput('Phí cắt', 'edit-phi-cat', utils.formatCurrency(o.phi_cat), { currency: true })}
+      ${buildEditInput('Đơn giá vốn', 'edit-don-gia-von', utils.formatCurrency(o.don_gia_von), { currency: true })}
+      ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
+      ${buildEditInput('Tiền cọc', 'edit-tien-coc', utils.formatCurrency(o.tien_coc), { currency: true })}
+      ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
+      ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
+      ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
+
+      <h4 class="edit-section-title">Trục in</h4>
       <div class="form-group">
-        <label class="form-label">Mã đơn hàng</label>
-        <input type="text" class="form-control" value="${o.id}" readonly>
+        <label class="form-label" for="edit-loai-truc">Loại trục</label>
+        <select id="edit-loai-truc" class="form-control" onchange="toggleEditAxisFields()">
+          <option value="cu" ${o.loai_truc !== 'moi' ? 'selected' : ''}>Trục cũ</option>
+          <option value="moi" ${o.loai_truc === 'moi' ? 'selected' : ''}>Trục mới</option>
+        </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Tên hàng</label>
-        <input type="text" id="edit-ten-hang" class="form-control" value="${o.ten_hang || ''}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tên khách hàng</label>
-        <input type="text" id="edit-ten-khach-hang" class="form-control" value="${o.ten_khach_hang || ''}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ngày giao dự kiến</label>
-        <input type="date" id="edit-ngay-du-kien" class="form-control" value="${o.ngay_du_kien ? new Date(o.ngay_du_kien).toISOString().split('T')[0] : ''}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Số lượng</label>
-        <input type="number" step="any" id="edit-so-luong" class="form-control" value="${o.so_luong || 0}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Đơn giá bán (đ)</label>
-        <input type="text" id="edit-don-gia-ban" class="form-control currency-format" value="${utils.formatCurrency(o.don_gia_ban)}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tiền cọc (đ)</label>
-        <input type="text" id="edit-tien-coc" class="form-control currency-format" value="${utils.formatCurrency(o.tien_coc)}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tiền ship (đ)</label>
-        <input type="text" id="edit-tien-ship" class="form-control currency-format" value="${utils.formatCurrency(o.tien_ship)}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Đơn giá vốn (đ)</label>
-        <input type="text" id="edit-don-gia-von" class="form-control currency-format" value="${utils.formatCurrency(o.don_gia_von)}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Quy cách (m)</label>
-        <input type="number" step="any" id="edit-qc-m" class="form-control" value="${o.quy_cach_m || 0}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Cuộn/Cây</label>
-        <input type="number" step="any" id="edit-cuon-cay" class="form-control" value="${o.cuon_cay || 0}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hoa hồng (%)</label>
-        <input type="number" step="any" id="edit-hoa-hong-percent" class="form-control" value="${o.hoa_hong || 0}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Cộng tác viên (CTV)</label>
-        <input type="text" id="edit-ctv" class="form-control" value="${o.ctv || ''}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Phí cắt (đ)</label>
-        <input type="text" id="edit-phi-cat" class="form-control currency-format" value="${utils.formatCurrency(o.phi_cat)}">
+      <div class="edit-axis-fields ${o.loai_truc === 'moi' ? 'active' : ''}" id="edit-axis-fields">
+        ${buildEditInput('Tên trục', 'edit-truc-ten', o.ten_truc)}
+        ${buildEditInput('Chu vi', 'edit-truc-chu-vi', o.truc_chu_vi, { type: 'number', min: 0 })}
+        ${buildEditInput('Số lượng trục', 'edit-truc-so-luong', o.truc_so_luong, { type: 'number', min: 0 })}
+        ${buildEditInput('Giá gốc trục', 'edit-truc-gia-goc', utils.formatCurrency(o.truc_gia_goc), { currency: true })}
+        ${buildEditInput('Giá bán trục', 'edit-truc-gia-ban', utils.formatCurrency(o.truc_gia_ban), { currency: true })}
+        ${buildEditInput('CTV trục', 'edit-truc-ctv', o.truc_ctv)}
+        ${buildEditInput('Hoa hồng trục (%)', 'edit-truc-hoa-hong-percent', o.truc_hoa_hong, { type: 'number', min: 0, max: 100 })}
       </div>
     </form>
   `;
 }
 
+function toggleEditAxisFields() {
+  const isNewAxis = document.getElementById('edit-loai-truc')?.value === 'moi';
+  const fields = document.getElementById('edit-axis-fields');
+  if (!fields) return;
+  fields.classList.toggle('active', isNewAxis);
+  ['edit-truc-ten', 'edit-truc-so-luong', 'edit-truc-gia-goc', 'edit-truc-gia-ban'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.required = isNewAxis;
+  });
+}
+
 // HTML Generator cho form sửa Trục In
 function generateTrucInEditForm(o) {
   return `
-    <form id="edit-order-form" class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
-      <div class="form-group">
-        <label class="form-label">Mã đơn hàng</label>
-        <input type="text" class="form-control" value="${o.id}" readonly>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tên hàng</label>
-        <input type="text" id="edit-ten-hang" class="form-control" value="${o.ten_hang || ''}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tên khách hàng</label>
-        <input type="text" id="edit-ten-khach-hang" class="form-control" value="${o.ten_khach_hang || ''}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ngày giao dự kiến</label>
-        <input type="date" id="edit-ngay-du-kien" class="form-control" value="${o.ngay_du_kien ? new Date(o.ngay_du_kien).toISOString().split('T')[0] : ''}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Số lượng</label>
-        <input type="number" step="any" id="edit-so-luong" class="form-control" value="${o.so_luong || 0}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Đơn giá gốc (đ)</label>
-        <input type="text" id="edit-don-gia-goc" class="form-control currency-format" value="${utils.formatCurrency(o.don_gia_goc)}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Đơn giá bán (đ)</label>
-        <input type="text" id="edit-don-gia-ban" class="form-control currency-format" value="${utils.formatCurrency(o.don_gia_ban)}" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Hoa hồng (%)</label>
-        <input type="number" step="any" id="edit-hoa-hong-percent" class="form-control" value="${o.hoa_hong || 0}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tiền ship (đ)</label>
-        <input type="text" id="edit-tien-ship" class="form-control currency-format" value="${utils.formatCurrency(o.tien_ship)}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Cộng tác viên (CTV)</label>
-        <input type="text" id="edit-ctv" class="form-control" value="${o.ctv || ''}">
-      </div>
+    <form id="edit-order-form" class="form-grid edit-order-grid">
+      <h4 class="edit-section-title">Thông tin đơn hàng</h4>
+      ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
+      ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
+      ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
+      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', o.ngay_du_kien ? new Date(o.ngay_du_kien).toISOString().split('T')[0] : '', { type: 'date', required: true })}
+      ${buildEditInput('Quy cách', 'edit-quy-cach', o.quy_cach)}
+      ${buildEditInput('Màu sắc', 'edit-mau-sac', o.mau_sac)}
+      ${editOrderTypeGlobal === 'truc_in' ? buildEditInput('Màu keo', 'edit-mau-keo', o.mau_keo) : ''}
+      <h4 class="edit-section-title">Giá và chi phí</h4>
+      ${buildEditInput('Số lượng', 'edit-so-luong', o.so_luong, { type: 'number', min: 0, required: true })}
+      ${buildEditInput('Đơn giá gốc', 'edit-don-gia-goc', utils.formatCurrency(o.don_gia_goc), { currency: true, required: true })}
+      ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
+      ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
+      ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
+      ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
     </form>
   `;
 }
@@ -314,93 +330,144 @@ function generateBangKeoEditForm(o) {
 async function submitEditOrder() {
   try {
     const form = document.getElementById('edit-order-form');
+    if (!form) return;
     if (!form.checkValidity()) {
       form.reportValidity();
       return;
     }
 
     const tableName = utils.getOrderTableName(editOrderTypeGlobal);
-
     const tenHang = document.getElementById('edit-ten-hang').value.trim();
     const tenKhachHang = document.getElementById('edit-ten-khach-hang').value.trim();
-    const ngayDuKien = new Date(document.getElementById('edit-ngay-du-kien').value);
+    const ngayDuKien = document.getElementById('edit-ngay-du-kien').value;
     const soLuong = parseFloat(document.getElementById('edit-so-luong').value) || 0;
     const donGiaBan = utils.parseCurrency(document.getElementById('edit-don-gia-ban').value);
     const ctv = document.getElementById('edit-ctv').value.trim() || null;
-    const hoaHong = parseFloat(document.getElementById('edit-hoa-hong-percent').value) || 0;
+    const hoaHong = orderMath.percent(document.getElementById('edit-hoa-hong-percent').value);
     const tienShip = utils.parseCurrency(document.getElementById('edit-tien-ship').value);
 
-    let sql = "";
-    let params = [];
+    if (!tenHang || !tenKhachHang || !ngayDuKien || soLuong <= 0 || donGiaBan <= 0) {
+      utils.showToast('Vui lòng nhập đủ tên hàng, khách hàng, ngày giao, số lượng và giá bán', 'warning');
+      return;
+    }
+
+    let sql;
+    let params;
 
     if (editOrderTypeGlobal === 'bang_keo_in') {
       const donGiaVon = utils.parseCurrency(document.getElementById('edit-don-gia-von').value);
       const quyCachM = parseFloat(document.getElementById('edit-qc-m').value) || 0;
       const cuonCay = parseFloat(document.getElementById('edit-cuon-cay').value) || 0;
-      const phiCat = utils.parseCurrency(document.getElementById('edit-phi-cat').value);
       const tienCoc = utils.parseCurrency(document.getElementById('edit-tien-coc').value);
+      const isNewAxis = document.getElementById('edit-loai-truc').value === 'moi';
+      const axisQuantity = parseFloat(document.getElementById('edit-truc-so-luong').value) || 0;
+      const axisCostPrice = utils.parseCurrency(document.getElementById('edit-truc-gia-goc').value);
+      const axisSalePrice = utils.parseCurrency(document.getElementById('edit-truc-gia-ban').value);
 
-      // Tính toán lại
-      let donGiaGoc = 0;
-      if (cuonCay > 0 && quyCachM > 0) {
-        donGiaGoc = (donGiaVon + phiCat) / 90 * quyCachM / cuonCay; 
+      if (isNewAxis && (!document.getElementById('edit-truc-ten').value.trim() || axisQuantity <= 0 || axisCostPrice <= 0 || axisSalePrice <= 0)) {
+        utils.showToast('Trục mới cần đủ tên trục, số lượng, giá gốc và giá bán', 'warning');
+        return;
       }
-      
-      const thanhTienGoc = donGiaGoc * soLuong;
-      const thanhTienBan = donGiaBan * soLuong;
-      const congNoKhach = thanhTienBan - tienCoc;
-      const loiNhuan = thanhTienBan - thanhTienGoc;
-      const tienHoaHong = loiNhuan * (hoaHong / 100);
-      const loiNhuanRong = loiNhuan - tienHoaHong - tienShip;
+
+      const result = orderMath.calculatePrintedTape({
+        quantity: soLuong,
+        baseCost: donGiaVon,
+        quantityFee: utils.parseCurrency(document.getElementById('edit-phi-sl').value),
+        glueFee: utils.parseCurrency(document.getElementById('edit-phi-keo').value),
+        colorFee: utils.parseCurrency(document.getElementById('edit-phi-mau').value),
+        sizeFee: utils.parseCurrency(document.getElementById('edit-phi-size').value),
+        cuttingFee: utils.parseCurrency(document.getElementById('edit-phi-cat').value),
+        salePrice: donGiaBan,
+        deposit: tienCoc,
+        commissionPercent: hoaHong,
+        shipping: tienShip,
+        rollLength: quyCachM,
+        rollsPerTree: cuonCay,
+        isNewAxis,
+        axisQuantity,
+        axisCostPrice,
+        axisSalePrice,
+        axisCommissionPercent: document.getElementById('edit-truc-hoa-hong-percent').value,
+        settled: !!editOrderDataGlobal?.da_tat_toan
+      });
 
       sql = `
-        UPDATE bang_keo_in_orders SET 
-          ten_hang = $1, ten_khach_hang = $2, ngay_du_kien = $3, so_luong = $4,
-          don_gia_ban = $5, ctv = $6, hoa_hong = $7, tien_ship = $8,
-          don_gia_von = $9, quy_cach_m = $10, cuon_cay = $11, phi_cat = $12,
-          tien_coc = $13, don_gia_goc = $14, thanh_tien_goc = $15, thanh_tien_ban = $16,
-          cong_no_khach = $17, loi_nhuan = $18, tien_hoa_hong = $19, loi_nhuan_rong = $20
-        WHERE id = $21
+        UPDATE bang_keo_in_orders SET
+          ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach_mm=$4, quy_cach_m=$5,
+          quy_cach_mic=$6, cuon_cay=$7, so_luong=$8, phi_sl=$9, mau_keo=$10, phi_keo=$11,
+          mau_sac=$12, phi_mau=$13, phi_size=$14, phi_cat=$15, don_gia_von=$16,
+          don_gia_goc=$17, thanh_tien_goc=$18, don_gia_ban=$19, thanh_tien_ban=$20,
+          tien_coc=$21, cong_no_khach=$22, ctv=$23, hoa_hong=$24, tien_hoa_hong=$25,
+          loi_giay=$26, thung_bao=$27, loi_nhuan=$28, tien_ship=$29, loi_nhuan_rong=$30,
+          loai_truc=$31, ten_truc=$32, truc_chu_vi=$33, truc_so_luong=$34, truc_gia_goc=$35,
+          truc_gia_ban=$36, truc_thanh_tien_goc=$37, truc_thanh_tien_ban=$38, truc_ctv=$39,
+          truc_hoa_hong=$40, truc_tien_hoa_hong=$41, truc_loi_nhuan=$42, truc_loi_nhuan_rong=$43
+        WHERE id=$44
       `;
       params = [
-        tenHang, tenKhachHang, ngayDuKien, soLuong, donGiaBan, ctv, hoaHong, tienShip,
-        donGiaVon, quyCachM, cuonCay, phiCat, tienCoc, donGiaGoc, thanhTienGoc, thanhTienBan,
-        congNoKhach, loiNhuan, tienHoaHong, loiNhuanRong, editOrderIdGlobal
-      ];
-
-    } else {
-      // Dành cho Trục In hoặc Băng Keo Thường
-      const donGiaGoc = utils.parseCurrency(document.getElementById('edit-don-gia-goc').value);
-      
-      const thanhTien = donGiaGoc * soLuong;
-      const thanhTienBan = donGiaBan * soLuong;
-      const loiNhuan = thanhTienBan - thanhTien;
-      const tienHoaHong = loiNhuan * (hoaHong / 100);
-      const congNoKhach = thanhTienBan;
-      const loiNhuanRong = loiNhuan - tienHoaHong - tienShip;
-
-      sql = `
-        UPDATE ${tableName} SET 
-          ten_hang = $1, ten_khach_hang = $2, ngay_du_kien = $3, so_luong = $4,
-          don_gia_goc = $5, don_gia_ban = $6, ctv = $7, hoa_hong = $8,
-          tien_ship = $9, thanh_tien = $10, thanh_tien_ban = $11,
-          cong_no_khach = $12, loi_nhuan = $13, tien_hoa_hong = $14, loi_nhuan_rong = $15
-        WHERE id = $16
-      `;
-      params = [
-        tenHang, tenKhachHang, ngayDuKien, soLuong, donGiaGoc, donGiaBan, ctv, hoaHong,
-        tienShip, thanhTien, thanhTienBan, congNoKhach, loiNhuan, tienHoaHong, loiNhuanRong,
+        tenHang, tenKhachHang, ngayDuKien,
+        parseFloat(document.getElementById('edit-qc-mm').value) || null, quyCachM || null,
+        parseFloat(document.getElementById('edit-qc-mic').value) || null, cuonCay || null, soLuong,
+        utils.parseCurrency(document.getElementById('edit-phi-sl').value), document.getElementById('edit-mau-keo').value.trim() || null,
+        utils.parseCurrency(document.getElementById('edit-phi-keo').value), document.getElementById('edit-mau-sac').value.trim() || null,
+        utils.parseCurrency(document.getElementById('edit-phi-mau').value), utils.parseCurrency(document.getElementById('edit-phi-size').value),
+        utils.parseCurrency(document.getElementById('edit-phi-cat').value), donGiaVon,
+        result.product.costPrice, result.product.costTotal, donGiaBan, result.product.saleTotal,
+        tienCoc, result.outstanding, ctv, hoaHong, result.product.commission,
+        document.getElementById('edit-loi-giay').value.trim() || null, document.getElementById('edit-thung-bao').value.trim() || null,
+        result.product.profit, tienShip, result.product.netProfit, isNewAxis ? 'moi' : 'cu',
+        isNewAxis ? document.getElementById('edit-truc-ten').value.trim() : null,
+        isNewAxis ? (parseFloat(document.getElementById('edit-truc-chu-vi').value) || null) : null,
+        isNewAxis ? axisQuantity : 0, isNewAxis ? axisCostPrice : 0, isNewAxis ? axisSalePrice : 0,
+        result.axis.costTotal, result.axis.saleTotal,
+        isNewAxis ? (document.getElementById('edit-truc-ctv').value.trim() || null) : null,
+        isNewAxis ? result.axis.commissionPercent : 0, result.axis.commission, result.axis.profit, result.axis.netProfit,
         editOrderIdGlobal
       ];
+    } else {
+      const donGiaGoc = utils.parseCurrency(document.getElementById('edit-don-gia-goc').value);
+      if (donGiaGoc <= 0) {
+        utils.showToast('Đơn giá gốc phải lớn hơn 0', 'warning');
+        return;
+      }
+      const result = orderMath.calculateStandardOrder({
+        quantity: soLuong,
+        costPrice: donGiaGoc,
+        salePrice: donGiaBan,
+        commissionPercent: hoaHong,
+        shipping: tienShip,
+        settled: !!editOrderDataGlobal?.da_tat_toan
+      });
+      const common = [
+        tenHang, tenKhachHang, ngayDuKien, document.getElementById('edit-quy-cach').value.trim() || null,
+        soLuong, document.getElementById('edit-mau-sac').value.trim() || null
+      ];
+
+      if (editOrderTypeGlobal === 'truc_in') {
+        sql = `UPDATE truc_in_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
+          so_luong=$5, mau_sac=$6, mau_keo=$7, don_gia_goc=$8, don_gia_ban=$9, ctv=$10,
+          hoa_hong=$11, tien_ship=$12, thanh_tien=$13, thanh_tien_ban=$14, cong_no_khach=$15,
+          loi_nhuan=$16, tien_hoa_hong=$17, loi_nhuan_rong=$18 WHERE id=$19`;
+        params = [...common, document.getElementById('edit-mau-keo').value.trim() || null, donGiaGoc, donGiaBan,
+          ctv, hoaHong, tienShip, result.costTotal, result.saleTotal, result.outstanding,
+          result.profit, result.commission, result.netProfit, editOrderIdGlobal];
+      } else {
+        sql = `UPDATE bang_keo_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
+          so_luong=$5, mau_sac=$6, don_gia_goc=$7, don_gia_ban=$8, ctv=$9, hoa_hong=$10,
+          tien_ship=$11, thanh_tien=$12, thanh_tien_ban=$13, cong_no_khach=$14,
+          loi_nhuan=$15, tien_hoa_hong=$16, loi_nhuan_rong=$17 WHERE id=$18`;
+        params = [...common, donGiaGoc, donGiaBan, ctv, hoaHong, tienShip, result.costTotal,
+          result.saleTotal, result.outstanding, result.profit, result.commission, result.netProfit, editOrderIdGlobal];
+      }
     }
 
     const res = await window.electronAPI.dbRun(sql, params);
     if (res.ok) {
       utils.showToast(`Đã lưu thay đổi cho đơn ${editOrderIdGlobal}`, "success");
       closeModal('modal-edit-order');
-      
-      // Reload dữ liệu trên trang hiện tại
+      editOrderDataGlobal = null;
       await switchTab(activeTab);
+      if (typeof loadDashboardData === 'function' && activeTab !== 'dashboard') loadDashboardData();
     } else {
       utils.showToast("Lỗi cập nhật đơn hàng: " + res.error, "danger");
     }
@@ -429,7 +496,9 @@ async function writeSingleRowExcel(data, prefix) {
     });
 
     if (savePath && !savePath.canceled && savePath.filePath) {
-      XLSX.writeFile(workbook, savePath.filePath);
+      const base64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+      const result = await window.electronAPI.writeFileBase64(savePath.filePath, base64);
+      if (!result.ok) throw new Error(result.error || 'Không thể ghi file Excel');
       utils.showToast("Xuất Excel thành công!", "success");
     }
   } catch (err) {
@@ -445,8 +514,8 @@ async function exportCurrentFormToExcel() {
     mode = 'quote';
   } else if (activeTab === 'sales') {
     mode = 'order';
-  } else if (activeTab === 'history') {
-    exportHistoryExcel();
+  } else if (activeTab === 'thong-ke') {
+    exportStatsExcel();
     return;
   } else {
     utils.showToast("Không hỗ trợ xuất Excel cho tab hiện tại", "warning");
@@ -567,16 +636,16 @@ const commandPaletteActions = [
   { title: 'Tạo đơn Trục In', description: 'Mở form gia công Trục In', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-truc-in') },
   { title: 'Tạo báo giá', description: 'Mở khu vực báo giá đơn hàng', group: 'Báo giá', run: () => switchTab('quotes-creation') },
   { title: 'Danh sách báo giá', description: 'Xem và chuyển báo giá thành đơn hàng', group: 'Báo giá', run: () => switchTab('quotes-list') },
-  { title: 'Thống kê', description: 'Theo dõi giao hàng, công nợ và lợi nhuận', group: 'Báo cáo', run: () => switchTab('thong-ke') },
+  { title: 'Thống kê', description: 'Theo dõi giao hàng, công nợ, lịch sử đơn và xuất Excel', group: 'Báo cáo', run: () => switchTab('thong-ke') },
   { title: 'Đơn quá hạn', description: 'Lọc nhanh các đơn chưa giao đã quá hạn', group: 'Báo cáo', run: () => jumpToStatsFilter('overdue') },
   { title: 'Đơn sắp hạn', description: 'Lọc nhanh các đơn cần giao trong 3 ngày', group: 'Báo cáo', run: () => jumpToStatsFilter('near-due') },
   { title: 'Công nợ chưa tất toán', description: 'Lọc các đơn còn công nợ mở', group: 'Báo cáo', run: () => jumpToStatsFilter('unsettled') },
-  { title: 'Lịch sử đơn hàng', description: 'Tra cứu, gửi email, đính kèm và xuất Excel', group: 'Dữ liệu', run: () => switchTab('history') },
-  { title: 'Tải mẫu nhập Excel', description: 'Tạo file mẫu theo loại đơn đang chọn trong Lịch sử', group: 'Dữ liệu', run: () => exportImportTemplate() },
+  { title: 'Tải mẫu nhập Excel', description: 'Tạo file mẫu theo loại đơn đang chọn trong Thống kê', group: 'Dữ liệu', run: () => { switchTab('thong-ke'); exportImportTemplate(); } },
   { title: 'Nhập đơn từ Excel', description: 'Nhập nhiều đơn hàng và tự tính tiền', group: 'Dữ liệu', run: () => importOrdersFromExcel() },
   { title: 'Xuất đơn / phiếu giao', description: 'Mở trình chọn nhiều đơn để in chứng từ', group: 'Chứng từ', run: () => openMultiOrderExportDialog() },
   { title: 'Xuất Excel form hiện tại', description: 'Xuất dữ liệu từ form hoặc lịch sử đang mở', group: 'Xuất file', run: () => exportCurrentFormToExcel() },
   { title: 'Làm mới dữ liệu', description: 'Tải lại dữ liệu của trang hiện tại', group: 'Hệ thống', run: () => refreshCurrentPage() },
+  { title: 'Kiểm tra cập nhật', description: 'Tìm phiên bản mới trên GitHub Releases', group: 'Hệ thống', run: () => checkForAppUpdates() },
   { title: 'Phím tắt', description: 'Xem danh sách phím tắt thao tác nhanh', group: 'Hệ thống', run: () => openShortcutsModal() }
 ];
 
@@ -727,10 +796,7 @@ window.addEventListener('keydown', async (e) => {
 
   if (key === 'F5') {
     e.preventDefault();
-    if (activeTab === 'history') {
-      loadHistoryData();
-      utils.showToast("Đã cập nhật lịch sử đơn hàng", "success");
-    } else if (activeTab === 'thong-ke') {
+    if (activeTab === 'thong-ke') {
       loadStatsData();
       utils.showToast("Đã cập nhật thống kê", "success");
     } else if (activeTab === 'dashboard') {
@@ -749,9 +815,9 @@ window.addEventListener('keydown', async (e) => {
   if (key === 'Delete') {
     const activeEl = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
     if (activeEl !== 'input' && activeEl !== 'textarea' && !document.activeElement.isContentEditable) {
-      if (activeTab === 'history') {
+      if (activeTab === 'thong-ke') {
         e.preventDefault();
-        deleteSelectedHistory();
+        deleteSelectedStats();
       }
     }
     return;
@@ -815,13 +881,7 @@ window.addEventListener('keydown', async (e) => {
     // Ctrl + F: Focus ô tìm kiếm nhanh
     if (lowerKey === 'f') {
       e.preventDefault();
-      if (activeTab === 'history') {
-        const input = document.getElementById('hist-search');
-        if (input) {
-          input.focus();
-          input.select();
-        }
-      } else if (activeTab === 'thong-ke') {
+      if (activeTab === 'thong-ke') {
         const input = document.getElementById('stats-search');
         if (input) {
           input.focus();
@@ -840,8 +900,8 @@ window.addEventListener('keydown', async (e) => {
     // Ctrl + M: Mở hộp thoại gửi Email cho dòng được chọn
     if (lowerKey === 'm') {
       e.preventDefault();
-      if (activeTab === 'history') {
-        sendSelectedHistoryEmail();
+      if (activeTab === 'thong-ke') {
+        sendSelectedStatsEmail();
       }
       return;
     }
@@ -849,7 +909,7 @@ window.addEventListener('keydown', async (e) => {
     // Ctrl + D: Quản lý đính kèm cho dòng được chọn
     if (lowerKey === 'd') {
       e.preventDefault();
-      if (activeTab === 'history') {
+      if (activeTab === 'thong-ke') {
         openAttachmentsManager();
       }
       return;

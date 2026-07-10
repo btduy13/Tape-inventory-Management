@@ -1,10 +1,11 @@
 // MAIN.JS - TIẾN TRÌNH CHÍNH (BACKEND DESKTOP SHELL)
-const { app, BrowserWindow, Menu, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { app, BrowserWindow, Menu, ipcMain, shell, dialog, nativeImage } = require('electron');
 const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
 const config = require('./config');
+const { setupAutoUpdater, checkForUpdatesManual } = require('./updater');
 
 // Tăng heap size để tối ưu hiệu năng
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
@@ -86,11 +87,32 @@ function initDatabase() {
               ADD COLUMN IF NOT EXISTS truc_thanh_tien_ban NUMERIC DEFAULT 0,
               ADD COLUMN IF NOT EXISTS truc_ctv TEXT,
               ADD COLUMN IF NOT EXISTS truc_hoa_hong NUMERIC DEFAULT 0,
+              ADD COLUMN IF NOT EXISTS truc_tien_hoa_hong NUMERIC DEFAULT 0,
               ADD COLUMN IF NOT EXISTS truc_loi_nhuan NUMERIC DEFAULT 0,
               ADD COLUMN IF NOT EXISTS truc_loi_nhuan_rong NUMERIC DEFAULT 0
           `);
+          await dbPool.query(`
+            UPDATE bang_keo_in_orders
+            SET truc_tien_hoa_hong = GREATEST(COALESCE(truc_loi_nhuan, 0), 0) * LEAST(GREATEST(COALESCE(truc_hoa_hong, 0), 0), 100) / 100
+            WHERE COALESCE(loai_truc, 'cu') = 'moi'
+          `);
+          await dbPool.query(`
+            UPDATE bang_keo_in_orders
+            SET cong_no_khach = CASE
+              WHEN COALESCE(da_tat_toan, FALSE) THEN 0
+              ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)
+            END
+          `);
+          await dbPool.query(`
+            UPDATE bang_keo_orders
+            SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
+          `);
+          await dbPool.query(`
+            UPDATE truc_in_orders
+            SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
+          `);
           await dbPool.query(`SET lock_timeout = 0`); // Reset timeout về mặc định
-          writeLogToFile('info', 'Đã kiểm tra/thêm cột is_quote vào các bảng order.');
+          writeLogToFile('info', 'Đã đồng bộ schema và công nợ các bảng đơn hàng.');
         } catch (dbErr) {
           writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + dbErr.message);
           // Đảm bảo reset lock_timeout nếu có lỗi xảy ra
@@ -105,8 +127,17 @@ function initDatabase() {
   }
 }
 
+function getAppIcon() {
+  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  if (fs.existsSync(iconPath)) {
+    return nativeImage.createFromPath(iconPath);
+  }
+  return null;
+}
+
 // 3. TẠO CỬA SỔ CHÍNH
 function createWindow() {
+  const appIcon = getAppIcon();
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -114,15 +145,25 @@ function createWindow() {
     minHeight: 700,
     center: true,
     title: config.APP_NAME,
+    icon: appIcon || undefined,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false
+      webSecurity: true
     },
     show: false,
-    backgroundColor: '#0b0f19'
+    backgroundColor: '#f3f3f3'
+  });
+
+  mainWindow.webContents.on('console-message', (event, details) => {
+    const level = details.level === 3 || details.level === 'error' ? 'error' : 'info';
+    writeLogToFile(level, `Renderer: ${details.message || ''} (${details.sourceId || 'unknown'}:${details.lineNumber || 0})`);
+  });
+
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    writeLogToFile('critical', `Renderer đã dừng: ${details.reason} (${details.exitCode})`);
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
@@ -149,6 +190,7 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     writeLogToFile('info', 'Cửa sổ ứng dụng chính đã hiển thị.');
+    setupAutoUpdater(mainWindow, writeLogToFile);
   });
 
   mainWindow.on('closed', () => {
@@ -160,6 +202,8 @@ function createWindow() {
 function setupIpcHandlers() {
   // Lấy phiên bản
   ipcMain.handle('get-version', () => config.APP_VERSION);
+
+  ipcMain.handle('check-for-updates', async () => checkForUpdatesManual());
 
   // Mở URL ngoài trình duyệt
   ipcMain.handle('open-external', async (event, url) => {
@@ -226,6 +270,34 @@ function setupIpcHandlers() {
     } catch (err) {
       writeLogToFile('error', `Lỗi DB Run: ${sql} | Lỗi: ${err.message}`);
       return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('db-transaction', async (event, statements) => {
+    if (!Array.isArray(statements) || statements.length === 0) {
+      return { ok: false, error: 'Transaction không có câu lệnh' };
+    }
+
+    const client = await dbPool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SET LOCAL lock_timeout = 3000');
+      const results = [];
+      for (const statement of statements) {
+        if (!statement || typeof statement.sql !== 'string') {
+          throw new Error('Câu lệnh transaction không hợp lệ');
+        }
+        const result = await client.query(statement.sql, statement.params || []);
+        results.push({ rowCount: result.rowCount, rows: result.rows });
+      }
+      await client.query('COMMIT');
+      return { ok: true, results };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      writeLogToFile('error', `Lỗi DB Transaction: ${err.message}`);
+      return { ok: false, error: err.message };
+    } finally {
+      client.release();
     }
   });
 

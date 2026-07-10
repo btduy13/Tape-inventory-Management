@@ -336,44 +336,39 @@ async function convertQuoteToOrder(quoteId, type) {
     // 1. Tạo mã ID đơn hàng mới
     const newOrderId = await generateOrderId(idPrefix, tableName);
 
-    // 2. Thực hiện chuyển đổi trong transaction với lock_timeout để tránh treo UI
-    await window.electronAPI.dbRun('BEGIN');
-    try {
-      // Đặt lock_timeout 3 giây — nếu bị khóa bởi giao dịch khác thì tự hủy
-      await window.electronAPI.dbRun('SET LOCAL lock_timeout = 3000');
-
-      // Cập nhật polymorphic attachments liên quan
-      const updateAttachSql = `
+    // 2. Cập nhật đơn và tệp đính kèm trên cùng một kết nối transaction
+    const updateAttachSql = `
         UPDATE order_attachments
         SET order_id = $1, order_type = $2
         WHERE order_id = $3 AND order_type = $4
-      `;
-      await window.electronAPI.dbRun(updateAttachSql, [newOrderId, type, quoteId, type]);
+    `;
 
-      // Cập nhật báo giá thành đơn hàng chính thức
-      const updateOrderSql = `
+    const debtExpression = tableName === 'bang_keo_in_orders'
+      ? `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)`
+      : `GREATEST(COALESCE(thanh_tien_ban, 0), 0)`;
+    const updateOrderSql = `
         UPDATE ${tableName}
-        SET id = $1, is_quote = FALSE, thoi_gian = NOW()
+        SET id = $1,
+            is_quote = FALSE,
+            thoi_gian = NOW(),
+            da_giao = FALSE,
+            da_tat_toan = FALSE,
+            cong_no_khach = ${debtExpression}
         WHERE id = $2
-      `;
-      const res = await window.electronAPI.dbRun(updateOrderSql, [newOrderId, quoteId]);
+    `;
+    const res = await window.electronAPI.dbTransaction([
+      { sql: updateAttachSql, params: [newOrderId, type, quoteId, type] },
+      { sql: updateOrderSql, params: [newOrderId, quoteId] }
+    ]);
 
-      if (!res.ok) {
-        throw new Error(res.error || 'Lỗi cập nhật đơn hàng');
-      }
+    if (!res.ok) {
+      throw new Error(res.error || 'Lỗi cập nhật đơn hàng');
+    }
 
-      await window.electronAPI.dbRun('COMMIT');
+    utils.showToast(`Chuyển đơn thành công! Mã đơn mới: ${newOrderId}`, "success");
 
-      utils.showToast(`Chuyển đơn thành công! Mã đơn mới: ${newOrderId}`, "success");
-
-      // Chuyển sang tab Lịch sử để user thấy đơn hàng mới ngay lập tức
-      if (typeof switchTab === 'function') {
-        await switchTab('history');
-      }
-    } catch (txErr) {
-      // Rollback transaction nếu có lỗi
-      await window.electronAPI.dbRun('ROLLBACK');
-      throw txErr;
+    if (typeof switchTab === 'function') {
+      await switchTab('thong-ke');
     }
 
   } catch (err) {

@@ -8,9 +8,19 @@ const utils = {
 
   // 2. Chuyển đổi chuỗi định dạng tiền tệ về số thực (Ví dụ: "1,500,000" -> 1500000)
   parseCurrency: function(str) {
-    if (!str) return 0;
-    const cleanStr = str.toString().replace(/,/g, '');
-    const num = parseFloat(cleanStr);
+    if (str === null || str === undefined || str === '') return 0;
+    if (typeof str === 'number') return Number.isFinite(str) ? str : 0;
+
+    let cleanStr = String(str).trim().replace(/[^\d,.-]/g, '');
+    const separators = cleanStr.match(/[.,]/g) || [];
+    const looksGrouped = /^-?\d{1,3}([.,]\d{3})+$/.test(cleanStr);
+    if (looksGrouped || separators.length > 1) {
+      cleanStr = cleanStr.replace(/[.,]/g, '');
+    } else {
+      cleanStr = cleanStr.replace(',', '.');
+    }
+
+    const num = Number(cleanStr);
     return isNaN(num) ? 0 : num;
   },
 
@@ -38,6 +48,8 @@ const utils = {
   // 5. Hiển thị thông báo Toast nhanh góc dưới màn hình
   companyInfo: {
     name: 'CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI BĂNG KEO IN VĨNH THỊNH',
+    shortName: 'Vĩnh Thịnh Băng Keo',
+    logoUrl: 'assets/logo.png',
     address: '90E đường số 18B, P. Bình Hưng Hòa A, Q. Bình Tân, TP. HCM, Việt Nam',
     hotline: '0903003882 - 0936380405',
     representative: 'LÝ THANH QUẾ',
@@ -56,6 +68,26 @@ const utils = {
     if (normalized === 'truc_in') return 'truc_in_orders';
     if (normalized === 'bang_keo') return 'bang_keo_orders';
     return 'bang_keo_in_orders';
+  },
+
+  beginFormSubmit: function(event) {
+    const form = event?.currentTarget;
+    if (!form) return true;
+    if (form.dataset.submitting === 'true') return false;
+    form.dataset.submitting = 'true';
+    form.setAttribute('aria-busy', 'true');
+    const button = event.submitter || form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    return true;
+  },
+
+  endFormSubmit: function(event) {
+    const form = event?.currentTarget;
+    if (!form) return;
+    delete form.dataset.submitting;
+    form.removeAttribute('aria-busy');
+    const button = event.submitter || form.querySelector('button[type="submit"]');
+    if (button) button.disabled = false;
   },
 
   showToast: function(message, type = 'success') {
@@ -84,6 +116,9 @@ const utils = {
   setupCurrencyInputs: function() {
     const inputs = document.querySelectorAll('.currency-format');
     inputs.forEach(input => {
+      if (input.dataset.currencyReady === 'true') return;
+      input.dataset.currencyReady = 'true';
+
       // Khi focus: bỏ dấu phẩy để dễ sửa
       input.addEventListener('focus', function() {
         const val = utils.parseCurrency(this.value);
@@ -92,8 +127,8 @@ const utils = {
 
       // Khi blur: tự động định dạng lại số
       input.addEventListener('blur', function() {
-        const val = parseFloat(this.value);
-        this.value = isNaN(val) ? "0" : utils.formatCurrency(val);
+        const val = utils.parseCurrency(this.value);
+        this.value = utils.formatCurrency(val);
       });
       
       // Ngăn chặn nhập ký tự không phải số
@@ -108,32 +143,63 @@ const utils = {
   // 7. Tạo danh sách gợi ý tự động (Autocomplete)
   setupAutocomplete: function(inputElement, suggestionsElement, queryFunc, onSelectCallback) {
     let currentFocus = -1;
+    let requestId = 0;
+    let debounceTimer = null;
 
-    inputElement.addEventListener('input', async function() {
-      const val = this.value;
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function highlightMatch(item, query) {
+      const label = String(item);
+      const index = label.toLocaleLowerCase('vi').indexOf(String(query).toLocaleLowerCase('vi'));
+      if (index < 0) return escapeHtml(label);
+      return `${escapeHtml(label.slice(0, index))}<strong>${escapeHtml(label.slice(index, index + query.length))}</strong>${escapeHtml(label.slice(index + query.length))}`;
+    }
+
+    inputElement.addEventListener('input', function() {
+      const val = this.value.trim();
       closeAllLists();
       currentFocus = -1;
       if (!val || val.length < 1) return;
 
-      const items = await queryFunc(val);
-      if (items.length === 0) return;
+      const activeRequest = ++requestId;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        let items = [];
+        try {
+          items = await queryFunc(val);
+        } catch (err) {
+          console.error('Autocomplete query failed:', err);
+          return;
+        }
+        if (activeRequest !== requestId || inputElement.value.trim() !== val || items.length === 0) return;
 
-      suggestionsElement.style.width = this.offsetWidth + 'px';
-      suggestionsElement.style.display = 'block';
+        suggestionsElement.style.width = inputElement.offsetWidth + 'px';
+        suggestionsElement.style.display = 'block';
 
-      items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'autocomplete-suggestion';
-        div.innerHTML = `<strong>${item.substr(0, val.length)}</strong>${item.substr(val.length)}`;
-        
-        div.addEventListener('click', function() {
-          inputElement.value = item;
-          closeAllLists();
-          if (onSelectCallback) onSelectCallback(item);
+        items.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'autocomplete-suggestion';
+          div.innerHTML = highlightMatch(item, val);
+          div.title = `Dùng dữ liệu gần nhất của ${item}`;
+          div.addEventListener('mousedown', event => event.preventDefault());
+          div.addEventListener('click', async function() {
+            inputElement.value = item;
+            closeAllLists();
+            inputElement.setAttribute('aria-expanded', 'false');
+            if (onSelectCallback) await onSelectCallback(item);
+          });
+
+          suggestionsElement.appendChild(div);
         });
-
-        suggestionsElement.appendChild(div);
-      });
+        inputElement.setAttribute('aria-expanded', 'true');
+      }, 120);
     });
 
     inputElement.addEventListener('keydown', function(e) {
@@ -176,10 +242,18 @@ const utils = {
     }
 
     function closeAllLists() {
+      requestId++;
+      clearTimeout(debounceTimer);
       suggestionsElement.innerHTML = '';
       suggestionsElement.style.display = 'none';
+      inputElement.setAttribute('aria-expanded', 'false');
       currentFocus = -1;
     }
+
+    inputElement.setAttribute('autocomplete', 'off');
+    inputElement.setAttribute('aria-autocomplete', 'list');
+    inputElement.setAttribute('aria-controls', suggestionsElement.id);
+    inputElement.setAttribute('aria-expanded', 'false');
 
     document.addEventListener('click', function(e) {
       if (e.target !== inputElement) {
