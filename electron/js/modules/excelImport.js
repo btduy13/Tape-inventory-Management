@@ -331,7 +331,7 @@ async function importOrdersFromExcel() {
   if (!file || file.canceled || !file.filePaths || file.filePaths.length === 0) return;
 
   try {
-    const fileData = await window.electronAPI.readFileAsBase64(file.filePaths[0]);
+    const fileData = await window.electronAPI.readFileAsBase64(file.filePaths[0], 'excel');
     if (!fileData.ok) {
       utils.showToast('Không thể đọc file Excel: ' + fileData.error, 'danger');
       return;

@@ -47,11 +47,11 @@ function renderQuotationsTable(rows) {
     if (row.type === 'truc_in') typeLabel = "Trục In";
 
     tr.innerHTML = `
-      <td><strong>${row.id}</strong></td>
-      <td>${utils.formatDate(row.thoi_gian)}</td>
-      <td>${row.ten_hang} (${typeLabel})</td>
-      <td>${row.ten_khach_hang}</td>
-      <td>${utils.formatDate(row.ngay_du_kien)}</td>
+      <td><strong>${escapeQuoteHtml(row.id)}</strong></td>
+      <td>${escapeQuoteHtml(utils.formatDate(row.thoi_gian))}</td>
+      <td>${escapeQuoteHtml(row.ten_hang)} (${typeLabel})</td>
+      <td>${escapeQuoteHtml(row.ten_khach_hang)}</td>
+      <td>${escapeQuoteHtml(utils.formatDate(row.ngay_du_kien))}</td>
       <td style="text-align: right;">${row.so_luong}</td>
       <td style="text-align: right;">${utils.formatCurrency(row.don_gia_ban)}đ</td>
       <td style="text-align: right; font-weight: 600;">${utils.formatCurrency(row.thanh_tien_ban)}đ</td>

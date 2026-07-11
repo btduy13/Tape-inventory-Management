@@ -97,12 +97,86 @@
     return order.da_tat_toan ? 0 : Math.max(0, saleTotal + axisTotal - deposit);
   }
 
+  function calculateVoucherTotals(products = [], depositValue = 0) {
+    const totals = products.reduce((result, product = {}) => {
+      result.subtotal += Math.max(0, number(product.total));
+      result.vat += Math.max(0, number(product.vat));
+      return result;
+    }, { subtotal: 0, vat: 0 });
+    const deposit = Math.max(0, number(depositValue));
+    const totalPayable = totals.subtotal + totals.vat;
+
+    return {
+      ...totals,
+      deposit,
+      totalPayable,
+      remaining: Math.max(0, totalPayable - deposit)
+    };
+  }
+
+  function toVietnameseWords(value) {
+    const amount = Math.round(Math.max(0, number(value)));
+    if (amount === 0) return 'Không';
+
+    const digits = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    const scales = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
+    const groups = [];
+    let remaining = amount;
+
+    while (remaining > 0) {
+      groups.push(remaining % 1000);
+      remaining = Math.floor(remaining / 1000);
+    }
+
+    const readGroup = (group, forceHundreds) => {
+      const words = [];
+      const hundreds = Math.floor(group / 100);
+      const tens = Math.floor((group % 100) / 10);
+      const ones = group % 10;
+
+      if (hundreds > 0) words.push(`${digits[hundreds]} trăm`);
+      else if (forceHundreds) words.push('không trăm');
+
+      if (tens > 1) {
+        words.push(`${digits[tens]} mươi`);
+        if (ones === 1) words.push('mốt');
+        else if (ones === 4) words.push('tư');
+        else if (ones === 5) words.push('lăm');
+        else if (ones > 0) words.push(digits[ones]);
+      } else if (tens === 1) {
+        words.push('mười');
+        if (ones === 5) words.push('lăm');
+        else if (ones > 0) words.push(digits[ones]);
+      } else if (ones > 0) {
+        if (hundreds > 0 || forceHundreds) words.push('lẻ');
+        words.push(digits[ones]);
+      }
+
+      return words.join(' ');
+    };
+
+    const words = [];
+    let hasHigherGroup = false;
+    for (let index = groups.length - 1; index >= 0; index -= 1) {
+      const group = groups[index];
+      if (group === 0) continue;
+      words.push(readGroup(group, hasHigherGroup && group < 100));
+      if (scales[index]) words.push(scales[index]);
+      hasHigherGroup = true;
+    }
+
+    const result = words.join(' ').replace(/\s+/g, ' ').trim();
+    return result.charAt(0).toUpperCase() + result.slice(1);
+  }
+
   return {
     number,
     percent,
     calculateLine,
     calculateStandardOrder,
     calculatePrintedTape,
-    outstandingFromOrder
+    outstandingFromOrder,
+    calculateVoucherTotals,
+    toVietnameseWords
   };
 });

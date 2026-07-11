@@ -25,7 +25,7 @@ async function openEmailDialog(orderId, orderType) {
 
     const order = res.rows[0];
     const typeLabel = orderType === 'bang_keo_in' ? 'Băng Keo In' : (orderType === 'truc_in' ? 'Trục In' : 'Băng Keo');
-    const formattedTitle = `${typeLabel} ${order.ten_hang}`;
+    const formattedTitle = `${typeLabel} ${order.ten_hang || ''}`.replace(/[\r\n]+/g, ' ').trim();
     
     // Đặt Tiêu đề gốc
     emailBaseSubject = formattedTitle;
@@ -47,13 +47,13 @@ async function openEmailDialog(orderId, orderType) {
     let qtyText = order.so_luong.toLocaleString() + (orderType === 'bang_keo' ? ' KG' : ' cuộn');
 
     const bodyTemplate = `Chào bác,<br><br>` +
-      `Bác làm giúp con đơn hàng ${typeLabel} "<strong>${order.ten_hang}</strong>" này nhé:<br>` +
+      `Bác làm giúp con đơn hàng ${typeLabel} "<strong>${utils.escapeHtml(order.ten_hang)}</strong>" này nhé:<br>` +
       `Thông tin đơn hàng:<br>` +
       `________________________________<br>` +
-      `Màu sắc: ${order.mau_sac || 'Mặc định'}<br>` +
-      `Màu keo: ${order.mau_keo || 'Thường'}<br>` +
+      `Màu sắc: ${utils.escapeHtml(order.mau_sac || 'Mặc định')}<br>` +
+      `Màu keo: ${utils.escapeHtml(order.mau_keo || 'Thường')}<br>` +
       `Số lượng: ${qtyText}<br>` +
-      `${specText.replace(/\n/g, '<br>')}<br>` +
+      `${utils.escapeHtml(specText).replace(/\n/g, '<br>')}<br>` +
       `________________________________<br><br>` +
       `Cám ơn bác<br>` +
       `Quế`;
@@ -152,7 +152,7 @@ function renderEmailAttachmentsTable() {
       <td style="text-align: center;">
         <input type="checkbox" ${att.checked ? 'checked' : ''} onchange="toggleEmailAttachment(${idx}, this.checked)">
       </td>
-      <td>${att.filename}</td>
+      <td>${utils.escapeHtml(att.filename)}</td>
       <td>${sizeStr}</td>
       <td style="text-align: center;">${badge}</td>
     `;

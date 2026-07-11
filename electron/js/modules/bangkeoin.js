@@ -390,7 +390,7 @@ async function saveOrderAttachments(orderId, orderType, filePaths) {
         if (!resFile.ok) continue;
 
         const base64Data = resFile.data;
-        const sizeBytes = 0; 
+        const sizeBytes = resFile.size || Math.floor(base64Data.length * 3 / 4);
         const ext = fileName.split('.').pop().toLowerCase();
         const contentType = {
           'pdf': 'application/pdf',

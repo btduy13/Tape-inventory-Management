@@ -42,7 +42,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
 
   // Đọc file ra base64
-  readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-base64', filePath),
+  readFileAsBase64: (filePath, purpose) => ipcRenderer.invoke('read-file-base64', filePath, purpose),
 
   writeFileBase64: (filePath, base64Data) => ipcRenderer.invoke('write-file-base64', filePath, base64Data),
 

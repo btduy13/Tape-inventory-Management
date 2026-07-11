@@ -5,6 +5,8 @@ const { app, BrowserWindow, Menu, ipcMain, shell, dialog, nativeImage } = requir
 const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
 const config = require('./config');
+const { validateRendererSql } = require('./dbPolicy');
+const { MAX_TOTAL_ATTACHMENT_BYTES, sanitizeAttachmentName, validateEmailPayload } = require('./emailPolicy');
 const { setupAutoUpdater, checkForUpdatesManual } = require('./updater');
 
 // Tăng heap size để tối ưu hiệu năng
@@ -13,6 +15,19 @@ app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 let mainWindow;
 let dbPool;
 const LOG_DIR = path.join(app.getPath('userData'), 'logs');
+const approvedReadPaths = new Set();
+const approvedWritePaths = new Set();
+
+function approvedPathKey(filePath) {
+  return path.resolve(String(filePath || '')).toLowerCase();
+}
+
+function consumeApprovedPath(approvedPaths, filePath) {
+  const key = approvedPathKey(filePath);
+  if (!key || !approvedPaths.has(key)) return false;
+  approvedPaths.delete(key);
+  return true;
+}
 
 // 1. KHỞI TẠO LOGGING SYSTEM
 function ensureLogDir() {
@@ -38,6 +53,9 @@ function writeLogToFile(level, message) {
 // 2. KHỞI TẠO KẾT NỐI SUPABASE POSTGRESQL
 function initDatabase() {
   try {
+    if (!config.DATABASE_URL) {
+      throw new Error('Thiếu DATABASE_URL. Hãy cấu hình biến môi trường hoặc config.local.json');
+    }
     writeLogToFile('info', 'Đang khởi tạo Pool kết nối tới PostgreSQL Supabase...');
     dbPool = new Pool({
       connectionString: config.DATABASE_URL,
@@ -250,7 +268,8 @@ function setupIpcHandlers() {
   // --- TRUY VẤN CƠ SỞ DỮ LIỆU POSTGRESQL ---
   ipcMain.handle('db-query', async (event, sql, params) => {
     try {
-      const res = await dbPool.query(sql, params);
+      const validatedSql = validateRendererSql(sql, ['SELECT']);
+      const res = await dbPool.query(validatedSql, params);
       return { ok: true, rows: res.rows };
     } catch (err) {
       writeLogToFile('error', `Lỗi DB Query: ${sql} | Lỗi: ${err.message}`);
@@ -260,7 +279,8 @@ function setupIpcHandlers() {
 
   ipcMain.handle('db-run', async (event, sql, params) => {
     try {
-      const res = await dbPool.query(sql, params);
+      const validatedSql = validateRendererSql(sql, ['INSERT', 'UPDATE', 'DELETE']);
+      const res = await dbPool.query(validatedSql, params);
       return { 
         ok: true, 
         rowCount: res.rowCount, 
@@ -287,7 +307,8 @@ function setupIpcHandlers() {
         if (!statement || typeof statement.sql !== 'string') {
           throw new Error('Câu lệnh transaction không hợp lệ');
         }
-        const result = await client.query(statement.sql, statement.params || []);
+        const validatedSql = validateRendererSql(statement.sql, ['INSERT', 'UPDATE', 'DELETE']);
+        const result = await client.query(validatedSql, statement.params || []);
         results.push({ rowCount: result.rowCount, rows: result.rows });
       }
       await client.query('COMMIT');
@@ -304,7 +325,11 @@ function setupIpcHandlers() {
   // --- GỬI EMAIL QUA SMTP GMAIL ---
   ipcMain.handle('send-email', async (event, toAddress, subject, body, htmlBody, attachments, dbAttachmentIds) => {
     try {
-      writeLogToFile('info', `Đang chuẩn bị gửi email tới: ${toAddress} | Tiêu đề: ${subject}`);
+      const email = validateEmailPayload({ toAddress, subject, body, htmlBody, attachments, dbAttachmentIds });
+      if (!config.EMAIL_CONFIG.username || !config.EMAIL_CONFIG.password || !config.EMAIL_CONFIG.sender) {
+        throw new Error('Thiếu cấu hình SMTP trong biến môi trường hoặc config.local.json');
+      }
+      writeLogToFile('info', `Đang chuẩn bị gửi email tới: ${email.toAddress}`);
       
       const transporter = nodemailer.createTransport({
         host: config.EMAIL_CONFIG.server,
@@ -313,11 +338,14 @@ function setupIpcHandlers() {
         auth: {
           user: config.EMAIL_CONFIG.username,
           pass: config.EMAIL_CONFIG.password
-        }
+        },
+        disableFileAccess: true,
+        disableUrlAccess: true
       });
 
       // Xử lý chuyển đổi attachments từ Base64 sang Buffer nhị phân
-      const processedAttachments = (attachments || []).map(att => {
+      let totalAttachmentBytes = email.estimatedBytes;
+      const processedAttachments = email.attachments.map(att => {
         return {
           filename: att.filename,
           content: Buffer.from(att.content, 'base64'),
@@ -326,17 +354,21 @@ function setupIpcHandlers() {
       });
 
       // Lấy thêm attachments từ database nếu có
-      if (dbAttachmentIds && dbAttachmentIds.length > 0) {
-        writeLogToFile('info', `Đang nạp ${dbAttachmentIds.length} tệp đính kèm từ database...`);
-        for (const attId of dbAttachmentIds) {
+      if (email.dbAttachmentIds.length > 0) {
+        writeLogToFile('info', `Đang nạp ${email.dbAttachmentIds.length} tệp đính kèm từ database...`);
+        for (const attId of email.dbAttachmentIds) {
           const dbRes = await dbPool.query(
             'SELECT file_name, data, content_type FROM order_attachments WHERE id = $1',
             [attId]
           );
           if (dbRes.rows.length > 0) {
             const row = dbRes.rows[0];
+            totalAttachmentBytes += row.data?.length || 0;
+            if (totalAttachmentBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
+              throw new Error('Tổng tệp đính kèm vượt quá 25 MB');
+            }
             processedAttachments.push({
-              filename: row.file_name,
+              filename: sanitizeAttachmentName(row.file_name),
               content: row.data, // row.data is a Node Buffer since pg returns bytea as Buffer
               contentType: row.content_type || 'application/octet-stream'
             });
@@ -347,11 +379,13 @@ function setupIpcHandlers() {
 
       const mailOptions = {
         from: config.EMAIL_CONFIG.sender,
-        to: toAddress,
-        subject: subject,
-        text: body,
-        html: htmlBody,
-        attachments: processedAttachments
+        to: email.toAddress,
+        subject: email.subject,
+        text: email.body,
+        html: email.htmlBody,
+        attachments: processedAttachments,
+        disableFileAccess: true,
+        disableUrlAccess: true
       };
 
       const info = await transporter.sendMail(mailOptions);
@@ -364,13 +398,29 @@ function setupIpcHandlers() {
   });
 
   // --- ĐỌC FILE RA BASE64 ĐỂ ĐÍNH KÈM FRONTEND ---
-  ipcMain.handle('read-file-base64', async (event, filePath) => {
+  ipcMain.handle('read-file-base64', async (event, filePath, purpose = 'attachment') => {
     try {
+      if (!consumeApprovedPath(approvedReadPaths, filePath)) {
+        throw new Error('Tệp chưa được người dùng cấp quyền đọc');
+      }
+
+      const stats = await fs.promises.stat(filePath);
+      const isExcel = purpose === 'excel';
+      const maxBytes = isExcel ? 15 * 1024 * 1024 : 25 * 1024 * 1024;
+      const extension = path.extname(filePath).toLowerCase();
+      if (isExcel && !['.xlsx', '.xls'].includes(extension)) {
+        throw new Error('Chỉ hỗ trợ tệp Excel .xlsx hoặc .xls');
+      }
+      if (!stats.isFile() || stats.size > maxBytes) {
+        throw new Error(`Tệp vượt quá giới hạn ${Math.round(maxBytes / 1024 / 1024)} MB`);
+      }
+
       const data = await fs.promises.readFile(filePath);
       return {
         ok: true,
         data: data.toString('base64'),
-        name: path.basename(filePath)
+        name: path.basename(filePath),
+        size: stats.size
       };
     } catch (err) {
       writeLogToFile('error', 'Lỗi đọc file ra base64: ' + err.message);
@@ -381,7 +431,17 @@ function setupIpcHandlers() {
   // --- IN ẤN PDF BÁO GIÁ ---
   ipcMain.handle('write-file-base64', async (event, filePath, base64Data) => {
     try {
-      await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
+      if (!consumeApprovedPath(approvedWritePaths, filePath)) {
+        throw new Error('Đường dẫn chưa được người dùng cấp quyền ghi');
+      }
+      if (path.extname(filePath).toLowerCase() !== '.xlsx') {
+        throw new Error('Chỉ hỗ trợ xuất tệp Excel .xlsx');
+      }
+      const output = Buffer.from(String(base64Data || ''), 'base64');
+      if (output.length === 0 || output.length > 50 * 1024 * 1024) {
+        throw new Error('Dữ liệu Excel không hợp lệ hoặc vượt quá 50 MB');
+      }
+      await fs.promises.writeFile(filePath, output);
       return { ok: true };
     } catch (err) {
       writeLogToFile('error', 'Loi ghi file base64: ' + err.message);
@@ -391,6 +451,15 @@ function setupIpcHandlers() {
 
   ipcMain.handle('print-to-pdf', async (event, htmlContent, savePath) => {
     try {
+      if (!consumeApprovedPath(approvedWritePaths, savePath)) {
+        throw new Error('Đường dẫn chưa được người dùng cấp quyền ghi PDF');
+      }
+      if (path.extname(savePath).toLowerCase() !== '.pdf') {
+        throw new Error('Chỉ hỗ trợ xuất tệp PDF .pdf');
+      }
+      if (typeof htmlContent !== 'string' || htmlContent.length > 5 * 1024 * 1024) {
+        throw new Error('Nội dung PDF không hợp lệ hoặc quá lớn');
+      }
       writeLogToFile('info', 'Đang tạo cửa sổ in PDF báo giá...');
       let pdfWindow = new BrowserWindow({
         show: false,
@@ -434,11 +503,17 @@ function setupIpcHandlers() {
   // --- FILE SYSTEM DIALOGS ---
   ipcMain.handle('show-save-dialog', async (event, options) => {
     const result = await dialog.showSaveDialog(mainWindow, options);
+    if (!result.canceled && result.filePath) {
+      approvedWritePaths.add(approvedPathKey(result.filePath));
+    }
     return result;
   });
 
   ipcMain.handle('show-open-dialog', async (event, options) => {
     const result = await dialog.showOpenDialog(mainWindow, options);
+    if (!result.canceled && Array.isArray(result.filePaths)) {
+      result.filePaths.forEach(filePath => approvedReadPaths.add(approvedPathKey(filePath)));
+    }
     return result;
   });
 }

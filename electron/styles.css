@@ -2774,3 +2774,118 @@ body.light-theme .toolbar-icon-btn {
   user-select: none;
   cursor: pointer;
 }
+
+/* Dòng trục đi kèm hiển thị như một nhánh con của đơn Băng Keo In */
+#stats-table tbody tr.stats-parent-with-axis > td {
+  border-bottom-color: transparent;
+}
+
+#stats-table tbody tr.stats-axis-child {
+  cursor: default;
+  background: rgba(var(--color-primary-rgb), 0.035);
+}
+
+#stats-table tbody tr.stats-axis-child:hover {
+  background: rgba(var(--color-primary-rgb), 0.055);
+}
+
+#stats-table tbody tr.stats-axis-child > td {
+  height: 42px;
+  padding-top: 4px;
+  padding-bottom: 9px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#stats-table tbody tr.stats-axis-child .stats-axis-empty {
+  padding: 0;
+}
+
+.stats-axis-tree-cell {
+  position: relative;
+}
+
+.stats-axis-tree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.stats-tree-branch {
+  color: var(--color-primary);
+  font-family: Consolas, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.stats-axis-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.28);
+  border-radius: 4px;
+  background: rgba(var(--color-primary-rgb), 0.09);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.stats-axis-name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-axis-meta,
+.stats-axis-finance {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.stats-axis-money {
+  text-align: right;
+}
+
+.stats-axis-money small,
+.stats-axis-money strong {
+  display: block;
+}
+
+.stats-axis-money small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.stats-axis-money strong {
+  margin-top: 2px;
+  color: var(--text-primary);
+}
+
+.stats-axis-profit {
+  color: var(--color-success) !important;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stats-axis-tree--detail {
+  min-height: 36px;
+  padding: 3px 12px 3px 42px;
+}
+
+#stats-table tbody tr.selected + tr.stats-axis-child {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+body.light-theme #stats-table tbody tr.stats-axis-child {
+  background: rgba(var(--color-primary-rgb), 0.045);
+}

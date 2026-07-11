@@ -1,20 +1,31 @@
-// CẤU HÌNH HỆ THỐNG PHẦN MỀM BĂNG KEO (CONFIG.JS)
+// CẤU HÌNH HỆ THỐNG PHẦN MỀM BĂNG KEO
+const fs = require('fs');
+const path = require('path');
 const pkg = require('./package.json');
 
+function loadLocalConfig() {
+  const localPath = path.join(__dirname, 'config.local.json');
+  if (!fs.existsSync(localPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(localPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`config.local.json không hợp lệ: ${error.message}`);
+  }
+}
+
+const local = loadLocalConfig();
+const localEmail = local.EMAIL_CONFIG || {};
+const smtpUsername = process.env.SMTP_USERNAME || localEmail.username || '';
+
 module.exports = {
-  // Chuỗi kết nối tới cơ sở dữ liệu Supabase PostgreSQL
-  DATABASE_URL: "postgresql://postgres.ctmkkxfheqjdmjahkheu:M4tkh%40u_11@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres",
-
-  // Cấu hình gửi Email qua SMTP (Gmail App Password)
+  DATABASE_URL: process.env.DATABASE_URL || local.DATABASE_URL || '',
   EMAIL_CONFIG: {
-    server: "smtp.gmail.com",
-    port: 587,
-    username: "tque197@gmail.com",
-    password: "otiz qxdn uhul bbfw", // App Password
-    sender: "Phần Mềm Quản Lý Đơn Hàng <tque197@gmail.com>"
+    server: process.env.SMTP_SERVER || localEmail.server || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || localEmail.port || 587),
+    username: smtpUsername,
+    password: process.env.SMTP_PASSWORD || localEmail.password || '',
+    sender: process.env.SMTP_SENDER || localEmail.sender || (smtpUsername ? `Phần Mềm Quản Lý Đơn Hàng <${smtpUsername}>` : '')
   },
-
-  // Tên ứng dụng và phiên bản
-  APP_NAME: "Quản lý Đơn hàng Băng Keo",
+  APP_NAME: 'Quản lý Đơn hàng Băng Keo',
   APP_VERSION: pkg.version
 };

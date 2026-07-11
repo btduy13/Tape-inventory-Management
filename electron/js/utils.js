@@ -90,6 +90,15 @@ const utils = {
     if (button) button.disabled = false;
   },
 
+  escapeHtml: function(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   showToast: function(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -102,7 +111,11 @@ const utils = {
     if (type === 'warning') icon = "⚠️";
     if (type === 'danger') icon = "❌";
 
-    toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+    const iconElement = document.createElement('span');
+    const messageElement = document.createElement('span');
+    iconElement.textContent = icon;
+    messageElement.textContent = String(message ?? '');
+    toast.append(iconElement, messageElement);
     container.appendChild(toast);
 
     // Tự động xóa sau 3.5 giây

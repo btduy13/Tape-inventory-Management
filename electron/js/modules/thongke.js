@@ -221,6 +221,65 @@ function getVisibleStatsRows() {
   return Array.from(document.querySelectorAll('#stats-table-body tr[data-id]'));
 }
 
+function hasStatsAxisChild(row) {
+  return statsActiveSubtab === 'bang-keo-in' && row?.loai_truc === 'moi';
+}
+
+function getStatsAxisMeta(row) {
+  const parts = [];
+  if (row.truc_chu_vi !== null && row.truc_chu_vi !== undefined && row.truc_chu_vi !== '') {
+    parts.push(`Chu vi ${row.truc_chu_vi}`);
+  }
+  parts.push(`${utils.formatCurrency(row.truc_so_luong || 0)} trục`);
+  return parts.join(' • ');
+}
+
+function createStatsAxisChildRow(row, columnCount = 9, detailMode = false) {
+  const child = document.createElement('tr');
+  child.className = `stats-axis-child${detailMode ? ' stats-axis-child--detail' : ''}`;
+  child.dataset.parentId = row.id;
+
+  const axisName = utils.escapeHtml(row.ten_truc || 'Trục mới');
+  const axisMeta = utils.escapeHtml(getStatsAxisMeta(row));
+  const axisCtv = row.truc_ctv ? `CTV: ${utils.escapeHtml(row.truc_ctv)}` : 'Không có CTV';
+  const commissionText = `${utils.formatCurrency(row.truc_hoa_hong || 0)}% • ${utils.formatCurrency(row.truc_tien_hoa_hong || 0)}đ`;
+
+  if (detailMode) {
+    child.innerHTML = `
+      <td colspan="${columnCount}">
+        <div class="stats-axis-tree stats-axis-tree--detail">
+          <span class="stats-tree-branch" aria-hidden="true">└─</span>
+          <span class="stats-axis-badge">Trục đi kèm</span>
+          <strong class="stats-axis-name">${axisName}</strong>
+          <span class="stats-axis-meta">${axisMeta}</span>
+          <span class="stats-axis-finance">Giá gốc ${utils.formatCurrency(row.truc_gia_goc || 0)}đ • Giá bán ${utils.formatCurrency(row.truc_gia_ban || 0)}đ</span>
+          <span class="stats-axis-finance">Thành tiền ${utils.formatCurrency(row.truc_thanh_tien_ban || 0)}đ</span>
+          <span class="stats-axis-finance">Hoa hồng ${commissionText}</span>
+          <strong class="stats-axis-profit">Lãi ròng ${utils.formatCurrency(row.truc_loi_nhuan_rong || 0)}đ</strong>
+        </div>
+      </td>
+    `;
+    return child;
+  }
+
+  child.innerHTML = `
+    <td class="stats-axis-empty"></td>
+    <td class="stats-axis-empty"></td>
+    <td colspan="2" class="stats-axis-tree-cell">
+      <div class="stats-axis-tree">
+        <span class="stats-tree-branch" aria-hidden="true">└─</span>
+        <span class="stats-axis-badge">Trục</span>
+        <strong class="stats-axis-name">${axisName}</strong>
+      </div>
+    </td>
+    <td><span class="stats-axis-meta">${axisMeta}</span></td>
+    <td class="stats-axis-money"><small>Thành tiền</small><strong>${utils.formatCurrency(row.truc_thanh_tien_ban || 0)}đ</strong></td>
+    <td colspan="2"><span class="stats-axis-meta">${axisCtv} • HH ${commissionText}</span></td>
+    <td class="stats-axis-profit">Lãi ròng ${utils.formatCurrency(row.truc_loi_nhuan_rong || 0)}đ</td>
+  `;
+  return child;
+}
+
 function handleStatsRowClick(event, rowEl) {
   const rows = getVisibleStatsRows();
   const currentIndex = rows.indexOf(rowEl);
@@ -284,6 +343,7 @@ function renderStatsTable(rows) {
   rows.forEach(row => {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    if (hasStatsAxisChild(row)) tr.classList.add('stats-parent-with-axis');
     
     // Đánh giá cảnh báo thời hạn
     const today = new Date();
@@ -314,11 +374,11 @@ function renderStatsTable(rows) {
       : '<span class="badge badge-gray">Chưa</span>';
 
     tr.innerHTML = `
-      <td><strong>${row.id}</strong></td>
-      <td>${utils.formatDate(row.thoi_gian)}</td>
-      <td>${row.ten_hang}</td>
-      <td>${row.ten_khach_hang}</td>
-      <td ${warningStyle}>${utils.formatDate(row.ngay_du_kien)}</td>
+      <td><strong>${utils.escapeHtml(row.id)}</strong></td>
+      <td>${utils.escapeHtml(utils.formatDate(row.thoi_gian))}</td>
+      <td>${utils.escapeHtml(row.ten_hang)}</td>
+      <td>${utils.escapeHtml(row.ten_khach_hang)}</td>
+      <td ${warningStyle}>${utils.escapeHtml(utils.formatDate(row.ngay_du_kien))}</td>
       <td>${utils.formatCurrency(row.cong_no_khach)}đ</td>
       <td>${daGiaoBadge}</td>
       <td>${daTatToanBadge}</td>
@@ -327,6 +387,9 @@ function renderStatsTable(rows) {
 
     bindStatsRowEvents(tr, row);
     body.appendChild(tr);
+    if (hasStatsAxisChild(row)) {
+      body.appendChild(createStatsAxisChildRow(row));
+    }
   });
 
   updateStatsSelectionSummary();
@@ -354,6 +417,7 @@ function renderStatsDetailTable(rows) {
   rows.forEach(row => {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    if (hasStatsAxisChild(row)) tr.classList.add('stats-parent-with-axis');
 
     cols.forEach(col => {
       const td = document.createElement('td');
@@ -379,6 +443,9 @@ function renderStatsDetailTable(rows) {
 
     bindStatsRowEvents(tr, row);
     body.appendChild(tr);
+    if (hasStatsAxisChild(row)) {
+      body.appendChild(createStatsAxisChildRow(row, cols.length, true));
+    }
   });
 
   updateStatsSelectionSummary();
@@ -500,12 +567,15 @@ function openStatsColumnFilter(event, columnKey) {
       <button type="button" onclick="clearStatsColumnFilter('${columnKey}')">Xóa lọc</button>
     </div>
     <div class="column-filter-values">
-      ${values.map(value => `
+      ${values.map(value => {
+        const encodedValue = encodeURIComponent(value).replace(/'/g, '%27');
+        return `
         <label class="column-filter-value">
-          <input type="checkbox" ${!isFiltered || activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodeURIComponent(value)}'), this.checked)">
-          <span>${value}</span>
+          <input type="checkbox" ${!isFiltered || activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
+          <span>${utils.escapeHtml(value)}</span>
         </label>
-      `).join('')}
+      `;
+      }).join('')}
     </div>
   `;
 
@@ -807,14 +877,24 @@ async function loadAttachmentsList() {
   res.rows.forEach(att => {
     const tr = document.createElement('tr');
     const sizeKB = (att.file_size / 1024).toFixed(1) + ' KB';
-    tr.innerHTML = `
-      <td><strong>${att.file_name}</strong></td>
-      <td>${sizeKB}</td>
-      <td style="text-align:right;">
-        <button class="btn btn-secondary" onclick="downloadAttachmentFile(${att.id}, '${att.file_name.replace(/'/g, "\\'")}')" style="padding:2px 6px; font-size:11px;">Tải</button>
-        <button class="btn btn-danger" onclick="deleteAttachmentFile(${att.id})" style="padding:2px 6px; font-size:11px;">Xóa</button>
-      </td>
-    `;
+    const nameCell = document.createElement('td');
+    const nameStrong = document.createElement('strong');
+    nameStrong.textContent = att.file_name;
+    nameCell.appendChild(nameStrong);
+    const sizeCell = document.createElement('td');
+    sizeCell.textContent = sizeKB;
+    const actionCell = document.createElement('td');
+    actionCell.style.textAlign = 'right';
+    const downloadButton = document.createElement('button');
+    downloadButton.className = 'btn btn-secondary btn-sm';
+    downloadButton.textContent = 'Tải';
+    downloadButton.addEventListener('click', () => downloadAttachmentFile(att.id, att.file_name));
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'btn btn-danger btn-sm';
+    deleteButton.textContent = 'Xóa';
+    deleteButton.addEventListener('click', () => deleteAttachmentFile(att.id));
+    actionCell.append(downloadButton, deleteButton);
+    tr.append(nameCell, sizeCell, actionCell);
     body.appendChild(tr);
   });
 }
@@ -839,7 +919,7 @@ async function downloadAttachmentFile(attId, fileName) {
     const blob = new Blob([new Uint8Array(byteNumbers)], { type: att.content_type });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
-    link.download = fileName;
+    link.download = String(fileName || 'tep-dinh-kem').replace(/[\\/:*?"<>|]/g, '_');
     link.click();
     utils.showToast('Đã tải tệp tin thành công!', 'success');
   } catch (err) {
@@ -862,8 +942,14 @@ async function deleteAttachmentFile(attId) {
 async function uploadAttachmentFile(input) {
   if (!input.files.length) return;
 
-  utils.showToast('Đang tải tệp lên...', 'warning');
   const file = input.files[0];
+  if (file.size > 25 * 1024 * 1024) {
+    utils.showToast('Tệp đính kèm vượt quá giới hạn 25 MB', 'warning');
+    input.value = '';
+    return;
+  }
+
+  utils.showToast('Đang tải tệp lên...', 'warning');
   const fileReader = new FileReader();
 
   fileReader.onload = async function() {

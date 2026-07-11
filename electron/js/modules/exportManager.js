@@ -141,7 +141,7 @@ function loadExportOrdersTable() {
         <input type="checkbox" ${selectedExportOrderIds.has(row.id) ? 'checked' : ''} onchange="toggleSelectOrder('${row.id}', this.checked)">
       </td>
       <td><strong>${row.id}</strong></td>
-      <td>${utils.formatDate(row.thoi_gian)}</td>
+      <td>${escapeExportHtml(utils.formatDate(row.thoi_gian))}</td>
       <td>${escapeExportHtml(row.ten_hang)}</td>
       <td>${escapeExportHtml(row.ten_khach_hang)}</td>
       <td style="text-align: right;">${Number(row.so_luong || 0).toLocaleString()}${qtyLabel}</td>
@@ -222,10 +222,10 @@ async function proceedToExportPreview() {
         text_color: order.mau_sac || "",
         bg_color: order.mau_keo || "",
         unit: unit,
-        quantity: order.so_luong || 0,
-        price: order.don_gia_ban || 0,
-        vat: order.vat || 0,
-        total: order.thanh_tien_ban || order.thanh_tien_goc || 0
+        quantity: orderMath.number(order.so_luong),
+        price: orderMath.number(order.don_gia_ban),
+        vat: orderMath.number(order.vat),
+        total: orderMath.number(order.thanh_tien_ban || order.thanh_tien_goc)
       });
 
       if (tableName === 'bang_keo_in_orders' && order.loai_truc === 'moi') {
@@ -236,10 +236,12 @@ async function proceedToExportPreview() {
           text_color: '',
           bg_color: 'Trục mới',
           unit: 'trục',
-          quantity: order.truc_so_luong || 0,
-          price: order.truc_gia_ban || 0,
+          quantity: orderMath.number(order.truc_so_luong),
+          price: orderMath.number(order.truc_gia_ban),
           vat: 0,
-          total: order.truc_thanh_tien_ban || ((order.truc_so_luong || 0) * (order.truc_gia_ban || 0))
+          total: orderMath.number(order.truc_thanh_tien_ban) || (
+            orderMath.number(order.truc_so_luong) * orderMath.number(order.truc_gia_ban)
+          )
         });
       }
     }
@@ -380,26 +382,24 @@ async function triggerPrint() {
 }
 
 function recalculatePreviewTotals() {
-  const totalSum = exportPreviewData.products.reduce((acc, curr) => acc + curr.total, 0);
-  const vat = exportPreviewData.products.reduce((acc, curr) => acc + (parseFloat(curr.vat) || 0), 0);
-  const deposit = parseFloat(document.getElementById('preview-deposit').value) || 0;
-  
-  const remaining = totalSum + vat - deposit;
+  const totals = orderMath.calculateVoucherTotals(
+    exportPreviewData.products,
+    document.getElementById('preview-deposit').value
+  );
 
-  document.getElementById('preview-total-sum').value = `${utils.formatCurrency(totalSum)}đ + VAT ${utils.formatCurrency(vat)}đ`;
-  document.getElementById('preview-remaining').value = utils.formatCurrency(remaining) + "đ";
+  document.getElementById('preview-total-sum').value = `${utils.formatCurrency(totals.subtotal)}đ + VAT ${utils.formatCurrency(totals.vat)}đ`;
+  document.getElementById('preview-remaining').value = utils.formatCurrency(totals.remaining) + "đ";
 }
 
 // Khởi tạo hiển thị phiếu in và trigger modal xem trước chuẩn A4 Arial (ReportLab style)
 function generateCombinedPrintInvoice() {
   const customerName = document.getElementById('preview-customer-name').value.trim();
   const address = document.getElementById('preview-customer-address').value.trim();
-  const vat = exportPreviewData.products.reduce((acc, curr) => acc + (parseFloat(curr.vat) || 0), 0);
-  const deposit = parseFloat(document.getElementById('preview-deposit').value) || 0;
-  
-  const totalSum = exportPreviewData.products.reduce((acc, curr) => acc + curr.total, 0);
-  const totalPayable = totalSum + vat;
-  const remaining = totalPayable - deposit;
+  const totals = orderMath.calculateVoucherTotals(
+    exportPreviewData.products,
+    document.getElementById('preview-deposit').value
+  );
+  const { vat, deposit, totalPayable, remaining } = totals;
 
   if (exportPreviewData.products.length === 0) {
     utils.showToast("Không có sản phẩm nào để xuất!", "warning");
@@ -475,7 +475,7 @@ function generateCombinedPrintInvoice() {
   }
 
   // Tiền bằng chữ
-  const wordsAmount = convertNumToVietnameseWords(remaining);
+  const wordsAmount = orderMath.toVietnameseWords(remaining);
   const dateStr = utils.formatDate(new Date());
 
   const htmlContent = `
@@ -537,24 +537,24 @@ function generateCombinedPrintInvoice() {
         <tbody>
           ${rowsHtml}
           <tr>
-            <td colspan="7" style="border: none;"></td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">VAT</td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">${utils.formatCurrency(vat)}</td>
+            <td colspan="6" style="border: none;"></td>
+            <td colspan="2" style="border: 0.5px solid #000; padding: 6px 8px; text-align: right; font-weight: 600; white-space: nowrap;">VAT</td>
+            <td style="border: 0.5px solid #000; padding: 6px 8px; text-align: right; white-space: nowrap;">${utils.formatCurrency(vat)}</td>
+          </tr>
+          <tr style="background-color: #f1f5f9;">
+            <td colspan="6" style="border: none; background: #fff;"></td>
+            <td colspan="2" style="border: 0.5px solid #000; padding: 6px 8px; text-align: right; font-weight: bold; white-space: nowrap;">Tổng cộng</td>
+            <td style="border: 0.5px solid #000; padding: 6px 8px; text-align: right; font-weight: bold; white-space: nowrap;">${utils.formatCurrency(totalPayable)}</td>
           </tr>
           <tr>
-            <td colspan="7" style="border: none;"></td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">Tổng Cộng</td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">${utils.formatCurrency(totalPayable)}</td>
+            <td colspan="6" style="border: none;"></td>
+            <td colspan="2" style="border: 0.5px solid #000; padding: 6px 8px; text-align: right; white-space: nowrap;">Tiền cọc</td>
+            <td style="border: 0.5px solid #000; padding: 6px 8px; text-align: right; color: #dc2626; white-space: nowrap;">${deposit > 0 ? '-' : ''}${utils.formatCurrency(deposit)}</td>
           </tr>
-          <tr>
-            <td colspan="7" style="border: none;"></td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-style: italic;">Cọc</td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right; color: red;">-${utils.formatCurrency(deposit)}</td>
-          </tr>
-          <tr style="background-color: #f9f9f9; font-weight: bold;">
-            <td colspan="7" style="border: none;"></td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">Còn Lại</td>
-            <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-size:11pt; color: #1e3a8a;">${utils.formatCurrency(remaining)}</td>
+          <tr style="background-color: #eaf2ff; font-weight: bold;">
+            <td colspan="6" style="border: none; background: #fff;"></td>
+            <td colspan="2" style="border: 0.5px solid #000; padding: 7px 8px; text-align: right; white-space: nowrap; color: #1e3a8a;">Còn lại cần thu</td>
+            <td style="border: 0.5px solid #000; padding: 7px 8px; text-align: right; font-size: 11pt; color: #1e3a8a; white-space: nowrap;">${utils.formatCurrency(remaining)}</td>
           </tr>
         </tbody>
       </table>
@@ -574,61 +574,4 @@ function generateCombinedPrintInvoice() {
   // Đóng modal preview điều chỉnh, mở modal in A4 chuẩn
   document.getElementById('modal-export-preview').classList.remove('active');
   document.getElementById('modal-view-voucher').classList.add('active');
-}
-
-// Copy hàm chuyển số thành chữ từ thongke.js
-function convertNumToVietnameseWords(number) {
-  if (number === 0) return "Không";
-  
-  const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-  const placeValues = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
-  
-  let stringNumber = Math.round(number).toString();
-  let len = stringNumber.length;
-  
-  if (len > 18) return "Số quá lớn";
-  
-  let numberGroups = [];
-  while (stringNumber.length > 0) {
-    numberGroups.push(stringNumber.substring(Math.max(0, stringNumber.length - 3)));
-    stringNumber = stringNumber.substring(0, Math.max(0, stringNumber.length - 3));
-  }
-  
-  let words = [];
-  
-  for (let i = 0; i < numberGroups.length; i++) {
-    let groupVal = parseInt(numberGroups[i]);
-    if (groupVal === 0) continue;
-    
-    let groupWords = [];
-    let hundreds = Math.floor(groupVal / 100);
-    let tens = Math.floor((groupVal % 100) / 10);
-    let ones = groupVal % 10;
-    
-    if (hundreds > 0 || words.length > 0) {
-      groupWords.push(units[hundreds] + " trăm");
-    }
-    
-    if (tens > 1) {
-      groupWords.push(units[tens] + " mươi");
-      if (ones === 1) groupWords.push("mốt");
-      else if (ones === 5) groupWords.push("lăm");
-      else if (ones > 0) groupWords.push(units[ones]);
-    } else if (tens === 1) {
-      groupWords.push("mười");
-      if (ones === 5) groupWords.push("lăm");
-      else if (ones > 0) groupWords.push(units[ones]);
-    } else if (hundreds > 0 && ones > 0) {
-      groupWords.push("lẻ");
-      groupWords.push(units[ones]);
-    } else if (ones > 0) {
-      groupWords.push(units[ones]);
-    }
-    
-    words.unshift(groupWords.join(" ") + " " + placeValues[i]);
-  }
-  
-  let finalResult = words.join(" ").trim();
-  finalResult = finalResult.replace(/\s+/g, ' ');
-  return finalResult.charAt(0).toUpperCase() + finalResult.slice(1);
 }

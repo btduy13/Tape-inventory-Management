@@ -68,3 +68,32 @@ test('overpayment and loss never create negative debt or commission', () => {
   assert.equal(result.commission, 0);
   assert.equal(result.outstanding, 0);
 });
+
+test('voucher totals add database numeric strings instead of concatenating them', () => {
+  const totals = orderMath.calculateVoucherTotals([
+    { total: '2400000', vat: '240000' },
+    { total: '1800000', vat: '0' }
+  ], '1000000');
+
+  assert.equal(totals.subtotal, 4200000);
+  assert.equal(totals.vat, 240000);
+  assert.equal(totals.totalPayable, 4440000);
+  assert.equal(totals.remaining, 3440000);
+});
+
+test('voucher totals reject invalid values and never return negative remaining debt', () => {
+  const totals = orderMath.calculateVoucherTotals([
+    { total: 'invalid', vat: -100 },
+    { total: '1800000', vat: '0' }
+  ], '2000000');
+
+  assert.equal(totals.subtotal, 1800000);
+  assert.equal(totals.vat, 0);
+  assert.equal(totals.remaining, 0);
+});
+
+test('voucher amount in words keeps million groups in the correct order', () => {
+  assert.equal(orderMath.toVietnameseWords(4200000), 'Bốn triệu hai trăm nghìn');
+  assert.equal(orderMath.toVietnameseWords('4005000'), 'Bốn triệu không trăm lẻ năm nghìn');
+  assert.equal(orderMath.toVietnameseWords(0), 'Không');
+});
