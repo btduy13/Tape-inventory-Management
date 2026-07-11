@@ -81,6 +81,7 @@ tmp/
 # Node modules
 node_modules/
 electron/node_modules/
+electron/dist-installer/
 
 # Local secrets
 electron/config.local.json

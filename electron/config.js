@@ -4,13 +4,23 @@ const path = require('path');
 const pkg = require('./package.json');
 
 function loadLocalConfig() {
-  const localPath = path.join(__dirname, 'config.local.json');
-  if (!fs.existsSync(localPath)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(localPath, 'utf8'));
-  } catch (error) {
-    throw new Error(`config.local.json không hợp lệ: ${error.message}`);
+  const candidates = [
+    process.env.TAPE_CONFIG_PATH,
+    path.join(__dirname, 'config.local.json'),
+    process.env.APPDATA ? path.join(process.env.APPDATA, pkg.name, 'config.local.json') : '',
+    path.join(path.dirname(process.execPath), 'config.local.json')
+  ].filter(Boolean);
+
+  for (const localPath of [...new Set(candidates)]) {
+    if (!fs.existsSync(localPath)) continue;
+    try {
+      return JSON.parse(fs.readFileSync(localPath, 'utf8'));
+    } catch (error) {
+      throw new Error(`${localPath} không hợp lệ: ${error.message}`);
+    }
   }
+
+  return {};
 }
 
 const local = loadLocalConfig();
