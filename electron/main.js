@@ -249,7 +249,7 @@ function requireDatabasePool() {
 }
 
 function getAppIcon() {
-  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  const iconPath = path.join(__dirname, 'assets', 'app-icon.png');
   if (fs.existsSync(iconPath)) {
     return nativeImage.createFromPath(iconPath);
   }

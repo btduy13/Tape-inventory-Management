@@ -1,6 +1,6 @@
 {
   "name": "tape-inventory-management",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Phần mềm quản lý đơn hàng Băng Keo",
   "main": "main.js",
   "author": "Antigravity",
@@ -24,7 +24,8 @@
   "build": {
     "appId": "com.bangkeo.inventory",
     "productName": "Quản lý Đơn hàng Băng Keo",
-    "artifactName": "BangKeo_Setup_${version}.${ext}",
+    "artifactName": "BangKeo_VinhThinh_Setup_${version}.${ext}",
+    "executableName": "BangKeoVinhThinh",
     "asar": true,
     "directories": {
       "output": "dist-installer"
@@ -50,18 +51,22 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico"
     },
     "nsis": {
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Quản lý Băng Keo",
-      "uninstallDisplayName": "Quản lý Băng Keo",
+      "shortcutName": "Quản lý Băng Keo Vĩnh Thịnh",
+      "uninstallDisplayName": "Quản lý Băng Keo Vĩnh Thịnh",
       "runAfterFinish": true
     },
     "publish": [
