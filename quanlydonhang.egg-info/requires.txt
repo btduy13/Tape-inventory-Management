@@ -1,5 +1,0 @@
-ttkthemes
-pillow
-sqlalchemy
-openpyxl
-babel
