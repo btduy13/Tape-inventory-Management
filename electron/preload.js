@@ -5,6 +5,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Trả về phiên bản hiện tại của app
   getVersion: () => ipcRenderer.invoke('get-version'),
 
+  getDatabaseStatus: () => ipcRenderer.invoke('get-database-status'),
+  manageDatabaseConfig: () => ipcRenderer.invoke('manage-database-config'),
+
+  onDatabaseStatus: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('database-status', listener);
+    return () => ipcRenderer.removeListener('database-status', listener);
+  },
+
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
 
   onUpdateStatus: (callback) => {

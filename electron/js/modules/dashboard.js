@@ -4,6 +4,11 @@ let productDistChartInst = null;
 
 async function loadDashboardData() {
   try {
+    const databaseStatus = await window.electronAPI.getDatabaseStatus();
+    if (!databaseStatus.connected) {
+      throw new Error(databaseStatus.error || 'Chưa kết nối cơ sở dữ liệu');
+    }
+
     // 1. Cập nhật thẻ chỉ số (Metrics) tháng này
     await loadDashboardMetrics();
     await loadDashboardAttentionMetrics();
@@ -20,9 +25,10 @@ async function loadDashboardData() {
 
   } catch (err) {
     if (typeof setConnectionStatus === 'function') {
-      setConnectionStatus(false, 'Mây: Mất kết nối');
+      setConnectionStatus(false, 'Mây: Cần cấu hình');
     }
     window.electronAPI.writeLog('error', 'Lỗi tải trang tổng quan: ' + err.message);
+    utils.showToast(`Không thể tải dữ liệu: ${err.message}. Bấm badge Mây để xử lý.`, 'danger');
   }
 }
 

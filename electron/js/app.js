@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeUpdateListeners();
 
   // 3. Tải dữ liệu cho Dashboard mặc định
-  await switchTab('dashboard');
+  const databaseConnected = await initializeDatabaseStatus();
+  if (databaseConnected) await switchTab('dashboard');
 });
 
 // Thiết lập ngày mặc định (Ngày mai)
@@ -646,6 +647,7 @@ const commandPaletteActions = [
   { title: 'Xuất Excel form hiện tại', description: 'Xuất dữ liệu từ form hoặc lịch sử đang mở', group: 'Xuất file', run: () => exportCurrentFormToExcel() },
   { title: 'Làm mới dữ liệu', description: 'Tải lại dữ liệu của trang hiện tại', group: 'Hệ thống', run: () => refreshCurrentPage() },
   { title: 'Kiểm tra cập nhật', description: 'Tìm phiên bản mới trên GitHub Releases', group: 'Hệ thống', run: () => checkForAppUpdates() },
+  { title: 'Cấu hình dữ liệu', description: 'Kiểm tra, xuất hoặc nhập kết nối cho máy mới', group: 'Hệ thống', run: () => openDatabaseConfigManager() },
   { title: 'Phím tắt', description: 'Xem danh sách phím tắt thao tác nhanh', group: 'Hệ thống', run: () => openShortcutsModal() }
 ];
 
@@ -671,6 +673,33 @@ function setConnectionStatus(isConnected, label) {
   if (badge) badge.classList.toggle('offline', !isConnected);
   if (text) text.innerText = label || (isConnected ? 'Mây: Kết nối' : 'Mây: Mất kết nối');
   if (footer) footer.innerText = isConnected ? 'Đã sẵn sàng' : 'Không thể tải dữ liệu mới';
+}
+
+async function initializeDatabaseStatus() {
+  try {
+    const status = await window.electronAPI.getDatabaseStatus();
+    setConnectionStatus(!!status.connected, status.connected ? 'Mây: Kết nối' : 'Mây: Cần cấu hình');
+    return !!status.connected;
+  } catch (_) {
+    setConnectionStatus(false, 'Mây: Mất kết nối');
+    return false;
+  }
+}
+
+async function openDatabaseConfigManager() {
+  const result = await window.electronAPI.manageDatabaseConfig();
+  if (!result) return;
+
+  if (result.exported) {
+    utils.showToast('Đã xuất cấu hình. Chỉ chuyển tệp này sang máy tin cậy.', 'success');
+  } else if (result.connected) {
+    setConnectionStatus(true);
+    utils.showToast('Kết nối cơ sở dữ liệu hoạt động bình thường.', 'success');
+    await switchTab(activeTab);
+  } else if (result.error) {
+    setConnectionStatus(false, 'Mây: Mất kết nối');
+    utils.showToast('Không thể kết nối: ' + result.error, 'danger');
+  }
 }
 
 function openCommandPalette() {

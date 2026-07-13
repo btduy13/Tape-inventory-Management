@@ -1,6 +1,6 @@
 {
   "name": "tape-inventory-management",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "Phần mềm quản lý đơn hàng Băng Keo",
   "main": "main.js",
   "author": "Antigravity",
@@ -13,6 +13,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.js",
+    "test:integration": "node test/integration/orderFlows.js",
     "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check js/app.js",
     "build:win": "electron-builder --win nsis --x64"
   },
@@ -52,7 +53,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "icon.ico"
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,

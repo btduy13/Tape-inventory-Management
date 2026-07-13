@@ -207,7 +207,8 @@ async function loadStatsTableData() {
     statsAllOrders = res.rows;
     renderStatsTable(statsAllOrders);
   } else {
-    utils.showToast("Không thể tải danh sách thống kê", "danger");
+    setConnectionStatus(false, 'Mây: Cần cấu hình');
+    utils.showToast(`Không thể tải Thống kê: ${res.error || 'Chưa kết nối dữ liệu'}. Bấm badge Mây để xử lý.`, "danger");
   }
 }
 

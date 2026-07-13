@@ -14,7 +14,9 @@ app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 
 let mainWindow;
 let dbPool;
+let databaseStatus = { state: 'disconnected', error: '' };
 const LOG_DIR = path.join(app.getPath('userData'), 'logs');
+const USER_CONFIG_PATH = path.join(app.getPath('userData'), 'config.local.json');
 const approvedReadPaths = new Set();
 const approvedWritePaths = new Set();
 
@@ -27,6 +29,91 @@ function consumeApprovedPath(approvedPaths, filePath) {
   if (!key || !approvedPaths.has(key)) return false;
   approvedPaths.delete(key);
   return true;
+}
+
+function validatePortableConfig(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Tệp cấu hình phải là JSON hợp lệ');
+  }
+
+  const databaseUrl = String(payload.DATABASE_URL || '').trim();
+  if (!/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
+    throw new Error('DATABASE_URL phải là địa chỉ PostgreSQL hợp lệ');
+  }
+
+  const email = payload.EMAIL_CONFIG && typeof payload.EMAIL_CONFIG === 'object'
+    ? payload.EMAIL_CONFIG
+    : {};
+  return {
+    DATABASE_URL: databaseUrl,
+    EMAIL_CONFIG: {
+      server: String(email.server || 'smtp.gmail.com').trim(),
+      port: Number(email.port || 587),
+      username: String(email.username || '').trim(),
+      password: String(email.password || ''),
+      sender: String(email.sender || '').trim()
+    }
+  };
+}
+
+function readPortableConfig(filePath) {
+  return validatePortableConfig(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+}
+
+function currentPortableConfig() {
+  return validatePortableConfig({
+    DATABASE_URL: config.DATABASE_URL,
+    EMAIL_CONFIG: config.EMAIL_CONFIG
+  });
+}
+
+async function importDatabaseConfig(ownerWindow = null) {
+  const result = await dialog.showOpenDialog(ownerWindow || undefined, {
+    title: 'Chọn cấu hình dữ liệu Băng Keo',
+    properties: ['openFile'],
+    filters: [{ name: 'Cấu hình JSON', extensions: ['json'] }]
+  });
+  if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
+
+  try {
+    const imported = readPortableConfig(result.filePaths[0]);
+    fs.mkdirSync(path.dirname(USER_CONFIG_PATH), { recursive: true });
+    fs.writeFileSync(USER_CONFIG_PATH, JSON.stringify(imported, null, 2), { encoding: 'utf8', mode: 0o600 });
+    return { ok: true };
+  } catch (error) {
+    await dialog.showMessageBox(ownerWindow || undefined, {
+      type: 'error',
+      title: 'Cấu hình không hợp lệ',
+      message: 'Không thể nhập cấu hình dữ liệu',
+      detail: error.message
+    });
+    return { ok: false, error: error.message };
+  }
+}
+
+function relaunchApplication() {
+  app.relaunch();
+  app.exit(0);
+}
+
+async function ensureStartupConfiguration() {
+  if (config.DATABASE_URL) return true;
+
+  const choice = await dialog.showMessageBox({
+    type: 'warning',
+    title: 'Chưa có cấu hình dữ liệu',
+    message: 'Phần mềm chưa được kết nối với cơ sở dữ liệu.',
+    detail: 'Trên máy đang hoạt động, bấm badge “Mây” và chọn “Xuất cấu hình”. Sau đó chuyển tệp JSON sang máy này và chọn “Nhập cấu hình”.',
+    buttons: ['Nhập cấu hình', 'Thoát'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true
+  });
+  if (choice.response !== 0) return false;
+
+  const imported = await importDatabaseConfig();
+  if (imported.ok) relaunchApplication();
+  return false;
 }
 
 // 1. KHỞI TẠO LOGGING SYSTEM
@@ -51,98 +138,114 @@ function writeLogToFile(level, message) {
 }
 
 // 2. KHỞI TẠO KẾT NỐI SUPABASE POSTGRESQL
-function initDatabase() {
+async function runDatabaseMigrations(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_history (
+      id SERIAL PRIMARY KEY,
+      email_address VARCHAR(255) NOT NULL,
+      last_sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      sent_count INTEGER DEFAULT 1
+    )
+  `);
+  writeLogToFile('info', 'Đã kiểm tra/khởi tạo bảng email_history thành công.');
+
+  await pool.query('SET lock_timeout = 2000');
   try {
-    if (!config.DATABASE_URL) {
-      throw new Error('Thiếu DATABASE_URL. Hãy cấu hình biến môi trường hoặc config.local.json');
-    }
-    writeLogToFile('info', 'Đang khởi tạo Pool kết nối tới PostgreSQL Supabase...');
-    dbPool = new Pool({
+    await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    await pool.query(`
+      ALTER TABLE bang_keo_in_orders
+        ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
+        ADD COLUMN IF NOT EXISTS ten_truc TEXT,
+        ADD COLUMN IF NOT EXISTS truc_chu_vi NUMERIC,
+        ADD COLUMN IF NOT EXISTS truc_so_luong NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_gia_goc NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_gia_ban NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_thanh_tien_goc NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_thanh_tien_ban NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_ctv TEXT,
+        ADD COLUMN IF NOT EXISTS truc_hoa_hong NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_tien_hoa_hong NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_loi_nhuan NUMERIC DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS truc_loi_nhuan_rong NUMERIC DEFAULT 0
+    `);
+    await pool.query(`
+      UPDATE bang_keo_in_orders
+      SET truc_tien_hoa_hong = GREATEST(COALESCE(truc_loi_nhuan, 0), 0) * LEAST(GREATEST(COALESCE(truc_hoa_hong, 0), 0), 100) / 100
+      WHERE COALESCE(loai_truc, 'cu') = 'moi'
+    `);
+    await pool.query(`
+      UPDATE bang_keo_in_orders
+      SET cong_no_khach = CASE
+        WHEN COALESCE(da_tat_toan, FALSE) THEN 0
+        ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)
+      END
+    `);
+    await pool.query(`
+      UPDATE bang_keo_orders
+      SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
+    `);
+    await pool.query(`
+      UPDATE truc_in_orders
+      SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
+    `);
+    writeLogToFile('info', 'Đã đồng bộ schema và công nợ các bảng đơn hàng.');
+  } finally {
+    await pool.query('SET lock_timeout = 0').catch(() => {});
+  }
+}
+
+async function initDatabase() {
+  if (!config.DATABASE_URL) {
+    databaseStatus = { state: 'disconnected', error: 'Thiếu cấu hình DATABASE_URL' };
+    return false;
+  }
+
+  databaseStatus = { state: 'connecting', error: '' };
+  writeLogToFile('info', 'Đang khởi tạo Pool kết nối tới PostgreSQL Supabase...');
+  if (dbPool) {
+    await dbPool.end().catch(() => {});
+    dbPool = undefined;
+  }
+  const nextPool = new Pool({
       connectionString: config.DATABASE_URL,
       ssl: {
-        rejectUnauthorized: false // Hỗ trợ kết nối SSL qua Supabase pooler
+        rejectUnauthorized: false
       },
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000
     });
-    
-    // Test thử kết nối và khởi tạo bảng
-    dbPool.query('SELECT NOW()', async (err, res) => {
-      if (err) {
-        writeLogToFile('error', 'Lỗi kiểm tra kết nối database: ' + err.message);
-      } else {
-        writeLogToFile('info', 'Kết nối thành công tới database Supabase! Thời gian: ' + res.rows[0].now);
-        try {
-          await dbPool.query(`
-            CREATE TABLE IF NOT EXISTS email_history (
-              id SERIAL PRIMARY KEY,
-              email_address VARCHAR(255) NOT NULL,
-              last_sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              sent_count INTEGER DEFAULT 1
-            )
-          `);
-          writeLogToFile('info', 'Đã kiểm tra/khởi tạo bảng email_history thành công.');
-          
-          // Chạy migration thêm cột is_quote nếu chưa có
-          // Đặt lock_timeout để tránh treo ứng dụng nếu có giao dịch khác đang khóa bảng
-          await dbPool.query(`SET lock_timeout = 2000`);
-          await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
-          await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
-          await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
-          await dbPool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
-          await dbPool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
-          await dbPool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
-          await dbPool.query(`
-            ALTER TABLE bang_keo_in_orders
-              ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
-              ADD COLUMN IF NOT EXISTS ten_truc TEXT,
-              ADD COLUMN IF NOT EXISTS truc_chu_vi NUMERIC,
-              ADD COLUMN IF NOT EXISTS truc_so_luong NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_gia_goc NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_gia_ban NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_thanh_tien_goc NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_thanh_tien_ban NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_ctv TEXT,
-              ADD COLUMN IF NOT EXISTS truc_hoa_hong NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_tien_hoa_hong NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_loi_nhuan NUMERIC DEFAULT 0,
-              ADD COLUMN IF NOT EXISTS truc_loi_nhuan_rong NUMERIC DEFAULT 0
-          `);
-          await dbPool.query(`
-            UPDATE bang_keo_in_orders
-            SET truc_tien_hoa_hong = GREATEST(COALESCE(truc_loi_nhuan, 0), 0) * LEAST(GREATEST(COALESCE(truc_hoa_hong, 0), 0), 100) / 100
-            WHERE COALESCE(loai_truc, 'cu') = 'moi'
-          `);
-          await dbPool.query(`
-            UPDATE bang_keo_in_orders
-            SET cong_no_khach = CASE
-              WHEN COALESCE(da_tat_toan, FALSE) THEN 0
-              ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)
-            END
-          `);
-          await dbPool.query(`
-            UPDATE bang_keo_orders
-            SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
-          `);
-          await dbPool.query(`
-            UPDATE truc_in_orders
-            SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
-          `);
-          await dbPool.query(`SET lock_timeout = 0`); // Reset timeout về mặc định
-          writeLogToFile('info', 'Đã đồng bộ schema và công nợ các bảng đơn hàng.');
-        } catch (dbErr) {
-          writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + dbErr.message);
-          // Đảm bảo reset lock_timeout nếu có lỗi xảy ra
-          try {
-            await dbPool.query(`SET lock_timeout = 0`);
-          } catch (e) {}
-        }
-      }
-    });
-  } catch (err) {
-    writeLogToFile('critical', 'Lỗi khởi tạo Database Pool: ' + err.message);
+
+  try {
+    const result = await nextPool.query('SELECT NOW()');
+    dbPool = nextPool;
+    databaseStatus = { state: 'connected', error: '' };
+    writeLogToFile('info', 'Kết nối thành công tới database Supabase! Thời gian: ' + result.rows[0].now);
+    try {
+      await runDatabaseMigrations(dbPool);
+    } catch (migrationError) {
+      writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + migrationError.message);
+    }
+    return true;
+  } catch (error) {
+    await nextPool.end().catch(() => {});
+    dbPool = undefined;
+    databaseStatus = { state: 'disconnected', error: error.message };
+    writeLogToFile('critical', 'Lỗi khởi tạo Database Pool: ' + error.message);
+    return false;
   }
+}
+
+function requireDatabasePool() {
+  if (!dbPool || databaseStatus.state !== 'connected') {
+    throw new Error(databaseStatus.error || 'Chưa kết nối cơ sở dữ liệu. Bấm badge Mây để nhập hoặc kiểm tra cấu hình.');
+  }
+  return dbPool;
 }
 
 function getAppIcon() {
@@ -151,6 +254,97 @@ function getAppIcon() {
     return nativeImage.createFromPath(iconPath);
   }
   return null;
+}
+
+async function exportDatabaseConfig(ownerWindow = mainWindow) {
+  try {
+    const warning = await dialog.showMessageBox(ownerWindow || undefined, {
+      type: 'warning',
+      title: 'Xuất cấu hình dữ liệu',
+      message: 'Tệp cấu hình chứa thông tin kết nối riêng.',
+      detail: 'Chỉ chuyển trực tiếp sang máy tin cậy. Không gửi lên GitHub, email công khai hoặc nhóm chat.',
+      buttons: ['Tiếp tục xuất', 'Hủy'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true
+    });
+    if (warning.response !== 0) return { ok: false, canceled: true };
+
+    const destination = await dialog.showSaveDialog(ownerWindow || undefined, {
+      title: 'Lưu cấu hình để chuyển sang máy mới',
+      defaultPath: 'Cau_hinh_Bang_Keo.json',
+      filters: [{ name: 'Cấu hình JSON', extensions: ['json'] }]
+    });
+    if (destination.canceled || !destination.filePath) return { ok: false, canceled: true };
+
+    fs.writeFileSync(destination.filePath, JSON.stringify(currentPortableConfig(), null, 2), {
+      encoding: 'utf8',
+      mode: 0o600
+    });
+    return { ok: true, exported: true };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+async function showDatabaseConfigManager(ownerWindow = mainWindow) {
+  const choice = await dialog.showMessageBox(ownerWindow || undefined, {
+    type: databaseStatus.state === 'connected' ? 'info' : 'warning',
+    title: 'Kết nối dữ liệu',
+    message: databaseStatus.state === 'connected' ? 'Cơ sở dữ liệu đang kết nối.' : 'Cơ sở dữ liệu chưa kết nối.',
+    detail: databaseStatus.error || 'Bạn có thể kiểm tra, xuất cấu hình cho máy mới hoặc nhập cấu hình đã có.',
+    buttons: ['Kiểm tra kết nối', 'Xuất cấu hình', 'Nhập cấu hình', 'Đóng'],
+    defaultId: 0,
+    cancelId: 3,
+    noLink: true
+  });
+
+  if (choice.response === 0) {
+    let connected = false;
+    try {
+      await requireDatabasePool().query('SELECT 1');
+      connected = true;
+    } catch (_) {
+      connected = await initDatabase();
+    }
+    return { ok: connected, connected, error: databaseStatus.error };
+  }
+  if (choice.response === 1) return exportDatabaseConfig(ownerWindow);
+  if (choice.response === 2) {
+    const imported = await importDatabaseConfig(ownerWindow);
+    if (imported.ok) {
+      await dialog.showMessageBox(ownerWindow || undefined, {
+        type: 'info',
+        title: 'Đã nhập cấu hình',
+        message: 'Phần mềm sẽ khởi động lại để kết nối dữ liệu.'
+      });
+      relaunchApplication();
+    }
+    return imported;
+  }
+  return { ok: true, canceled: true, connected: databaseStatus.state === 'connected' };
+}
+
+async function showDatabaseRecoveryDialog() {
+  if (!mainWindow || mainWindow.isDestroyed() || databaseStatus.state === 'connected') return;
+  const choice = await dialog.showMessageBox(mainWindow, {
+    type: 'error',
+    title: 'Không thể kết nối dữ liệu',
+    message: 'Phần mềm chưa thể tải đơn hàng và thống kê.',
+    detail: databaseStatus.error || 'Hãy kiểm tra Internet hoặc nhập lại cấu hình dữ liệu.',
+    buttons: ['Thử kết nối lại', 'Nhập cấu hình', 'Đóng'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true
+  });
+
+  if (choice.response === 0) {
+    const connected = await initDatabase();
+    if (connected && mainWindow && !mainWindow.isDestroyed()) mainWindow.reload();
+  } else if (choice.response === 1) {
+    const imported = await importDatabaseConfig(mainWindow);
+    if (imported.ok) relaunchApplication();
+  }
 }
 
 // 3. TẠO CỬA SỔ CHÍNH
@@ -208,6 +402,7 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     writeLogToFile('info', 'Cửa sổ ứng dụng chính đã hiển thị.');
+    mainWindow.webContents.send('database-status', databaseStatus);
     setupAutoUpdater(mainWindow, writeLogToFile);
   });
 
@@ -220,6 +415,14 @@ function createWindow() {
 function setupIpcHandlers() {
   // Lấy phiên bản
   ipcMain.handle('get-version', () => config.APP_VERSION);
+
+  ipcMain.handle('get-database-status', () => ({
+    connected: databaseStatus.state === 'connected',
+    state: databaseStatus.state,
+    error: databaseStatus.error
+  }));
+
+  ipcMain.handle('manage-database-config', () => showDatabaseConfigManager(mainWindow));
 
   ipcMain.handle('check-for-updates', async () => checkForUpdatesManual());
 
@@ -269,7 +472,7 @@ function setupIpcHandlers() {
   ipcMain.handle('db-query', async (event, sql, params) => {
     try {
       const validatedSql = validateRendererSql(sql, ['SELECT']);
-      const res = await dbPool.query(validatedSql, params);
+      const res = await requireDatabasePool().query(validatedSql, params);
       return { ok: true, rows: res.rows };
     } catch (err) {
       writeLogToFile('error', `Lỗi DB Query: ${sql} | Lỗi: ${err.message}`);
@@ -280,7 +483,7 @@ function setupIpcHandlers() {
   ipcMain.handle('db-run', async (event, sql, params) => {
     try {
       const validatedSql = validateRendererSql(sql, ['INSERT', 'UPDATE', 'DELETE']);
-      const res = await dbPool.query(validatedSql, params);
+      const res = await requireDatabasePool().query(validatedSql, params);
       return { 
         ok: true, 
         rowCount: res.rowCount, 
@@ -298,8 +501,9 @@ function setupIpcHandlers() {
       return { ok: false, error: 'Transaction không có câu lệnh' };
     }
 
-    const client = await dbPool.connect();
+    let client;
     try {
+      client = await requireDatabasePool().connect();
       await client.query('BEGIN');
       await client.query('SET LOCAL lock_timeout = 3000');
       const results = [];
@@ -314,11 +518,11 @@ function setupIpcHandlers() {
       await client.query('COMMIT');
       return { ok: true, results };
     } catch (err) {
-      await client.query('ROLLBACK');
+      if (client) await client.query('ROLLBACK').catch(() => {});
       writeLogToFile('error', `Lỗi DB Transaction: ${err.message}`);
       return { ok: false, error: err.message };
     } finally {
-      client.release();
+      if (client) client.release();
     }
   });
 
@@ -357,7 +561,7 @@ function setupIpcHandlers() {
       if (email.dbAttachmentIds.length > 0) {
         writeLogToFile('info', `Đang nạp ${email.dbAttachmentIds.length} tệp đính kèm từ database...`);
         for (const attId of email.dbAttachmentIds) {
-          const dbRes = await dbPool.query(
+          const dbRes = await requireDatabasePool().query(
             'SELECT file_name, data, content_type FROM order_attachments WHERE id = $1',
             [attId]
           );
@@ -519,11 +723,21 @@ function setupIpcHandlers() {
 }
 
 // 5. VÒNG ĐỜI HỆ THỐNG
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   writeLogToFile('info', 'Ứng dụng đã khởi động.');
-  initDatabase();
+  const configured = await ensureStartupConfiguration();
+  if (!configured) {
+    if (!app.isQuitting) app.quit();
+    return;
+  }
+  const connected = await initDatabase();
   setupIpcHandlers();
   createWindow();
+  if (!connected) {
+    mainWindow.webContents.once('did-finish-load', () => {
+      setTimeout(showDatabaseRecoveryDialog, 300);
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -14,16 +14,20 @@ function loadLocalConfig() {
   for (const localPath of [...new Set(candidates)]) {
     if (!fs.existsSync(localPath)) continue;
     try {
-      return JSON.parse(fs.readFileSync(localPath, 'utf8'));
+      return {
+        data: JSON.parse(fs.readFileSync(localPath, 'utf8')),
+        source: localPath
+      };
     } catch (error) {
       throw new Error(`${localPath} không hợp lệ: ${error.message}`);
     }
   }
 
-  return {};
+  return { data: {}, source: '' };
 }
 
-const local = loadLocalConfig();
+const loaded = loadLocalConfig();
+const local = loaded.data;
 const localEmail = local.EMAIL_CONFIG || {};
 const smtpUsername = process.env.SMTP_USERNAME || localEmail.username || '';
 
@@ -37,5 +41,6 @@ module.exports = {
     sender: process.env.SMTP_SENDER || localEmail.sender || (smtpUsername ? `Phần Mềm Quản Lý Đơn Hàng <${smtpUsername}>` : '')
   },
   APP_NAME: 'Quản lý Đơn hàng Băng Keo',
-  APP_VERSION: pkg.version
+  APP_VERSION: pkg.version,
+  CONFIG_SOURCE: loaded.source
 };

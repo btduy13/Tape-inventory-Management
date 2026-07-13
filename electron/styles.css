@@ -291,11 +291,23 @@ body {
 .connection-badge {
   background-color: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.2);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.connection-badge:hover {
+  background-color: rgba(16, 185, 129, 0.14);
 }
 
 .connection-badge.offline {
   background-color: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.25);
+}
+
+.connection-badge.offline:hover {
+  background-color: rgba(239, 68, 68, 0.14);
 }
 
 .connection-badge.offline .pulse-indicator {
