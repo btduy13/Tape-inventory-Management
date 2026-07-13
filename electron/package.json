@@ -1,6 +1,6 @@
 {
   "name": "tape-inventory-management",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "description": "Phần mềm quản lý đơn hàng Băng Keo",
   "main": "main.js",
   "author": "Antigravity",
@@ -30,6 +30,12 @@
     "directories": {
       "output": "dist-installer"
     },
+    "extraResources": [
+      {
+        "from": "config.local.json",
+        "to": "config.local.json"
+      }
+    ],
     "files": [
       "index.html",
       "styles.css",

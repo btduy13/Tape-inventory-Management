@@ -8,6 +8,7 @@ function loadLocalConfig() {
     process.env.TAPE_CONFIG_PATH,
     path.join(__dirname, 'config.local.json'),
     process.env.APPDATA ? path.join(process.env.APPDATA, pkg.name, 'config.local.json') : '',
+    process.resourcesPath ? path.join(process.resourcesPath, 'config.local.json') : '',
     path.join(path.dirname(process.execPath), 'config.local.json')
   ].filter(Boolean);
 
