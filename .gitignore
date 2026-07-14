@@ -1,0 +1,45 @@
+# Executables and installers
+*.exe
+*.zip
+*.msi
+*.dmg
+*.deb
+*.rpm
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+*.spec
+installer_package/
+venv_build/
+
+# Node and Electron build artifacts
+node_modules/
+electron/node_modules/
+electron/dist-installer/
+electron/dist-release/
+electron/runtime-*.png
+
+# Local secrets
+electron/config.local.json
+
+# Logs, databases and temporary files
+*.log
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.temp
+temp/
+tmp/
+
+# IDE and OS files
+.cursor/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
