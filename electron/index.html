@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'">
+    <title>Quản lý Đơn hàng Băng Keo</title>
+    <link rel="icon" type="image/png" href="assets/app-icon.png">
+    <link rel="icon" type="image/x-icon" href="assets/icon.ico">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- File CSS tùy biến -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="light-theme">
+
+    <div class="app-container">
+
+        <!-- THANH ĐIỀU HƯỚNG TRÁI (SIDEBAR) -->
+        <aside class="sidebar" aria-label="Thanh điều hướng chính">
+            <div class="sidebar-brand">
+                <img class="brand-logo" src="assets/logo.png" alt="Vĩnh Thịnh Băng Keo">
+                <div class="brand-info">
+                    <span class="brand-name">VĨNH THỊNH</span>
+                    <span class="brand-tagline">Băng keo in &amp; thương mại</span>
+                    <span class="brand-subtitle" id="app-version-display">Phiên bản v1.5.0</span>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-tab="dashboard">
+                    <a onclick="switchTab('dashboard')">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path>
+            </svg>
+                        <span>Tổng quan</span>
+                    </a>
+                </li>
+                <li class="menu-item" data-tab="sales">
+                    <a onclick="switchTab('sales')">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"></path>
+            </svg>
+                        <span>Bán Hàng</span>
+                    </a>
+                </li>
+                <li class="menu-item" data-tab="quotes-creation">
+                    <a onclick="switchTab('quotes-creation')">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+                        <span>Báo Giá</span>
+                    </a>
+                </li>
+                <li class="menu-item" data-tab="quotes-list">
+                    <a onclick="switchTab('quotes-list')">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+                        <span>Các Đơn Báo Giá</span>
+                    </a>
+                </li>
+                <li class="menu-item" data-tab="thong-ke">
+                    <a onclick="switchTab('thong-ke')">
+                        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+                        <span>Thống Kê</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- LIGHT/DARK THEME SELECTOR IN SIDEBAR -->
+            <div style="padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                <span class="brand-subtitle" style="font-weight:600;">Giao diện</span>
+                <button class="pill" id="theme-toggle-btn" onclick="toggleTheme()" style="padding: 4px 10px;">Sáng</button>
+            </div>
+        </aside>
+
+        <!-- KHU VỰC CHÍNH (MAIN WRAPPER) -->
+        <main class="main-wrapper">
+
+            <!-- HEADER BAR -->
+            <header class="header" role="banner">
+                <div class="header-title-section">
+                    <h1 id="page-display-title" class="header-title">Tổng quan</h1>
+                    <div id="header-breadcrumb" class="breadcrumb">
+                        <span class="breadcrumb-item" onclick="switchTab('dashboard')">Trang chủ</span>
+                        <span class="breadcrumb-separator">›</span>
+                        <span class="breadcrumb-item active" id="breadcrumb-page-name">Tổng quan</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="command-trigger" onclick="openCommandPalette()" title="Mở lệnh nhanh (Ctrl+K)">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.1-5.4a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"></path>
+            </svg>
+            <span>Tìm nhanh / mở lệnh</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+
+                    <div class="header-company-badge">
+                        <div class="pulse-indicator"></div>
+                        <span>BĂNG KEO VĨNH THỊNH</span>
+                    </div>
+
+                    <!-- SUPABASE STATUS INDICATOR -->
+                    <button type="button" class="header-company-badge connection-badge" id="connection-status-badge" onclick="openDatabaseConfigManager()" title="Kiểm tra, xuất hoặc nhập cấu hình dữ liệu">
+                        <div class="pulse-indicator" id="connection-status-dot"></div>
+                        <span id="connection-status-text" style="font-size: 11px;">Mây: Kết nối</span>
+                    </button>
+
+                    <button class="icon-btn" onclick="openShortcutsModal()" title="Phím tắt (Ctrl+/)">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.88 9.88a3 3 0 1 1 4.24 4.24M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"></path>
+            </svg>
+          </button>
+
+                    <button class="icon-btn" onclick="refreshCurrentPage()" title="Làm mới trang (F5)">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+            </svg>
+          </button>
+                </div>
+            </header>
+
+            <!-- CONTAINER NỘI DUNG CHÍNH (CONTENT CONTAINER) -->
+            <section class="content-container">
+
+                <!-- ==================== TỔNG QUAN (DASHBOARD) ==================== -->
+                <div id="pane-dashboard" class="tab-pane active">
+                    <!-- HÀNG THỐNG KÊ METRICS -->
+                    <div class="metrics-grid">
+                        <div class="card">
+                            <div class="card-info">
+                                <span class="card-title">Đơn hàng</span>
+                                <span class="card-value" id="dash-total-orders">0</span>
+                                <span class="card-subtitle">Tháng này</span>
+                            </div>
+                            <div class="card-icon">📦</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-info">
+                                <span class="card-title">Doanh thu</span>
+                                <span class="card-value" id="dash-revenue">0đ</span>
+                                <span class="card-subtitle">Tháng này</span>
+                            </div>
+                            <div class="card-icon" style="color:var(--color-success)">💰</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-info">
+                                <span class="card-title">Giá trị TB</span>
+                                <span class="card-value" id="dash-avg-order">0đ</span>
+                                <span class="card-subtitle">Mỗi đơn</span>
+                            </div>
+                            <div class="card-icon" style="color:var(--color-primary)">📈</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-info">
+                                <span class="card-title">Sản phẩm chủ lực</span>
+                                <span class="card-value" id="dash-top-product" style="font-size: 15px; font-weight: 700; margin-top: 6px;">N/A</span>
+                                <span class="card-subtitle">Top số lượng</span>
+                            </div>
+                            <div class="card-icon" style="color:var(--color-warning)">👤</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-action-panel">
+                        <div>
+                            <span class="section-eyebrow">Thao tác nhanh</span>
+                            <h2>Điều hành đơn hàng hôm nay</h2>
+                        </div>
+                        <div class="quick-actions">
+                            <button class="btn btn-primary" onclick="jumpToSalesForm('sales-form-bang-keo-in')">Tạo đơn Băng Keo In</button>
+                            <button class="btn btn-secondary" onclick="switchTab('quotes-creation')">Tạo báo giá</button>
+                            <button class="btn btn-secondary" onclick="openMultiOrderExportDialog()">Xuất đơn / phiếu giao</button>
+                            <button class="btn btn-secondary" onclick="openCommandPalette()">Mở lệnh nhanh</button>
+                        </div>
+                    </div>
+
+                    <div class="attention-grid">
+                        <button class="attention-card danger" onclick="jumpToStatsFilter('overdue')">
+              <span class="attention-label">Quá hạn giao</span>
+              <strong id="dash-overdue-count">0</strong>
+              <small>Cần xử lý ngay</small>
+            </button>
+                        <button class="attention-card warning" onclick="jumpToStatsFilter('near-due')">
+              <span class="attention-label">Giao trong 3 ngày</span>
+              <strong id="dash-due-soon-count">0</strong>
+              <small>Đơn chưa giao</small>
+            </button>
+                        <button class="attention-card info" onclick="jumpToStatsFilter('unsettled')">
+              <span class="attention-label">Công nợ mở</span>
+              <strong id="dash-open-debt">0đ</strong>
+              <small>Khách hàng chưa trả</small>
+            </button>
+                        <button class="attention-card warning" onclick="switchTab('thong-ke')">
+              <span class="attention-label">Nợ nhà cung cấp</span>
+              <strong id="dash-supplier-debt">0đ</strong>
+              <small>Giá vốn đơn chưa tất toán</small>
+            </button>
+                        <button class="attention-card success" onclick="switchTab('quotes-list')">
+              <span class="attention-label">Báo giá chờ</span>
+              <strong id="dash-pending-quotes">0</strong>
+              <small>Có thể chuyển đơn</small>
+            </button>
+                    </div>
+
+                    <!-- BIỂU ĐỒ TRỰC QUAN -->
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <span class="chart-title">Thống kê doanh số</span>
+                                <div class="chart-filters">
+                                    <button class="pill active" id="filter-daily" onclick="updateDashboardCharts('daily')">Ngày</button>
+                                    <button class="pill" id="filter-weekly" onclick="updateDashboardCharts('weekly')">Tuần</button>
+                                    <button class="pill" id="filter-monthly" onclick="updateDashboardCharts('monthly')">Tháng</button>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="salesTrendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <span class="chart-title">Phân bố sản phẩm</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="productDistChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- ==================== BÁN HÀNG (PANEL) ==================== -->
+                <div id="pane-sales" class="tab-pane">
+                    <!-- Thanh điều hướng phụ -->
+                    <div class="subtabs-bar" style="margin-bottom: 20px; display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                        <button class="pill active" id="btn-sales-bki" onclick="switchSalesForm('sales-form-bang-keo-in')">Băng Keo In Logo</button>
+                        <button class="pill" id="btn-sales-bk" onclick="switchSalesForm('sales-form-bang-keo')">Băng Keo Thường</button>
+                        <button class="pill" id="btn-sales-ti" onclick="switchSalesForm('sales-form-truc-in')">Gia Công Trục In</button>
+                    </div>
+
+                    <!-- Sub-panes cho các form bán hàng -->
+                    <div id="sales-form-bang-keo-in" class="sales-form-pane">
+                        <form id="form-bang-keo-in" onsubmit="saveBangKeoIn(event)">
+                            <!-- Thông tin cơ bản -->
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bki-ten-hang" class="form-control" placeholder="Nhập hoặc chọn tên hàng..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="bki-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="bki-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bki-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (mm)</label>
+                                        <input type="number" step="any" id="bki-qc-mm" class="form-control" placeholder="Ví dụ: 48">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (m)</label>
+                                        <input type="number" step="any" id="bki-qc-m" class="form-control" placeholder="Ví dụ: 100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (mic)</label>
+                                        <input type="number" step="any" id="bki-qc-mic" class="form-control" placeholder="Ví dụ: 50">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cuộn/Cây</label>
+                                        <input type="number" step="any" id="bki-cuon-cay" class="form-control" placeholder="Ví dụ: 6">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Loại trục</label>
+                                        <input type="hidden" id="bki-loai-truc" value="cu">
+                                        <div class="radio-pill-group axis-toggle-group">
+                                            <button type="button" class="btn btn-pill active" id="bki-axis-old" onclick="setBangKeoInAxisMode('order', 'cu')">Trục cũ</button>
+                                            <button type="button" class="btn btn-pill" id="bki-axis-new" onclick="setBangKeoInAxisMode('order', 'moi')">Trục mới</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card bki-new-axis-card" id="bki-new-axis-card" style="display:none;">
+                                <h3 class="form-section-title">Thông tin Trục mới</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Tên Trục</label>
+                                        <input type="text" id="bki-truc-ten" class="form-control" placeholder="Tên trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Chu vi</label>
+                                        <input type="number" step="any" id="bki-truc-chu-vi" class="form-control" placeholder="Chu vi trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng</label>
+                                        <input type="number" step="any" id="bki-truc-so-luong" class="form-control" placeholder="Số lượng trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Giá gốc (đ)</label>
+                                        <input type="text" id="bki-truc-gia-goc" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Giá bán (đ)</label>
+                                        <input type="text" id="bki-truc-gia-ban" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="bki-truc-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="bki-truc-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">CTV</label>
+                                        <input type="text" id="bki-truc-ctv" class="form-control" placeholder="CTV trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="bki-truc-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="bki-truc-tien-hoa-hong" class="form-control calculated-field" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lãi (đ)</label>
+                                        <input type="text" id="bki-truc-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lãi ròng (đ)</label>
+                                        <input type="text" id="bki-truc-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Giá và Chi phí -->
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="bki-so-luong" class="form-control" placeholder="Số lượng cuộn..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí số lượng (đ)</label>
+                                        <input type="text" id="bki-phi-sl" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu keo</label>
+                                        <input type="text" id="bki-mau-keo" class="form-control" placeholder="Trắng trong, đục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí keo (đ)</label>
+                                        <input type="text" id="bki-phi-keo" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu sắc</label>
+                                        <input type="text" id="bki-mau-sac" class="form-control" placeholder="Đỏ, xanh...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí màu (đ)</label>
+                                        <input type="text" id="bki-phi-mau" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí size (đ)</label>
+                                        <input type="text" id="bki-phi-size" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí cắt (đ)</label>
+                                        <input type="text" id="bki-phi-cat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá vốn (đ)</label>
+                                        <input type="text" id="bki-don-gia-von" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bki-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá gốc (đ)</label>
+                                        <input type="text" id="bki-don-gia-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="bki-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="bki-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền cọc (đ)</label>
+                                        <input type="text" id="bki-tien-coc" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Công nợ khách (đ)</label>
+                                        <input type="text" id="bki-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền ship (đ)</label>
+                                        <input type="text" id="bki-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="bki-ctv" class="form-control" placeholder="Tên CTV...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="bki-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="bki-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận (đ)</label>
+                                        <input type="text" id="bki-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lõi Giấy</label>
+                                        <input type="text" id="bki-loi-giay" class="form-control" placeholder="Lõi nhựa, giấy...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thùng/Bao bì</label>
+                                        <input type="text" id="bki-thung-bao" class="form-control" placeholder="Nhãn hiệu thùng...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="bki-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo-in')">Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" onclick="calculateBangKeoIn()">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu đơn hàng</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="sales-form-bang-keo" class="sales-form-pane" style="display: none;">
+                        <form id="form-bang-keo" onsubmit="saveBangKeo(event)">
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bk-ten-hang" class="form-control" placeholder="Tên hàng..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="bk-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="bk-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bk-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (KG)</label>
+                                        <input type="text" id="bk-quy-cach" class="form-control" placeholder="Ví dụ: 1.2kg">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="bk-so-luong" class="form-control" placeholder="Số lượng bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu sắc</label>
+                                        <input type="text" id="bk-mau-sac" class="form-control" placeholder="Màu sắc cuộn...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá gốc (đ) <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bk-don-gia-goc" class="form-control currency-format" placeholder="Đơn giá mua vào..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="bk-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="bk-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán ra..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="bk-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Công nợ khách (đ)</label>
+                                        <input type="text" id="bk-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="bk-ctv" class="form-control" placeholder="CTV môi giới...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="bk-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="bk-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận (đ)</label>
+                                        <input type="text" id="bk-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền ship (đ)</label>
+                                        <input type="text" id="bk-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="bk-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo')">Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" onclick="calculateBangKeo()">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu đơn hàng</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="sales-form-truc-in" class="sales-form-pane" style="display: none;">
+                        <form id="form-truc-in" onsubmit="saveTrucIn(event)">
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ti-ten-hang" class="form-control" placeholder="Tên trục in..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="ti-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="ti-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ti-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách</label>
+                                        <input type="text" id="ti-quy-cach" class="form-control" placeholder="Kích thước trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="ti-so-luong" class="form-control" placeholder="Số lượng trục..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu sắc</label>
+                                        <input type="text" id="ti-mau-sac" class="form-control" placeholder="Số màu...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu keo</label>
+                                        <input type="text" id="ti-mau-keo" class="form-control" placeholder="Màu keo...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá gốc (đ) <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ti-don-gia-goc" class="form-control currency-format" placeholder="Đơn giá gia công..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="ti-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ti-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="ti-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Công nợ khách (đ)</label>
+                                        <input type="text" id="ti-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="ti-ctv" class="form-control" placeholder="CTV giới thiệu...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="ti-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="ti-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận (đ)</label>
+                                        <input type="text" id="ti-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền ship (đ)</label>
+                                        <input type="text" id="ti-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="ti-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" onclick="clearForm('truc-in')">Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" onclick="calculateTrucIn()">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu đơn hàng</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+
+                <!-- ==================== BÁO GIÁ (PANEL) ==================== -->
+                <div id="pane-quotes-creation" class="tab-pane">
+                    <!-- Thanh điều hướng phụ -->
+                    <div class="subtabs-bar" style="margin-bottom: 20px; display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                        <button class="pill active" id="btn-quotes-bki" onclick="switchQuotesForm('quotes-form-bang-keo-in')">Băng Keo In Logo</button>
+                        <button class="pill" id="btn-quotes-bk" onclick="switchQuotesForm('quotes-form-bang-keo')">Băng Keo Thường</button>
+                        <button class="pill" id="btn-quotes-ti" onclick="switchQuotesForm('quotes-form-truc-in')">Gia Công Trục In</button>
+                    </div>
+
+                    <!-- Sub-panes cho các form báo giá -->
+                    <div id="quotes-form-bang-keo-in" class="quotes-form-pane">
+                        <form id="form-quote-bang-keo-in" onsubmit="saveBangKeoIn(event, 'quote')">
+                            <!-- Thông tin cơ bản -->
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bki-ten-hang" class="form-control" placeholder="Nhập hoặc chọn tên hàng..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="q-bki-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="q-bki-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bki-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (mm)</label>
+                                        <input type="number" step="any" id="q-bki-qc-mm" class="form-control" placeholder="Ví dụ: 48">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (m)</label>
+                                        <input type="number" step="any" id="q-bki-qc-m" class="form-control" placeholder="Ví dụ: 100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (mic)</label>
+                                        <input type="number" step="any" id="q-bki-qc-mic" class="form-control" placeholder="Ví dụ: 50">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cuộn/Cây</label>
+                                        <input type="number" step="any" id="q-bki-cuon-cay" class="form-control" placeholder="Ví dụ: 6">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Loại trục</label>
+                                        <input type="hidden" id="q-bki-loai-truc" value="cu">
+                                        <div class="radio-pill-group axis-toggle-group">
+                                            <button type="button" class="btn btn-pill active" id="q-bki-axis-old" onclick="setBangKeoInAxisMode('quote', 'cu')">Trục cũ</button>
+                                            <button type="button" class="btn btn-pill" id="q-bki-axis-new" onclick="setBangKeoInAxisMode('quote', 'moi')">Trục mới</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card bki-new-axis-card" id="q-bki-new-axis-card" style="display:none;">
+                                <h3 class="form-section-title">Thông tin Trục mới</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Tên Trục</label>
+                                        <input type="text" id="q-bki-truc-ten" class="form-control" placeholder="Tên trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Chu vi</label>
+                                        <input type="number" step="any" id="q-bki-truc-chu-vi" class="form-control" placeholder="Chu vi trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng</label>
+                                        <input type="number" step="any" id="q-bki-truc-so-luong" class="form-control" placeholder="Số lượng trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Giá gốc (đ)</label>
+                                        <input type="text" id="q-bki-truc-gia-goc" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Giá bán (đ)</label>
+                                        <input type="text" id="q-bki-truc-gia-ban" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="q-bki-truc-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="q-bki-truc-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">CTV</label>
+                                        <input type="text" id="q-bki-truc-ctv" class="form-control" placeholder="CTV trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="q-bki-truc-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="q-bki-truc-tien-hoa-hong" class="form-control calculated-field" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lãi (đ)</label>
+                                        <input type="text" id="q-bki-truc-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lãi ròng (đ)</label>
+                                        <input type="text" id="q-bki-truc-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Giá và Chi phí -->
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="q-bki-so-luong" class="form-control" placeholder="Số lượng cuộn..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí số lượng (đ)</label>
+                                        <input type="text" id="q-bki-phi-sl" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu keo</label>
+                                        <input type="text" id="q-bki-mau-keo" class="form-control" placeholder="Trắng trong, đục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí keo (đ)</label>
+                                        <input type="text" id="q-bki-phi-keo" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu sắc</label>
+                                        <input type="text" id="q-bki-mau-sac" class="form-control" placeholder="Đỏ, xanh...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí màu (đ)</label>
+                                        <input type="text" id="q-bki-phi-mau" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí size (đ)</label>
+                                        <input type="text" id="q-bki-phi-size" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phí cắt (đ)</label>
+                                        <input type="text" id="q-bki-phi-cat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá vốn (đ)</label>
+                                        <input type="text" id="q-bki-don-gia-von" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bki-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá gốc (đ)</label>
+                                        <input type="text" id="q-bki-don-gia-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="q-bki-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="q-bki-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền cọc (đ)</label>
+                                        <input type="text" id="q-bki-tien-coc" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">VAT báo giá (đ)</label>
+                                        <input type="text" id="q-bki-vat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Công nợ khách (đ)</label>
+                                        <input type="text" id="q-bki-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền ship (đ)</label>
+                                        <input type="text" id="q-bki-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="q-bki-ctv" class="form-control" placeholder="Tên CTV...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="q-bki-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="q-bki-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận (đ)</label>
+                                        <input type="text" id="q-bki-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lõi Giấy</label>
+                                        <input type="text" id="q-bki-loi-giay" class="form-control" placeholder="Lõi nhựa, giấy...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thùng/Bao bì</label>
+                                        <input type="text" id="q-bki-thung-bao" class="form-control" placeholder="Nhãn hiệu thùng...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="q-bki-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo-in', 'quote')">Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" onclick="calculateBangKeoIn('quote')">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu báo giá & Xuất PDF</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="quotes-form-bang-keo" class="quotes-form-pane" style="display: none;">
+                        <form id="form-quote-bang-keo" onsubmit="saveBangKeo(event, 'quote')">
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bk-ten-hang" class="form-control" placeholder="Tên hàng..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="q-bk-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="q-bk-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bk-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách (KG)</label>
+                                        <input type="text" id="q-bk-quy-cach" class="form-control" placeholder="Ví dụ: 1.2kg">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="q-bk-so-luong" class="form-control" placeholder="Số lượng bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu sắc</label>
+                                        <input type="text" id="q-bk-mau-sac" class="form-control" placeholder="Màu sắc cuộn...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá gốc (đ) <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bk-don-gia-goc" class="form-control currency-format" placeholder="Đơn giá mua vào..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="q-bk-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-bk-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán ra..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="q-bk-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Công nợ khách (đ)</label>
+                                        <input type="text" id="q-bk-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">VAT báo giá (đ)</label>
+                                        <input type="text" id="q-bk-vat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="q-bk-ctv" class="form-control" placeholder="CTV môi giới...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="q-bk-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="q-bk-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận (đ)</label>
+                                        <input type="text" id="q-bk-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền ship (đ)</label>
+                                        <input type="text" id="q-bk-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="q-bk-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo', 'quote')">Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" onclick="calculateBangKeo('quote')">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu báo giá & Xuất PDF</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="quotes-form-truc-in" class="quotes-form-pane" style="display: none;">
+                        <form id="form-quote-truc-in" onsubmit="saveTrucIn(event, 'quote')">
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-ti-ten-hang" class="form-control" placeholder="Tên trục in..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="q-ti-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="q-ti-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-ti-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quy cách</label>
+                                        <input type="text" id="q-ti-quy-cach" class="form-control" placeholder="Kích thước trục...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="q-ti-so-luong" class="form-control" placeholder="Số lượng trục..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu sắc</label>
+                                        <input type="text" id="q-ti-mau-sac" class="form-control" placeholder="Số màu...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Màu keo</label>
+                                        <input type="text" id="q-ti-mau-keo" class="form-control" placeholder="Màu keo...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá gốc (đ) <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-ti-don-gia-goc" class="form-control currency-format" placeholder="Đơn giá gia công..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền gốc (đ)</label>
+                                        <input type="text" id="q-ti-thanh-tien-goc" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="q-ti-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Thành tiền bán (đ)</label>
+                                        <input type="text" id="q-ti-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Công nợ khách (đ)</label>
+                                        <input type="text" id="q-ti-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">VAT báo giá (đ)</label>
+                                        <input type="text" id="q-ti-vat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="q-ti-ctv" class="form-control" placeholder="CTV giới thiệu...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="q-ti-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="q-ti-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận (đ)</label>
+                                        <input type="text" id="q-ti-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tiền ship (đ)</label>
+                                        <input type="text" id="q-ti-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="q-ti-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" onclick="clearForm('truc-in', 'quote')">Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" onclick="calculateTrucIn('quote')">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu báo giá & Xuất PDF</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+
+                <!-- ==================== CÁC ĐƠN BÁO GIÁ (PANEL) ==================== -->
+                <div id="pane-quotes-list" class="tab-pane">
+                    <!-- BỘ LỌC TÌM KIẾM CHI TIẾT -->
+                    <div class="form-card" style="padding: 16px 20px; margin-bottom: 15px;">
+                        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 0;">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:11px;">Tìm kiếm từ khóa</label>
+                                <input type="text" id="quote-list-search" class="form-control" placeholder="ID, Tên hàng, Khách..." style="height:32px; font-size:12px;" oninput="applyQuotesFilters()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:11px;">Loại báo giá</label>
+                                <select id="quote-list-type" class="form-control" style="height:32px; font-size:12px;" onchange="applyQuotesFilters()">
+                  <option value="all">Tất cả</option>
+                  <option value="bang_keo_in">Băng Keo In</option>
+                  <option value="bang_keo">Băng Keo thường</option>
+                  <option value="truc_in">Trục In</option>
+                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size:11px;">Tháng lọc</label>
+                                <select id="quote-list-month" class="form-control" style="height:32px; font-size:12px;" onchange="applyQuotesFilters()">
+                  <option value="all">Tất cả tháng</option>
+                  <option value="1">Tháng 1</option>
+                  <option value="2">Tháng 2</option>
+                  <option value="3">Tháng 3</option>
+                  <option value="4">Tháng 4</option>
+                  <option value="5">Tháng 5</option>
+                  <option value="6">Tháng 6</option>
+                  <option value="7">Tháng 7</option>
+                  <option value="8">Tháng 8</option>
+                  <option value="9">Tháng 9</option>
+                  <option value="10">Tháng 10</option>
+                  <option value="11">Tháng 11</option>
+                  <option value="12">Tháng 12</option>
+                </select>
+                            </div>
+                            <div class="form-group" style="justify-content: flex-end;">
+                                <button class="btn btn-primary btn-sm" onclick="loadQuotationsData()" style="height: 32px; width: 100%; font-size: 12px;">Làm mới</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG LỊCH SỬ BÁO GIÁ -->
+                    <div class="table-container">
+                        <div class="table-controls">
+                            <span style="font-weight:700;">Danh sách Đơn Báo Giá</span>
+                        </div>
+
+                        <div class="scroll-wrapper">
+                            <table class="data-table" id="quotes-list-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã Báo Giá</th>
+                                        <th>Ngày Tạo</th>
+                                        <th>Tên Hàng</th>
+                                        <th>Tên Khách Hàng</th>
+                                        <th>Ngày Giao Dự Kiến</th>
+                                        <th style="text-align: right;">Số Lượng</th>
+                                        <th style="text-align: right;">Đơn Giá Bán</th>
+                                        <th style="text-align: right;">Thành Tiền</th>
+                                        <th style="width: 250px; text-align: center;">Hành Động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quotes-list-tbody">
+                                    <!-- Load động từ JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== THỐNG KÊ (DASHBOARD) ==================== -->
+                <div id="pane-thong-ke" class="tab-pane pane-full-table">
+                    <!-- Báo cáo dạng thẻ cảnh báo -->
+                    <div class="metrics-grid">
+                        <div class="card" style="border-left: 4px solid var(--color-danger);">
+                            <div class="card-info">
+                                <span class="card-title">Cảnh báo</span>
+                                <span class="card-value" id="stats-warning-count" style="color:var(--color-danger)">0</span>
+                                <span class="card-subtitle" id="stats-warning-desc">0 sắp hạn, 0 quá hạn</span>
+                            </div>
+                            <div class="card-icon">⚠️</div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--color-warning);">
+                            <div class="card-info">
+                                <span class="card-title">Trạng thái</span>
+                                <span class="card-value" id="stats-pending-count" style="color:var(--color-warning)">0</span>
+                                <span class="card-subtitle" id="stats-pending-desc">Chưa tất toán</span>
+                            </div>
+                            <div class="card-icon">🔄</div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--color-info);">
+                            <div class="card-info">
+                                <span class="card-title">Tổng công nợ</span>
+                                <span class="card-value" id="stats-debt-sum" style="color:var(--color-info)">0đ</span>
+                                <span class="card-subtitle">Công nợ khách hàng</span>
+                            </div>
+                            <div class="card-icon">💳</div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--color-warning);">
+                            <div class="card-info">
+                                <span class="card-title">Nợ nhà cung cấp</span>
+                                <span class="card-value" id="stats-supplier-debt-sum" style="color:var(--color-warning)">0đ</span>
+                                <span class="card-subtitle">Giá vốn đơn chưa tất toán</span>
+                            </div>
+                            <div class="card-icon">🏭</div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--color-success);">
+                            <div class="card-info">
+                                <span class="card-title">Lợi nhuận ròng</span>
+                                <span class="card-value" id="stats-profit-sum" style="color:var(--color-success)">0đ</span>
+                                <span class="card-subtitle">Ước tính thực tế</span>
+                            </div>
+                            <div class="card-icon">💎</div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG DANH SÁCH THỐNG KÊ CHI TIẾT -->
+                    <div class="table-container">
+                        <div class="table-controls stats-toolbar">
+                            <div class="table-controls-left">
+                                <div class="chart-filters" id="stats-subtabs">
+                                    <button class="pill active" onclick="switchStatsSubtab('bang-keo-in')">Băng Keo In</button>
+                                    <button class="pill" onclick="switchStatsSubtab('truc-in')">Trục In</button>
+                                    <button class="pill" onclick="switchStatsSubtab('bang-keo')">Băng Keo</button>
+                                </div>
+
+                                <div class="chart-filters" id="stats-view-modes">
+                                    <button class="pill active" onclick="switchStatsViewMode('summary')">Tóm tắt</button>
+                                    <button class="pill" onclick="switchStatsViewMode('detail')">Chi tiết</button>
+                                </div>
+
+                                <input type="text" id="stats-search" class="form-control" placeholder="Tìm theo tên..." style="width:180px; height: 32px;" oninput="filterStatsTable()">
+
+                                <select id="stats-month-filter" class="form-control" style="width:120px; height: 32px;" onchange="filterStatsTable()">
+                  <option value="all">Tháng: Tất cả</option>
+                  <option value="1">Tháng 1</option>
+                  <option value="2">Tháng 2</option>
+                  <option value="3">Tháng 3</option>
+                  <option value="4">Tháng 4</option>
+                  <option value="5">Tháng 5</option>
+                  <option value="6">Tháng 6</option>
+                  <option value="7">Tháng 7</option>
+                  <option value="8">Tháng 8</option>
+                  <option value="9">Tháng 9</option>
+                  <option value="10">Tháng 10</option>
+                  <option value="11">Tháng 11</option>
+                  <option value="12">Tháng 12</option>
+                </select>
+
+                                <select id="stats-status-filter" class="form-control" style="width:140px; height: 32px;" onchange="filterStatsTable()">
+                  <option value="all">Trạng thái: Tất cả</option>
+                  <option value="near-due">Sắp đến hạn</option>
+                  <option value="overdue">Quá hạn</option>
+                  <option value="unsettled">Chưa tất toán</option>
+                  <option value="finished">Đã hoàn thành</option>
+                </select>
+
+                                <input type="date" id="stats-date-from" class="form-control" title="Từ ngày" style="width:140px; height: 32px;" onchange="filterStatsTable()">
+                                <input type="date" id="stats-date-to" class="form-control" title="Đến ngày" style="width:140px; height: 32px;" onchange="filterStatsTable()">
+
+                                <select id="stats-giao-filter" class="form-control" style="width:130px; height: 32px;" onchange="filterStatsTable()">
+                  <option value="all">Giao hàng: Tất cả</option>
+                  <option value="giao">Đã giao</option>
+                  <option value="chua">Chưa giao</option>
+                </select>
+
+                                <input type="text" id="stats-ctv-filter" class="form-control" placeholder="CTV..." style="width:120px; height: 32px;" oninput="filterStatsTable()">
+                            </div>
+
+                            <div class="table-controls-toolbar-row">
+                            <div class="table-controls-actions">
+                                <button type="button" class="toolbar-icon-btn toolbar-icon-btn--refresh" onclick="loadStatsData()" title="Làm mới (F5)" aria-label="Làm mới">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn" onclick="openBulkStatsStatusDialog()" title="Cập nhật trạng thái" aria-label="Cập nhật trạng thái">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn toolbar-icon-btn--labeled" onclick="openMultiOrderExportDialog()" title="Xuất đơn đặt hàng / phiếu giao" aria-label="Xuất đơn đặt hàng / phiếu giao">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="8" rx="1"/><path d="M6 17h12"/></svg>
+                                    <span>Xuất đơn</span>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn" onclick="exportImportTemplate()" title="Tải mẫu nhập Excel" aria-label="Tải mẫu nhập Excel">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn" onclick="importOrdersFromExcel()" title="Nhập đơn từ Excel" aria-label="Nhập đơn từ Excel">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn" onclick="exportStatsExcel()" title="Xuất Excel" aria-label="Xuất Excel">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn" onclick="sendSelectedStatsEmail()" title="Gửi Email" aria-label="Gửi Email">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn toolbar-icon-btn--danger" onclick="deleteSelectedStats()" title="Xóa đơn đã chọn" aria-label="Xóa đơn đã chọn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                                <button type="button" class="toolbar-icon-btn" onclick="openAttachmentsManager()" title="Đính kèm tệp" aria-label="Đính kèm tệp">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 4 0 108.486 8.486L20.5 13"/></svg>
+                                </button>
+                            </div>
+
+                            <div class="selection-summary" id="stats-selection-summary" style="display:none;">
+                                <span id="stats-selected-count">0 đơn</span>
+                                <strong id="stats-selected-debt">0đ</strong>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- Bảng dữ liệu thống kê -->
+                        <div class="scroll-wrapper">
+                            <table class="data-table" id="stats-table">
+                                <thead>
+                                    <tr id="stats-table-header">
+                                        <!-- Thêm cột động bằng JS -->
+                                    </tr>
+                                </thead>
+                                <tbody id="stats-table-body">
+                                    <!-- Trộn dữ liệu động bằng JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- STATUS BAR DƯỚI CÙNG -->
+            <footer style="height: 24px; border-top: 1px solid var(--border-color); background-color: var(--bg-secondary); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 11px; color: var(--text-muted); flex-shrink: 0;">
+                <span id="footer-status-text">Đã sẵn sàng</span>
+                <span id="footer-db-time">Cập nhật: N/A</span>
+            </footer>
+
+        </main>
+
+    </div>
+
+    <!-- ==================== A. MODAL: SỬA ĐƠN HÀNG (EDIT DIALOG) ==================== -->
+    <div id="modal-edit-order" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="edit-modal-title">Sửa thông tin đơn hàng</h3>
+                <button class="modal-close" onclick="closeModal('modal-edit-order')">×</button>
+            </div>
+            <div class="modal-body" id="edit-modal-body">
+                <!-- Form sửa đổi sẽ được chèn động tùy theo loại đơn hàng -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-edit-order')">Hủy bỏ</button>
+                <button class="btn btn-primary" onclick="submitEditOrder()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== B. MODAL: QUẢN LÝ ĐÍNH KÈM (ATTACHMENTS MANAGER) ==================== -->
+    <div id="modal-attachments" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Quản lý tệp đính kèm</h3>
+                <button class="modal-close" onclick="closeModal('modal-attachments')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <input type="file" id="attach-file-input" style="display:none;" onchange="uploadAttachmentFile(this)">
+                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('attach-file-input').click()">➕ Thêm tệp mới</button>
+                    <span id="attach-status-label" style="font-size:12px; align-self:center; color:var(--text-secondary);">Chọn tệp đính kèm</span>
+                </div>
+                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); max-height: 250px; overflow-y: auto;">
+                    <table class="data-table" style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>Tên tệp</th>
+                                <th>Kích thước</th>
+                                <th style="width:80px; text-align:right;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attachments-table-body">
+                            <!-- Nạp danh sách tệp đính kèm bằng JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-attachments')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-bulk-stats-status" class="modal-overlay">
+        <div class="modal-content" style="width: 420px; max-width: 92vw;">
+            <div class="modal-header">
+                <h3 class="modal-title">Cập nhật trạng thái</h3>
+                <button class="modal-close" onclick="closeModal('modal-bulk-stats-status')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-card" style="padding: 16px; margin-bottom: 16px;">
+                    <div id="bulk-stats-status-label" style="font-weight:700; margin-bottom: 12px;">0 đơn đã chọn</div>
+                    <label style="display:flex; align-items:center; gap:10px; margin-bottom: 10px;">
+            <input type="checkbox" id="bulk-stats-da-giao" checked>
+            <span>Đã giao hàng</span>
+          </label>
+                    <label style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="bulk-stats-da-tat-toan" checked>
+            <span>Đã tất toán</span>
+          </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-bulk-stats-status')">Hủy</button>
+                <button class="btn btn-primary" onclick="applyBulkStatsStatus()">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== C. MODAL: XEM VÀ IN PHIẾU GIAO HÀNG (TIMES NEW ROMAN A4 PREVIEW) ==================== -->
+    <div id="modal-view-voucher" class="modal-overlay">
+        <div class="modal-content" style="max-width: 850px; background-color:#fff; color:#000;">
+            <div class="modal-header" style="background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color); color: var(--text-primary);">
+                <h3 class="modal-title">Xem trước Đơn đặt hàng / Phiếu giao hàng</h3>
+                <div style="display:flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-view-voucher')" style="color:var(--text-primary);">Đóng</button>
+                    <button class="btn btn-secondary" onclick="saveCurrentVoucherPdf()">Lưu PDF</button>
+                    <button class="btn btn-primary" onclick="triggerPrint()">In chứng từ</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 30px 40px; overflow-y:auto; background:#fff;">
+                <div id="voucher-print-area">
+                    <!-- Biểu mẫu in sẽ được sinh động bằng JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== D. MODAL: GỬI EMAIL CHUYÊN NGHIỆP (EMAIL DIALOG) ==================== -->
+    <div id="modal-email-dialog" class="modal-overlay">
+        <div class="modal-content" style="max-width: 760px; height: 90vh;">
+            <div class="modal-header">
+                <h3 class="modal-title">Gửi Email Đơn Hàng</h3>
+                <button class="modal-close" onclick="closeEmailDialogModal()">×</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto;">
+
+                <div style="border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px 12px; background:var(--bg-secondary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <div>
+                            <strong>Cấu hình gửi mail</strong>
+                            <div id="email-smtp-status" style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Đang kiểm tra...</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEmailSmtpSettings()">⚙ SMTP</button>
+                    </div>
+                    <div id="email-smtp-settings" style="display:none; margin-top:12px;">
+                        <div class="form-grid" style="grid-template-columns:2fr 1fr; gap:10px;">
+                            <div class="form-group"><label class="form-label">Máy chủ SMTP</label><input id="email-smtp-server" class="form-control" value="smtp.gmail.com"></div>
+                            <div class="form-group"><label class="form-label">Cổng</label><input id="email-smtp-port" type="number" class="form-control" value="587"></div>
+                            <div class="form-group"><label class="form-label">Tài khoản email</label><input id="email-smtp-username" type="email" class="form-control" autocomplete="username"></div>
+                            <div class="form-group"><label class="form-label">Mật khẩu ứng dụng</label><input id="email-smtp-password" type="password" class="form-control" autocomplete="new-password" placeholder="Giữ trống nếu không đổi"></div>
+                            <div class="form-group" style="grid-column:1 / -1;"><label class="form-label">Người gửi</label><input id="email-smtp-sender" class="form-control" placeholder="Tên hiển thị <email@example.com>"></div>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="testEmailSmtpSettings()">Kiểm tra kết nối</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="saveEmailSmtpSettings()">Lưu cấu hình</button>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">Gmail yêu cầu Mật khẩu ứng dụng, không dùng mật khẩu đăng nhập thông thường.</div>
+                    </div>
+                </div>
+
+                <!-- Thông tin người nhận và tiêu đề -->
+                <div class="form-grid" style="grid-template-columns: 1fr; gap: 10px; margin-bottom: 0;">
+                    <div class="form-group" style="position: relative;">
+                        <label class="form-label">Người nhận email</label>
+                        <input type="email" id="email-to" class="form-control" placeholder="nhap_email@gmail.com..." autocomplete="off" oninput="onEmailToInput()" onfocus="onEmailToFocus()">
+                        <div id="email-autocomplete-suggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tiêu đề email</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="email-subject" class="form-control" style="flex: 1;" placeholder="Tiêu đề...">
+                            <label class="checkbox-container" style="margin-bottom: 0; white-space: nowrap;">
+                <input type="checkbox" id="email-is-new-axis" checked onchange="updateEmailSubjectPrefix()">
+                <span class="checkmark"></span> Trục mới
+              </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toolbar soạn thảo -->
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label class="form-label">Nội dung soạn thảo</label>
+                    <div class="email-toolbar" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 12px; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; align-items: center;">
+
+                        <select id="email-font-family" class="form-control" style="width: 130px; height: 28px; padding: 2px 6px; font-size: 12px; background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" onchange="formatEmailText('fontName', this.value)">
+              <option value="Arial">Arial</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Courier New">Courier New</option>
+              <option value="Verdana">Verdana</option>
+              <option value="Tahoma">Tahoma</option>
+              <option value="Calibri">Calibri</option>
+            </select>
+
+                        <select id="email-font-size" class="form-control" style="width: 70px; height: 28px; padding: 2px 6px; font-size: 12px; background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" onchange="formatEmailText('fontSize', this.value)">
+              <option value="2">10px</option>
+              <option value="3">12px</option>
+              <option value="4" selected>14px</option>
+              <option value="5">18px</option>
+              <option value="6">24px</option>
+              <option value="7">36px</option>
+            </select>
+
+                        <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-weight: bold; height: 28px;" onclick="formatEmailText('bold')">B</button>
+                        <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-style: italic; height: 28px;" onclick="formatEmailText('italic')">I</button>
+                        <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; text-decoration: underline; height: 28px;" onclick="formatEmailText('underline')">U</button>
+
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 12px; color: var(--text-secondary);">Màu:</span>
+                            <input type="color" id="email-fore-color" style="border: none; background: none; width: 24px; height: 24px; cursor: pointer; padding: 0;" onchange="formatEmailText('foreColor', this.value)" value="#ffffff">
+                        </div>
+
+                    </div>
+
+                    <!-- Trình soạn thảo contenteditable -->
+                    <div id="email-body-editor" contenteditable="true" style="min-height: 180px; max-height: 250px; overflow-y: auto; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0 0 var(--radius-sm) var(--radius-sm); padding: 12px; font-family: Arial; font-size: 14px; color: var(--text-primary); line-height: 1.5; outline: none;">
+                    </div>
+                </div>
+
+                <!-- Tệp đính kèm -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label class="form-label" style="margin-bottom: 0;">Danh sách tệp đính kèm</label>
+                        <button class="btn btn-secondary btn-sm" onclick="addEmailLocalAttachment()">➕ Thêm tệp...</button>
+                    </div>
+                    <div style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); max-height: 120px; overflow-y: auto; background: var(--bg-primary);">
+                        <table class="data-table" style="font-size: 11px; margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="email-attachments-select-all" checked onchange="toggleAllEmailAttachments(this.checked)"></th>
+                                    <th>Tên tệp tin</th>
+                                    <th>Kích thước</th>
+                                    <th style="width: 60px; text-align: center;">Nguồn</th>
+                                </tr>
+                            </thead>
+                            <tbody id="email-attachments-tbody">
+                                <!-- Chèn động bằng JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEmailDialogModal()">Hủy bỏ</button>
+                <button class="btn btn-primary" onclick="submitSendEmail()">📧 Gửi Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== E. MODAL: CHỌN ĐƠN XUẤT CHỨNG TỪ (ORDER EXPORT SELECTOR) ==================== -->
+    <div id="modal-order-export" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px; height: 90vh;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="order-export-title">Xuất Đơn Đặt Hàng / Phiếu Giao Hàng</h3>
+                <button class="modal-close" onclick="closeModal('modal-order-export')">×</button>
+            </div>
+            <div class="modal-body export-selector-body" style="display: flex; flex-direction: column; gap: 15px; overflow: hidden;">
+
+                <!-- Loại chứng từ & Bộ lọc -->
+                <div class="export-selector-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <!-- Loại chứng từ -->
+                    <div class="radio-pill-group export-document-switch" style="display: flex; gap: 5px; background: var(--bg-primary); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                        <button class="btn btn-pill active" id="export-doc-order" onclick="setExportDocumentType('don_dat_hang')">Đơn đặt hàng</button>
+                        <button class="btn btn-pill" id="export-doc-delivery" onclick="setExportDocumentType('phieu_giao_hang')">Phiếu giao hàng</button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="export-filter-row" style="display: flex; gap: 8px; align-items: center;">
+                        <select id="export-filter-year" class="form-control" style="width: 90px; height: 32px; font-size:12px; background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" onchange="loadExportOrdersTable()">
+              <!-- JS nạp danh sách năm -->
+            </select>
+                        <select id="export-filter-month" class="form-control" style="width: 110px; height: 32px; font-size:12px; background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" onchange="loadExportOrdersTable()">
+              <option value="all">Tất cả tháng</option>
+              <option value="1">Tháng 1</option>
+              <option value="2">Tháng 2</option>
+              <option value="3">Tháng 3</option>
+              <option value="4">Tháng 4</option>
+              <option value="5">Tháng 5</option>
+              <option value="6">Tháng 6</option>
+              <option value="7">Tháng 7</option>
+              <option value="8">Tháng 8</option>
+              <option value="9">Tháng 9</option>
+              <option value="10">Tháng 10</option>
+              <option value="11">Tháng 11</option>
+              <option value="12">Tháng 12</option>
+            </select>
+                        <select id="export-filter-type" class="form-control" style="width: 120px; height: 32px; font-size:12px; background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" onchange="loadExportOrdersTable()">
+              <option value="all">Tất cả loại</option>
+              <option value="bang_keo_in">Băng Keo In</option>
+              <option value="truc_in">Trục In</option>
+              <option value="bang_keo">Băng Keo</option>
+            </select>
+                        <input type="text" id="export-filter-search" class="form-control" placeholder="Tìm kiếm đơn..." style="width: 160px; height: 32px; font-size:12px;" oninput="loadExportOrdersTable()">
+                    </div>
+                </div>
+
+                <!-- Bảng danh sách đơn hàng -->
+                <div class="scroll-wrapper export-orders-panel" style="flex: 1; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <table class="data-table" id="export-orders-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px; text-align: center;"><input type="checkbox" id="export-orders-select-all" onchange="toggleAllExportOrders(this.checked)"></th>
+                                <th>Mã đơn</th>
+                                <th>Ngày đặt</th>
+                                <th>Tên hàng</th>
+                                <th>Khách hàng</th>
+                                <th style="text-align: right;">Số lượng</th>
+                                <th style="text-align: right;">Đơn giá</th>
+                            </tr>
+                        </thead>
+                        <tbody id="export-orders-tbody">
+                            <!-- Nạp danh sách đơn hàng từ database -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-order-export')">Hủy bỏ</button>
+                <button class="btn btn-primary" onclick="proceedToExportPreview()">Tiếp tục ➔</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== F. MODAL: ĐIỀU CHỈNH CHI TIẾT CHỨNG TỪ (EXPORT PREVIEW EDITOR) ==================== -->
+    <div id="modal-export-preview" class="modal-overlay">
+        <div class="modal-content" style="max-width: 950px; height: 90vh;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="export-preview-title">Xem trước & Điều chỉnh chứng từ</h3>
+                <button class="modal-close" onclick="closeModal('modal-export-preview')">×</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; overflow-y: auto;">
+
+                <!-- Khách hàng -->
+                <div class="form-card" style="padding: 15px; margin-bottom: 0;">
+                    <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 13px; color: var(--color-primary);">Thông tin khách hàng</h4>
+                    <div class="form-grid" style="grid-template-columns: 1fr 2fr; gap: 10px; margin-bottom: 0;">
+                        <div class="form-group">
+                            <label class="form-label">Kính gửi (Khách hàng)</label>
+                            <input type="text" id="preview-customer-name" class="form-control" placeholder="Tên khách hàng...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Địa chỉ</label>
+                            <input type="text" id="preview-customer-address" class="form-control" placeholder="Địa chỉ...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chi tiết sản phẩm -->
+                <div class="form-card" style="padding: 15px; margin-bottom: 0; display: flex; flex-direction: column; gap: 8px;">
+                    <h4 style="margin-top: 0; margin-bottom: 0; font-size: 13px; color: var(--color-primary);">Chi tiết đơn hàng</h4>
+                    <div class="scroll-wrapper" style="max-height: 250px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <table class="data-table" id="preview-products-table" style="font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>Tên sản phẩm</th>
+                                    <th style="width: 140px;">Quy cách</th>
+                                    <th style="width: 90px;">Màu keo</th>
+                                    <th style="width: 90px;">Màu sắc</th>
+                                    <th style="width: 60px;">Đơn vị</th>
+                                    <th style="width: 80px; text-align: right;">Số lượng</th>
+                                    <th style="width: 100px; text-align: right;">Đơn giá</th>
+                                    <th style="width: 90px; text-align: right;">VAT</th>
+                                    <th style="width: 110px; text-align: right;">Thành tiền</th>
+                                    <th style="width: 50px; text-align: center;">Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-products-tbody">
+                                <!-- Chèn động và cho phép sửa trực tiếp bằng ô input -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tiền nong -->
+                <div class="form-card" style="padding: 15px; margin-bottom: 0;">
+                    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 0;">
+                        <div class="form-group">
+                            <label class="form-label">Tổng tiền hàng</label>
+                            <input type="text" id="preview-total-sum" class="form-control" readonly style="background-color: var(--bg-primary);">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Đặt cọc trước (đồng)</label>
+                            <input type="number" id="preview-deposit" class="form-control" value="0" oninput="recalculatePreviewTotals()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Còn lại cần thu</label>
+                            <input type="text" id="preview-remaining" class="form-control" readonly style="background-color: var(--bg-primary); font-weight: bold; color: var(--color-warning);">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="goBackToExportSelection()">⮌ Quay lại</button>
+                <button class="btn btn-primary" onclick="generateCombinedPrintInvoice()">🖨️ Xem trước phiếu in</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== G. MODAL: LENH NHANH (COMMAND PALETTE) ==================== -->
+    <div id="modal-command-palette" class="modal-overlay command-overlay">
+        <div class="command-modal">
+            <div class="command-search-row">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.1-5.4a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"></path>
+        </svg>
+                <input type="text" id="command-palette-input" placeholder="Nhập tên trang, thao tác, hoặc phím tắt..." autocomplete="off" oninput="renderCommandResults()" onkeydown="handleCommandPaletteKey(event)">
+                <button class="modal-close" onclick="closeModal('modal-command-palette')">×</button>
+            </div>
+            <div class="command-results" id="command-palette-results"></div>
+            <div class="command-footer">
+                <span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span>
+                <span><kbd>Enter</kbd> Mở</span>
+                <span><kbd>Esc</kbd> Đóng</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== H. MODAL: PHIM TAT ==================== -->
+    <div id="modal-shortcuts" class="modal-overlay">
+        <div class="modal-content shortcuts-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Phím tắt & thao tác nhanh</h3>
+                <button class="modal-close" onclick="closeModal('modal-shortcuts')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="shortcut-grid">
+                    <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>K</kbd><span>Mở lệnh nhanh</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>S</kbd><span>Lưu / gửi / cập nhật</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>T</kbd><span>Tính toán form hiện tại</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>E</kbd><span>Xuất Excel</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd><kbd>F</kbd><span>Tìm trong trang hiện tại</span></div>
+                    <div class="shortcut-item"><kbd>F5</kbd><span>Làm mới dữ liệu</span></div>
+                    <div class="shortcut-item"><kbd>Delete</kbd><span>Xóa dòng đã chọn trong thống kê</span></div>
+                    <div class="shortcut-item"><kbd>Esc</kbd><span>Đóng hộp thoại đang mở</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- THỰC THỂ KHÁC -->
+    <div class="toast-container" id="toast-container"></div>
+    <div class="context-menu" id="custom-context-menu"></div>
+    <div class="column-filter-menu" id="stats-column-filter-menu"></div>
+
+    <!-- SCRIPTS GIAO DIỆN -->
+    <!-- Copy xlsx và exceljs từ thư mục RD -->
+    <script src="xlsx.full.min.js"></script>
+
+    <!-- Modules Core JS -->
+    <script src="js/utils.js"></script>
+    <script src="js/orderMath.js"></script>
+    <script src="js/modules/dashboard.js"></script>
+    <script src="js/modules/bangkeoin.js"></script>
+    <script src="js/modules/bangkeo.js"></script>
+    <script src="js/modules/trucin.js"></script>
+    <script src="js/modules/thongke.js"></script>
+    <script src="js/modules/excelImport.js"></script>
+    <script src="js/modules/emailDialog.js"></script>
+    <script src="js/modules/exportManager.js"></script>
+    <script src="js/modules/quotations.js"></script>
+    <script src="js/modules/updateManager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
