@@ -1,0 +1,88 @@
+{
+  "name": "tape-inventory-management",
+  "version": "1.5.10",
+  "description": "Phần mềm quản lý đơn hàng Băng Keo",
+  "main": "main.js",
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "nodemailer": "^9.0.3",
+    "pg": "^8.11.5"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "test:integration": "node test/integration/orderFlows.js",
+    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/modules/quotations.js",
+    "build:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.bangkeo.inventory",
+    "productName": "Quản lý Đơn hàng Băng Keo",
+    "artifactName": "BangKeo_VinhThinh_Setup_${version}.${ext}",
+    "executableName": "BangKeoVinhThinh",
+    "asar": true,
+    "directories": {
+      "output": "dist-installer"
+    },
+    "extraResources": [
+      {
+        "from": "config.local.json",
+        "to": "config.local.json"
+      }
+    ],
+    "files": [
+      "index.html",
+      "styles.css",
+      "main.js",
+      "preload.js",
+      "updater.js",
+      "config.js",
+      "dbPolicy.js",
+      "emailPolicy.js",
+      "ipcPolicy.js",
+      "xlsx.full.min.js",
+      "js/**/*",
+      "assets/**/*",
+      "icon.ico",
+      "package.json",
+      "!config.local.json",
+      "!config.local.example.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quản lý Băng Keo Vĩnh Thịnh",
+      "uninstallDisplayName": "Quản lý Băng Keo Vĩnh Thịnh",
+      "runAfterFinish": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "btduy13",
+        "repo": "Tape-inventory-Management",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
