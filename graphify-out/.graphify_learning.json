@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-21T04:34:48.743402+00:00",
+  "generated_at": "2026-07-22T03:37:44.363284+00:00",
   "nodes": {
     "accounting_saferefreshallmodules": {
       "code_fingerprint": "",
@@ -12,7 +12,7 @@
           "q": "which is the correct folder that has all the source code for this application"
         }
       ],
-      "score": 0.869313271,
+      "score": 0.850236368,
       "source_file": "accounting.js",
       "status": "tentative",
       "uses": 1
@@ -20,8 +20,18 @@
     "cloud_sync": {
       "code_fingerprint": "",
       "label": "cloud-sync.js",
-      "last": "2026-07-21T04:32:33.716075+00:00",
+      "last": "2026-07-21T05:32:04.633286+00:00",
       "provenance": [
+        {
+          "date": "2026-07-21T05:32:04.633286+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
+        {
+          "date": "2026-07-21T05:07:40.709406+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
         {
           "date": "2026-07-21T04:32:33.716075+00:00",
           "outcome": "useful",
@@ -33,10 +43,10 @@
           "q": "có cách nào giảm bớt egress không? hướng sử dụng Redish thì sao"
         }
       ],
-      "score": 1.999688492,
+      "score": 3.913331112,
       "source_file": "cloud-sync.js",
       "status": "preferred",
-      "uses": 2
+      "uses": 4
     },
     "cloud_sync_cloudsyncauthenticateandbootstrap": {
       "code_fingerprint": "",
@@ -49,7 +59,7 @@
           "q": "có online database nào free không? suprabase đầy mất rồi"
         }
       ],
-      "score": 0.999270989,
+      "score": 0.97734219,
       "source_file": "cloud-sync.js",
       "status": "tentative",
       "uses": 1
@@ -57,18 +67,23 @@
     "cloud_sync_cloudsyncfetchallrows": {
       "code_fingerprint": "",
       "label": "cloudSyncFetchAllRows()",
-      "last": "2026-07-21T03:56:01.365741+00:00",
+      "last": "2026-07-22T02:33:09.460849+00:00",
       "provenance": [
+        {
+          "date": "2026-07-22T02:33:09.460849+00:00",
+          "outcome": "useful",
+          "q": "tại sao kiểm tra dl khi khởi động tận 36s?"
+        },
         {
           "date": "2026-07-21T03:56:01.365741+00:00",
           "outcome": "useful",
           "q": "ergress đầy rồi làm sao"
         }
       ],
-      "score": 0.999377811,
+      "score": 1.976410987,
       "source_file": "cloud-sync.js",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "cloud_sync_cloudsyncfetchrowssince": {
       "code_fingerprint": "",
@@ -91,7 +106,7 @@
           "q": "có online database nào free không? suprabase đầy mất rồi"
         }
       ],
-      "score": 2.998668049,
+      "score": 2.932862888,
       "source_file": "cloud-sync.js",
       "status": "preferred",
       "uses": 3
@@ -107,7 +122,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "cloud-sync.js",
       "status": "tentative",
       "uses": 1
@@ -123,7 +138,7 @@
           "q": "có cách nào giảm bớt egress không? hướng sử dụng Redish thì sao"
         }
       ],
-      "score": 0.9997246,
+      "score": 0.977785847,
       "source_file": "cloud-sync.js",
       "status": "tentative",
       "uses": 1
@@ -131,8 +146,18 @@
     "cloud_sync_cloudsyncpushnow": {
       "code_fingerprint": "",
       "label": "cloudSyncPushNow()",
-      "last": "2026-07-21T04:32:33.716075+00:00",
+      "last": "2026-07-21T05:32:04.633286+00:00",
       "provenance": [
+        {
+          "date": "2026-07-21T05:32:04.633286+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
+        {
+          "date": "2026-07-21T05:07:40.709406+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
         {
           "date": "2026-07-21T04:32:33.716075+00:00",
           "outcome": "useful",
@@ -144,23 +169,60 @@
           "q": "có online database nào free không? suprabase đầy mất rồi"
         }
       ],
-      "score": 1.99923488,
+      "score": 3.912887455,
       "source_file": "cloud-sync.js",
       "status": "preferred",
-      "uses": 2
+      "uses": 4
     },
     "cloud_sync_cloudsyncrestorebaselinefromconfirmedcache": {
       "code_fingerprint": "",
       "label": "cloudSyncRestoreBaselineFromConfirmedCache()",
-      "last": "2026-07-21T04:14:23.717609+00:00",
+      "last": "2026-07-22T02:33:09.460849+00:00",
       "provenance": [
+        {
+          "date": "2026-07-22T02:33:09.460849+00:00",
+          "outcome": "useful",
+          "q": "tại sao kiểm tra dl khi khởi động tận 36s?"
+        },
         {
           "date": "2026-07-21T04:14:23.717609+00:00",
           "outcome": "useful",
           "q": "đây là kết quả từ suprabase; thử query xem dữ liệu mới nhất là từ bao giờ; phương án clone qua db nào là hợp lý?"
         }
       ],
-      "score": 0.99967246,
+      "score": 1.976699169,
+      "source_file": "cloud-sync.js",
+      "status": "preferred",
+      "uses": 2
+    },
+    "cloud_sync_cloudsyncstarttask": {
+      "code_fingerprint": "",
+      "label": "cloudSyncStartTask()",
+      "last": "2026-07-22T02:33:09.460849+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-22T02:33:09.460849+00:00",
+          "outcome": "useful",
+          "q": "tại sao kiểm tra dl khi khởi động tận 36s?"
+        }
+      ],
+      "score": 0.998964318,
+      "source_file": "cloud-sync.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "cloud_sync_cloudsyncstatefromrows": {
+      "code_fingerprint": "",
+      "label": "cloudSyncStateFromRows()",
+      "last": "2026-07-21T05:32:04.633286+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T05:32:04.633286+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        }
+      ],
+      "score": 0.978954271,
       "source_file": "cloud-sync.js",
       "status": "tentative",
       "uses": 1
@@ -181,7 +243,7 @@
           "q": "ergress đầy rồi làm sao"
         }
       ],
-      "score": 1.999341703,
+      "score": 1.955466556,
       "source_file": "cloud-sync.js",
       "status": "preferred",
       "uses": 2
@@ -189,8 +251,18 @@
     "cloud_sync_listentocloudchanges": {
       "code_fingerprint": "",
       "label": "listenToCloudChanges()",
-      "last": "2026-07-21T04:17:38.753775+00:00",
+      "last": "2026-07-21T05:32:04.633286+00:00",
       "provenance": [
+        {
+          "date": "2026-07-21T05:32:04.633286+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
+        {
+          "date": "2026-07-21T05:07:40.709406+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
         {
           "date": "2026-07-21T04:17:38.753775+00:00",
           "outcome": "useful",
@@ -207,10 +279,10 @@
           "q": "có online database nào free không? suprabase đầy mất rồi"
         }
       ],
-      "score": 2.998668049,
+      "score": 4.890388265,
       "source_file": "cloud-sync.js",
       "status": "preferred",
-      "uses": 3
+      "uses": 5
     },
     "cloud_sync_manualincrementalsync": {
       "code_fingerprint": "",
@@ -233,7 +305,7 @@
           "q": "ergress đầy rồi làm sao"
         }
       ],
-      "score": 2.999066303,
+      "score": 2.933252403,
       "source_file": "cloud-sync.js",
       "status": "preferred",
       "uses": 3
@@ -241,8 +313,23 @@
     "cloud_sync_pullandmergefromcloud": {
       "code_fingerprint": "",
       "label": "pullAndMergeFromCloud()",
-      "last": "2026-07-21T04:32:33.716075+00:00",
+      "last": "2026-07-22T02:33:09.460849+00:00",
       "provenance": [
+        {
+          "date": "2026-07-22T02:33:09.460849+00:00",
+          "outcome": "useful",
+          "q": "tại sao kiểm tra dl khi khởi động tận 36s?"
+        },
+        {
+          "date": "2026-07-21T05:32:04.633286+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
+        {
+          "date": "2026-07-21T05:07:40.709406+00:00",
+          "outcome": "useful",
+          "q": "áp dụng thêm các thay đổi cần thiết; sau đó thật sự chạy phần mềm, test 2 hoặc nhiều máy để xem các function vừa deployt có thật sự có hiệu quả không? commit lên github sau khi đã test xong toàn bộ"
+        },
         {
           "date": "2026-07-21T04:32:33.716075+00:00",
           "outcome": "useful",
@@ -252,6 +339,22 @@
           "date": "2026-07-21T04:17:38.753775+00:00",
           "outcome": "useful",
           "q": "có cách nào giảm bớt egress không? hướng sử dụng Redish thì sao"
+        }
+      ],
+      "score": 5.889742099,
+      "source_file": "cloud-sync.js",
+      "status": "preferred",
+      "uses": 6
+    },
+    "cloud_sync_pullfromcloudonstartup": {
+      "code_fingerprint": "",
+      "label": "pullFromCloudOnStartup()",
+      "last": "2026-07-22T02:33:09.460849+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-22T02:33:09.460849+00:00",
+          "outcome": "useful",
+          "q": "tại sao kiểm tra dl khi khởi động tận 36s?"
         },
         {
           "date": "2026-07-21T03:56:01.365741+00:00",
@@ -259,26 +362,10 @@
           "q": "ergress đầy rồi làm sao"
         }
       ],
-      "score": 2.999066303,
+      "score": 1.976410987,
       "source_file": "cloud-sync.js",
       "status": "preferred",
-      "uses": 3
-    },
-    "cloud_sync_pullfromcloudonstartup": {
-      "code_fingerprint": "",
-      "label": "pullFromCloudOnStartup()",
-      "last": "2026-07-21T03:56:01.365741+00:00",
-      "provenance": [
-        {
-          "date": "2026-07-21T03:56:01.365741+00:00",
-          "outcome": "useful",
-          "q": "ergress đầy rồi làm sao"
-        }
-      ],
-      "score": 0.999377811,
-      "source_file": "cloud-sync.js",
-      "status": "tentative",
-      "uses": 1
+      "uses": 2
     },
     "cloud_sync_startcloudmetadatapolling": {
       "code_fingerprint": "",
@@ -291,7 +378,7 @@
           "q": "tôi cần giảm bớt egress; có cách nào áp dụng được liền không?"
         }
       ],
-      "score": 0.999963892,
+      "score": 0.978019888,
       "source_file": "cloud-sync.js",
       "status": "tentative",
       "uses": 1
@@ -312,7 +399,7 @@
           "q": "có online database nào free không? suprabase đầy mất rồi"
         }
       ],
-      "score": 1.998943448,
+      "score": 1.955077041,
       "source_file": "cloud-sync.js",
       "status": "preferred",
       "uses": 2
@@ -328,7 +415,7 @@
           "q": "which is the correct folder that has all the source code for this application"
         }
       ],
-      "score": 0.869313271,
+      "score": 0.850236368,
       "source_file": "core/platform-paths.js",
       "status": "tentative",
       "uses": 1
@@ -344,7 +431,7 @@
           "q": "inspect printing module; A5 paper size cannot pass to real printer"
         }
       ],
-      "score": 0.869394284,
+      "score": 0.850315603,
       "source_file": "core/printer-job.js",
       "status": "tentative",
       "uses": 1
@@ -360,7 +447,7 @@
           "q": "inspect printing module; A5 paper size cannot pass to real printer"
         }
       ],
-      "score": 0.869394284,
+      "score": 0.850315603,
       "source_file": "core/printer-job.js",
       "status": "tentative",
       "uses": 1
@@ -376,7 +463,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "core/state-diff.js",
       "status": "tentative",
       "uses": 1
@@ -392,7 +479,7 @@
           "q": "inspect printing module; A5 paper size cannot pass to real printer"
         }
       ],
-      "score": 0.869394284,
+      "score": 0.850315603,
       "source_file": "core/voucher-print-document.js",
       "status": "tentative",
       "uses": 1
@@ -408,7 +495,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "modules/auth.js",
       "status": "tentative",
       "uses": 1
@@ -424,7 +511,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "modules/dashboard.js",
       "status": "tentative",
       "uses": 1
@@ -440,7 +527,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "modules/dashboard.js",
       "status": "tentative",
       "uses": 1
@@ -456,7 +543,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "modules/dashboard.js",
       "status": "tentative",
       "uses": 1
@@ -472,7 +559,7 @@
           "q": "commit gh, build new release"
         }
       ],
-      "score": 0.870703592,
+      "score": 0.851596179,
       "source_file": "modules/inventory.js",
       "status": "tentative",
       "uses": 1
@@ -488,7 +575,7 @@
           "q": "commit gh, build new release"
         }
       ],
-      "score": 0.870703592,
+      "score": 0.851596179,
       "source_file": "modules/inventory.js",
       "status": "tentative",
       "uses": 1
@@ -504,7 +591,7 @@
           "q": "commit gh, build new release"
         }
       ],
-      "score": 0.870703592,
+      "score": 0.851596179,
       "source_file": "modules/inventory.js",
       "status": "tentative",
       "uses": 1
@@ -520,7 +607,7 @@
           "q": "không phải chỉ mỗi báo giá, mà là toàn bộ app"
         }
       ],
-      "score": 0.870509591,
+      "score": 0.851406435,
       "source_file": "modules/purchase.js",
       "status": "tentative",
       "uses": 1
@@ -536,7 +623,7 @@
           "q": "Kiểm tra và sửa việc ẩn số tiền chiết khấu trên phiếu báo giá và đơn đặt hàng khi không có mặt hàng chiết khấu"
         }
       ],
-      "score": 0.870387936,
+      "score": 0.851287449,
       "source_file": "modules/purchase.js",
       "status": "tentative",
       "uses": 1
@@ -552,7 +639,7 @@
           "q": "không phải chỉ mỗi báo giá, mà là toàn bộ app"
         }
       ],
-      "score": 0.870509591,
+      "score": 0.851406435,
       "source_file": "modules/purchase.js",
       "status": "tentative",
       "uses": 1
@@ -568,7 +655,7 @@
           "q": "không phải chỉ mỗi báo giá, mà là toàn bộ app"
         }
       ],
-      "score": 0.870509591,
+      "score": 0.851406435,
       "source_file": "modules/sales.js",
       "status": "tentative",
       "uses": 1
@@ -584,7 +671,7 @@
           "q": "Kiểm tra và sửa việc ẩn số tiền chiết khấu trên phiếu báo giá và đơn đặt hàng khi không có mặt hàng chiết khấu"
         }
       ],
-      "score": 0.870387936,
+      "score": 0.851287449,
       "source_file": "modules/sales.js",
       "status": "tentative",
       "uses": 1
@@ -600,7 +687,7 @@
           "q": "không phải chỉ mỗi báo giá, mà là toàn bộ app"
         }
       ],
-      "score": 0.870509591,
+      "score": 0.851406435,
       "source_file": "modules/sales.js",
       "status": "tentative",
       "uses": 1
@@ -616,7 +703,7 @@
           "q": "tôi cần nâng cấp thêm phần mềm nhưng chưa biết nâng cấp gì; gợi ý giúp tôi"
         }
       ],
-      "score": 0.894639549,
+      "score": 0.875006866,
       "source_file": "modules/settings.js",
       "status": "tentative",
       "uses": 1
@@ -627,4 +714,53 @@
       "last": "2026-07-15T03:06:10.152513+00:00",
       "provenance": [
         {
-          "date": "2026-07-15T03:06:10.152513
+          "date": "2026-07-15T03:06:10.152513+00:00",
+          "outcome": "useful",
+          "q": "which is the correct folder that has all the source code for this application"
+        }
+      ],
+      "score": 0.850236368,
+      "source_file": "state.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "ui_framework_printcurrentvoucher": {
+      "code_fingerprint": "",
+      "label": "printCurrentVoucher()",
+      "last": "2026-07-15T03:11:58.624409+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-15T03:11:58.624409+00:00",
+          "outcome": "useful",
+          "q": "inspect printing module; A5 paper size cannot pass to real printer"
+        }
+      ],
+      "score": 0.850315603,
+      "source_file": "ui-framework.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "ui_framework_viewvoucher": {
+      "code_fingerprint": "",
+      "label": "viewVoucher()",
+      "last": "2026-07-15T04:31:52.742351+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-15T04:31:52.742351+00:00",
+          "outcome": "useful",
+          "q": "không phải chỉ mỗi báo giá, mà là toàn bộ app"
+        },
+        {
+          "date": "2026-07-15T04:23:10.108938+00:00",
+          "outcome": "useful",
+          "q": "Kiểm tra và sửa việc ẩn số tiền chiết khấu trên phiếu báo giá và đơn đặt hàng khi không có mặt hàng chiết khấu"
+        }
+      ],
+      "score": 1.702693885,
+      "source_file": "ui-framework.js",
+      "status": "preferred",
+      "uses": 2
+    }
+  },
+  "version": 1
+}
