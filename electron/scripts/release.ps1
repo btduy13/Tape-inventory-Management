@@ -36,7 +36,7 @@ $distDir = Join-Path $ElectronDir "dist-installer"
 if (-not $SkipBuild) {
   Write-Host "Dang build installer v$Version ..." -ForegroundColor Cyan
   Push-Location $ElectronDir
-  npm run build-win
+  npm run build:win
   if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
   Pop-Location
 }
