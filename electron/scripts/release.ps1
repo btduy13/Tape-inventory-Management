@@ -62,8 +62,13 @@ if (Test-Path $latestYml) {
 Write-Host "Installer: $($installer.Name)" -ForegroundColor Green
 if (Test-Path $latestYml) { Write-Host "Metadata: latest.yml" -ForegroundColor Green }
 
+$prevErrorAction = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 $existing = gh release view $tag 2>$null
-if ($LASTEXITCODE -eq 0) {
+$releaseExists = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = $prevErrorAction
+
+if ($releaseExists) {
   Write-Host "Release $tag da ton tai. Dang upload them asset..." -ForegroundColor Yellow
   foreach ($asset in $assets) {
     gh release upload $tag $asset --clobber
