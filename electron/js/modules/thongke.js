@@ -209,7 +209,7 @@ async function loadStatsTableData() {
   const res = await window.electronAPI.dbQuery(sql);
   if (res.ok) {
     statsAllOrders = res.rows;
-    renderStatsTable(statsAllOrders);
+    filterStatsTable();
   } else {
     setConnectionStatus(false, 'Mây: Cần cấu hình');
     utils.showToast(`Không thể tải Thống kê: ${res.error || 'Chưa kết nối dữ liệu'}. Bấm badge Mây để xử lý.`, "danger");

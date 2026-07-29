@@ -30,6 +30,7 @@ async function openEmailDialog(orderId, orderType) {
     
     // Đặt Tiêu đề gốc
     emailBaseSubject = formattedTitle;
+    document.getElementById('email-subject').value = "";
     document.getElementById('email-is-new-axis').checked = true;
     
     // Tự động thiết lập người nhận mặc định
@@ -117,12 +118,14 @@ function updateEmailSubjectPrefix() {
   
   let currentSubject = document.getElementById('email-subject').value.trim();
   
-  if (currentSubject.startsWith("TRỤC MỚI - ")) {
+  if (currentSubject === "" || currentSubject === emailBaseSubject) {
+    currentSubject = prefix + emailBaseSubject;
+  } else if (currentSubject.startsWith("TRỤC MỚI - ")) {
     currentSubject = currentSubject.replace("TRỤC MỚI - ", prefix);
   } else if (currentSubject.startsWith("TRỤC CŨ - ")) {
     currentSubject = currentSubject.replace("TRỤC CŨ - ", prefix);
   } else {
-    currentSubject = prefix + emailBaseSubject;
+    currentSubject = prefix + currentSubject;
   }
   
   document.getElementById('email-subject').value = currentSubject;
