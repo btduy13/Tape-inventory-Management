@@ -323,6 +323,10 @@
                                         <input type="text" id="bki-truc-gia-ban" class="form-control currency-format" value="0">
                                     </div>
                                     <div class="form-group">
+                                        <label class="form-label">VAT trục (đ)</label>
+                                        <input type="text" id="bki-truc-vat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
                                         <label class="form-label">Thành tiền gốc (đ)</label>
                                         <input type="text" id="bki-truc-thanh-tien-goc" class="form-control" value="0" readonly>
                                     </div>
@@ -610,6 +614,10 @@
                                         <input type="text" id="ti-cong-no-khach" class="form-control" value="0" readonly>
                                     </div>
                                     <div class="form-group">
+                                        <label class="form-label">VAT (đ)</label>
+                                        <input type="text" id="ti-vat" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
                                         <label class="form-label">Cộng tác viên (CTV)</label>
                                         <input type="text" id="ti-ctv" class="form-control" placeholder="CTV giới thiệu...">
                                     </div>
@@ -702,8 +710,19 @@
                                 </div>
                             </div>
 
+                            <div class="form-card quote-drafts-card">
+                                <div class="quote-drafts-heading">
+                                    <div><h3 class="form-section-title">Kích thước và giá</h3><p>Mỗi tab là một kích thước, bộ giá và danh sách trục riêng trong cùng báo giá.</p></div>
+                                    <div class="quote-drafts-actions"><span class="quote-draft-count" id="quote-draft-count-bang_keo_in">1 kích thước</span><button type="button" class="btn btn-secondary" onclick="addQuoteDraft('bang_keo_in')">+ Thêm báo giá</button></div>
+                                </div>
+                                <div class="quote-draft-tabs" id="quote-drafts-bang_keo_in" role="tablist"></div>
+                            </div>
+
                             <div class="form-card bki-new-axis-card" id="q-bki-new-axis-card" style="display:none;">
-                                <h3 class="form-section-title">Thông tin Trục mới</h3>
+                                <div class="quote-axis-heading">
+                                    <div><h3 class="form-section-title">Trục đang nhập</h3><p>Lưu trục hiện tại rồi nhập trục tiếp theo nếu mẫu in có nhiều màu.</p></div>
+                                    <button type="button" class="btn btn-secondary" onclick="addCurrentQuoteAxis()">+ Thêm trục tiếp theo</button>
+                                </div>
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label class="form-label">Tên Trục</label>
@@ -724,6 +743,10 @@
                                     <div class="form-group">
                                         <label class="form-label">Giá bán (đ)</label>
                                         <input type="text" id="q-bki-truc-gia-ban" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">VAT trục (đ)</label>
+                                        <input type="text" id="q-bki-truc-vat" class="form-control currency-format" value="0">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Thành tiền gốc (đ)</label>
@@ -754,6 +777,11 @@
                                         <input type="text" id="q-bki-truc-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
                                     </div>
                                 </div>
+                            </div>
+
+                            <div class="form-card quote-axis-tree-card" id="q-bki-axis-tree-card" style="display:none;">
+                                <h3 class="form-section-title">Danh sách trục của kích thước này</h3>
+                                <div id="q-bki-axis-tree" class="quote-axis-tree"></div>
                             </div>
 
                             <!-- Giá và Chi phí -->
@@ -861,7 +889,8 @@
                                 <div class="btn-row">
                                     <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo-in', 'quote')">Xóa form</button>
                                     <button type="button" class="btn btn-secondary" onclick="calculateBangKeoIn('quote')">Tính toán</button>
-                                    <button type="submit" class="btn btn-primary">Lưu báo giá & Xuất PDF</button>
+                                    <button type="button" class="btn btn-secondary" onclick="addQuoteDraft('bang_keo_in')">+ Thêm báo giá</button>
+                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xuất PDF</button>
                                 </div>
                             </div>
                         </form>
@@ -897,6 +926,14 @@
                                         <input type="text" id="q-bk-mau-sac" class="form-control" placeholder="Màu sắc cuộn...">
                                     </div>
                                 </div>
+                            </div>
+
+                            <div class="form-card quote-drafts-card">
+                                <div class="quote-drafts-heading">
+                                    <div><h3 class="form-section-title">Kích thước và giá</h3><p>Mỗi tab là một kích thước và bộ giá riêng trong cùng báo giá.</p></div>
+                                    <div class="quote-drafts-actions"><span class="quote-draft-count" id="quote-draft-count-bang_keo">1 kích thước</span><button type="button" class="btn btn-secondary" onclick="addQuoteDraft('bang_keo')">+ Thêm báo giá</button></div>
+                                </div>
+                                <div class="quote-draft-tabs" id="quote-drafts-bang_keo" role="tablist"></div>
                             </div>
 
                             <div class="form-card">
@@ -955,7 +992,8 @@
                                 <div class="btn-row">
                                     <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo', 'quote')">Xóa form</button>
                                     <button type="button" class="btn btn-secondary" onclick="calculateBangKeo('quote')">Tính toán</button>
-                                    <button type="submit" class="btn btn-primary">Lưu báo giá & Xuất PDF</button>
+                                    <button type="button" class="btn btn-secondary" onclick="addQuoteDraft('bang_keo')">+ Thêm báo giá</button>
+                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xuất PDF</button>
                                 </div>
                             </div>
                         </form>
@@ -995,6 +1033,14 @@
                                         <input type="text" id="q-ti-mau-keo" class="form-control" placeholder="Màu keo...">
                                     </div>
                                 </div>
+                            </div>
+
+                            <div class="form-card quote-drafts-card">
+                                <div class="quote-drafts-heading">
+                                    <div><h3 class="form-section-title">Kích thước và giá</h3><p>Mỗi tab là một kích thước và bộ giá riêng trong cùng báo giá.</p></div>
+                                    <div class="quote-drafts-actions"><span class="quote-draft-count" id="quote-draft-count-truc_in">1 kích thước</span><button type="button" class="btn btn-secondary" onclick="addQuoteDraft('truc_in')">+ Thêm báo giá</button></div>
+                                </div>
+                                <div class="quote-draft-tabs" id="quote-drafts-truc_in" role="tablist"></div>
                             </div>
 
                             <div class="form-card">
@@ -1053,7 +1099,8 @@
                                 <div class="btn-row">
                                     <button type="button" class="btn btn-secondary" onclick="clearForm('truc-in', 'quote')">Xóa form</button>
                                     <button type="button" class="btn btn-secondary" onclick="calculateTrucIn('quote')">Tính toán</button>
-                                    <button type="submit" class="btn btn-primary">Lưu báo giá & Xuất PDF</button>
+                                    <button type="button" class="btn btn-secondary" onclick="addQuoteDraft('truc_in')">+ Thêm báo giá</button>
+                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xuất PDF</button>
                                 </div>
                             </div>
                         </form>

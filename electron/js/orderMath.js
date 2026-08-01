@@ -38,9 +38,11 @@
 
   function calculateStandardOrder(input = {}) {
     const line = calculateLine(input);
+    const vat = Math.max(0, number(input.vat));
     return {
       ...line,
-      outstanding: input.settled ? 0 : Math.max(0, line.saleTotal - Math.max(0, number(input.deposit)))
+      vat,
+      outstanding: input.settled ? 0 : Math.max(0, line.saleTotal + vat - Math.max(0, number(input.deposit)))
     };
   }
 
@@ -65,36 +67,41 @@
       commissionPercent: input.commissionPercent,
       shipping: input.shipping
     });
+    const axisVat = input.isNewAxis ? Math.max(0, number(input.axisVat)) : 0;
     const axis = input.isNewAxis
-      ? calculateLine({
+      ? { ...calculateLine({
           quantity: input.axisQuantity,
           costPrice: input.axisCostPrice,
           salePrice: input.axisSalePrice,
           commissionPercent: input.axisCommissionPercent
-        })
-      : calculateLine();
+        }), vat: axisVat }
+      : { ...calculateLine(), vat: 0 };
     const deposit = Math.max(0, number(input.deposit));
+    const vat = Math.max(0, number(input.vat));
     const combinedSaleTotal = product.saleTotal + axis.saleTotal;
 
     return {
       product,
       axis,
       deposit,
+      vat,
       combinedCostTotal: product.costTotal + axis.costTotal,
       combinedSaleTotal,
       combinedProfit: product.profit + axis.profit,
       combinedCommission: product.commission + axis.commission,
       combinedNetProfit: product.netProfit + axis.netProfit,
-      outstanding: input.settled ? 0 : Math.max(0, combinedSaleTotal - deposit)
+      outstanding: input.settled ? 0 : Math.max(0, combinedSaleTotal + vat + axisVat - deposit)
     };
   }
 
   function outstandingFromOrder(order = {}, orderType = 'bang_keo_in') {
     const saleTotal = Math.max(0, number(order.thanh_tien_ban));
-    if (orderType !== 'bang_keo_in') return order.da_tat_toan ? 0 : saleTotal;
+    const vat = Math.max(0, number(order.vat));
+    if (orderType !== 'bang_keo_in') return order.da_tat_toan ? 0 : saleTotal + vat;
     const axisTotal = order.loai_truc === 'moi' ? Math.max(0, number(order.truc_thanh_tien_ban)) : 0;
+    const axisVat = order.loai_truc === 'moi' ? Math.max(0, number(order.truc_vat)) : 0;
     const deposit = Math.max(0, number(order.tien_coc));
-    return order.da_tat_toan ? 0 : Math.max(0, saleTotal + axisTotal - deposit);
+    return order.da_tat_toan ? 0 : Math.max(0, saleTotal + axisTotal + vat + axisVat - deposit);
   }
 
   function calculateVoucherTotals(products = [], depositValue = 0) {
@@ -112,6 +119,48 @@
       totalPayable,
       remaining: Math.max(0, totalPayable - deposit)
     };
+  }
+
+  function calculateQuoteItems(items = []) {
+    const normalizedItems = items.map(item => {
+      const quantity = Math.max(0, number(item?.quantity));
+      const unitPrice = Math.max(0, number(item?.unitPrice));
+      return {
+        specification: String(item?.specification || '-'),
+        quantity,
+        unitPrice,
+        total: quantity * unitPrice
+      };
+    });
+    return {
+      items: normalizedItems,
+      quantity: normalizedItems.reduce((sum, item) => sum + item.quantity, 0),
+      subtotal: normalizedItems.reduce((sum, item) => sum + item.total, 0)
+    };
+  }
+
+  function calculateQuoteBundle(items = []) {
+    return items.reduce((totals, item = {}) => {
+      totals.quantity += Math.max(0, number(item.quantity));
+      totals.productSubtotal += Math.max(0, number(item.total));
+      totals.costTotal += Math.max(0, number(item.costTotal));
+      totals.vat += Math.max(0, number(item.vat));
+      totals.deposit += Math.max(0, number(item.deposit));
+      totals.shipping += Math.max(0, number(item.shipping));
+      (Array.isArray(item.axes) ? item.axes : []).forEach(axis => {
+        totals.axisCount += 1;
+        totals.axisQuantity += Math.max(0, number(axis.quantity));
+        totals.axisSubtotal += Math.max(0, number(axis.total));
+        totals.axisCostTotal += Math.max(0, number(axis.costTotal));
+        totals.axisVat += Math.max(0, number(axis.vat));
+      });
+      totals.totalPayable = totals.productSubtotal + totals.axisSubtotal + totals.vat + totals.axisVat;
+      totals.remaining = Math.max(0, totals.totalPayable - totals.deposit);
+      return totals;
+    }, {
+      quantity: 0, productSubtotal: 0, costTotal: 0, vat: 0, deposit: 0, shipping: 0,
+      axisCount: 0, axisQuantity: 0, axisSubtotal: 0, axisCostTotal: 0, axisVat: 0, totalPayable: 0, remaining: 0
+    });
   }
 
   function toVietnameseWords(value) {
@@ -177,6 +226,8 @@
     calculatePrintedTape,
     outstandingFromOrder,
     calculateVoucherTotals,
+    calculateQuoteItems,
+    calculateQuoteBundle,
     toVietnameseWords
   };
 });

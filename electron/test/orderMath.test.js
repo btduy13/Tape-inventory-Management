@@ -69,6 +69,57 @@ test('overpayment and loss never create negative debt or commission', () => {
   assert.equal(result.outstanding, 0);
 });
 
+test('VAT is included in customer debt for standard and printed tape orders', () => {
+  const standard = orderMath.calculateStandardOrder({ quantity: 2, salePrice: 100000, vat: 20000 });
+  const printed = orderMath.calculatePrintedTape({ quantity: 2, salePrice: 100000, vat: 20000 });
+  assert.equal(standard.outstanding, 220000);
+  assert.equal(printed.outstanding, 220000);
+});
+
+test('printed tape keeps product VAT and new-axis VAT separate in debt', () => {
+  const result = orderMath.calculatePrintedTape({
+    quantity: 10,
+    salePrice: 20000,
+    vat: 20000,
+    deposit: 50000,
+    isNewAxis: true,
+    axisQuantity: 2,
+    axisCostPrice: 30000,
+    axisSalePrice: 50000,
+    axisVat: 10000
+  });
+  assert.equal(result.vat, 20000);
+  assert.equal(result.axis.vat, 10000);
+  assert.equal(result.outstanding, 280000);
+});
+
+test('one quotation aggregates multiple sizes of the same product', () => {
+  const result = orderMath.calculateQuoteItems([
+    { specification: '48mm x 100m', quantity: 10, unitPrice: 12000 },
+    { specification: '60mm x 100m', quantity: 5, unitPrice: 15000 }
+  ]);
+  assert.equal(result.quantity, 15);
+  assert.equal(result.subtotal, 195000);
+  assert.equal(result.items.length, 2);
+});
+
+test('quotation bundle totals multiple prices, VAT and print axes', () => {
+  const result = orderMath.calculateQuoteBundle([
+    { quantity: 10, total: 120000, costTotal: 80000, vat: 12000, deposit: 20000, axes: [
+      { quantity: 1, total: 900000, costTotal: 600000, vat: 90000 },
+      { quantity: 1, total: 700000, costTotal: 500000 }
+    ] },
+    { quantity: 5, total: 75000, costTotal: 50000, vat: 7500, axes: [] }
+  ]);
+  assert.equal(result.quantity, 15);
+  assert.equal(result.axisCount, 2);
+  assert.equal(result.productSubtotal, 195000);
+  assert.equal(result.axisSubtotal, 1600000);
+  assert.equal(result.axisVat, 90000);
+  assert.equal(result.totalPayable, 1904500);
+  assert.equal(result.remaining, 1884500);
+});
+
 test('voucher totals add database numeric strings instead of concatenating them', () => {
   const totals = orderMath.calculateVoucherTotals([
     { total: '2400000', vat: '240000' },

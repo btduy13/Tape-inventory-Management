@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Gắn sự kiện tính toán tự động
   const inputSuffixes = [
     'so-luong', 'don-gia-goc', 'don-gia-ban', 
-    'hoa-hong-percent', 'tien-ship'
+    'hoa-hong-percent', 'tien-ship', 'vat'
   ];
   
   inputSuffixes.forEach(suffix => {
@@ -88,13 +88,15 @@ function calculateBangKeo(mode = 'order') {
     const donGiaBan = utils.parseCurrency(document.getElementById(`${prefix}don-gia-ban`).value);
     const hoaHongPercent = parseFloat(document.getElementById(`${prefix}hoa-hong-percent`).value) || 0;
     const tienShip = utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value);
+    const vat = utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value);
 
     const result = orderMath.calculateStandardOrder({
       quantity: soLuong,
       costPrice: donGiaGoc,
       salePrice: donGiaBan,
       commissionPercent: hoaHongPercent,
-      shipping: tienShip
+      shipping: tienShip,
+      vat
     });
 
     // Cập nhật giao diện
@@ -157,6 +159,9 @@ async function saveBangKeo(event, mode = 'order') {
       is_quote: (mode === 'quote')
     };
 
+    if (mode === 'quote' && !prepareQuoteItems('bang_keo', data)) return;
+    if (mode === 'quote' && await saveEditedQuoteIfNeeded('bang_keo', data)) return;
+
     // Tạo ID mới tự động (B-MM-YY-NNN hoặc BG-B-MM-YY-NNN)
     const idPrefix = (mode === 'quote') ? "BG-B" : "B";
     const orderId = await generateOrderId(idPrefix, "bang_keo_orders");
@@ -167,10 +172,10 @@ async function saveBangKeo(event, mode = 'order') {
         quy_cach, so_luong, mau_sac, don_gia_goc, thanh_tien, 
         don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong, 
         tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong, 
-        da_giao, da_tat_toan, da_gui_email, is_quote, vat
+        da_giao, da_tat_toan, da_gui_email, is_quote, vat, quote_items
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
-        $16, $17, $18, $19, $20, $21, $22, $23, $24
+        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
       )
     `;
 
@@ -179,7 +184,8 @@ async function saveBangKeo(event, mode = 'order') {
       data.quy_cach, data.so_luong, data.mau_sac, data.don_gia_goc, data.thanh_tien,
       data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
       data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat
+      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat,
+      JSON.stringify(data.quote_items || [])
     ];
 
     const res = await window.electronAPI.dbRun(sql, params);
@@ -191,6 +197,7 @@ async function saveBangKeo(event, mode = 'order') {
           await generateAndSaveQuotePDF(orderId, 'bang_keo', data);
         }
         clearFormBangKeo('quote');
+        clearQuoteItems('bang_keo');
       } else {
         utils.showToast(`Đã lưu đơn Băng Keo thành công! Mã: ${orderId}`, "success");
         clearFormBangKeo('order');
@@ -229,6 +236,8 @@ function clearFormBangKeo(mode = 'order') {
   document.getElementById(`${prefix}loi-nhuan`).value = "0";
   document.getElementById(`${prefix}tien-ship`).value = "0";
   document.getElementById(`${prefix}loi-nhuan-rong`).value = "0";
+  const vatEl = document.getElementById(`${prefix}vat`);
+  if (vatEl) vatEl.value = "0";
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

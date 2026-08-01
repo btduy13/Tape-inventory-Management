@@ -1,6 +1,6 @@
 {
   "name": "tape-inventory-management",
-  "version": "1.5.11",
+  "version": "1.5.12",
   "description": "Phần mềm quản lý đơn hàng Băng Keo",
   "main": "main.js",
   "author": "Antigravity",
@@ -11,11 +11,12 @@
     "pg": "^8.11.5"
   },
   "scripts": {
-    "start": "electron .",
+    "start": "node node_modules/electron/cli.js .",
     "test": "node --test test/*.test.js",
+    "test:ui": "node test/quotationUi.smoke.js",
     "test:integration": "node test/integration/orderFlows.js",
-    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/modules/quotations.js",
-    "build:win": "electron-builder --win nsis --x64"
+    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check config.js && node --check dbPolicy.js && node --check emailPolicy.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/utils.js && node --check js/orderMath.js && node --check js/modules/dashboard.js && node --check js/modules/bangkeoin.js && node --check js/modules/bangkeo.js && node --check js/modules/trucin.js && node --check js/modules/thongke.js && node --check js/modules/excelImport.js && node --check js/modules/emailDialog.js && node --check js/modules/exportManager.js && node --check js/modules/quotations.js && node --check js/modules/updateManager.js",
+    "build:win": "node node_modules/electron-builder/cli.js --win nsis --x64"
   },
   "devDependencies": {
     "electron": "^43.1.0",

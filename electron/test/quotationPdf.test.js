@@ -32,3 +32,26 @@ test('quote PDF omits redundant collaborator and VAT copy', () => {
 test('v1.5.9 confirmation flow is preserved', () => {
   assert.match(quotationSource, /await utils\.confirmAction/);
 });
+
+test('quote PDF renders every stored size and keeps legacy quote fallback', () => {
+  assert.match(quotationSource, /normalizeStoredQuoteItems\(data, type\)/);
+  assert.match(quotationSource, /quoteItems\.map\(\(item, index\)/);
+  assert.match(quotationSource, /data\?\.thanh_tien_ban/);
+});
+
+test('quotation UI data supports tabs, tree rows and multiple axes', () => {
+  assert.match(quotationSource, /function addQuoteDraft\(type\)/);
+  assert.match(quotationSource, /function renderQuoteAxisTree\(\)/);
+  assert.match(quotationSource, /quote-tree-item/);
+  assert.match(quotationSource, /quote-tree-axis/);
+  assert.match(quotationSource, /allAxes\.map\(\(axis, index\)/);
+});
+
+test('saved quotations can be loaded into tabs and updated in place', () => {
+  assert.match(quotationSource, /function openQuoteEditor\(quoteId, type\)/);
+  assert.match(quotationSource, /function loadQuoteIntoEditor\(quoteId, type, data\)/);
+  assert.match(quotationSource, /async function saveEditedQuoteIfNeeded\(type, data\)/);
+  assert.match(quotationSource, /UPDATE \$\{table\} SET \$\{assignments\}/);
+  assert.match(quotationSource, /Cập nhật báo giá & Xuất PDF/);
+  assert.match(quotationSource, /fields: \{ \.\.\.fields \}/);
+});

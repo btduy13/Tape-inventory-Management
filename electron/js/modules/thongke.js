@@ -28,9 +28,9 @@ const statsDetailColumnHeaders = {
   thanh_tien_goc: 'Tiền Gốc', don_gia_ban: 'Giá Bán', thanh_tien_ban: 'Tiền Bán', tien_coc: 'Tiền Cọc',
   cong_no_khach: 'Công Nợ Khách', cong_no_ncc: 'Nợ NCC', ctv: 'CTV', hoa_hong: 'Hoa Hồng (%)', tien_hoa_hong: 'Tiền H.Hồng',
   loi_giay: 'Lõi Giấy', thung_bao: 'Thùng Bao', loi_nhuan: 'Lợi Nhuận', tien_ship: 'Tiền Ship',
-  loi_nhuan_rong: 'Lợi Nhuận Ròng', da_giao: 'Đã Giao', da_tat_toan: 'Đã Tất Toán', thanh_tien: 'Thành Tiền',
+  loi_nhuan_rong: 'Lợi Nhuận Ròng', vat: 'VAT', da_giao: 'Đã Giao', da_tat_toan: 'Đã Tất Toán', thanh_tien: 'Thành Tiền',
   loai_truc: 'Loại Trục', ten_truc: 'Tên Trục', truc_chu_vi: 'Chu Vi Trục', truc_so_luong: 'SL Trục',
-  truc_gia_goc: 'Giá Gốc Trục', truc_gia_ban: 'Giá Bán Trục', truc_thanh_tien_goc: 'Tiền Gốc Trục',
+  truc_gia_goc: 'Giá Gốc Trục', truc_gia_ban: 'Giá Bán Trục', truc_vat: 'VAT Trục', truc_thanh_tien_goc: 'Tiền Gốc Trục',
   truc_thanh_tien_ban: 'Tiền Bán Trục', truc_ctv: 'CTV Trục', truc_hoa_hong: 'HH Trục (%)',
   truc_tien_hoa_hong: 'Tiền H.Hồng Trục',
   truc_loi_nhuan: 'Lãi Trục', truc_loi_nhuan_rong: 'Lãi Ròng Trục', da_gui_email: 'Đã Email'
@@ -42,26 +42,26 @@ const statsDetailColumnsMap = {
     'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat',
     'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc',
     'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loai_truc', 'ten_truc', 'truc_chu_vi',
-    'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
+    'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_vat', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
     'truc_ctv', 'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'loi_nhuan', 'tien_ship',
-    'loi_nhuan_rong', 'da_giao', 'da_tat_toan', 'da_gui_email'
+    'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ],
   truc_in: [
     'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo',
     'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'cong_no_ncc', 'ctv', 'hoa_hong',
-    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'da_giao', 'da_tat_toan', 'da_gui_email'
+    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ],
   bang_keo: [
     'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
     'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'cong_no_ncc', 'ctv', 'hoa_hong',
-    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'da_giao', 'da_tat_toan', 'da_gui_email'
+    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ]
 };
 
 const statsCurrencyColumns = new Set([
   'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc',
-  'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
-  'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
+  'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat',
+  'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_vat', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
   'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong'
 ]);
 
@@ -702,8 +702,8 @@ async function toggleDeliveryStatus(orderId, currentStatus) {
 // 10. Thực hiện thay đổi trạng thái tất toán từ chuột phải
 function getSettlementUpdateSql(tableName, includeDelivery = false) {
   const customerDebtExpression = tableName === 'bang_keo_in_orders'
-    ? `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)`
-    : `GREATEST(COALESCE(thanh_tien_ban, 0), 0)`;
+    ? `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`
+    : `GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0)`;
   const supplierDebtExpression = tableName === 'bang_keo_in_orders'
     ? `GREATEST(COALESCE(thanh_tien_goc, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_goc, 0) ELSE 0 END, 0)`
     : tableName === 'bang_keo_orders'

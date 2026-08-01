@@ -163,8 +163,12 @@ async function runDatabaseMigrations(pool) {
     await pool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS truc_vat NUMERIC DEFAULT 0`);
     await pool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
     await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    for (const table of ['bang_keo_in_orders', 'bang_keo_orders', 'truc_in_orders']) {
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS quote_items JSONB DEFAULT '[]'::jsonb`);
+    }
     await pool.query(`
       ALTER TABLE bang_keo_in_orders
         ADD COLUMN IF NOT EXISTS loai_truc VARCHAR(10) DEFAULT 'cu',
@@ -190,16 +194,16 @@ async function runDatabaseMigrations(pool) {
       UPDATE bang_keo_in_orders
       SET cong_no_khach = CASE
         WHEN COALESCE(da_tat_toan, FALSE) THEN 0
-        ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)
+        ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)
       END
     `);
     await pool.query(`
       UPDATE bang_keo_orders
-      SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
+      SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0) END
     `);
     await pool.query(`
       UPDATE truc_in_orders
-      SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0), 0) END
+      SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0) END
     `);
     await pool.query(`
       UPDATE bang_keo_in_orders

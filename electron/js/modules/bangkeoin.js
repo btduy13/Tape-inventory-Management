@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputSuffixes = [
     'so-luong', 'phi-sl', 'phi-keo', 'phi-mau', 'phi-size',
     'phi-cat', 'don-gia-von', 'don-gia-ban', 'tien-coc',
-    'tien-ship', 'hoa-hong-percent', 'qc-m', 'cuon-cay',
-    'truc-so-luong', 'truc-gia-goc', 'truc-gia-ban', 'truc-hoa-hong-percent'
+    'tien-ship', 'hoa-hong-percent', 'vat', 'qc-m', 'cuon-cay',
+    'truc-so-luong', 'truc-gia-goc', 'truc-gia-ban', 'truc-vat', 'truc-hoa-hong-percent'
   ];
   
   inputSuffixes.forEach(suffix => {
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setBangKeoInAxisMode('quote', 'cu');
 });
 
-function setBangKeoInAxisMode(mode = 'order', axisMode = 'cu') {
+function setBangKeoInAxisMode(mode = 'order', axisMode = 'cu', options = {}) {
   const prefix = (mode === 'quote') ? 'q-bki-' : 'bki-';
   const isNewAxis = axisMode === 'moi';
 
@@ -53,9 +53,14 @@ function setBangKeoInAxisMode(mode = 'order', axisMode = 'cu') {
     if (el) el.required = isNewAxis;
   });
 
-  if (!isNewAxis) {
+  if (!isNewAxis && !options.preserveFields) {
     clearBangKeoInAxisFields(mode);
+    if (mode === 'quote' && typeof getActiveQuoteDraft === 'function') {
+      getActiveQuoteDraft('bang_keo_in').savedAxes = [];
+    }
   }
+
+  if (mode === 'quote' && typeof renderQuoteAxisTree === 'function') renderQuoteAxisTree();
 
   calculateBangKeoIn(mode);
 }
@@ -68,6 +73,7 @@ function clearBangKeoInAxisFields(mode = 'order') {
     'truc-so-luong': '',
     'truc-gia-goc': '0',
     'truc-gia-ban': '0',
+    'truc-vat': '0',
     'truc-thanh-tien-goc': '0',
     'truc-thanh-tien-ban': '0',
     'truc-ctv': '',
@@ -144,6 +150,7 @@ async function autofillBangKeoInData(tenHang, mode = 'order') {
         document.getElementById(`${prefix}truc-so-luong`).value = order.truc_so_luong || "";
         document.getElementById(`${prefix}truc-gia-goc`).value = utils.formatCurrency(order.truc_gia_goc || 0);
         document.getElementById(`${prefix}truc-gia-ban`).value = utils.formatCurrency(order.truc_gia_ban || 0);
+        document.getElementById(`${prefix}truc-vat`).value = utils.formatCurrency(order.truc_vat || 0);
         document.getElementById(`${prefix}truc-ctv`).value = order.truc_ctv || "";
         document.getElementById(`${prefix}truc-hoa-hong-percent`).value = order.truc_hoa_hong || 0;
       } else {
@@ -173,6 +180,7 @@ function calculateBangKeoIn(mode = 'order') {
       cuttingFee: utils.parseCurrency(document.getElementById(`${prefix}phi-cat`).value),
       salePrice: utils.parseCurrency(document.getElementById(`${prefix}don-gia-ban`).value),
       deposit: utils.parseCurrency(document.getElementById(`${prefix}tien-coc`).value),
+      vat: utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value),
       commissionPercent: document.getElementById(`${prefix}hoa-hong-percent`).value,
       shipping: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       rollLength: document.getElementById(`${prefix}qc-m`).value,
@@ -181,6 +189,7 @@ function calculateBangKeoIn(mode = 'order') {
       axisQuantity: document.getElementById(`${prefix}truc-so-luong`)?.value,
       axisCostPrice: utils.parseCurrency(document.getElementById(`${prefix}truc-gia-goc`)?.value),
       axisSalePrice: utils.parseCurrency(document.getElementById(`${prefix}truc-gia-ban`)?.value),
+      axisVat: utils.parseCurrency(document.getElementById(`${prefix}truc-vat`)?.value),
       axisCommissionPercent: document.getElementById(`${prefix}truc-hoa-hong-percent`)?.value
     });
 
@@ -188,7 +197,10 @@ function calculateBangKeoIn(mode = 'order') {
     document.getElementById(`${prefix}don-gia-goc`).value = utils.formatCurrency(result.product.costPrice);
     document.getElementById(`${prefix}thanh-tien-goc`).value = utils.formatCurrency(result.product.costTotal);
     document.getElementById(`${prefix}thanh-tien-ban`).value = utils.formatCurrency(result.product.saleTotal);
-    document.getElementById(`${prefix}cong-no-khach`).value = utils.formatCurrency(result.outstanding);
+    const savedAxisTotal = mode === 'quote' && typeof getActiveQuoteDraft === 'function'
+      ? (getActiveQuoteDraft('bang_keo_in').savedAxes || []).reduce((sum, axis) => sum + orderMath.number(axis.total) + orderMath.number(axis.vat), 0)
+      : 0;
+    document.getElementById(`${prefix}cong-no-khach`).value = utils.formatCurrency(result.outstanding + savedAxisTotal);
     document.getElementById(`${prefix}tien-hoa-hong`).value = utils.formatCurrency(result.product.commission);
     document.getElementById(`${prefix}loi-nhuan`).value = utils.formatCurrency(result.product.profit);
     calculateBangKeoInAxis(mode, result.axis);
@@ -242,11 +254,16 @@ async function saveBangKeoIn(event, mode = 'order') {
 
     const isNewAxis = document.getElementById(`${prefix}loai-truc`)?.value === 'moi';
     if (isNewAxis) {
+      const savedAxisCount = mode === 'quote' && typeof getActiveQuoteDraft === 'function'
+        ? (getActiveQuoteDraft('bang_keo_in').savedAxes || []).length
+        : 0;
+      const axisName = document.getElementById(`${prefix}truc-ten`).value.trim();
       const axisQuantity = parseFloat(document.getElementById(`${prefix}truc-so-luong`).value) || 0;
       const axisCost = utils.parseCurrency(document.getElementById(`${prefix}truc-gia-goc`).value);
       const axisSale = utils.parseCurrency(document.getElementById(`${prefix}truc-gia-ban`).value);
-      if (axisQuantity <= 0 || axisCost <= 0 || axisSale <= 0) {
-        utils.showToast("Trục mới cần có số lượng, giá gốc và giá bán lớn hơn 0", "warning");
+      const currentAxisStarted = !!axisName || axisQuantity > 0 || axisCost > 0 || axisSale > 0;
+      if ((savedAxisCount === 0 || currentAxisStarted) && (!axisName || axisQuantity <= 0 || axisCost <= 0 || axisSale <= 0)) {
+        utils.showToast("Trục mới cần đủ tên, số lượng, giá gốc và giá bán", "warning");
         return;
       }
     }
@@ -296,12 +313,16 @@ async function saveBangKeoIn(event, mode = 'order') {
       truc_gia_ban: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-gia-ban`).value) : 0,
       truc_thanh_tien_goc: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-goc`).value) : 0,
       truc_thanh_tien_ban: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-ban`).value) : 0,
+      truc_vat: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-vat`)?.value) : 0,
       truc_ctv: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (document.getElementById(`${prefix}truc-ctv`).value.trim() || null) : null,
       truc_hoa_hong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (parseFloat(document.getElementById(`${prefix}truc-hoa-hong-percent`).value) || 0) : 0,
       truc_tien_hoa_hong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-tien-hoa-hong`).value) : 0,
       truc_loi_nhuan: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-loi-nhuan`).value) : 0,
       truc_loi_nhuan_rong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-loi-nhuan-rong`).value) : 0
     };
+
+    if (mode === 'quote' && !prepareQuoteItems('bang_keo_in', data)) return;
+    if (mode === 'quote' && await saveEditedQuoteIfNeeded('bang_keo_in', data)) return;
 
     // Tạo mã ID đơn hàng tự động
     const idPrefix = (mode === 'quote') ? "BG-BK" : "BK";
@@ -318,12 +339,12 @@ async function saveBangKeoIn(event, mode = 'order') {
         loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
         loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
         truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
-        truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, vat
+        truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, truc_vat, vat, quote_items
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
         $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 
         $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-        $42, $43, $44, $45, $46, $47, $48, $49, $50
+        $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52
       )
     `;
 
@@ -337,7 +358,8 @@ async function saveBangKeoIn(event, mode = 'order') {
       data.loi_nhuan_rong, data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote,
       data.loai_truc, data.ten_truc, data.truc_chu_vi, data.truc_so_luong, data.truc_gia_goc,
       data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
-      data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong, data.vat
+      data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong, data.truc_vat, data.vat,
+      JSON.stringify(data.quote_items || [])
     ];
 
     const res = await window.electronAPI.dbRun(sql, params);
@@ -350,6 +372,7 @@ async function saveBangKeoIn(event, mode = 'order') {
           await generateAndSaveQuotePDF(orderId, 'bang_keo_in', data);
         }
         clearFormBangKeoIn('quote');
+        clearQuoteItems('bang_keo_in');
       } else {
         utils.showToast(`Đã lưu đơn hàng thành công! Mã: ${orderId}`, "success");
         clearFormBangKeoIn('order');
@@ -486,6 +509,8 @@ function clearFormBangKeoIn(mode = 'order') {
   document.getElementById(`${prefix}thung-bao`).value = "";
   document.getElementById(`${prefix}loi-nhuan`).value = "0";
   document.getElementById(`${prefix}loi-nhuan-rong`).value = "0";
+  const vatEl = document.getElementById(`${prefix}vat`);
+  if (vatEl) vatEl.value = "0";
   setBangKeoInAxisMode(mode, 'cu');
   
   // Đặt ngày dự kiến mặc định là hôm sau

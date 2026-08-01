@@ -131,6 +131,10 @@ function clearForm(type, mode = 'order') {
   } else if (type === 'truc-in') {
     if (typeof clearFormTrucIn === 'function') clearFormTrucIn(mode);
   }
+  if (mode === 'quote' && typeof clearQuoteItems === 'function') {
+    const quoteType = type === 'bang-keo-in' ? 'bang_keo_in' : (type === 'truc-in' ? 'truc_in' : 'bang_keo');
+    clearQuoteItems(quoteType);
+  }
 }
 
 // Nút làm mới trang tiện ích
@@ -272,6 +276,7 @@ function generateBangKeoInEditForm(o) {
       ${buildEditInput('Đơn giá vốn', 'edit-don-gia-von', utils.formatCurrency(o.don_gia_von), { currency: true })}
       ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
       ${buildEditInput('Tiền cọc', 'edit-tien-coc', utils.formatCurrency(o.tien_coc), { currency: true })}
+      ${buildEditInput('VAT (đ)', 'edit-vat', utils.formatCurrency(o.vat), { currency: true })}
       ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
       ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
       ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
@@ -290,6 +295,7 @@ function generateBangKeoInEditForm(o) {
         ${buildEditInput('Số lượng trục', 'edit-truc-so-luong', o.truc_so_luong, { type: 'number', min: 0 })}
         ${buildEditInput('Giá gốc trục', 'edit-truc-gia-goc', utils.formatCurrency(o.truc_gia_goc), { currency: true })}
         ${buildEditInput('Giá bán trục', 'edit-truc-gia-ban', utils.formatCurrency(o.truc_gia_ban), { currency: true })}
+        ${buildEditInput('VAT trục', 'edit-truc-vat', utils.formatCurrency(o.truc_vat), { currency: true })}
         ${buildEditInput('CTV trục', 'edit-truc-ctv', o.truc_ctv)}
         ${buildEditInput('Hoa hồng trục (%)', 'edit-truc-hoa-hong-percent', o.truc_hoa_hong, { type: 'number', min: 0, max: 100 })}
       </div>
@@ -324,6 +330,7 @@ function generateTrucInEditForm(o) {
       ${buildEditInput('Số lượng', 'edit-so-luong', o.so_luong, { type: 'number', min: 0, required: true })}
       ${buildEditInput('Đơn giá gốc', 'edit-don-gia-goc', utils.formatCurrency(o.don_gia_goc), { currency: true, required: true })}
       ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
+      ${buildEditInput('VAT (đ)', 'edit-vat', utils.formatCurrency(o.vat), { currency: true })}
       ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
       ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
       ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
@@ -355,6 +362,7 @@ async function submitEditOrder() {
     const ctv = document.getElementById('edit-ctv').value.trim() || null;
     const hoaHong = orderMath.percent(document.getElementById('edit-hoa-hong-percent').value);
     const tienShip = utils.parseCurrency(document.getElementById('edit-tien-ship').value);
+    const vat = utils.parseCurrency(document.getElementById('edit-vat')?.value);
 
     if (!tenHang || !tenKhachHang || !ngayDuKien || soLuong <= 0 || donGiaBan <= 0) {
       utils.showToast('Vui lòng nhập đủ tên hàng, khách hàng, ngày giao, số lượng và giá bán', 'warning');
@@ -373,6 +381,7 @@ async function submitEditOrder() {
       const axisQuantity = parseFloat(document.getElementById('edit-truc-so-luong').value) || 0;
       const axisCostPrice = utils.parseCurrency(document.getElementById('edit-truc-gia-goc').value);
       const axisSalePrice = utils.parseCurrency(document.getElementById('edit-truc-gia-ban').value);
+      const axisVat = isNewAxis ? utils.parseCurrency(document.getElementById('edit-truc-vat').value) : 0;
 
       if (isNewAxis && (!document.getElementById('edit-truc-ten').value.trim() || axisQuantity <= 0 || axisCostPrice <= 0 || axisSalePrice <= 0)) {
         utils.showToast('Trục mới cần đủ tên trục, số lượng, giá gốc và giá bán', 'warning');
@@ -389,6 +398,7 @@ async function submitEditOrder() {
         cuttingFee: utils.parseCurrency(document.getElementById('edit-phi-cat').value),
         salePrice: donGiaBan,
         deposit: tienCoc,
+        vat,
         commissionPercent: hoaHong,
         shipping: tienShip,
         rollLength: quyCachM,
@@ -397,6 +407,7 @@ async function submitEditOrder() {
         axisQuantity,
         axisCostPrice,
         axisSalePrice,
+        axisVat,
         axisCommissionPercent: document.getElementById('edit-truc-hoa-hong-percent').value,
         settled: !!editOrderDataGlobal?.da_tat_toan
       });
@@ -411,8 +422,9 @@ async function submitEditOrder() {
           loi_giay=$26, thung_bao=$27, loi_nhuan=$28, tien_ship=$29, loi_nhuan_rong=$30,
           loai_truc=$31, ten_truc=$32, truc_chu_vi=$33, truc_so_luong=$34, truc_gia_goc=$35,
           truc_gia_ban=$36, truc_thanh_tien_goc=$37, truc_thanh_tien_ban=$38, truc_ctv=$39,
-          truc_hoa_hong=$40, truc_tien_hoa_hong=$41, truc_loi_nhuan=$42, truc_loi_nhuan_rong=$43
-        WHERE id=$44
+          truc_hoa_hong=$40, truc_tien_hoa_hong=$41, truc_loi_nhuan=$42, truc_loi_nhuan_rong=$43,
+          truc_vat=$44, vat=$45
+        WHERE id=$46
       `;
       params = [
         tenHang, tenKhachHang, ngayDuKien,
@@ -431,7 +443,7 @@ async function submitEditOrder() {
         isNewAxis ? axisQuantity : 0, isNewAxis ? axisCostPrice : 0, isNewAxis ? axisSalePrice : 0,
         result.axis.costTotal, result.axis.saleTotal,
         isNewAxis ? (document.getElementById('edit-truc-ctv').value.trim() || null) : null,
-        isNewAxis ? result.axis.commissionPercent : 0, result.axis.commission, result.axis.profit, result.axis.netProfit,
+        isNewAxis ? result.axis.commissionPercent : 0, result.axis.commission, result.axis.profit, result.axis.netProfit, axisVat, vat,
         editOrderIdGlobal
       ];
     } else {
@@ -446,6 +458,7 @@ async function submitEditOrder() {
         salePrice: donGiaBan,
         commissionPercent: hoaHong,
         shipping: tienShip,
+        vat,
         settled: !!editOrderDataGlobal?.da_tat_toan
       });
       const common = [
@@ -457,17 +470,17 @@ async function submitEditOrder() {
         sql = `UPDATE truc_in_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
           so_luong=$5, mau_sac=$6, mau_keo=$7, don_gia_goc=$8, don_gia_ban=$9, ctv=$10,
           hoa_hong=$11, tien_ship=$12, thanh_tien_goc=$13, thanh_tien_ban=$14, cong_no_khach=$15,
-          loi_nhuan=$16, tien_hoa_hong=$17, loi_nhuan_rong=$18 WHERE id=$19`;
+          loi_nhuan=$16, tien_hoa_hong=$17, loi_nhuan_rong=$18, vat=$19 WHERE id=$20`;
         params = [...common, document.getElementById('edit-mau-keo').value.trim() || null, donGiaGoc, donGiaBan,
           ctv, hoaHong, tienShip, result.costTotal, result.saleTotal, result.outstanding,
-          result.profit, result.commission, result.netProfit, editOrderIdGlobal];
+          result.profit, result.commission, result.netProfit, vat, editOrderIdGlobal];
       } else {
         sql = `UPDATE bang_keo_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
           so_luong=$5, mau_sac=$6, don_gia_goc=$7, don_gia_ban=$8, ctv=$9, hoa_hong=$10,
           tien_ship=$11, thanh_tien=$12, thanh_tien_ban=$13, cong_no_khach=$14,
-          loi_nhuan=$15, tien_hoa_hong=$16, loi_nhuan_rong=$17 WHERE id=$18`;
+          loi_nhuan=$15, tien_hoa_hong=$16, loi_nhuan_rong=$17, vat=$18 WHERE id=$19`;
         params = [...common, donGiaGoc, donGiaBan, ctv, hoaHong, tienShip, result.costTotal,
-          result.saleTotal, result.outstanding, result.profit, result.commission, result.netProfit, editOrderIdGlobal];
+          result.saleTotal, result.outstanding, result.profit, result.commission, result.netProfit, vat, editOrderIdGlobal];
       }
     }
 
@@ -568,6 +581,7 @@ async function exportCurrentFormToExcel() {
       'Thành tiền gốc': utils.parseCurrency(document.getElementById(`${prefix}bki-thanh-tien-goc`).value),
       'Đơn giá bán': utils.parseCurrency(document.getElementById(`${prefix}bki-don-gia-ban`).value),
       'Thành tiền bán': utils.parseCurrency(document.getElementById(`${prefix}bki-thanh-tien-ban`).value),
+      'VAT': utils.parseCurrency(document.getElementById(`${prefix}bki-vat`)?.value),
       'Tiền cọc': utils.parseCurrency(document.getElementById(`${prefix}bki-tien-coc`).value),
       'Công nợ khách': utils.parseCurrency(document.getElementById(`${prefix}bki-cong-no-khach`).value),
       'CTV': document.getElementById(`${prefix}bki-ctv`).value.trim(),
@@ -605,6 +619,7 @@ async function exportCurrentFormToExcel() {
       'Đơn giá bán': utils.parseCurrency(document.getElementById(`${prefix}bk-don-gia-ban`).value),
       'Thành tiền bán': utils.parseCurrency(document.getElementById(`${prefix}bk-thanh-tien-ban`).value),
       'Công nợ khách': utils.parseCurrency(document.getElementById(`${prefix}bk-cong-no-khach`).value),
+      'VAT': utils.parseCurrency(document.getElementById(`${prefix}bk-vat`)?.value),
       'CTV': document.getElementById(`${prefix}bk-ctv`).value.trim(),
       'Hoa hồng (%)': parseFloat(document.getElementById(`${prefix}bk-hoa-hong-percent`).value) || 0,
       'Tiền hoa hồng': utils.parseCurrency(document.getElementById(`${prefix}bk-tien-hoa-hong`).value),
@@ -627,6 +642,7 @@ async function exportCurrentFormToExcel() {
       'Đơn giá bán': utils.parseCurrency(document.getElementById(`${prefix}ti-don-gia-ban`).value),
       'Thành tiền bán': utils.parseCurrency(document.getElementById(`${prefix}ti-thanh-tien-ban`).value),
       'Công nợ khách': utils.parseCurrency(document.getElementById(`${prefix}ti-cong-no-khach`).value),
+      'VAT': utils.parseCurrency(document.getElementById(`${prefix}ti-vat`)?.value),
       'CTV': document.getElementById(`${prefix}ti-ctv`).value.trim(),
       'Hoa hồng (%)': parseFloat(document.getElementById(`${prefix}ti-hoa-hong-percent`).value) || 0,
       'Tiền hoa hồng': utils.parseCurrency(document.getElementById(`${prefix}ti-tien-hoa-hong`).value),

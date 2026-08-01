@@ -41,10 +41,11 @@ function printedTapeData(id, { newAxis = false, quote = false } = {}) {
     axisQuantity: 1,
     axisCostPrice: 1400000,
     axisSalePrice: 1800000,
+    axisVat: newAxis ? 180000 : 0,
     axisCommissionPercent: 20
   });
 
-  return {
+  const data = {
     id,
     thoi_gian: new Date(),
     ten_hang: `CODEX TEST BKI ${newAxis ? 'TRUC MOI' : 'TRUC CU'}`,
@@ -90,12 +91,23 @@ function printedTapeData(id, { newAxis = false, quote = false } = {}) {
     truc_gia_ban: result.axis.salePrice,
     truc_thanh_tien_goc: result.axis.costTotal,
     truc_thanh_tien_ban: result.axis.saleTotal,
+    truc_vat: result.axis.vat,
     truc_ctv: newAxis ? 'CODEX CTV TRUC' : null,
     truc_hoa_hong: result.axis.commissionPercent,
     truc_tien_hoa_hong: result.axis.commission,
     truc_loi_nhuan: result.axis.profit,
     truc_loi_nhuan_rong: result.axis.netProfit
   };
+  if (quote) {
+    data.quote_items = JSON.stringify([
+      { specification: '48mm x 90m (50mic)', quantity: 60, unitPrice: 26000, total: 1560000, axes: [
+        { name: 'TRỤC ĐỎ', circumference: 380, quantity: 1, unitPrice: 900000, total: 900000 },
+        { name: 'TRỤC XANH', circumference: 380, quantity: 1, unitPrice: 850000, total: 850000 }
+      ] },
+      { specification: '60mm x 90m (50mic)', quantity: 60, unitPrice: 28000, total: 1680000 }
+    ]);
+  }
+  return data;
 }
 
 function standardData(id, table, { quote = false } = {}) {
@@ -137,6 +149,12 @@ function standardData(id, table, { quote = false } = {}) {
   } else {
     base.thanh_tien = result.costTotal;
   }
+  if (quote) {
+    base.quote_items = JSON.stringify([
+      { specification: '48mm', quantity: 40, unitPrice: 12000, total: 480000 },
+      { specification: '60mm', quantity: 60, unitPrice: 14000, total: 840000 }
+    ]);
+  }
   return base;
 }
 
@@ -168,6 +186,10 @@ async function run() {
   try {
     await client.query('BEGIN');
     await client.query('SET LOCAL statement_timeout = 15000');
+    for (const table of ['bang_keo_in_orders', 'bang_keo_orders', 'truc_in_orders']) {
+      await client.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS quote_items JSONB DEFAULT '[]'::jsonb`);
+    }
+    await client.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS truc_vat NUMERIC DEFAULT 0`);
 
     const clock = await client.query('SELECT NOW() AS now');
     assert.ok(clock.rows[0].now);
@@ -185,14 +207,40 @@ async function run() {
     const newAxis = inserted.find(row => row.id === ids.bkiNew);
     assert.equal(newAxis.loai_truc, 'moi');
     assert.equal(Number(newAxis.truc_thanh_tien_ban), Number(newAxis.truc_so_luong) * Number(newAxis.truc_gia_ban));
-    assert.equal(Number(newAxis.cong_no_khach), Number(newAxis.thanh_tien_ban) + Number(newAxis.truc_thanh_tien_ban) - Number(newAxis.tien_coc));
+    assert.equal(Number(newAxis.cong_no_khach), Number(newAxis.thanh_tien_ban) + Number(newAxis.truc_thanh_tien_ban) + Number(newAxis.truc_vat) - Number(newAxis.tien_coc));
     assert.ok(Number(newAxis.truc_tien_hoa_hong) > 0);
+
+    const originalQuoteAxisCount = await client.query(
+      `SELECT jsonb_array_length(quote_items->0->'axes') AS axis_count FROM bang_keo_in_orders WHERE id = $1`,
+      [ids.bkiQuote]
+    );
+    assert.equal(Number(originalQuoteAxisCount.rows[0].axis_count), 2);
+
+    const editedQuoteItems = [
+      { specification: '50mm x 100m (50mic)', quantity: 30, unitPrice: 30000, total: 900000, fields: { 'qc-mm': '50', 'so-luong': '30', 'don-gia-ban': '30000' }, axes: [] },
+      { specification: '70mm x 100m (50mic)', quantity: 20, unitPrice: 40000, total: 800000, fields: { 'qc-mm': '70', 'so-luong': '20', 'don-gia-ban': '40000' }, axes: [{ name: 'TRỤC SỬA', quantity: 1, unitPrice: 500000, total: 500000, vat: 50000 }] }
+    ];
+    await client.query(
+      `UPDATE bang_keo_in_orders SET ten_hang = $1, so_luong = $2, thanh_tien_ban = $3, quote_items = $4 WHERE id = $5 AND is_quote = TRUE`,
+      ['CODEX TEST BKI EDITED', 50, 1700000, JSON.stringify(editedQuoteItems), ids.bkiQuote]
+    );
+    const editedQuote = (await client.query(
+      `SELECT ten_hang, so_luong, thanh_tien_ban, jsonb_array_length(quote_items) AS item_count,
+              jsonb_array_length(quote_items->1->'axes') AS axis_count
+       FROM bang_keo_in_orders WHERE id = $1`,
+      [ids.bkiQuote]
+    )).rows[0];
+    assert.equal(editedQuote.ten_hang, 'CODEX TEST BKI EDITED');
+    assert.equal(Number(editedQuote.so_luong), 50);
+    assert.equal(Number(editedQuote.thanh_tien_ban), 1700000);
+    assert.equal(editedQuote.item_count, 2);
+    assert.equal(editedQuote.axis_count, 1);
 
     await assertStatusLifecycle(
       client,
       'bang_keo_in_orders',
       ids.bkiNew,
-      `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END - COALESCE(tien_coc, 0), 0)`
+      `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`
     );
     await assertStatusLifecycle(client, 'bang_keo_orders', ids.tape, 'GREATEST(COALESCE(thanh_tien_ban, 0), 0)');
     await assertStatusLifecycle(client, 'truc_in_orders', ids.axis, 'GREATEST(COALESCE(thanh_tien_ban, 0), 0)');
@@ -219,6 +267,16 @@ async function run() {
       ) quotes
     `, [Object.values(ids)]);
     assert.equal(quoteCount.rows[0].count, 3);
+    const quoteSizes = await client.query(`
+      SELECT jsonb_array_length(quote_items) AS item_count
+      FROM bang_keo_in_orders WHERE id = $1
+    `, [ids.bkiQuote]);
+    assert.equal(Number(quoteSizes.rows[0].item_count), 2);
+    const quoteAxisCount = await client.query(`
+      SELECT jsonb_array_length(quote_items->0->'axes') AS axis_count
+      FROM bang_keo_in_orders WHERE id = $1
+    `, [ids.bkiQuote]);
+    assert.equal(Number(quoteAxisCount.rows[0].axis_count), 0);
 
     const integrity = await client.query(`
       SELECT

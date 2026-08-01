@@ -238,7 +238,7 @@ async function proceedToExportPreview() {
           unit: 'trục',
           quantity: orderMath.number(order.truc_so_luong),
           price: orderMath.number(order.truc_gia_ban),
-          vat: 0,
+          vat: orderMath.number(order.truc_vat),
           total: orderMath.number(order.truc_thanh_tien_ban) || (
             orderMath.number(order.truc_so_luong) * orderMath.number(order.truc_gia_ban)
           )
