@@ -2990,7 +2990,8 @@ body.light-theme #stats-table tbody tr.stats-axis-child {
 }
 
 /* Quotation workspace: keep entered values and calculated values visually separate. */
-.quote-ui-restructured {
+.quote-ui-restructured,
+.sales-ui-restructured {
   --quote-input-bg: color-mix(in srgb, var(--color-primary) 4%, var(--bg-secondary));
   --quote-result-bg: color-mix(in srgb, var(--color-success) 5%, var(--bg-secondary));
 }
@@ -3047,6 +3048,101 @@ body.light-theme #stats-table tbody tr.stats-axis-child {
 .quote-section-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px 12px; }
 .quote-result-section .quote-section-grid { grid-template-columns: 1fr; gap: 10px; }
 
+.quote-section-grid.quote-entry-groups {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.quote-entry-group {
+  min-width: 0;
+  padding: 14px 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-tertiary) 62%, var(--bg-secondary));
+}
+
+.quote-entry-group-heading {
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
+}
+
+.quote-entry-group-heading h4 {
+  margin: 0 0 3px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.quote-entry-group-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.quote-entry-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quote-entry-group .form-group { min-width: 0; }
+
+.axis-switch-control {
+  display: grid;
+  grid-template-columns: 1fr 42px 1fr;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 120ms ease;
+}
+
+.axis-switch-control:hover { border-color: color-mix(in srgb, var(--color-primary) 55%, var(--border-color)); }
+.axis-switch-control:active { transform: translateY(1px); }
+.axis-switch-control:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.axis-switch-option { font-size: 11px; font-weight: 650; transition: color 180ms ease, font-weight 180ms ease; }
+.axis-switch-old { text-align: right; }
+.axis-switch-new { text-align: left; }
+.axis-switch-control:not(.is-new) .axis-switch-old,
+.axis-switch-control.is-new .axis-switch-new { color: var(--color-primary); font-weight: 800; }
+
+.axis-switch-track {
+  position: relative;
+  width: 42px;
+  height: 23px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 30%, var(--bg-tertiary));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 30%, transparent);
+  transition: background-color 180ms ease;
+}
+
+.axis-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, .24);
+  transition: transform 180ms ease;
+}
+
+.axis-switch-control.is-new .axis-switch-track { background: var(--color-primary); }
+.axis-switch-control.is-new .axis-switch-thumb { transform: translateX(19px); }
+
 .quote-result-section .form-control[readonly] {
   border-style: solid;
   border-color: color-mix(in srgb, var(--color-success) 25%, var(--border-color));
@@ -3056,7 +3152,8 @@ body.light-theme #stats-table tbody tr.stats-axis-child {
 }
 
 .quote-axis-workspace { margin-top: 14px; }
-.quote-workspace-card > .btn-row { margin-top: 18px; }
+.quote-workspace-card > .btn-row,
+.sales-workspace-card > .btn-row { margin-top: 18px; }
 
 @media (max-width: 980px) {
   .quote-form-workspace { grid-template-columns: 1fr; }
@@ -3065,7 +3162,13 @@ body.light-theme #stats-table tbody tr.stats-axis-child {
   .quote-shared-grid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 760px) {
+  .quote-section-grid.quote-entry-groups { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 560px) {
   .quote-section-grid,
   .quote-result-section .quote-section-grid { grid-template-columns: 1fr; }
+  .quote-entry-group-grid { grid-template-columns: 1fr; }
+  .axis-switch-control { grid-template-columns: minmax(64px, 1fr) 42px minmax(64px, 1fr); }
 }

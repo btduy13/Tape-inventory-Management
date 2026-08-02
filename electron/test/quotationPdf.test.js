@@ -55,3 +55,20 @@ test('saved quotations can be loaded into tabs and updated in place', () => {
   assert.match(quotationSource, /Cập nhật báo giá & Xuất PDF/);
   assert.match(quotationSource, /fields: \{ \.\.\.fields \}/);
 });
+
+test('sales forms reuse the separated quotation workspace structure', () => {
+  assert.match(quotationSource, /const salesFormConfigs =/);
+  assert.match(quotationSource, /function restructureSalesForm\(type, config\)/);
+  assert.match(quotationSource, /sales-product-card/);
+  assert.match(quotationSource, /sales-entry-section/);
+  assert.match(quotationSource, /sales-result-section/);
+  assert.match(quotationSource, /sales-ui-restructured/);
+});
+
+test('quotation declaration fields are grouped and axis mode uses one switch', () => {
+  assert.match(quotationSource, /const quoteEntryGroupConfigs =/);
+  assert.match(quotationSource, /Quy cách & trục in/);
+  assert.match(quotationSource, /Sản lượng & thành phẩm/);
+  assert.match(quotationSource, /Giá bán & phụ phí/);
+  assert.match(quotationSource, /Thanh toán & cộng tác/);
+});

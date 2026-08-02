@@ -291,10 +291,11 @@
                                     <div class="form-group">
                                         <label class="form-label">Loại trục</label>
                                         <input type="hidden" id="bki-loai-truc" value="cu">
-                                        <div class="radio-pill-group axis-toggle-group">
-                                            <button type="button" class="btn btn-pill active" id="bki-axis-old" onclick="setBangKeoInAxisMode('order', 'cu')">Trục cũ</button>
-                                            <button type="button" class="btn btn-pill" id="bki-axis-new" onclick="setBangKeoInAxisMode('order', 'moi')">Trục mới</button>
-                                        </div>
+                                        <button type="button" class="axis-switch-control" id="bki-axis-switch" role="switch" aria-checked="false" onclick="toggleBangKeoInAxisMode('order')">
+                                            <span class="axis-switch-option axis-switch-old">Trục cũ</span>
+                                            <span class="axis-switch-track" aria-hidden="true"><span class="axis-switch-thumb"></span></span>
+                                            <span class="axis-switch-option axis-switch-new">Trục mới</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -702,10 +703,11 @@
                                     <div class="form-group">
                                         <label class="form-label">Loại trục</label>
                                         <input type="hidden" id="q-bki-loai-truc" value="cu">
-                                        <div class="radio-pill-group axis-toggle-group">
-                                            <button type="button" class="btn btn-pill active" id="q-bki-axis-old" onclick="setBangKeoInAxisMode('quote', 'cu')">Trục cũ</button>
-                                            <button type="button" class="btn btn-pill" id="q-bki-axis-new" onclick="setBangKeoInAxisMode('quote', 'moi')">Trục mới</button>
-                                        </div>
+                                        <button type="button" class="axis-switch-control" id="q-bki-axis-switch" role="switch" aria-checked="false" onclick="toggleBangKeoInAxisMode('quote')">
+                                            <span class="axis-switch-option axis-switch-old">Trục cũ</span>
+                                            <span class="axis-switch-track" aria-hidden="true"><span class="axis-switch-thumb"></span></span>
+                                            <span class="axis-switch-option axis-switch-new">Trục mới</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

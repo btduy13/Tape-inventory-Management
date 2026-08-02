@@ -7,6 +7,11 @@ const quoteDraftConfigs = {
   bang_keo: { formId: 'form-quote-bang-keo', prefix: 'q-bk-', calculate: () => calculateBangKeo('quote') },
   truc_in: { formId: 'form-quote-truc-in', prefix: 'q-ti-', calculate: () => calculateTrucIn('quote') }
 };
+const salesFormConfigs = {
+  bang_keo_in: { formId: 'form-bang-keo-in', prefix: 'bki-' },
+  bang_keo: { formId: 'form-bang-keo', prefix: 'bk-' },
+  truc_in: { formId: 'form-truc-in', prefix: 'ti-' }
+};
 const quoteSharedFields = new Set(['ten-hang', 'ngay-du-kien', 'ten-khach-hang']);
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     restructureQuoteForm(type);
     initializeQuoteDrafts(type);
   });
+  Object.entries(salesFormConfigs).forEach(([type, config]) => restructureSalesForm(type, config));
 });
 
 function createQuoteSection(title, description, className) {
@@ -25,6 +31,148 @@ function createQuoteSection(title, description, className) {
     </div>
     <div class="quote-section-grid"></div>`;
   return section;
+}
+
+const quoteEntryGroupConfigs = {
+  bang_keo_in: [
+    { key: 'specification', title: 'Quy cách & trục in', description: 'Kích thước cuộn và loại trục sử dụng.', fields: ['qc-mm', 'qc-m', 'qc-mic', 'cuon-cay', 'loai-truc'] },
+    { key: 'product', title: 'Sản lượng & thành phẩm', description: 'Số lượng, màu in, lõi và bao bì.', fields: ['so-luong', 'mau-keo', 'mau-sac', 'loi-giay', 'thung-bao'] },
+    { key: 'pricing', title: 'Giá bán & phụ phí', description: 'Chi phí cấu thành và đơn giá áp dụng.', fields: ['phi-sl', 'phi-keo', 'phi-mau', 'phi-size', 'phi-cat', 'don-gia-von', 'don-gia-ban'] },
+    { key: 'payment', title: 'Thanh toán & cộng tác', description: 'Cọc, VAT, vận chuyển và hoa hồng.', fields: ['tien-coc', 'vat', 'tien-ship', 'ctv', 'hoa-hong-percent'] }
+  ],
+  bang_keo: [
+    { key: 'specification', title: 'Quy cách & sản lượng', description: 'Thông số của mặt hàng đang báo giá.', fields: ['quy-cach', 'so-luong', 'mau-sac'] },
+    { key: 'pricing', title: 'Giá & thanh toán', description: 'Giá mua, giá bán, VAT và vận chuyển.', fields: ['don-gia-goc', 'don-gia-ban', 'vat', 'tien-ship'] },
+    { key: 'collaboration', title: 'Cộng tác viên', description: 'Người giới thiệu và tỷ lệ hoa hồng.', fields: ['ctv', 'hoa-hong-percent'] }
+  ],
+  truc_in: [
+    { key: 'specification', title: 'Quy cách & sản lượng', description: 'Kích thước, số lượng và màu trục.', fields: ['quy-cach', 'so-luong', 'mau-sac', 'mau-keo'] },
+    { key: 'pricing', title: 'Giá & thanh toán', description: 'Giá gia công, giá bán, VAT và vận chuyển.', fields: ['don-gia-goc', 'don-gia-ban', 'vat', 'tien-ship'] },
+    { key: 'collaboration', title: 'Cộng tác viên', description: 'Người giới thiệu và tỷ lệ hoa hồng.', fields: ['ctv', 'hoa-hong-percent'] }
+  ]
+};
+
+const quoteAxisEntryGroups = [
+  { key: 'identity', title: 'Thông số trục', description: 'Tên, chu vi và số lượng trục.', fields: ['truc-ten', 'truc-chu-vi', 'truc-so-luong'] },
+  { key: 'pricing', title: 'Giá & VAT trục', description: 'Giá vốn, giá bán và VAT riêng của trục.', fields: ['truc-gia-goc', 'truc-gia-ban', 'truc-vat'] },
+  { key: 'collaboration', title: 'Hoa hồng trục', description: 'CTV và tỷ lệ hoa hồng của trục.', fields: ['truc-ctv', 'truc-hoa-hong-percent'] }
+];
+
+function organizeQuoteEntryGroups(container, prefix, groups) {
+  if (!container || !groups?.length) return;
+  const fieldNodes = new Map();
+  [...container.querySelectorAll(':scope > .form-group')].forEach(group => {
+    const control = group.querySelector('input[id], select[id], textarea[id]');
+    if (control?.id.startsWith(prefix)) fieldNodes.set(control.id.slice(prefix.length), group);
+  });
+
+  container.classList.add('quote-entry-groups');
+  groups.forEach(groupConfig => {
+    const subsection = document.createElement('section');
+    subsection.className = `quote-entry-group quote-entry-group-${groupConfig.key}`;
+    subsection.innerHTML = `
+      <header class="quote-entry-group-heading">
+        <h4>${groupConfig.title}</h4>
+        <p>${groupConfig.description}</p>
+      </header>
+      <div class="quote-entry-group-grid"></div>`;
+    const grid = subsection.querySelector('.quote-entry-group-grid');
+    groupConfig.fields.forEach(field => {
+      const node = fieldNodes.get(field);
+      if (node) {
+        grid.append(node);
+        fieldNodes.delete(field);
+      }
+    });
+    if (grid.children.length) container.append(subsection);
+  });
+
+  if (fieldNodes.size) {
+    const fallback = document.createElement('section');
+    fallback.className = 'quote-entry-group quote-entry-group-other';
+    fallback.innerHTML = '<header class="quote-entry-group-heading"><h4>Thông tin khác</h4></header><div class="quote-entry-group-grid"></div>';
+    fieldNodes.forEach(node => fallback.querySelector('.quote-entry-group-grid').append(node));
+    container.append(fallback);
+  }
+}
+
+function restructureSalesForm(type, config) {
+  const form = document.getElementById(config?.formId);
+  if (!form || form.classList.contains('sales-ui-restructured')) return;
+
+  const productInput = document.getElementById(`${config.prefix}ten-hang`);
+  const customerInput = document.getElementById(`${config.prefix}ten-khach-hang`);
+  const dateInput = document.getElementById(`${config.prefix}ngay-du-kien`);
+  const saleInput = document.getElementById(`${config.prefix}don-gia-ban`);
+  const infoCard = productInput?.closest('.form-card');
+  const priceCard = saleInput?.closest('.form-card');
+  if (!productInput || !customerInput || !dateInput || !infoCard || !priceCard) return;
+
+  const productCard = createQuoteSection(
+    'Tên hàng',
+    'Thông tin nhận diện của đơn bán hàng.',
+    'form-card quote-product-card sales-product-card'
+  );
+  productCard.querySelector('.quote-section-grid').append(productInput.closest('.form-group'));
+  infoCard.before(productCard);
+
+  infoCard.classList.add('quote-shared-card', 'sales-shared-card');
+  const infoTitle = infoCard.querySelector('.form-section-title');
+  if (infoTitle) infoTitle.textContent = 'Khách hàng và thời gian giao';
+  infoCard.querySelector('.form-grid')?.classList.add('quote-shared-grid');
+
+  const entrySection = createQuoteSection(
+    'Kê khai',
+    'Thông tin cần nhập cho đơn hàng đang tạo.',
+    'quote-entry-section sales-entry-section'
+  );
+  const resultSection = createQuoteSection(
+    'Kết quả tính toán',
+    'Các giá trị tự cập nhật từ phần kê khai.',
+    'quote-result-section sales-result-section'
+  );
+  const entryGrid = entrySection.querySelector('.quote-section-grid');
+  const resultGrid = resultSection.querySelector('.quote-section-grid');
+  const allGroups = [...new Set([
+    ...infoCard.querySelectorAll('.form-group'),
+    ...priceCard.querySelectorAll('.form-group')
+  ])];
+  allGroups.forEach(group => {
+    const control = group.querySelector('input, select, textarea');
+    if (!control || control === productInput || control === customerInput || control === dateInput) return;
+    (control.readOnly ? resultGrid : entryGrid).append(group);
+  });
+  organizeQuoteEntryGroups(entryGrid, config.prefix, quoteEntryGroupConfigs[type]);
+
+  priceCard.classList.add('quote-workspace-card', 'sales-workspace-card');
+  priceCard.querySelector('.form-section-title')?.remove();
+  [...priceCard.querySelectorAll(':scope > .form-grid')].forEach(grid => grid.remove());
+  const workspace = document.createElement('div');
+  workspace.className = 'quote-form-workspace sales-form-workspace';
+  workspace.append(entrySection, resultSection);
+  priceCard.prepend(workspace);
+
+  const axisCard = type === 'bang_keo_in' ? document.getElementById('bki-new-axis-card') : null;
+  if (axisCard) {
+    const axisGrid = axisCard.querySelector(':scope > .form-grid');
+    if (axisGrid) {
+      const axisEntry = createQuoteSection('Kê khai trục', 'Thông số và VAT của trục mới.', 'quote-entry-section sales-entry-section');
+      const axisResult = createQuoteSection('Kết quả trục', 'Giá trị được tính riêng cho trục.', 'quote-result-section sales-result-section');
+      [...axisGrid.querySelectorAll(':scope > .form-group')].forEach(group => {
+        const control = group.querySelector('input, select, textarea');
+        const destination = control?.readOnly ? axisResult : axisEntry;
+        destination.querySelector('.quote-section-grid').append(group);
+      });
+      organizeQuoteEntryGroups(axisEntry.querySelector('.quote-section-grid'), config.prefix, quoteAxisEntryGroups);
+      const axisWorkspace = document.createElement('div');
+      axisWorkspace.className = 'quote-form-workspace quote-axis-workspace sales-form-workspace';
+      axisWorkspace.append(axisEntry, axisResult);
+      axisGrid.replaceWith(axisWorkspace);
+    }
+    priceCard.after(axisCard);
+  }
+
+  form.classList.add('sales-ui-restructured');
 }
 
 function restructureQuoteForm(type) {
@@ -79,6 +227,7 @@ function restructureQuoteForm(type) {
     if (!control || control === productInput || control === customerInput || control === dateInput) return;
     (control.readOnly ? resultGrid : entryGrid).append(group);
   });
+  organizeQuoteEntryGroups(entryGrid, config.prefix, quoteEntryGroupConfigs[type]);
 
   priceCard.classList.add('quote-workspace-card');
   priceCard.querySelector('.form-section-title')?.remove();
@@ -99,6 +248,7 @@ function restructureQuoteForm(type) {
         const destination = control?.readOnly ? axisResult : axisEntry;
         destination.querySelector('.quote-section-grid').append(group);
       });
+      organizeQuoteEntryGroups(axisEntry.querySelector('.quote-section-grid'), config.prefix, quoteAxisEntryGroups);
       const axisWorkspace = document.createElement('div');
       axisWorkspace.className = 'quote-form-workspace quote-axis-workspace';
       axisWorkspace.append(axisEntry, axisResult);

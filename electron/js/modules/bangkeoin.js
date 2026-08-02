@@ -40,13 +40,15 @@ function setBangKeoInAxisMode(mode = 'order', axisMode = 'cu', options = {}) {
 
   const valueEl = document.getElementById(`${prefix}loai-truc`);
   const cardEl = document.getElementById(`${prefix}new-axis-card`);
-  const oldBtn = document.getElementById(`${prefix}axis-old`);
-  const newBtn = document.getElementById(`${prefix}axis-new`);
+  const switchButton = document.getElementById(`${prefix}axis-switch`);
 
   if (valueEl) valueEl.value = axisMode;
   if (cardEl) cardEl.style.display = isNewAxis ? 'block' : 'none';
-  if (oldBtn) oldBtn.classList.toggle('active', !isNewAxis);
-  if (newBtn) newBtn.classList.toggle('active', isNewAxis);
+  if (switchButton) {
+    switchButton.classList.toggle('is-new', isNewAxis);
+    switchButton.setAttribute('aria-checked', String(isNewAxis));
+    switchButton.setAttribute('aria-label', isNewAxis ? 'Đang dùng trục mới. Nhấn để chuyển sang trục cũ' : 'Đang dùng trục cũ. Nhấn để chuyển sang trục mới');
+  }
 
   ['truc-ten', 'truc-chu-vi', 'truc-so-luong', 'truc-gia-goc', 'truc-gia-ban'].forEach(suffix => {
     const el = document.getElementById(`${prefix}${suffix}`);
@@ -63,6 +65,12 @@ function setBangKeoInAxisMode(mode = 'order', axisMode = 'cu', options = {}) {
   if (mode === 'quote' && typeof renderQuoteAxisTree === 'function') renderQuoteAxisTree();
 
   calculateBangKeoIn(mode);
+}
+
+function toggleBangKeoInAxisMode(mode = 'order') {
+  const prefix = mode === 'quote' ? 'q-bki-' : 'bki-';
+  const currentMode = document.getElementById(`${prefix}loai-truc`)?.value || 'cu';
+  setBangKeoInAxisMode(mode, currentMode === 'moi' ? 'cu' : 'moi');
 }
 
 function clearBangKeoInAxisFields(mode = 'order') {

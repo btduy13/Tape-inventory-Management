@@ -158,7 +158,19 @@ async function evaluate(page, expression) {
         editFirstSize: document.getElementById('q-bki-qc-mm').value,
         editAxisVat: getActiveQuoteDraft('bang_keo_in').savedAxes[0]?.vat,
         editBannerVisible: !document.getElementById('quote-edit-banner-bang_keo_in').hidden,
-        editSubmitLabel: document.querySelector('#form-quote-bang-keo-in button[type="submit"]').textContent
+        editSubmitLabel: document.querySelector('#form-quote-bang-keo-in button[type="submit"]').textContent,
+        entryGroupTitles: [...document.querySelectorAll('#form-quote-bang-keo-in .quote-workspace-card > .quote-form-workspace > .quote-entry-section .quote-entry-group-heading h4')].map(node => node.textContent),
+        axisSwitchRole: document.getElementById('q-bki-axis-switch').getAttribute('role'),
+        axisSwitchChecked: document.getElementById('q-bki-axis-switch').getAttribute('aria-checked'),
+        legacyAxisButtons: document.querySelectorAll('#q-bki-axis-old, #q-bki-axis-new').length,
+        salesFormsRestructured: ['form-bang-keo-in', 'form-bang-keo', 'form-truc-in']
+          .every(id => document.getElementById(id).classList.contains('sales-ui-restructured')),
+        salesProductCardCount: document.querySelectorAll('#form-bang-keo-in .sales-product-card').length,
+        salesEntryContainsReadonly: !!document.querySelector('#form-bang-keo-in .sales-entry-section input[readonly]'),
+        salesResultContainsEditable: !!document.querySelector('#form-bang-keo-in .sales-result-section input:not([readonly])'),
+        salesEntryGroupTitles: [...document.querySelectorAll('#form-bang-keo-in .sales-workspace-card > .sales-form-workspace > .sales-entry-section .quote-entry-group-heading h4')].map(node => node.textContent),
+        salesAxisSwitchRole: document.getElementById('bki-axis-switch').getAttribute('role'),
+        salesLegacyAxisButtons: document.querySelectorAll('#bki-axis-old, #bki-axis-new').length
       };
     })()`);
 
@@ -178,6 +190,22 @@ async function evaluate(page, expression) {
     assert.equal(result.editAxisVat, 5000);
     assert.equal(result.editBannerVisible, true);
     assert.equal(result.editSubmitLabel, 'Cập nhật báo giá & Xuất PDF');
+    assert.deepEqual(result.entryGroupTitles, ['Quy cách & trục in', 'Sản lượng & thành phẩm', 'Giá bán & phụ phí', 'Thanh toán & cộng tác']);
+    assert.equal(result.axisSwitchRole, 'switch');
+    assert.equal(result.axisSwitchChecked, 'true');
+    assert.equal(result.legacyAxisButtons, 0);
+    assert.equal(result.salesFormsRestructured, true);
+    assert.equal(result.salesProductCardCount, 1);
+    assert.equal(result.salesEntryContainsReadonly, false);
+    assert.equal(result.salesResultContainsEditable, false);
+    assert.deepEqual(result.salesEntryGroupTitles, [
+      'Quy c\u00e1ch & tr\u1ee5c in',
+      'S\u1ea3n l\u01b0\u1ee3ng & th\u00e0nh ph\u1ea9m',
+      'Gi\u00e1 b\u00e1n & ph\u1ee5 ph\u00ed',
+      'Thanh to\u00e1n & c\u1ed9ng t\u00e1c'
+    ]);
+    assert.equal(result.salesAxisSwitchRole, 'switch');
+    assert.equal(result.salesLegacyAxisButtons, 0);
     console.log('Electron quotation UI smoke test passed');
   } catch (error) {
     if (stderr.trim()) console.error(stderr.trim());
