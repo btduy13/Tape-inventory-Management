@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 
-const electronExecutable = path.join(
+const electronExecutable = process.env.ELECTRON_TEST_EXECUTABLE || path.join(
   __dirname,
   '..',
   'node_modules',
@@ -11,6 +11,7 @@ const electronExecutable = path.join(
   process.platform === 'win32' ? 'electron.exe' : 'electron'
 );
 const appDirectory = path.join(__dirname, '..');
+const testPackagedExecutable = process.env.ELECTRON_TEST_PACKAGED === '1';
 const debugPort = 9333;
 
 function delay(milliseconds) {
@@ -73,8 +74,10 @@ async function evaluate(page, expression) {
 }
 
 (async () => {
-  const electron = spawn(electronExecutable, [`--remote-debugging-port=${debugPort}`, '.'], {
-    cwd: appDirectory,
+  const electronArguments = [`--remote-debugging-port=${debugPort}`];
+  if (!testPackagedExecutable) electronArguments.push('.');
+  const electron = spawn(electronExecutable, electronArguments, {
+    cwd: testPackagedExecutable ? path.dirname(electronExecutable) : appDirectory,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true
   });
@@ -85,7 +88,7 @@ async function evaluate(page, expression) {
     const page = await waitForPage();
     const result = await evaluate(page, String.raw`(async () => {
       const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
-      for (let attempt = 0; attempt < 40 && typeof addQuoteDraft !== 'function'; attempt += 1) {
+      for (let attempt = 0; attempt < 40 && (document.readyState === 'loading' || typeof addQuoteDraft !== 'function' || typeof switchTab !== 'function'); attempt += 1) {
         await wait(100);
       }
       const setValue = (id, value) => {
@@ -142,6 +145,51 @@ async function evaluate(page, expression) {
         ]
       });
 
+      setValue('bki-so-luong', '10');
+      setValue('bki-don-gia-ban', '12000');
+      setValue('bki-tien-coc', '20000');
+      setValue('bki-vat', '12000');
+      calculateBangKeoIn('order');
+      const printedTapeDebtWithVat = utils.parseCurrency(document.getElementById('bki-cong-no-khach').value);
+
+      setValue('bk-so-luong', '2');
+      setValue('bk-don-gia-goc', '10000');
+      setValue('bk-don-gia-ban', '15000');
+      setValue('bk-vat', '3000');
+      calculateBangKeo('order');
+      const standardTapeDebtWithVat = utils.parseCurrency(document.getElementById('bk-cong-no-khach').value);
+
+      statsViewMode = 'summary';
+      statsAllOrders = [
+        { id: 'FILTER-BA', thoi_gian: '2026-08-01', ten_hang: 'Đơn BA', ten_khach_hang: 'BA', ngay_du_kien: '2026-08-20', cong_no_khach: 1000, cong_no_ncc: 500, da_giao: false, da_tat_toan: false, da_gui_email: false },
+        { id: 'FILTER-BEAN', thoi_gian: '2026-08-02', ten_hang: 'Đơn BEAN', ten_khach_hang: 'BEAN', ngay_du_kien: '2026-08-21', cong_no_khach: 2000, cong_no_ncc: 1000, da_giao: true, da_tat_toan: false, da_gui_email: false }
+      ];
+      renderStatsTable(statsAllOrders);
+
+      const originalAddEventListener = document.addEventListener.bind(document);
+      const originalRemoveEventListener = document.removeEventListener.bind(document);
+      let filterCloseListenerBalance = 0;
+      document.addEventListener = function(type, listener, options) {
+        if (type === 'mousedown' && listener?.name === 'closeMenu') filterCloseListenerBalance += 1;
+        return originalAddEventListener(type, listener, options);
+      };
+      document.removeEventListener = function(type, listener, options) {
+        if (type === 'mousedown' && listener?.name === 'closeMenu') filterCloseListenerBalance -= 1;
+        return originalRemoveEventListener(type, listener, options);
+      };
+
+      const customerFilterButton = document.querySelectorAll('#stats-table-header .table-filter-button')[3];
+      openStatsColumnFilter({ preventDefault() {}, stopPropagation() {}, currentTarget: customerFilterButton }, 'ten_khach_hang');
+      await wait(80);
+      toggleStatsColumnFilterValue('ten_khach_hang', 'BA', false);
+      const filteredCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      clearStatsColumnFilter('ten_khach_hang');
+      const clearedCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const filterMenuClosed = document.getElementById('stats-column-filter-menu').style.display === 'none';
+      const customerHeaderInactive = !document.querySelectorAll('#stats-table-header .table-filter-button')[3].classList.contains('active');
+      document.addEventListener = originalAddEventListener;
+      document.removeEventListener = originalRemoveEventListener;
+
       return {
         draftCountBeforeEdit,
         sharedAfterAdd,
@@ -170,7 +218,16 @@ async function evaluate(page, expression) {
         salesResultContainsEditable: !!document.querySelector('#form-bang-keo-in .sales-result-section input:not([readonly])'),
         salesEntryGroupTitles: [...document.querySelectorAll('#form-bang-keo-in .sales-workspace-card > .sales-form-workspace > .sales-entry-section .quote-entry-group-heading h4')].map(node => node.textContent),
         salesAxisSwitchRole: document.getElementById('bki-axis-switch').getAttribute('role'),
-        salesLegacyAxisButtons: document.querySelectorAll('#bki-axis-old, #bki-axis-new').length
+        salesLegacyAxisButtons: document.querySelectorAll('#bki-axis-old, #bki-axis-new').length,
+        printedTapeVatField: !!document.getElementById('bki-vat'),
+        standardTapeVatField: !!document.getElementById('bk-vat'),
+        printedTapeDebtWithVat,
+        standardTapeDebtWithVat,
+        filteredCustomerRows,
+        clearedCustomerRows,
+        filterMenuClosed,
+        customerHeaderInactive,
+        filterCloseListenerBalance
       };
     })()`);
 
@@ -206,6 +263,15 @@ async function evaluate(page, expression) {
     ]);
     assert.equal(result.salesAxisSwitchRole, 'switch');
     assert.equal(result.salesLegacyAxisButtons, 0);
+    assert.equal(result.printedTapeVatField, true);
+    assert.equal(result.standardTapeVatField, true);
+    assert.equal(result.printedTapeDebtWithVat, 112000);
+    assert.equal(result.standardTapeDebtWithVat, 33000);
+    assert.equal(result.filteredCustomerRows, 1);
+    assert.equal(result.clearedCustomerRows, 2);
+    assert.equal(result.filterMenuClosed, true);
+    assert.equal(result.customerHeaderInactive, true);
+    assert.equal(result.filterCloseListenerBalance, 0);
     console.log('Electron quotation UI smoke test passed');
   } catch (error) {
     if (stderr.trim()) console.error(stderr.trim());

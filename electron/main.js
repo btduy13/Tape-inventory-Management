@@ -206,6 +206,31 @@ async function runDatabaseMigrations(pool) {
       SET cong_no_khach = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0 ELSE GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0) END
     `);
     await pool.query(`
+      CREATE OR REPLACE FUNCTION sync_printed_tape_customer_debt() RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.cong_no_khach := CASE WHEN COALESCE(NEW.da_tat_toan, FALSE) THEN 0
+          ELSE GREATEST(COALESCE(NEW.thanh_tien_ban, 0) + CASE WHEN NEW.loai_truc = 'moi' THEN COALESCE(NEW.truc_thanh_tien_ban, 0) + COALESCE(NEW.truc_vat, 0) ELSE 0 END + COALESCE(NEW.vat, 0) - COALESCE(NEW.tien_coc, 0), 0) END;
+        RETURN NEW;
+      END; $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS trg_sync_customer_debt ON bang_keo_in_orders;
+      CREATE TRIGGER trg_sync_customer_debt BEFORE INSERT OR UPDATE OF thanh_tien_ban, truc_thanh_tien_ban, truc_vat, loai_truc, vat, tien_coc, da_tat_toan
+      ON bang_keo_in_orders FOR EACH ROW EXECUTE FUNCTION sync_printed_tape_customer_debt();
+    `);
+    await pool.query(`
+      CREATE OR REPLACE FUNCTION sync_standard_customer_debt() RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.cong_no_khach := CASE WHEN COALESCE(NEW.da_tat_toan, FALSE) THEN 0
+          ELSE GREATEST(COALESCE(NEW.thanh_tien_ban, 0) + COALESCE(NEW.vat, 0), 0) END;
+        RETURN NEW;
+      END; $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS trg_sync_customer_debt ON bang_keo_orders;
+      CREATE TRIGGER trg_sync_customer_debt BEFORE INSERT OR UPDATE OF thanh_tien_ban, vat, da_tat_toan
+      ON bang_keo_orders FOR EACH ROW EXECUTE FUNCTION sync_standard_customer_debt();
+      DROP TRIGGER IF EXISTS trg_sync_customer_debt ON truc_in_orders;
+      CREATE TRIGGER trg_sync_customer_debt BEFORE INSERT OR UPDATE OF thanh_tien_ban, vat, da_tat_toan
+      ON truc_in_orders FOR EACH ROW EXECUTE FUNCTION sync_standard_customer_debt();
+    `);
+    await pool.query(`
       UPDATE bang_keo_in_orders
       SET cong_no_ncc = CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 0
         ELSE GREATEST(COALESCE(thanh_tien_goc, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_goc, 0) ELSE 0 END, 0) END

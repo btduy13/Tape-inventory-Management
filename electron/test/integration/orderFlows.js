@@ -28,6 +28,7 @@ async function insertRow(client, table, data) {
 }
 
 function printedTapeData(id, { newAxis = false, quote = false } = {}) {
+  const vat = quote ? 312000 : 156000;
   const result = orderMath.calculatePrintedTape({
     quantity: 120,
     baseCost: 900000,
@@ -35,6 +36,7 @@ function printedTapeData(id, { newAxis = false, quote = false } = {}) {
     rollsPerTree: 60,
     salePrice: 26000,
     deposit: quote ? 0 : 1000000,
+    vat,
     commissionPercent: 5,
     shipping: 100000,
     isNewAxis: newAxis,
@@ -82,7 +84,7 @@ function printedTapeData(id, { newAxis = false, quote = false } = {}) {
     da_tat_toan: false,
     da_gui_email: false,
     is_quote: quote,
-    vat: quote ? 312000 : 0,
+    vat,
     loai_truc: newAxis ? 'moi' : 'cu',
     ten_truc: newAxis ? 'TRUC CODEX TEST' : null,
     truc_chu_vi: newAxis ? 380 : null,
@@ -111,10 +113,12 @@ function printedTapeData(id, { newAxis = false, quote = false } = {}) {
 }
 
 function standardData(id, table, { quote = false } = {}) {
+  const vat = quote ? 120000 : 60000;
   const result = orderMath.calculateStandardOrder({
     quantity: 100,
     costPrice: 8000,
     salePrice: 12000,
+    vat,
     commissionPercent: 10,
     shipping: 50000
   });
@@ -141,7 +145,7 @@ function standardData(id, table, { quote = false } = {}) {
     da_tat_toan: false,
     da_gui_email: false,
     is_quote: quote,
-    vat: quote ? 120000 : 0
+    vat
   };
   if (table === 'truc_in_orders') {
     base.mau_keo = 'TEST';
@@ -207,7 +211,7 @@ async function run() {
     const newAxis = inserted.find(row => row.id === ids.bkiNew);
     assert.equal(newAxis.loai_truc, 'moi');
     assert.equal(Number(newAxis.truc_thanh_tien_ban), Number(newAxis.truc_so_luong) * Number(newAxis.truc_gia_ban));
-    assert.equal(Number(newAxis.cong_no_khach), Number(newAxis.thanh_tien_ban) + Number(newAxis.truc_thanh_tien_ban) + Number(newAxis.truc_vat) - Number(newAxis.tien_coc));
+    assert.equal(Number(newAxis.cong_no_khach), Number(newAxis.thanh_tien_ban) + Number(newAxis.truc_thanh_tien_ban) + Number(newAxis.vat) + Number(newAxis.truc_vat) - Number(newAxis.tien_coc));
     assert.ok(Number(newAxis.truc_tien_hoa_hong) > 0);
 
     const originalQuoteAxisCount = await client.query(
@@ -242,8 +246,8 @@ async function run() {
       ids.bkiNew,
       `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`
     );
-    await assertStatusLifecycle(client, 'bang_keo_orders', ids.tape, 'GREATEST(COALESCE(thanh_tien_ban, 0), 0)');
-    await assertStatusLifecycle(client, 'truc_in_orders', ids.axis, 'GREATEST(COALESCE(thanh_tien_ban, 0), 0)');
+    await assertStatusLifecycle(client, 'bang_keo_orders', ids.tape, 'GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0)');
+    await assertStatusLifecycle(client, 'truc_in_orders', ids.axis, 'GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0)');
 
     const stats = await client.query(`
       SELECT id, ten_hang, cong_no_khach FROM bang_keo_in_orders WHERE id = ANY($1)

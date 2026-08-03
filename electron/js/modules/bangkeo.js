@@ -152,7 +152,7 @@ async function saveBangKeo(event, mode = 'order') {
       loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
       tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
-      vat: mode === 'quote' ? utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value) : 0,
+      vat: utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value),
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,

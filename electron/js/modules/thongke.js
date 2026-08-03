@@ -1,6 +1,7 @@
 // JS/MODULES/THONGKE.JS - LOGIC XỬ LÝ PHÂN HỆ THỐNG KÊ CHI TIẾT
 let statsActiveSubtab = 'bang-keo-in';
 let statsColumnFilters = {};
+let statsColumnFilterCloseHandler = null;
 
 const statsColumnDefs = [
   { key: 'id', label: 'Mã đơn hàng', value: row => row.id || '' },
@@ -559,6 +560,8 @@ function openStatsColumnFilter(event, columnKey) {
   const column = statsColumnDefs.find(col => col.key === columnKey);
   if (!menu || !column) return;
 
+  closeStatsColumnFilterMenu();
+
   const values = Array.from(new Set(statsAllOrders.map(row => String(column.value(row)))))
     .filter(value => value !== '')
     .sort((a, b) => a.localeCompare(b, 'vi'));
@@ -590,13 +593,25 @@ function openStatsColumnFilter(event, columnKey) {
   menu.style.left = `${Math.min(rect.left, window.innerWidth - 300)}px`;
   menu.style.top = `${rect.bottom + 6}px`;
 
-  function closeMenu(e) {
+  statsColumnFilterCloseHandler = function closeMenu(e) {
     if (!menu.contains(e.target) && e.target !== event.currentTarget) {
-      menu.style.display = 'none';
-      document.removeEventListener('mousedown', closeMenu);
+      closeStatsColumnFilterMenu();
     }
+  };
+  setTimeout(() => {
+    if (statsColumnFilterCloseHandler) {
+      document.addEventListener('mousedown', statsColumnFilterCloseHandler);
+    }
+  }, 50);
+}
+
+function closeStatsColumnFilterMenu() {
+  const menu = document.getElementById('stats-column-filter-menu');
+  if (menu) menu.style.display = 'none';
+  if (statsColumnFilterCloseHandler) {
+    document.removeEventListener('mousedown', statsColumnFilterCloseHandler);
+    statsColumnFilterCloseHandler = null;
   }
-  setTimeout(() => document.addEventListener('mousedown', closeMenu), 50);
 }
 
 function toggleStatsColumnFilterValue(columnKey, value, checked) {
@@ -622,13 +637,13 @@ function toggleStatsColumnFilterValue(columnKey, value, checked) {
 
 function setStatsColumnFilterAll(columnKey) {
   delete statsColumnFilters[columnKey];
-  document.getElementById('stats-column-filter-menu').style.display = 'none';
+  closeStatsColumnFilterMenu();
   filterStatsTable();
 }
 
 function clearStatsColumnFilter(columnKey) {
   delete statsColumnFilters[columnKey];
-  document.getElementById('stats-column-filter-menu').style.display = 'none';
+  closeStatsColumnFilterMenu();
   filterStatsTable();
 }
 
