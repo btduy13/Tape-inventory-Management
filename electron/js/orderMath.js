@@ -38,9 +38,13 @@
 
   function calculateStandardOrder(input = {}) {
     const line = calculateLine(input);
-    const vat = Math.max(0, number(input.vat));
+    const vatPercent = percent(input.vatPercent);
+    // `vat` remains a backwards-compatible amount for legacy callers/data.
+    const hasVatPercent = Object.prototype.hasOwnProperty.call(input, 'vatPercent');
+    const vat = hasVatPercent ? line.saleTotal * vatPercent / 100 : Math.max(0, number(input.vat));
     return {
       ...line,
+      vatPercent,
       vat,
       outstanding: input.settled ? 0 : Math.max(0, line.saleTotal + vat - Math.max(0, number(input.deposit)))
     };
@@ -67,23 +71,32 @@
       commissionPercent: input.commissionPercent,
       shipping: input.shipping
     });
-    const axisVat = input.isNewAxis ? Math.max(0, number(input.axisVat)) : 0;
+    const axisVatPercent = input.isNewAxis ? percent(input.axisVatPercent) : 0;
+    const hasAxisVatPercent = Object.prototype.hasOwnProperty.call(input, 'axisVatPercent');
     const axis = input.isNewAxis
       ? { ...calculateLine({
           quantity: input.axisQuantity,
           costPrice: input.axisCostPrice,
           salePrice: input.axisSalePrice,
           commissionPercent: input.axisCommissionPercent
-        }), vat: axisVat }
+        }), vatPercent: axisVatPercent }
       : { ...calculateLine(), vat: 0 };
     const deposit = Math.max(0, number(input.deposit));
-    const vat = Math.max(0, number(input.vat));
+    const vatPercent = percent(input.vatPercent);
+    const hasVatPercent = Object.prototype.hasOwnProperty.call(input, 'vatPercent');
+    const vat = hasVatPercent ? product.saleTotal * vatPercent / 100 : Math.max(0, number(input.vat));
+    const axisVat = input.isNewAxis
+      ? (hasAxisVatPercent ? axis.saleTotal * axisVatPercent / 100 : Math.max(0, number(input.axisVat)))
+      : 0;
+    axis.vat = axisVat;
     const combinedSaleTotal = product.saleTotal + axis.saleTotal;
 
     return {
       product,
       axis,
       deposit,
+      vatPercent,
+      axisVatPercent,
       vat,
       combinedCostTotal: product.costTotal + axis.costTotal,
       combinedSaleTotal,

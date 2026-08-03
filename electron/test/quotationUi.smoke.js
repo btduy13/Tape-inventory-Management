@@ -101,7 +101,6 @@ async function evaluate(page, expression) {
 
       setValue('q-bki-ten-hang', 'Băng keo thử tab');
       setValue('q-bki-ten-khach-hang', 'Khách chung');
-      setValue('q-bki-ngay-du-kien', '2026-08-15');
       setValue('q-bki-qc-mm', '48');
       setValue('q-bki-so-luong', '10');
       setValue('q-bki-don-gia-ban', '12000');
@@ -109,8 +108,7 @@ async function evaluate(page, expression) {
 
       const sharedAfterAdd = [
         'q-bki-ten-hang',
-        'q-bki-ten-khach-hang',
-        'q-bki-ngay-du-kien'
+        'q-bki-ten-khach-hang'
       ].map(id => document.getElementById(id).value);
       setValue('q-bki-qc-mm', '60');
       switchQuoteDraft('bang_keo_in', quoteDraftStates.bang_keo_in.drafts[0].id);
@@ -120,13 +118,13 @@ async function evaluate(page, expression) {
       setValue('q-bki-truc-so-luong', '1');
       setValue('q-bki-truc-gia-goc', '30000');
       setValue('q-bki-truc-gia-ban', '50000');
-      setValue('q-bki-truc-vat', '5000');
+      setValue('q-bki-truc-vat', '10');
       addCurrentQuoteAxis();
       setValue('q-bki-truc-ten', 'Trục màu xanh');
       setValue('q-bki-truc-so-luong', '2');
       setValue('q-bki-truc-gia-goc', '35000');
       setValue('q-bki-truc-gia-ban', '60000');
-      setValue('q-bki-truc-vat', '12000');
+      setValue('q-bki-truc-vat', '8');
       captureActiveQuoteDraft('bang_keo_in');
       const draft = getActiveQuoteDraft('bang_keo_in');
       const item = buildQuoteItem('bang_keo_in', draft);
@@ -140,7 +138,10 @@ async function evaluate(page, expression) {
         ten_khach_hang: 'Khách chỉnh sửa',
         ngay_du_kien: '2026-09-20',
         quote_items: [
-          { specification: '48mm x 100m (50mic)', quantity: 10, unitPrice: 12000, total: 120000, fields: { 'qc-mm': '48', 'so-luong': '10', 'don-gia-ban': '12000', 'loai-truc': 'moi' }, axes: [{ name: 'Trục đỏ', quantity: 1, costPrice: 30000, unitPrice: 50000, total: 50000, vat: 5000 }] },
+          { specification: '48mm x 100m (50mic)', quantity: 10, unitPrice: 12000, total: 120000, fields: { 'qc-mm': '48', 'so-luong': '10', 'don-gia-ban': '12000', 'loai-truc': 'moi', 'truc-ten': 'Trục đỏ', 'truc-so-luong': '1', 'truc-gia-goc': '30000', 'truc-gia-ban': '50000', 'truc-vat': '10' }, axes: [
+            { name: 'Trục đỏ', quantity: 1, costPrice: 30000, unitPrice: 50000, total: 50000, vat: 5000, vatPercent: 10 },
+            { name: 'Trục xanh', quantity: 1, costPrice: 32000, unitPrice: 55000, total: 55000, vat: 5500, vatPercent: 10 }
+          ] },
           { specification: '60mm x 100m (50mic)', quantity: 5, unitPrice: 15000, total: 75000, fields: { 'qc-mm': '60', 'so-luong': '5', 'don-gia-ban': '15000', 'loai-truc': 'cu' }, axes: [] }
         ]
       });
@@ -148,14 +149,14 @@ async function evaluate(page, expression) {
       setValue('bki-so-luong', '10');
       setValue('bki-don-gia-ban', '12000');
       setValue('bki-tien-coc', '20000');
-      setValue('bki-vat', '12000');
+      setValue('bki-vat', '10');
       calculateBangKeoIn('order');
       const printedTapeDebtWithVat = utils.parseCurrency(document.getElementById('bki-cong-no-khach').value);
 
       setValue('bk-so-luong', '2');
       setValue('bk-don-gia-goc', '10000');
       setValue('bk-don-gia-ban', '15000');
-      setValue('bk-vat', '3000');
+      setValue('bk-vat', '10');
       calculateBangKeo('order');
       const standardTapeDebtWithVat = utils.parseCurrency(document.getElementById('bk-cong-no-khach').value);
 
@@ -190,6 +191,23 @@ async function evaluate(page, expression) {
       document.addEventListener = originalAddEventListener;
       document.removeEventListener = originalRemoveEventListener;
 
+      const savedAxisCountAfterLoad = getActiveQuoteDraft('bang_keo_in').savedAxes.length;
+      const axisEntryClearedAfterLoad = document.getElementById('q-bki-truc-ten').value === '';
+      editSavedQuoteAxis(0);
+      setValue('q-bki-truc-ten', 'Trục đỏ đã sửa');
+      const editedAxisItem = buildQuoteItem('bang_keo_in', captureActiveQuoteDraft('bang_keo_in'));
+      await generateAndSaveQuotePDF('BG-AXIS-REGRESSION', 'bang_keo_in', {
+        thoi_gian: '2026-08-03', ten_hang: 'Băng keo hai trục', ten_khach_hang: 'Khách kiểm thử',
+        quote_items: [editedAxisItem]
+      });
+      const editedAxisPreviewHtml = document.getElementById('quote-pdf-preview-frame').srcdoc;
+      const countText = (text, needle) => text.split(needle).length - 1;
+      const editedRedAxisPdfRows = countText(editedAxisPreviewHtml, '<strong>Trục đỏ đã sửa</strong>');
+      const greenAxisPdfRows = countText(editedAxisPreviewHtml, '<strong>Trục xanh</strong>');
+      const quotePreviewActive = document.getElementById('modal-quote-pdf-preview').classList.contains('active');
+      const quotePreviewHtml = document.getElementById('quote-pdf-preview-frame').srcdoc;
+      closeQuotePdfPreview();
+
       return {
         draftCountBeforeEdit,
         sharedAfterAdd,
@@ -204,7 +222,13 @@ async function evaluate(page, expression) {
         editDraftCount: quoteDraftStates.bang_keo_in.drafts.length,
         editShared: [document.getElementById('q-bki-ten-hang').value, document.getElementById('q-bki-ten-khach-hang').value],
         editFirstSize: document.getElementById('q-bki-qc-mm').value,
-        editAxisVat: getActiveQuoteDraft('bang_keo_in').savedAxes[0]?.vat,
+        editAxisVat: editedAxisItem.axes.find(axis => axis.name === 'Trục đỏ đã sửa')?.vat,
+        savedAxisCountAfterLoad,
+        axisEntryClearedAfterLoad,
+        editedAxisCount: editedAxisItem.axes.length,
+        editedAxisNames: editedAxisItem.axes.map(axis => axis.name).sort(),
+        editedRedAxisPdfRows,
+        greenAxisPdfRows,
         editBannerVisible: !document.getElementById('quote-edit-banner-bang_keo_in').hidden,
         editSubmitLabel: document.querySelector('#form-quote-bang-keo-in button[type="submit"]').textContent,
         entryGroupTitles: [...document.querySelectorAll('#form-quote-bang-keo-in .quote-workspace-card > .quote-form-workspace > .quote-entry-section .quote-entry-group-heading h4')].map(node => node.textContent),
@@ -223,6 +247,10 @@ async function evaluate(page, expression) {
         standardTapeVatField: !!document.getElementById('bk-vat'),
         printedTapeDebtWithVat,
         standardTapeDebtWithVat,
+        quoteDeliveryDateFields: document.querySelectorAll('#form-quote-bang-keo-in [id$="ngay-du-kien"], #form-quote-bang-keo [id$="ngay-du-kien"], #form-quote-truc-in [id$="ngay-du-kien"]').length,
+        quotePreviewActive,
+        quotePreviewHasCustomer: quotePreviewHtml.includes('Khách kiểm thử'),
+        quotePreviewHasDeliveryDate: quotePreviewHtml.includes('Ngày giao hàng'),
         filteredCustomerRows,
         clearedCustomerRows,
         filterMenuClosed,
@@ -232,12 +260,12 @@ async function evaluate(page, expression) {
     })()`);
 
     assert.equal(result.draftCountBeforeEdit, 2);
-    assert.deepEqual(result.sharedAfterAdd, ['Băng keo thử tab', 'Khách chung', '2026-08-15']);
+    assert.deepEqual(result.sharedAfterAdd, ['Băng keo thử tab', 'Khách chung']);
     assert.equal(result.restoredMillimeters, '48');
     assert.equal(result.savedAxisNodesBeforeEdit, 1);
     assert.equal(result.totalAxes, 2);
     assert.deepEqual(result.axisNames, ['Trục màu đỏ', 'Trục màu xanh']);
-    assert.deepEqual(result.axisVats, [5000, 12000]);
+    assert.deepEqual(result.axisVats, [5000, 9600]);
     assert.equal(result.productCardCount, 1);
     assert.equal(result.entryContainsReadonly, false);
     assert.equal(result.resultContainsEditable, false);
@@ -245,8 +273,14 @@ async function evaluate(page, expression) {
     assert.deepEqual(result.editShared, ['Băng keo cần sửa', 'Khách chỉnh sửa']);
     assert.equal(result.editFirstSize, '48');
     assert.equal(result.editAxisVat, 5000);
+    assert.equal(result.savedAxisCountAfterLoad, 2);
+    assert.equal(result.axisEntryClearedAfterLoad, true);
+    assert.equal(result.editedAxisCount, 2);
+    assert.deepEqual(result.editedAxisNames, ['Trục xanh', 'Trục đỏ đã sửa'].sort());
+    assert.equal(result.editedRedAxisPdfRows, 1);
+    assert.equal(result.greenAxisPdfRows, 1);
     assert.equal(result.editBannerVisible, true);
-    assert.equal(result.editSubmitLabel, 'Cập nhật báo giá & Xuất PDF');
+    assert.equal(result.editSubmitLabel, 'Cập nhật & Xem trước PDF');
     assert.deepEqual(result.entryGroupTitles, ['Quy cách & trục in', 'Sản lượng & thành phẩm', 'Giá bán & phụ phí', 'Thanh toán & cộng tác']);
     assert.equal(result.axisSwitchRole, 'switch');
     assert.equal(result.axisSwitchChecked, 'true');
@@ -267,6 +301,10 @@ async function evaluate(page, expression) {
     assert.equal(result.standardTapeVatField, true);
     assert.equal(result.printedTapeDebtWithVat, 112000);
     assert.equal(result.standardTapeDebtWithVat, 33000);
+    assert.equal(result.quoteDeliveryDateFields, 0);
+    assert.equal(result.quotePreviewActive, true);
+    assert.equal(result.quotePreviewHasCustomer, true);
+    assert.equal(result.quotePreviewHasDeliveryDate, false);
     assert.equal(result.filteredCustomerRows, 1);
     assert.equal(result.clearedCustomerRows, 2);
     assert.equal(result.filterMenuClosed, true);

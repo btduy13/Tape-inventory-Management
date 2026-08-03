@@ -76,6 +76,17 @@ test('VAT is included in customer debt for standard and printed tape orders', ()
   assert.equal(printed.outstanding, 220000);
 });
 
+test('VAT percentage is calculated from the total sale amount', () => {
+  const standard = orderMath.calculateStandardOrder({ quantity: 2, salePrice: 100000, vatPercent: 10 });
+  assert.equal(standard.vatPercent, 10);
+  assert.equal(standard.vat, 20000);
+  assert.equal(standard.outstanding, 220000);
+
+  const withoutVat = orderMath.calculateStandardOrder({ quantity: 2, salePrice: 100000, vatPercent: 0, vat: 99999 });
+  assert.equal(withoutVat.vat, 0);
+  assert.equal(withoutVat.outstanding, 200000);
+});
+
 test('printed tape keeps product VAT and new-axis VAT separate in debt', () => {
   const result = orderMath.calculatePrintedTape({
     quantity: 10,
@@ -91,6 +102,22 @@ test('printed tape keeps product VAT and new-axis VAT separate in debt', () => {
   assert.equal(result.vat, 20000);
   assert.equal(result.axis.vat, 10000);
   assert.equal(result.outstanding, 280000);
+});
+
+test('printed tape calculates product and new-axis VAT percentages from their totals', () => {
+  const result = orderMath.calculatePrintedTape({
+    quantity: 10,
+    salePrice: 20000,
+    vatPercent: 10,
+    isNewAxis: true,
+    axisQuantity: 2,
+    axisCostPrice: 30000,
+    axisSalePrice: 50000,
+    axisVatPercent: 8
+  });
+  assert.equal(result.vat, 20000);
+  assert.equal(result.axis.vat, 8000);
+  assert.equal(result.outstanding, 328000);
 });
 
 test('one quotation aggregates multiple sizes of the same product', () => {

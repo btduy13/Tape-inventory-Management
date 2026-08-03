@@ -164,8 +164,16 @@ async function runDatabaseMigrations(pool) {
     await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
     await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS truc_vat NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS vat_percent NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE bang_keo_in_orders ADD COLUMN IF NOT EXISTS truc_vat_percent NUMERIC DEFAULT 0`);
     await pool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE bang_keo_orders ADD COLUMN IF NOT EXISTS vat_percent NUMERIC DEFAULT 0`);
     await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE truc_in_orders ADD COLUMN IF NOT EXISTS vat_percent NUMERIC DEFAULT 0`);
+    await pool.query(`UPDATE bang_keo_in_orders SET vat_percent = vat / thanh_tien_ban * 100 WHERE COALESCE(vat_percent, 0) = 0 AND vat > 0 AND thanh_tien_ban > 0`);
+    await pool.query(`UPDATE bang_keo_in_orders SET truc_vat_percent = truc_vat / truc_thanh_tien_ban * 100 WHERE COALESCE(truc_vat_percent, 0) = 0 AND truc_vat > 0 AND truc_thanh_tien_ban > 0`);
+    await pool.query(`UPDATE bang_keo_orders SET vat_percent = vat / thanh_tien_ban * 100 WHERE COALESCE(vat_percent, 0) = 0 AND vat > 0 AND thanh_tien_ban > 0`);
+    await pool.query(`UPDATE truc_in_orders SET vat_percent = vat / thanh_tien_ban * 100 WHERE COALESCE(vat_percent, 0) = 0 AND vat > 0 AND thanh_tien_ban > 0`);
     for (const table of ['bang_keo_in_orders', 'bang_keo_orders', 'truc_in_orders']) {
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS quote_items JSONB DEFAULT '[]'::jsonb`);
     }

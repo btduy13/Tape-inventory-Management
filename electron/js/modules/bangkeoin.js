@@ -150,6 +150,9 @@ async function autofillBangKeoInData(tenHang, mode = 'order') {
       document.getElementById(`${prefix}tien-ship`).value = utils.formatCurrency(order.tien_ship || 0);
       document.getElementById(`${prefix}ctv`).value = order.ctv || "";
       document.getElementById(`${prefix}hoa-hong-percent`).value = order.hoa_hong || 0;
+      document.getElementById(`${prefix}vat`).value = Number(order.vat_percent) > 0
+        ? order.vat_percent
+        : (order.thanh_tien_ban ? (Number(order.vat || 0) / Number(order.thanh_tien_ban) * 100).toFixed(2) : 0);
 
       if (order.loai_truc === 'moi') {
         setBangKeoInAxisMode(mode, 'moi');
@@ -158,7 +161,9 @@ async function autofillBangKeoInData(tenHang, mode = 'order') {
         document.getElementById(`${prefix}truc-so-luong`).value = order.truc_so_luong || "";
         document.getElementById(`${prefix}truc-gia-goc`).value = utils.formatCurrency(order.truc_gia_goc || 0);
         document.getElementById(`${prefix}truc-gia-ban`).value = utils.formatCurrency(order.truc_gia_ban || 0);
-        document.getElementById(`${prefix}truc-vat`).value = utils.formatCurrency(order.truc_vat || 0);
+        document.getElementById(`${prefix}truc-vat`).value = Number(order.truc_vat_percent) > 0
+          ? order.truc_vat_percent
+          : (order.truc_thanh_tien_ban ? (Number(order.truc_vat || 0) / Number(order.truc_thanh_tien_ban) * 100).toFixed(2) : 0);
         document.getElementById(`${prefix}truc-ctv`).value = order.truc_ctv || "";
         document.getElementById(`${prefix}truc-hoa-hong-percent`).value = order.truc_hoa_hong || 0;
       } else {
@@ -188,7 +193,7 @@ function calculateBangKeoIn(mode = 'order') {
       cuttingFee: utils.parseCurrency(document.getElementById(`${prefix}phi-cat`).value),
       salePrice: utils.parseCurrency(document.getElementById(`${prefix}don-gia-ban`).value),
       deposit: utils.parseCurrency(document.getElementById(`${prefix}tien-coc`).value),
-      vat: utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value),
+      vatPercent: orderMath.percent(document.getElementById(`${prefix}vat`)?.value),
       commissionPercent: document.getElementById(`${prefix}hoa-hong-percent`).value,
       shipping: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       rollLength: document.getElementById(`${prefix}qc-m`).value,
@@ -197,7 +202,7 @@ function calculateBangKeoIn(mode = 'order') {
       axisQuantity: document.getElementById(`${prefix}truc-so-luong`)?.value,
       axisCostPrice: utils.parseCurrency(document.getElementById(`${prefix}truc-gia-goc`)?.value),
       axisSalePrice: utils.parseCurrency(document.getElementById(`${prefix}truc-gia-ban`)?.value),
-      axisVat: utils.parseCurrency(document.getElementById(`${prefix}truc-vat`)?.value),
+      axisVatPercent: orderMath.percent(document.getElementById(`${prefix}truc-vat`)?.value),
       axisCommissionPercent: document.getElementById(`${prefix}truc-hoa-hong-percent`)?.value
     });
 
@@ -258,9 +263,13 @@ async function saveBangKeoIn(event, mode = 'order') {
       return;
     }
 
-    calculateBangKeoIn(mode);
-
     const isNewAxis = document.getElementById(`${prefix}loai-truc`)?.value === 'moi';
+    calculateBangKeoIn(mode);
+    const vatPercent = orderMath.percent(document.getElementById(`${prefix}vat`)?.value);
+    const vatAmount = utils.parseCurrency(document.getElementById(`${prefix}thanh-tien-ban`).value) * vatPercent / 100;
+    const axisVatPercent = isNewAxis ? orderMath.percent(document.getElementById(`${prefix}truc-vat`)?.value) : 0;
+    const axisVatAmount = isNewAxis ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-ban`).value) * axisVatPercent / 100 : 0;
+
     if (isNewAxis) {
       const savedAxisCount = mode === 'quote' && typeof getActiveQuoteDraft === 'function'
         ? (getActiveQuoteDraft('bang_keo_in').savedAxes || []).length
@@ -280,7 +289,7 @@ async function saveBangKeoIn(event, mode = 'order') {
       thoi_gian: new Date(),
       ten_hang: tenHang,
       ten_khach_hang: tenKhachHang,
-      ngay_du_kien: new Date(document.getElementById(`${prefix}ngay-du-kien`).value),
+      ngay_du_kien: mode === 'quote' ? new Date() : new Date(document.getElementById(`${prefix}ngay-du-kien`).value),
       quy_cach_mm: parseFloat(document.getElementById(`${prefix}qc-mm`).value) || null,
       quy_cach_m: parseFloat(document.getElementById(`${prefix}qc-m`).value) || null,
       quy_cach_mic: parseFloat(document.getElementById(`${prefix}qc-mic`).value) || null,
@@ -308,7 +317,8 @@ async function saveBangKeoIn(event, mode = 'order') {
       loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
       tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
-      vat: utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value),
+      vat: vatAmount,
+      vat_percent: vatPercent,
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,
@@ -321,7 +331,8 @@ async function saveBangKeoIn(event, mode = 'order') {
       truc_gia_ban: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-gia-ban`).value) : 0,
       truc_thanh_tien_goc: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-goc`).value) : 0,
       truc_thanh_tien_ban: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-ban`).value) : 0,
-      truc_vat: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-vat`)?.value) : 0,
+      truc_vat: axisVatAmount,
+      truc_vat_percent: axisVatPercent,
       truc_ctv: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (document.getElementById(`${prefix}truc-ctv`).value.trim() || null) : null,
       truc_hoa_hong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (parseFloat(document.getElementById(`${prefix}truc-hoa-hong-percent`).value) || 0) : 0,
       truc_tien_hoa_hong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-tien-hoa-hong`).value) : 0,
@@ -347,12 +358,12 @@ async function saveBangKeoIn(event, mode = 'order') {
         loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
         loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
         truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
-        truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, truc_vat, vat, quote_items
+        truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, truc_vat, truc_vat_percent, vat, vat_percent, quote_items
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
         $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 
         $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-        $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52
+        $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54
       )
     `;
 
@@ -366,7 +377,7 @@ async function saveBangKeoIn(event, mode = 'order') {
       data.loi_nhuan_rong, data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote,
       data.loai_truc, data.ten_truc, data.truc_chu_vi, data.truc_so_luong, data.truc_gia_goc,
       data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
-      data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong, data.truc_vat, data.vat,
+      data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong, data.truc_vat, data.truc_vat_percent, data.vat, data.vat_percent,
       JSON.stringify(data.quote_items || [])
     ];
 
@@ -379,8 +390,9 @@ async function saveBangKeoIn(event, mode = 'order') {
         if (typeof generateAndSaveQuotePDF === 'function') {
           await generateAndSaveQuotePDF(orderId, 'bang_keo_in', data);
         }
-        clearFormBangKeoIn('quote');
-        clearQuoteItems('bang_keo_in');
+        editingQuoteState = { id: orderId, type: 'bang_keo_in', original: data };
+        setQuoteEditingUi('bang_keo_in', orderId);
+        await loadQuotationsData();
       } else {
         utils.showToast(`Đã lưu đơn hàng thành công! Mã: ${orderId}`, "success");
         clearFormBangKeoIn('order');
@@ -524,5 +536,6 @@ function clearFormBangKeoIn(mode = 'order') {
   // Đặt ngày dự kiến mặc định là hôm sau
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById(`${prefix}ngay-du-kien`).value = tomorrow.toISOString().split('T')[0];
+  const deliveryDate = document.getElementById(`${prefix}ngay-du-kien`);
+  if (deliveryDate) deliveryDate.value = tomorrow.toISOString().split('T')[0];
 }

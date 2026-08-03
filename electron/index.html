@@ -324,8 +324,8 @@
                                         <input type="text" id="bki-truc-gia-ban" class="form-control currency-format" value="0">
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT trục (đ)</label>
-                                        <input type="text" id="bki-truc-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT trục (%)</label>
+                                        <input type="number" id="bki-truc-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Thành tiền gốc (đ)</label>
@@ -419,8 +419,8 @@
                                         <input type="text" id="bki-tien-coc" class="form-control currency-format" value="0">
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT (đ)</label>
-                                        <input type="text" id="bki-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT tổng (%)</label>
+                                        <input type="number" id="bki-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Công nợ khách (đ)</label>
@@ -521,8 +521,8 @@
                                         <input type="text" id="bk-thanh-tien-ban" class="form-control" value="0" readonly>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT (đ)</label>
-                                        <input type="text" id="bk-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT tổng (%)</label>
+                                        <input type="number" id="bk-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Công nợ khách (đ)</label>
@@ -623,8 +623,8 @@
                                         <input type="text" id="ti-cong-no-khach" class="form-control" value="0" readonly>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT (đ)</label>
-                                        <input type="text" id="ti-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT tổng (%)</label>
+                                        <input type="number" id="ti-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Cộng tác viên (CTV)</label>
@@ -683,10 +683,6 @@
                                         <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
                                         <input type="text" id="q-bki-ten-hang" class="form-control" placeholder="Nhập hoặc chọn tên hàng..." required autocomplete="off">
                                         <div class="autocomplete-suggestions" id="q-bki-suggestions"></div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
-                                        <input type="date" id="q-bki-ngay-du-kien" class="form-control" required>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
@@ -755,8 +751,8 @@
                                         <input type="text" id="q-bki-truc-gia-ban" class="form-control currency-format" value="0">
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT trục (đ)</label>
-                                        <input type="text" id="q-bki-truc-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT trục (%)</label>
+                                        <input type="number" id="q-bki-truc-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Thành tiền gốc (đ)</label>
@@ -855,8 +851,8 @@
                                         <input type="text" id="q-bki-tien-coc" class="form-control currency-format" value="0">
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT báo giá (đ)</label>
-                                        <input type="text" id="q-bki-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT tổng báo giá (%)</label>
+                                        <input type="number" id="q-bki-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Công nợ khách (đ)</label>
@@ -900,7 +896,7 @@
                                     <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo-in', 'quote')">Xóa form</button>
                                     <button type="button" class="btn btn-secondary" onclick="calculateBangKeoIn('quote')">Tính toán</button>
                                     <button type="button" class="btn btn-secondary" onclick="addQuoteDraft('bang_keo_in')">+ Thêm báo giá</button>
-                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xuất PDF</button>
+                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xem trước PDF</button>
                                 </div>
                             </div>
                         </form>
@@ -914,10 +910,6 @@
                                         <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
                                         <input type="text" id="q-bk-ten-hang" class="form-control" placeholder="Tên hàng..." required autocomplete="off">
                                         <div class="autocomplete-suggestions" id="q-bk-suggestions"></div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
-                                        <input type="date" id="q-bk-ngay-du-kien" class="form-control" required>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
@@ -970,8 +962,8 @@
                                         <input type="text" id="q-bk-cong-no-khach" class="form-control" value="0" readonly>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT báo giá (đ)</label>
-                                        <input type="text" id="q-bk-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT tổng báo giá (%)</label>
+                                        <input type="number" id="q-bk-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Cộng tác viên (CTV)</label>
@@ -1003,7 +995,7 @@
                                     <button type="button" class="btn btn-secondary" onclick="clearForm('bang-keo', 'quote')">Xóa form</button>
                                     <button type="button" class="btn btn-secondary" onclick="calculateBangKeo('quote')">Tính toán</button>
                                     <button type="button" class="btn btn-secondary" onclick="addQuoteDraft('bang_keo')">+ Thêm báo giá</button>
-                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xuất PDF</button>
+                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xem trước PDF</button>
                                 </div>
                             </div>
                         </form>
@@ -1017,10 +1009,6 @@
                                         <label class="form-label">Tên hàng <span style="color:var(--color-danger)">*</span></label>
                                         <input type="text" id="q-ti-ten-hang" class="form-control" placeholder="Tên trục in..." required autocomplete="off">
                                         <div class="autocomplete-suggestions" id="q-ti-suggestions"></div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
-                                        <input type="date" id="q-ti-ngay-du-kien" class="form-control" required>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
@@ -1077,8 +1065,8 @@
                                         <input type="text" id="q-ti-cong-no-khach" class="form-control" value="0" readonly>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">VAT báo giá (đ)</label>
-                                        <input type="text" id="q-ti-vat" class="form-control currency-format" value="0">
+                                        <label class="form-label">VAT tổng báo giá (%)</label>
+                                        <input type="number" id="q-ti-vat" class="form-control" value="0" min="0" max="100" step="0.1">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Cộng tác viên (CTV)</label>
@@ -1110,7 +1098,7 @@
                                     <button type="button" class="btn btn-secondary" onclick="clearForm('truc-in', 'quote')">Xóa form</button>
                                     <button type="button" class="btn btn-secondary" onclick="calculateTrucIn('quote')">Tính toán</button>
                                     <button type="button" class="btn btn-secondary" onclick="addQuoteDraft('truc_in')">+ Thêm báo giá</button>
-                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xuất PDF</button>
+                                    <button type="submit" class="btn btn-primary">Lưu toàn bộ & Xem trước PDF</button>
                                 </div>
                             </div>
                         </form>
@@ -1174,7 +1162,6 @@
                                         <th>Ngày Tạo</th>
                                         <th>Tên Hàng</th>
                                         <th>Tên Khách Hàng</th>
-                                        <th>Ngày Giao Dự Kiến</th>
                                         <th style="text-align: right;">Số Lượng</th>
                                         <th style="text-align: right;">Đơn Giá Bán</th>
                                         <th style="text-align: right;">Thành Tiền</th>
@@ -1699,6 +1686,28 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="goBackToExportSelection()">⮌ Quay lại</button>
                 <button class="btn btn-primary" onclick="generateCombinedPrintInvoice()">🖨️ Xem trước phiếu in</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Xem trước báo giá A4 trước khi xuất PDF -->
+    <div id="modal-quote-pdf-preview" class="modal-overlay">
+        <div class="modal-content quote-pdf-preview-dialog">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="quote-pdf-preview-title">Xem trước báo giá</h3>
+                    <p class="quote-pdf-preview-hint">Kiểm tra nội dung và bố cục trước khi xuất tệp PDF.</p>
+                </div>
+                <button class="modal-close" onclick="closeQuotePdfPreview()" aria-label="Đóng xem trước">×</button>
+            </div>
+            <div class="modal-body quote-pdf-preview-body">
+                <div class="quote-pdf-sheet-frame">
+                    <iframe id="quote-pdf-preview-frame" title="Bản xem trước báo giá A4"></iframe>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeQuotePdfPreview()">Quay lại chỉnh sửa</button>
+                <button class="btn btn-primary" id="quote-pdf-export-button" onclick="exportQuotePreviewPDF()">Xuất PDF</button>
             </div>
         </div>
     </div>

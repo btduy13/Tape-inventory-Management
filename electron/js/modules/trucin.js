@@ -71,6 +71,9 @@ async function autofillTrucInData(tenHang, mode = 'order') {
       document.getElementById(`${prefix}ctv`).value = order.ctv || "";
       document.getElementById(`${prefix}hoa-hong-percent`).value = order.hoa_hong || 0;
       document.getElementById(`${prefix}tien-ship`).value = utils.formatCurrency(order.tien_ship || 0);
+      document.getElementById(`${prefix}vat`).value = Number(order.vat_percent) > 0
+        ? order.vat_percent
+        : (order.thanh_tien_ban ? (Number(order.vat || 0) / Number(order.thanh_tien_ban) * 100).toFixed(2) : 0);
 
       calculateTrucIn(mode);
       utils.showToast("Đã tự điền thông tin cũ", "success");
@@ -89,7 +92,7 @@ function calculateTrucIn(mode = 'order') {
     const donGiaBan = utils.parseCurrency(document.getElementById(`${prefix}don-gia-ban`).value);
     const hoaHongPercent = parseFloat(document.getElementById(`${prefix}hoa-hong-percent`).value) || 0;
     const tienShip = utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value);
-    const vat = utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value);
+    const vatPercent = orderMath.percent(document.getElementById(`${prefix}vat`)?.value);
 
     const result = orderMath.calculateStandardOrder({
       quantity: soLuong,
@@ -97,7 +100,7 @@ function calculateTrucIn(mode = 'order') {
       salePrice: donGiaBan,
       commissionPercent: hoaHongPercent,
       shipping: tienShip,
-      vat
+      vatPercent
     });
 
     // Cập nhật giao diện
@@ -133,12 +136,14 @@ async function saveTrucIn(event, mode = 'order') {
     }
 
     calculateTrucIn(mode);
+    const vatPercent = orderMath.percent(document.getElementById(`${prefix}vat`)?.value);
+    const vatAmount = orderMath.calculateStandardOrder({ quantity: soLuong, costPrice: donGiaGoc, salePrice: donGiaBan, vatPercent }).vat;
 
     const data = {
       thoi_gian: new Date(),
       ten_hang: tenHang,
       ten_khach_hang: tenKhachHang,
-      ngay_du_kien: new Date(document.getElementById(`${prefix}ngay-du-kien`).value),
+      ngay_du_kien: mode === 'quote' ? new Date() : new Date(document.getElementById(`${prefix}ngay-du-kien`).value),
       quy_cach: document.getElementById(`${prefix}quy-cach`).value.trim() || null,
       so_luong: soLuong,
       mau_sac: document.getElementById(`${prefix}mau-sac`).value.trim() || null,
@@ -154,7 +159,8 @@ async function saveTrucIn(event, mode = 'order') {
       loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
       tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
       loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
-      vat: utils.parseCurrency(document.getElementById(`${prefix}vat`)?.value),
+      vat: vatAmount,
+      vat_percent: vatPercent,
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,
@@ -174,10 +180,10 @@ async function saveTrucIn(event, mode = 'order') {
         quy_cach, so_luong, mau_sac, mau_keo, don_gia_goc, thanh_tien_goc, 
         don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong, 
         tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong, 
-        da_giao, da_tat_toan, da_gui_email, is_quote, vat, quote_items
+        da_giao, da_tat_toan, da_gui_email, is_quote, vat, vat_percent, quote_items
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
       )
     `;
 
@@ -186,7 +192,7 @@ async function saveTrucIn(event, mode = 'order') {
       data.quy_cach, data.so_luong, data.mau_sac, data.mau_keo, data.don_gia_goc, data.thanh_tien_goc,
       data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
       data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat,
+      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent,
       JSON.stringify(data.quote_items || [])
     ];
 
@@ -198,8 +204,9 @@ async function saveTrucIn(event, mode = 'order') {
         if (typeof generateAndSaveQuotePDF === 'function') {
           await generateAndSaveQuotePDF(orderId, 'truc_in', data);
         }
-        clearFormTrucIn('quote');
-        clearQuoteItems('truc_in');
+        editingQuoteState = { id: orderId, type: 'truc_in', original: data };
+        setQuoteEditingUi('truc_in', orderId);
+        await loadQuotationsData();
       } else {
         utils.showToast(`Đã lưu đơn Trục In thành công! Mã: ${orderId}`, "success");
         clearFormTrucIn('order');
@@ -244,5 +251,6 @@ function clearFormTrucIn(mode = 'order') {
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById(`${prefix}ngay-du-kien`).value = tomorrow.toISOString().split('T')[0];
+  const deliveryDate = document.getElementById(`${prefix}ngay-du-kien`);
+  if (deliveryDate) deliveryDate.value = tomorrow.toISOString().split('T')[0];
 }

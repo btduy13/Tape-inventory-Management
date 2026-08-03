@@ -52,8 +52,21 @@ test('saved quotations can be loaded into tabs and updated in place', () => {
   assert.match(quotationSource, /function loadQuoteIntoEditor\(quoteId, type, data\)/);
   assert.match(quotationSource, /async function saveEditedQuoteIfNeeded\(type, data\)/);
   assert.match(quotationSource, /UPDATE \$\{table\} SET \$\{assignments\}/);
-  assert.match(quotationSource, /Cập nhật báo giá & Xuất PDF/);
+  assert.match(quotationSource, /Cập nhật & Xem trước PDF/);
   assert.match(quotationSource, /fields: \{ \.\.\.fields \}/);
+});
+
+test('quotation preview opens before PDF export and omits delivery date', () => {
+  assert.match(quotationSource, /function openQuotePdfPreview\(quoteId, htmlContent\)/);
+  assert.match(quotationSource, /async function exportQuotePreviewPDF\(\)/);
+  assert.match(quotationSource, /frame\.srcdoc = htmlContent\.replace/);
+  assert.doesNotMatch(quotationSource, /<tr><td class="label">Ngày giao hàng<\/td>/);
+});
+
+test('stored axes are not restored into the active axis entry a second time', () => {
+  assert.match(quotationSource, /function quoteFieldsWithStoredAxes\(fields = \{\}, axes = \[\]\)/);
+  assert.match(quotationSource, /\.\.\.quoteAxisFieldDefaults/);
+  assert.match(quotationSource, /quoteFieldsWithStoredAxes\(restoredFields, savedAxes\)/);
 });
 
 test('sales forms reuse the separated quotation workspace structure', () => {
