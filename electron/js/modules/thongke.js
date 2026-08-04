@@ -330,7 +330,7 @@ function renderStatsTable(rows) {
   // 1. Tạo headers tiếng Việt
   header.innerHTML = statsColumnDefs.map(col => `
     <th>
-      <button type="button" class="table-filter-button ${statsColumnFilters[col.key]?.size ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col.key}')">
+      <button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col.key) ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col.key}')">
         <span>${col.label}</span>
         <span class="filter-caret">▾</span>
       </button>
@@ -522,7 +522,7 @@ function filterStatsTable() {
 
     const matchColumnFilters = statsViewMode !== 'summary' || statsColumnDefs.every(col => {
       const selectedValues = statsColumnFilters[col.key];
-      if (!selectedValues || selectedValues.size === 0) return true;
+      if (!selectedValues) return true;
       return selectedValues.has(String(col.value(row)));
     });
 
@@ -565,22 +565,23 @@ function openStatsColumnFilter(event, columnKey) {
   const values = Array.from(new Set(statsAllOrders.map(row => String(column.value(row)))))
     .filter(value => value !== '')
     .sort((a, b) => a.localeCompare(b, 'vi'));
-  const activeValues = statsColumnFilters[columnKey] || new Set();
-  const isFiltered = activeValues.size > 0;
+  const isFiltered = Object.prototype.hasOwnProperty.call(statsColumnFilters, columnKey);
+  const activeValues = isFiltered ? statsColumnFilters[columnKey] : new Set(values);
 
   menu.innerHTML = `
     <div class="column-filter-title">${column.label}</div>
     <input class="column-filter-search" type="text" placeholder="Tìm giá trị..." oninput="filterColumnFilterValues(this.value)">
     <div class="column-filter-actions">
       <button type="button" onclick="setStatsColumnFilterAll('${columnKey}')">Tất cả</button>
-      <button type="button" onclick="clearStatsColumnFilter('${columnKey}')">Xóa lọc</button>
+      <button type="button" onclick="deselectAllStatsColumnFilter('${columnKey}')">Bỏ chọn tất cả</button>
+      <button type="button" class="column-filter-clear-action" onclick="clearStatsColumnFilter('${columnKey}')">Xóa lọc</button>
     </div>
     <div class="column-filter-values">
       ${values.map(value => {
         const encodedValue = encodeURIComponent(value).replace(/'/g, '%27');
         return `
         <label class="column-filter-value">
-          <input type="checkbox" ${!isFiltered || activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
+          <input type="checkbox" ${activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
           <span>${utils.escapeHtml(value)}</span>
         </label>
       `;
@@ -619,7 +620,7 @@ function toggleStatsColumnFilterValue(columnKey, value, checked) {
   if (!column) return;
 
   const allValues = new Set(statsAllOrders.map(row => String(column.value(row))).filter(Boolean));
-  if (!statsColumnFilters[columnKey] || statsColumnFilters[columnKey].size === 0) {
+  if (!Object.prototype.hasOwnProperty.call(statsColumnFilters, columnKey)) {
     statsColumnFilters[columnKey] = new Set(allValues);
   }
 
@@ -637,13 +638,29 @@ function toggleStatsColumnFilterValue(columnKey, value, checked) {
 
 function setStatsColumnFilterAll(columnKey) {
   delete statsColumnFilters[columnKey];
-  closeStatsColumnFilterMenu();
+  document.querySelectorAll('#stats-column-filter-menu .column-filter-value input[type="checkbox"]').forEach(input => {
+    input.checked = true;
+  });
+  filterStatsTable();
+}
+
+function deselectAllStatsColumnFilter(columnKey) {
+  statsColumnFilters[columnKey] = new Set();
+  document.querySelectorAll('#stats-column-filter-menu .column-filter-value input[type="checkbox"]').forEach(input => {
+    input.checked = false;
+  });
   filterStatsTable();
 }
 
 function clearStatsColumnFilter(columnKey) {
   delete statsColumnFilters[columnKey];
-  closeStatsColumnFilterMenu();
+  const menu = document.getElementById('stats-column-filter-menu');
+  const searchInput = menu?.querySelector('.column-filter-search');
+  if (searchInput) searchInput.value = '';
+  filterColumnFilterValues('');
+  menu?.querySelectorAll('.column-filter-value input[type="checkbox"]').forEach(input => {
+    input.checked = true;
+  });
   filterStatsTable();
 }
 

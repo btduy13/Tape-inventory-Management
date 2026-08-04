@@ -182,12 +182,30 @@ async function evaluate(page, expression) {
       const customerFilterButton = document.querySelectorAll('#stats-table-header .table-filter-button')[3];
       openStatsColumnFilter({ preventDefault() {}, stopPropagation() {}, currentTarget: customerFilterButton }, 'ten_khach_hang');
       await wait(80);
+      const filterActionLabels = [...document.querySelectorAll('#stats-column-filter-menu .column-filter-actions button')]
+        .map(button => button.textContent.trim());
       toggleStatsColumnFilterValue('ten_khach_hang', 'BA', false);
       const filteredCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const columnSearchInput = document.querySelector('#stats-column-filter-menu .column-filter-search');
+      deselectAllStatsColumnFilter('ten_khach_hang');
+      const deselectedCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const allValuesUnchecked = [...document.querySelectorAll('#stats-column-filter-menu .column-filter-value input')]
+        .every(input => !input.checked);
+      const emptySelectionHeaderActive = document.querySelectorAll('#stats-table-header .table-filter-button')[3].classList.contains('active');
+      setStatsColumnFilterAll('ten_khach_hang');
+      const selectedAllCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const allValuesSelected = [...document.querySelectorAll('#stats-column-filter-menu .column-filter-value input')]
+        .every(input => input.checked);
+      columnSearchInput.value = 'BEA';
+      filterColumnFilterValues(columnSearchInput.value);
       clearStatsColumnFilter('ten_khach_hang');
       const clearedCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
-      const filterMenuClosed = document.getElementById('stats-column-filter-menu').style.display === 'none';
+      const filterMenuRemainsOpen = document.getElementById('stats-column-filter-menu').style.display === 'block';
+      const columnSearchCleared = columnSearchInput.value === '';
+      const allValuesVisibleAndChecked = [...document.querySelectorAll('#stats-column-filter-menu .column-filter-value')]
+        .every(label => label.style.display === 'flex' && label.querySelector('input').checked);
       const customerHeaderInactive = !document.querySelectorAll('#stats-table-header .table-filter-button')[3].classList.contains('active');
+      closeStatsColumnFilterMenu();
       document.addEventListener = originalAddEventListener;
       document.removeEventListener = originalRemoveEventListener;
 
@@ -251,9 +269,17 @@ async function evaluate(page, expression) {
         quotePreviewActive,
         quotePreviewHasCustomer: quotePreviewHtml.includes('Khách kiểm thử'),
         quotePreviewHasDeliveryDate: quotePreviewHtml.includes('Ngày giao hàng'),
+        filterActionLabels,
         filteredCustomerRows,
+        deselectedCustomerRows,
+        allValuesUnchecked,
+        emptySelectionHeaderActive,
+        selectedAllCustomerRows,
+        allValuesSelected,
         clearedCustomerRows,
-        filterMenuClosed,
+        filterMenuRemainsOpen,
+        columnSearchCleared,
+        allValuesVisibleAndChecked,
         customerHeaderInactive,
         filterCloseListenerBalance
       };
@@ -305,9 +331,17 @@ async function evaluate(page, expression) {
     assert.equal(result.quotePreviewActive, true);
     assert.equal(result.quotePreviewHasCustomer, true);
     assert.equal(result.quotePreviewHasDeliveryDate, false);
+    assert.deepEqual(result.filterActionLabels, ['Tất cả', 'Bỏ chọn tất cả', 'Xóa lọc']);
     assert.equal(result.filteredCustomerRows, 1);
+    assert.equal(result.deselectedCustomerRows, 0);
+    assert.equal(result.allValuesUnchecked, true);
+    assert.equal(result.emptySelectionHeaderActive, true);
+    assert.equal(result.selectedAllCustomerRows, 2);
+    assert.equal(result.allValuesSelected, true);
     assert.equal(result.clearedCustomerRows, 2);
-    assert.equal(result.filterMenuClosed, true);
+    assert.equal(result.filterMenuRemainsOpen, true);
+    assert.equal(result.columnSearchCleared, true);
+    assert.equal(result.allValuesVisibleAndChecked, true);
     assert.equal(result.customerHeaderInactive, true);
     assert.equal(result.filterCloseListenerBalance, 0);
     console.log('Electron quotation UI smoke test passed');
