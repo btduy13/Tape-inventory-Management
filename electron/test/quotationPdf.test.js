@@ -63,6 +63,13 @@ test('quotation preview opens before PDF export and omits delivery date', () => 
   assert.doesNotMatch(quotationSource, /<tr><td class="label">Ngày giao hàng<\/td>/);
 });
 
+test('quote PDF shows base price, VAT and VAT-inclusive price only when VAT exists', () => {
+  assert.match(quotationSource, /const priceSummaryRows = vatAmount > 0/);
+  assert.match(quotationSource, /Giá gốc \(chưa VAT\):/);
+  assert.match(quotationSource, /Giá gồm VAT:/);
+  assert.match(quotationSource, /Tổng tiền hàng:/);
+});
+
 test('stored axes are not restored into the active axis entry a second time', () => {
   assert.match(quotationSource, /function quoteFieldsWithStoredAxes\(fields = \{\}, axes = \[\]\)/);
   assert.match(quotationSource, /\.\.\.quoteAxisFieldDefaults/);

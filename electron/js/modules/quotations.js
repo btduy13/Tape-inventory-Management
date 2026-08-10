@@ -970,12 +970,25 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
               <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(axis.total)}đ</td>
             </tr>
     `).join('');
-    const vatRow = vatAmount > 0 ? `
+    const priceSummaryRows = vatAmount > 0 ? `
+          <tr>
+            <td>Giá gốc (chưa VAT):</td>
+            <td>${utils.formatCurrency(quoteSubtotal)}đ</td>
+          </tr>
           <tr>
             <td>VAT (${Number(effectiveVatPercent.toFixed(2))}% tổng):</td>
             <td>${utils.formatCurrency(vatAmount)}đ</td>
           </tr>
-    ` : '';
+          <tr>
+            <td>Giá gồm VAT:</td>
+            <td>${utils.formatCurrency(quoteTotal)}đ</td>
+          </tr>
+    ` : `
+          <tr>
+            <td>Tổng tiền hàng:</td>
+            <td>${utils.formatCurrency(quoteSubtotal)}đ</td>
+          </tr>
+    `;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -1063,11 +1076,7 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
         </table>
 
         <table class="totals">
-          <tr>
-            <td>Tổng tiền hàng:</td>
-            <td>${utils.formatCurrency(quoteSubtotal)}đ</td>
-          </tr>
-          ${vatRow}
+          ${priceSummaryRows}
           <tr>
             <td>Đặt cọc trước:</td>
             <td>${utils.formatCurrency(deposit)}đ</td>

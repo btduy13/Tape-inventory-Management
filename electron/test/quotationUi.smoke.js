@@ -207,6 +207,15 @@ async function evaluate(page, expression) {
       const quotePreviewActive = document.getElementById('modal-quote-pdf-preview').classList.contains('active');
       const quotePreviewHtml = document.getElementById('quote-pdf-preview-frame').srcdoc;
       closeQuotePdfPreview();
+      await generateAndSaveQuotePDF('BG-NO-VAT', 'bang_keo', {
+        thoi_gian: '2026-08-03', ten_hang: 'Băng keo không VAT', ten_khach_hang: 'Khách không VAT',
+        quote_items: [{
+          specification: '48mm x 100m', quantity: 2, unitPrice: 10000, total: 20000,
+          vat: 0, vatPercent: 0, axes: []
+        }]
+      });
+      const noVatPreviewHtml = document.getElementById('quote-pdf-preview-frame').srcdoc;
+      closeQuotePdfPreview();
 
       return {
         draftCountBeforeEdit,
@@ -251,6 +260,10 @@ async function evaluate(page, expression) {
         quotePreviewActive,
         quotePreviewHasCustomer: quotePreviewHtml.includes('Khách kiểm thử'),
         quotePreviewHasDeliveryDate: quotePreviewHtml.includes('Ngày giao hàng'),
+        quotePreviewShowsVatPrices: quotePreviewHtml.includes('Giá gốc (chưa VAT):') && quotePreviewHtml.includes('Giá gồm VAT:'),
+        noVatPreviewHidesVatPrices: !noVatPreviewHtml.includes('Giá gốc (chưa VAT):')
+          && !noVatPreviewHtml.includes('Giá gồm VAT:')
+          && noVatPreviewHtml.includes('Tổng tiền hàng:'),
         filteredCustomerRows,
         clearedCustomerRows,
         filterMenuClosed,
@@ -305,6 +318,8 @@ async function evaluate(page, expression) {
     assert.equal(result.quotePreviewActive, true);
     assert.equal(result.quotePreviewHasCustomer, true);
     assert.equal(result.quotePreviewHasDeliveryDate, false);
+    assert.equal(result.quotePreviewShowsVatPrices, true);
+    assert.equal(result.noVatPreviewHidesVatPrices, true);
     assert.equal(result.filteredCustomerRows, 1);
     assert.equal(result.clearedCustomerRows, 2);
     assert.equal(result.filterMenuClosed, true);
