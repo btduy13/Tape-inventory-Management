@@ -84,6 +84,7 @@ function clearBangKeoInAxisFields(mode = 'order') {
     'truc-vat': '0',
     'truc-thanh-tien-goc': '0',
     'truc-thanh-tien-ban': '0',
+    'truc-vat-amount': '0',
     'truc-ctv': '',
     'truc-hoa-hong-percent': '0',
     'truc-tien-hoa-hong': '0',
@@ -210,6 +211,8 @@ function calculateBangKeoIn(mode = 'order') {
     document.getElementById(`${prefix}don-gia-goc`).value = utils.formatCurrency(result.product.costPrice);
     document.getElementById(`${prefix}thanh-tien-goc`).value = utils.formatCurrency(result.product.costTotal);
     document.getElementById(`${prefix}thanh-tien-ban`).value = utils.formatCurrency(result.product.saleTotal);
+    const vatAmountEl = document.getElementById(`${prefix}vat-amount`);
+    if (vatAmountEl) vatAmountEl.value = utils.formatCurrency(result.vat);
     const savedAxisTotal = mode === 'quote' && typeof getActiveQuoteDraft === 'function'
       ? (getActiveQuoteDraft('bang_keo_in').savedAxes || []).reduce((sum, axis) => sum + orderMath.number(axis.total) + orderMath.number(axis.vat), 0)
       : 0;
@@ -230,7 +233,11 @@ function calculateBangKeoInAxis(mode = 'order', axisResult = null) {
   const axisModeEl = document.getElementById(`${prefix}loai-truc`);
   const isNewAxis = axisModeEl && axisModeEl.value === 'moi';
 
-  if (!isNewAxis) return;
+  const axisVatAmountEl = document.getElementById(`${prefix}truc-vat-amount`);
+  if (!isNewAxis) {
+    if (axisVatAmountEl) axisVatAmountEl.value = '0';
+    return;
+  }
 
   const result = axisResult || orderMath.calculateLine({
     quantity: document.getElementById(`${prefix}truc-so-luong`).value,
@@ -241,6 +248,10 @@ function calculateBangKeoInAxis(mode = 'order', axisResult = null) {
 
   document.getElementById(`${prefix}truc-thanh-tien-goc`).value = utils.formatCurrency(result.costTotal);
   document.getElementById(`${prefix}truc-thanh-tien-ban`).value = utils.formatCurrency(result.saleTotal);
+  if (axisVatAmountEl) {
+    const axisVatAmount = axisResult?.vat ?? result.saleTotal * orderMath.percent(document.getElementById(`${prefix}truc-vat`)?.value) / 100;
+    axisVatAmountEl.value = utils.formatCurrency(axisVatAmount);
+  }
   document.getElementById(`${prefix}truc-tien-hoa-hong`).value = utils.formatCurrency(result.commission);
   document.getElementById(`${prefix}truc-loi-nhuan`).value = utils.formatCurrency(result.profit);
   document.getElementById(`${prefix}truc-loi-nhuan-rong`).value = utils.formatCurrency(result.netProfit);
@@ -531,6 +542,8 @@ function clearFormBangKeoIn(mode = 'order') {
   document.getElementById(`${prefix}loi-nhuan-rong`).value = "0";
   const vatEl = document.getElementById(`${prefix}vat`);
   if (vatEl) vatEl.value = "0";
+  const vatAmountEl = document.getElementById(`${prefix}vat-amount`);
+  if (vatAmountEl) vatAmountEl.value = "0";
   setBangKeoInAxisMode(mode, 'cu');
   
   // Đặt ngày dự kiến mặc định là hôm sau

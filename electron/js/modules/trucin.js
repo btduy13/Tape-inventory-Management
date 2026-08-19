@@ -106,6 +106,8 @@ function calculateTrucIn(mode = 'order') {
     // Cập nhật giao diện
     document.getElementById(`${prefix}thanh-tien-goc`).value = utils.formatCurrency(result.costTotal);
     document.getElementById(`${prefix}thanh-tien-ban`).value = utils.formatCurrency(result.saleTotal);
+    const vatAmountEl = document.getElementById(`${prefix}vat-amount`);
+    if (vatAmountEl) vatAmountEl.value = utils.formatCurrency(result.vat);
     document.getElementById(`${prefix}cong-no-khach`).value = utils.formatCurrency(result.outstanding);
     document.getElementById(`${prefix}tien-hoa-hong`).value = utils.formatCurrency(result.commission);
     document.getElementById(`${prefix}loi-nhuan`).value = utils.formatCurrency(result.profit);
@@ -248,6 +250,8 @@ function clearFormTrucIn(mode = 'order') {
   document.getElementById(`${prefix}loi-nhuan-rong`).value = "0";
   const vatEl = document.getElementById(`${prefix}vat`);
   if (vatEl) vatEl.value = "0";
+  const vatAmountEl = document.getElementById(`${prefix}vat-amount`);
+  if (vatAmountEl) vatAmountEl.value = "0";
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

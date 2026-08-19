@@ -152,6 +152,15 @@ async function evaluate(page, expression) {
       setValue('bki-vat', '10');
       calculateBangKeoIn('order');
       const printedTapeDebtWithVat = utils.parseCurrency(document.getElementById('bki-cong-no-khach').value);
+      const printedTapeVatAmount = utils.parseCurrency(document.getElementById('bki-vat-amount').value);
+
+      setBangKeoInAxisMode('order', 'moi');
+      setValue('bki-truc-so-luong', '2');
+      setValue('bki-truc-gia-goc', '30000');
+      setValue('bki-truc-gia-ban', '50000');
+      setValue('bki-truc-vat', '8');
+      calculateBangKeoIn('order');
+      const printedTapeAxisVatAmount = utils.parseCurrency(document.getElementById('bki-truc-vat-amount').value);
 
       setValue('bk-so-luong', '2');
       setValue('bk-don-gia-goc', '10000');
@@ -159,6 +168,14 @@ async function evaluate(page, expression) {
       setValue('bk-vat', '10');
       calculateBangKeo('order');
       const standardTapeDebtWithVat = utils.parseCurrency(document.getElementById('bk-cong-no-khach').value);
+      const standardTapeVatAmount = utils.parseCurrency(document.getElementById('bk-vat-amount').value);
+
+      setValue('ti-so-luong', '3');
+      setValue('ti-don-gia-goc', '20000');
+      setValue('ti-don-gia-ban', '40000');
+      setValue('ti-vat', '10');
+      calculateTrucIn('order');
+      const printAxisVatAmount = utils.parseCurrency(document.getElementById('ti-vat-amount').value);
 
       statsViewMode = 'summary';
       statsAllOrders = [
@@ -256,6 +273,14 @@ async function evaluate(page, expression) {
         standardTapeVatField: !!document.getElementById('bk-vat'),
         printedTapeDebtWithVat,
         standardTapeDebtWithVat,
+        printedTapeVatAmount,
+        printedTapeAxisVatAmount,
+        standardTapeVatAmount,
+        printAxisVatAmount,
+        salesVatAmountFields: ['bki-vat-amount', 'bk-vat-amount', 'ti-vat-amount']
+          .every(id => !!document.getElementById(id)),
+        salesVatAmountsInResult: ['bki-vat-amount', 'bk-vat-amount', 'ti-vat-amount']
+          .every(id => !!document.getElementById(id).closest('.sales-result-section')),
         quoteDeliveryDateFields: document.querySelectorAll('#form-quote-bang-keo-in [id$="ngay-du-kien"], #form-quote-bang-keo [id$="ngay-du-kien"], #form-quote-truc-in [id$="ngay-du-kien"]').length,
         quotePreviewActive,
         quotePreviewHasCustomer: quotePreviewHtml.includes('Khách kiểm thử'),
@@ -314,6 +339,12 @@ async function evaluate(page, expression) {
     assert.equal(result.standardTapeVatField, true);
     assert.equal(result.printedTapeDebtWithVat, 112000);
     assert.equal(result.standardTapeDebtWithVat, 33000);
+    assert.equal(result.printedTapeVatAmount, 12000);
+    assert.equal(result.printedTapeAxisVatAmount, 8000);
+    assert.equal(result.standardTapeVatAmount, 3000);
+    assert.equal(result.printAxisVatAmount, 12000);
+    assert.equal(result.salesVatAmountFields, true);
+    assert.equal(result.salesVatAmountsInResult, true);
     assert.equal(result.quoteDeliveryDateFields, 0);
     assert.equal(result.quotePreviewActive, true);
     assert.equal(result.quotePreviewHasCustomer, true);
