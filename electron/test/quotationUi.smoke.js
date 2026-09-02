@@ -199,14 +199,87 @@ async function evaluate(page, expression) {
       const customerFilterButton = document.querySelectorAll('#stats-table-header .table-filter-button')[3];
       openStatsColumnFilter({ preventDefault() {}, stopPropagation() {}, currentTarget: customerFilterButton }, 'ten_khach_hang');
       await wait(80);
+      const filterActionLabels = [...document.querySelectorAll('#stats-column-filter-menu .column-filter-actions button')]
+        .map(button => button.textContent.trim());
       toggleStatsColumnFilterValue('ten_khach_hang', 'BA', false);
       const filteredCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+
+      // Mô phỏng dữ liệu vừa được tải lại sau khi chỉnh sửa giá trị đang được lọc.
+      statsAllOrders = statsAllOrders.map(row => row.id === 'FILTER-BEAN'
+        ? { ...row, ten_khach_hang: 'BEAN ĐÃ SỬA' }
+        : row);
+      filterStatsTable();
+      const rowsWhileStaleFilterAfterEdit = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const columnSearchInput = document.querySelector('#stats-column-filter-menu .column-filter-search');
+      columnSearchInput.value = 'BEA';
+      filterColumnFilterValues(columnSearchInput.value);
       clearStatsColumnFilter('ten_khach_hang');
-      const clearedCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const rowsAfterColumnClearFollowingEdit = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const filterMenuRemainsOpen = document.getElementById('stats-column-filter-menu').style.display === 'block';
+      const columnSearchCleared = columnSearchInput.value === '';
+      const columnValuesReset = [...document.querySelectorAll('#stats-column-filter-menu .column-filter-value')]
+        .every(label => label.style.display === 'flex' && label.querySelector('input').checked);
+
+      closeStatsColumnFilterMenu();
+      const customerFilterButtonAfterEdit = document.querySelectorAll('#stats-table-header .table-filter-button')[3];
+      openStatsColumnFilter({ preventDefault() {}, stopPropagation() {}, currentTarget: customerFilterButtonAfterEdit }, 'ten_khach_hang');
+      await wait(80);
+      deselectAllStatsColumnFilter('ten_khach_hang');
+      const deselectedCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const emptySelectionHeaderActive = document.querySelectorAll('#stats-table-header .table-filter-button')[3].classList.contains('active');
+      setStatsColumnFilterAll('ten_khach_hang');
+      const selectedAllCustomerRows = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+
+      document.getElementById('stats-search').value = 'không tồn tại';
+      document.getElementById('stats-month-filter').value = '1';
+      document.getElementById('stats-status-filter').value = 'finished';
+      document.getElementById('stats-date-from').value = '2026-09-01';
+      document.getElementById('stats-date-to').value = '2026-09-30';
+      document.getElementById('stats-giao-filter').value = 'giao';
+      document.getElementById('stats-ctv-filter').value = 'CTV';
+      statsColumnFilters.ten_khach_hang = new Set(['không tồn tại']);
+      filterStatsTable();
+      clearAllStatsFilters();
+      const rowsAfterClearAllFollowingEdit = document.querySelectorAll('#stats-table-body tr[data-id]').length;
+      const allFilterControlsReset = document.getElementById('stats-search').value === ''
+        && document.getElementById('stats-month-filter').value === 'all'
+        && document.getElementById('stats-status-filter').value === 'all'
+        && document.getElementById('stats-date-from').value === ''
+        && document.getElementById('stats-date-to').value === ''
+        && document.getElementById('stats-giao-filter').value === 'all'
+        && document.getElementById('stats-ctv-filter').value === '';
+      const allColumnFiltersReset = Object.keys(statsColumnFilters).length === 0;
       const filterMenuClosed = document.getElementById('stats-column-filter-menu').style.display === 'none';
       const customerHeaderInactive = !document.querySelectorAll('#stats-table-header .table-filter-button')[3].classList.contains('active');
       document.addEventListener = originalAddEventListener;
       document.removeEventListener = originalRemoveEventListener;
+
+      const bkiAxisExcelRows = buildBkiAxisExcelRows([
+        {
+          id: 'BKI-EXCEL-1', thoi_gian: '2026-09-02', ten_hang: 'BKI một trục', ten_khach_hang: 'Khách A',
+          quy_cach_mm: 48, quy_cach_m: 100, quy_cach_mic: 50, loai_truc: 'moi', ten_truc: 'Trục đơn',
+          truc_chu_vi: 320, truc_so_luong: 2, truc_gia_goc: 30000, truc_gia_ban: 50000,
+          truc_thanh_tien_goc: 60000, truc_thanh_tien_ban: 100000, truc_vat_percent: 8, truc_vat: 8000
+        },
+        {
+          id: 'BKI-EXCEL-2', thoi_gian: '2026-09-02', ten_hang: 'BKI nhiều trục', ten_khach_hang: 'Khách B',
+          loai_truc: 'moi', ten_truc: '2 trục in', quote_items: JSON.stringify([
+            { specification: '60mm x 100m (50mic)', axes: [
+              { name: 'Trục đỏ', circumference: 330, quantity: 1, costPrice: 40000, unitPrice: 60000, total: 60000, vatPercent: 10, vat: 6000 },
+              { name: 'Trục xanh', circumference: 340, quantity: 2, costPrice: 45000, unitPrice: 70000, total: 140000, vatPercent: 8, vat: 11200 }
+            ] }
+          ])
+        },
+        { id: 'BKI-EXCEL-3', loai_truc: 'cu', ten_truc: 'Không xuất' }
+      ]);
+      const bkiInlineExcelRows = buildStatsExcelRows([
+        {
+          id: 'BKI-INLINE-1', ten_hang: 'Đơn đầu', ten_khach_hang: 'Khách A', loai_truc: 'moi',
+          ten_truc: 'Trục ngay dưới', truc_so_luong: 1, truc_gia_goc: 30000, truc_gia_ban: 50000,
+          truc_thanh_tien_goc: 30000, truc_thanh_tien_ban: 50000, truc_vat_percent: 10, truc_vat: 5000
+        },
+        { id: 'BKI-INLINE-2', ten_hang: 'Đơn kế tiếp', ten_khach_hang: 'Khách B', loai_truc: 'cu' }
+      ], 'bang_keo_in');
 
       const savedAxisCountAfterLoad = getActiveQuoteDraft('bang_keo_in').savedAxes.length;
       const axisEntryClearedAfterLoad = document.getElementById('q-bki-truc-ten').value === '';
@@ -289,11 +362,29 @@ async function evaluate(page, expression) {
         noVatPreviewHidesVatPrices: !noVatPreviewHtml.includes('Giá gốc (chưa VAT):')
           && !noVatPreviewHtml.includes('Giá gồm VAT:')
           && noVatPreviewHtml.includes('Tổng tiền hàng:'),
+        filterActionLabels,
         filteredCustomerRows,
-        clearedCustomerRows,
+        rowsWhileStaleFilterAfterEdit,
+        rowsAfterColumnClearFollowingEdit,
+        filterMenuRemainsOpen,
+        columnSearchCleared,
+        columnValuesReset,
+        deselectedCustomerRows,
+        emptySelectionHeaderActive,
+        selectedAllCustomerRows,
+        rowsAfterClearAllFollowingEdit,
+        allFilterControlsReset,
+        allColumnFiltersReset,
         filterMenuClosed,
         customerHeaderInactive,
-        filterCloseListenerBalance
+        filterCloseListenerBalance,
+        bkiAxisExcelRowCount: bkiAxisExcelRows.length,
+        bkiAxisExcelNames: bkiAxisExcelRows.map(row => row['Tên Trục']),
+        bkiAxisExcelOrderIds: bkiAxisExcelRows.map(row => row['Mã Đơn Hàng']),
+        bkiAxisExcelVatTotals: bkiAxisExcelRows.map(row => row['Giá Trục Gồm VAT']),
+        bkiInlineExcelRowLabels: bkiInlineExcelRows.map(row => row['Tên Hàng']),
+        bkiInlineExcelRowIds: bkiInlineExcelRows.map(row => row['Mã Đơn Hàng']),
+        bkiInlineExcelAxisNote: bkiInlineExcelRows[1]['Ghi Chú']
       };
     })()`);
 
@@ -351,11 +442,29 @@ async function evaluate(page, expression) {
     assert.equal(result.quotePreviewHasDeliveryDate, false);
     assert.equal(result.quotePreviewShowsVatPrices, true);
     assert.equal(result.noVatPreviewHidesVatPrices, true);
+    assert.deepEqual(result.filterActionLabels, ['Tất cả', 'Bỏ chọn tất cả', 'Xóa lọc']);
     assert.equal(result.filteredCustomerRows, 1);
-    assert.equal(result.clearedCustomerRows, 2);
+    assert.equal(result.rowsWhileStaleFilterAfterEdit, 0);
+    assert.equal(result.rowsAfterColumnClearFollowingEdit, 2);
+    assert.equal(result.filterMenuRemainsOpen, true);
+    assert.equal(result.columnSearchCleared, true);
+    assert.equal(result.columnValuesReset, true);
+    assert.equal(result.deselectedCustomerRows, 0);
+    assert.equal(result.emptySelectionHeaderActive, true);
+    assert.equal(result.selectedAllCustomerRows, 2);
+    assert.equal(result.rowsAfterClearAllFollowingEdit, 2);
+    assert.equal(result.allFilterControlsReset, true);
+    assert.equal(result.allColumnFiltersReset, true);
     assert.equal(result.filterMenuClosed, true);
     assert.equal(result.customerHeaderInactive, true);
     assert.equal(result.filterCloseListenerBalance, 0);
+    assert.equal(result.bkiAxisExcelRowCount, 3);
+    assert.deepEqual(result.bkiAxisExcelNames, ['Trục đơn', 'Trục đỏ', 'Trục xanh']);
+    assert.deepEqual(result.bkiAxisExcelOrderIds, ['BKI-EXCEL-1', 'BKI-EXCEL-2', 'BKI-EXCEL-2']);
+    assert.deepEqual(result.bkiAxisExcelVatTotals, [108000, 66000, 151200]);
+    assert.deepEqual(result.bkiInlineExcelRowLabels, ['Đơn đầu', '↳ Trục kèm BKI: Trục ngay dưới', 'Đơn kế tiếp']);
+    assert.deepEqual(result.bkiInlineExcelRowIds, ['BKI-INLINE-1', '↳ BKI-INLINE-1', 'BKI-INLINE-2']);
+    assert.equal(result.bkiInlineExcelAxisNote, 'VAT 10% · Giá gồm VAT 55000');
     console.log('Electron quotation UI smoke test passed');
   } catch (error) {
     if (stderr.trim()) console.error(stderr.trim());

@@ -330,7 +330,7 @@ function renderStatsTable(rows) {
   // 1. Tạo headers tiếng Việt
   header.innerHTML = statsColumnDefs.map(col => `
     <th>
-      <button type="button" class="table-filter-button ${statsColumnFilters[col.key]?.size ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col.key}')">
+      <button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col.key) ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col.key}')">
         <span>${col.label}</span>
         <span class="filter-caret">▾</span>
       </button>
@@ -522,7 +522,7 @@ function filterStatsTable() {
 
     const matchColumnFilters = statsViewMode !== 'summary' || statsColumnDefs.every(col => {
       const selectedValues = statsColumnFilters[col.key];
-      if (!selectedValues || selectedValues.size === 0) return true;
+      if (!selectedValues) return true;
       return selectedValues.has(String(col.value(row)));
     });
 
@@ -565,22 +565,23 @@ function openStatsColumnFilter(event, columnKey) {
   const values = Array.from(new Set(statsAllOrders.map(row => String(column.value(row)))))
     .filter(value => value !== '')
     .sort((a, b) => a.localeCompare(b, 'vi'));
-  const activeValues = statsColumnFilters[columnKey] || new Set();
-  const isFiltered = activeValues.size > 0;
+  const isFiltered = Object.prototype.hasOwnProperty.call(statsColumnFilters, columnKey);
+  const activeValues = isFiltered ? statsColumnFilters[columnKey] : new Set(values);
 
   menu.innerHTML = `
     <div class="column-filter-title">${column.label}</div>
     <input class="column-filter-search" type="text" placeholder="Tìm giá trị..." oninput="filterColumnFilterValues(this.value)">
     <div class="column-filter-actions">
       <button type="button" onclick="setStatsColumnFilterAll('${columnKey}')">Tất cả</button>
-      <button type="button" onclick="clearStatsColumnFilter('${columnKey}')">Xóa lọc</button>
+      <button type="button" onclick="deselectAllStatsColumnFilter('${columnKey}')">Bỏ chọn tất cả</button>
+      <button type="button" class="column-filter-clear-action" onclick="clearStatsColumnFilter('${columnKey}')">Xóa lọc</button>
     </div>
     <div class="column-filter-values">
       ${values.map(value => {
         const encodedValue = encodeURIComponent(value).replace(/'/g, '%27');
         return `
         <label class="column-filter-value">
-          <input type="checkbox" ${!isFiltered || activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
+          <input type="checkbox" ${activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
           <span>${utils.escapeHtml(value)}</span>
         </label>
       `;
@@ -619,7 +620,7 @@ function toggleStatsColumnFilterValue(columnKey, value, checked) {
   if (!column) return;
 
   const allValues = new Set(statsAllOrders.map(row => String(column.value(row))).filter(Boolean));
-  if (!statsColumnFilters[columnKey] || statsColumnFilters[columnKey].size === 0) {
+  if (!Object.prototype.hasOwnProperty.call(statsColumnFilters, columnKey)) {
     statsColumnFilters[columnKey] = new Set(allValues);
   }
 
@@ -637,12 +638,49 @@ function toggleStatsColumnFilterValue(columnKey, value, checked) {
 
 function setStatsColumnFilterAll(columnKey) {
   delete statsColumnFilters[columnKey];
-  closeStatsColumnFilterMenu();
+  document.querySelectorAll('#stats-column-filter-menu .column-filter-value input[type="checkbox"]').forEach(input => {
+    input.checked = true;
+  });
+  filterStatsTable();
+}
+
+function deselectAllStatsColumnFilter(columnKey) {
+  statsColumnFilters[columnKey] = new Set();
+  document.querySelectorAll('#stats-column-filter-menu .column-filter-value input[type="checkbox"]').forEach(input => {
+    input.checked = false;
+  });
   filterStatsTable();
 }
 
 function clearStatsColumnFilter(columnKey) {
   delete statsColumnFilters[columnKey];
+  const menu = document.getElementById('stats-column-filter-menu');
+  const searchInput = menu?.querySelector('.column-filter-search');
+  if (searchInput) searchInput.value = '';
+  filterColumnFilterValues('');
+  menu?.querySelectorAll('.column-filter-value input[type="checkbox"]').forEach(input => {
+    input.checked = true;
+  });
+  filterStatsTable();
+}
+
+function clearAllStatsFilters() {
+  const defaults = {
+    'stats-search': '',
+    'stats-month-filter': 'all',
+    'stats-status-filter': 'all',
+    'stats-date-from': '',
+    'stats-date-to': '',
+    'stats-giao-filter': 'all',
+    'stats-ctv-filter': ''
+  };
+
+  Object.entries(defaults).forEach(([id, value]) => {
+    const control = document.getElementById(id);
+    if (control) control.value = value;
+  });
+  statsColumnFilters = {};
+  statsLastSelectedIndex = -1;
   closeStatsColumnFilterMenu();
   filterStatsTable();
 }
@@ -819,22 +857,7 @@ async function exportStatsExcel() {
 
   try {
     const orderType = getStatsOrderTypeKey();
-    const cols = statsDetailColumnsMap[orderType] || [];
-    const excelData = rowsToExport.map(row => {
-      const exportObj = {};
-      cols.forEach(col => {
-        const key = statsDetailColumnHeaders[col] || col;
-        const val = row[col];
-        if (col === 'thoi_gian' || col === 'ngay_du_kien') {
-          exportObj[key] = utils.formatDate(val);
-        } else if (col === 'da_giao' || col === 'da_tat_toan' || col === 'da_gui_email') {
-          exportObj[key] = val ? 'Rồi/Xong' : 'Chưa';
-        } else {
-          exportObj[key] = val;
-        }
-      });
-      return exportObj;
-    });
+    const excelData = buildStatsExcelRows(rowsToExport, orderType);
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -855,6 +878,147 @@ async function exportStatsExcel() {
   } catch (err) {
     utils.showToast('Lỗi xuất Excel: ' + err.message, 'danger');
   }
+}
+
+function buildStatsOrderExcelRow(row, orderType) {
+  const exportObj = {};
+  const cols = statsDetailColumnsMap[orderType] || [];
+  cols.forEach(col => {
+    const key = statsDetailColumnHeaders[col] || col;
+    const val = row[col];
+    if (col === 'thoi_gian' || col === 'ngay_du_kien') {
+      exportObj[key] = utils.formatDate(val);
+    } else if (col === 'da_giao' || col === 'da_tat_toan' || col === 'da_gui_email') {
+      exportObj[key] = val ? 'Rồi/Xong' : 'Chưa';
+    } else {
+      exportObj[key] = val;
+    }
+  });
+  return exportObj;
+}
+
+function buildBkiAxisInlineExcelRow(axis) {
+  return {
+    'Mã Đơn Hàng': `↳ ${axis['Mã Đơn Hàng']}`,
+    'Ngày Tạo': axis['Ngày Tạo'],
+    'Tên Hàng': `↳ Trục kèm BKI: ${axis['Tên Trục'] || ''}`,
+    'Khách Hàng': axis['Khách Hàng'],
+    'Quy Cách (mm)': axis['Quy Cách BKI'],
+    'Loại Trục': 'Trục kèm BKI',
+    'Tên Trục': axis['Tên Trục'],
+    'Chu Vi Trục': axis['Chu Vi Trục'],
+    'SL Trục': axis['Số Lượng Trục'],
+    'Giá Gốc Trục': axis['Giá Gốc Trục'],
+    'Giá Bán Trục': axis['Giá Bán Trục'],
+    'VAT Trục': axis['Tiền VAT Trục'],
+    'Tiền Gốc Trục': axis['Thành Tiền Gốc Trục'],
+    'Tiền Bán Trục': axis['Thành Tiền Bán Trục'],
+    'CTV Trục': axis['CTV Trục'],
+    'HH Trục (%)': axis['Hoa Hồng Trục (%)'],
+    'Tiền H.Hồng Trục': axis['Tiền Hoa Hồng Trục'],
+    'Lãi Trục': axis['Lãi Trục'],
+    'Lãi Ròng Trục': axis['Lãi Ròng Trục'],
+    'Ghi Chú': `VAT ${axis['VAT Trục (%)']}% · Giá gồm VAT ${axis['Giá Trục Gồm VAT']}`
+  };
+}
+
+function buildStatsExcelRows(orders = [], orderType = getStatsOrderTypeKey()) {
+  const result = [];
+  orders.forEach(order => {
+    result.push(buildStatsOrderExcelRow(order, orderType));
+    if (orderType === 'bang_keo_in') {
+      buildBkiAxisExcelRows([order]).forEach(axis => {
+        result.push(buildBkiAxisInlineExcelRow(axis));
+      });
+    }
+  });
+  return result;
+}
+
+function parseBkiQuoteItemsForExcel(row = {}) {
+  let items = row.quote_items;
+  if (typeof items === 'string') {
+    try { items = JSON.parse(items); } catch (_) { items = []; }
+  }
+  return Array.isArray(items) ? items : [];
+}
+
+function buildBkiAxisExcelRow(order, axis, specification, axisIndex) {
+  const quantity = Number(axis.quantity ?? axis.truc_so_luong ?? 0) || 0;
+  const costPrice = Number(axis.costPrice ?? axis.truc_gia_goc ?? 0) || 0;
+  const salePrice = Number(axis.unitPrice ?? axis.truc_gia_ban ?? 0) || 0;
+  const saleTotal = Number(axis.total ?? axis.truc_thanh_tien_ban ?? (quantity * salePrice)) || 0;
+  const vatAmount = Number(axis.vat ?? axis.truc_vat ?? 0) || 0;
+  const vatPercent = Number(axis.vatPercent ?? axis.truc_vat_percent ?? (saleTotal > 0 ? vatAmount / saleTotal * 100 : 0)) || 0;
+
+  return {
+    'Mã Đơn Hàng': order.id || '',
+    'Ngày Tạo': utils.formatDate(order.thoi_gian),
+    'Tên Hàng BKI': order.ten_hang || '',
+    'Khách Hàng': order.ten_khach_hang || '',
+    'Quy Cách BKI': specification || '',
+    'STT Trục': axisIndex + 1,
+    'Tên Trục': axis.name ?? axis.ten_truc ?? '',
+    'Chu Vi Trục': axis.circumference ?? axis.truc_chu_vi ?? '',
+    'Số Lượng Trục': quantity,
+    'Giá Gốc Trục': costPrice,
+    'Giá Bán Trục': salePrice,
+    'Thành Tiền Gốc Trục': Number(axis.costTotal ?? axis.truc_thanh_tien_goc ?? (quantity * costPrice)) || 0,
+    'Thành Tiền Bán Trục': saleTotal,
+    'VAT Trục (%)': vatPercent,
+    'Tiền VAT Trục': vatAmount,
+    'Giá Trục Gồm VAT': saleTotal + vatAmount,
+    'CTV Trục': axis.collaborator ?? axis.truc_ctv ?? '',
+    'Hoa Hồng Trục (%)': Number(axis.commissionPercent ?? axis.truc_hoa_hong ?? 0) || 0,
+    'Tiền Hoa Hồng Trục': Number(axis.commission ?? axis.truc_tien_hoa_hong ?? 0) || 0,
+    'Lãi Trục': Number(axis.profit ?? axis.truc_loi_nhuan ?? 0) || 0,
+    'Lãi Ròng Trục': Number(axis.netProfit ?? axis.truc_loi_nhuan_rong ?? 0) || 0
+  };
+}
+
+function buildBkiAxisExcelRows(orders = []) {
+  const result = [];
+
+  orders.forEach(order => {
+    const items = parseBkiQuoteItemsForExcel(order);
+    let storedAxisCount = 0;
+
+    items.forEach(item => {
+      const axes = Array.isArray(item?.axes) ? item.axes : [];
+      axes.forEach(axis => {
+        result.push(buildBkiAxisExcelRow(order, axis, item.specification, storedAxisCount));
+        storedAxisCount += 1;
+      });
+    });
+
+    // Đơn bán hàng BKI hiện lưu một trục kèm trực tiếp trên bản ghi.
+    // Không thêm lại dòng tổng hợp nếu quote_items đã chứa các trục chi tiết.
+    if (storedAxisCount === 0 && order.loai_truc === 'moi') {
+      const specification = [
+        order.quy_cach_mm ? `${order.quy_cach_mm}mm` : '',
+        order.quy_cach_m ? `${order.quy_cach_m}m` : '',
+        order.quy_cach_mic ? `${order.quy_cach_mic}mic` : ''
+      ].filter(Boolean).join(' x ');
+      result.push(buildBkiAxisExcelRow(order, {
+        ten_truc: order.ten_truc,
+        truc_chu_vi: order.truc_chu_vi,
+        truc_so_luong: order.truc_so_luong,
+        truc_gia_goc: order.truc_gia_goc,
+        truc_gia_ban: order.truc_gia_ban,
+        truc_thanh_tien_goc: order.truc_thanh_tien_goc,
+        truc_thanh_tien_ban: order.truc_thanh_tien_ban,
+        truc_vat: order.truc_vat,
+        truc_vat_percent: order.truc_vat_percent,
+        truc_ctv: order.truc_ctv,
+        truc_hoa_hong: order.truc_hoa_hong,
+        truc_tien_hoa_hong: order.truc_tien_hoa_hong,
+        truc_loi_nhuan: order.truc_loi_nhuan,
+        truc_loi_nhuan_rong: order.truc_loi_nhuan_rong
+      }, specification, 0));
+    }
+  });
+
+  return result;
 }
 
 async function sendSelectedStatsEmail() {
