@@ -1,6 +1,7 @@
 // JS/MODULES/THONGKE.JS - LOGIC XỬ LÝ PHÂN HỆ THỐNG KÊ CHI TIẾT
 let statsActiveSubtab = 'bang-keo-in';
 let statsColumnFilters = {};
+let statsSort = { key: null, direction: 'asc' };
 let statsColumnFilterCloseHandler = null;
 
 const statsColumnDefs = [
@@ -61,7 +62,7 @@ const statsDetailColumnsMap = {
 
 const statsCurrencyColumns = new Set([
   'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc',
-  'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat',
+  'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat',
   'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_vat', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
   'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong'
 ]);
@@ -157,6 +158,8 @@ async function loadStatsWarningMetrics() {
 // Chuyển đổi giữa các phân hệ con của Thống kê (Băng Keo In, Trục In, Băng Keo)
 function switchStatsSubtab(subtab) {
   statsActiveSubtab = subtab;
+  statsSort = { key: null, direction: 'asc' };
+  closeStatsColumnFilterMenu();
   
   const pills = document.querySelectorAll('#stats-subtabs button');
   pills.forEach(p => p.classList.remove('active'));
@@ -332,7 +335,7 @@ function renderStatsTable(rows) {
     <th>
       <button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col.key) ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col.key}')">
         <span>${col.label}</span>
-        <span class="filter-caret">▾</span>
+        <span class="filter-caret">${statsSort.key === col.key ? (statsSort.direction === 'asc' ? '↑' : '↓') : '▾'}</span>
       </button>
     </th>
   `).join('');
@@ -354,7 +357,7 @@ function renderStatsTable(rows) {
     // Đánh giá cảnh báo thời hạn
     const today = new Date();
     today.setHours(0,0,0,0);
-    const dueDate = new Date(row.ngay_du_kien);
+    const dueDate = new Date(row.ngay_du_kien || NaN);
     dueDate.setHours(0,0,0,0);
     const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     
@@ -411,7 +414,7 @@ function renderStatsDetailTable(rows) {
   const orderType = getStatsOrderTypeKey();
   const cols = statsDetailColumnsMap[orderType] || [];
 
-  header.innerHTML = cols.map(col => `<th>${statsDetailColumnHeaders[col] || col}</th>`).join('');
+  header.innerHTML = cols.map(col => `<th><button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col) ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col}')">${statsDetailColumnHeaders[col] || col} <span>${statsSort.key === col ? (statsSort.direction === 'asc' ? '↑' : '↓') : '▾'}</span></button></th>`).join('');
   body.innerHTML = "";
   statsLastSelectedIndex = -1;
   updateStatsSelectionSummary();
@@ -481,7 +484,7 @@ function bindStatsRowEvents(tr, row) {
 }
 
 // 7. Lọc dữ liệu bằng Search & Comboboxes (Offline Filter cực nhanh)
-function filterStatsTable() {
+function getFilteredStatsOrders() {
   const query = document.getElementById('stats-search').value.toLowerCase().trim();
   const monthFilter = document.getElementById('stats-month-filter').value;
   const statusFilter = document.getElementById('stats-status-filter').value;
@@ -496,16 +499,14 @@ function filterStatsTable() {
   const filtered = statsAllOrders.filter(row => {
     // A. Lọc từ khóa tìm kiếm
     const matchQuery = !query || 
-      row.id.toLowerCase().includes(query) ||
-      row.ten_hang.toLowerCase().includes(query) || 
-      row.ten_khach_hang.toLowerCase().includes(query);
+      [row.id, row.ten_hang, row.ten_khach_hang, row.ten_truc].some(value => String(value ?? '').toLowerCase().includes(query));
 
     // B. Lọc tháng đặt hàng
     const dateObj = new Date(row.thoi_gian);
     const matchMonth = monthFilter === 'all' || (dateObj.getMonth() + 1).toString() === monthFilter;
 
     // C. Lọc trạng thái
-    const dueDate = new Date(row.ngay_du_kien);
+    const dueDate = new Date(row.ngay_du_kien || NaN);
     dueDate.setHours(0,0,0,0);
     const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
 
@@ -520,13 +521,12 @@ function filterStatsTable() {
       matchStatus = row.da_tat_toan;
     }
 
-    const matchColumnFilters = statsViewMode !== 'summary' || statsColumnDefs.every(col => {
-      const selectedValues = statsColumnFilters[col.key];
-      if (!selectedValues) return true;
-      return selectedValues.has(String(col.value(row)));
+    const matchColumnFilters = Object.entries(statsColumnFilters).every(([key, selectedValues]) => {
+      const col = getStatsFilterColumn(key);
+      return !col || selectedValues.has(String(col.value(row)));
     });
 
-    const matchCtv = !ctvQuery || (row.ctv && String(row.ctv).toLowerCase().includes(ctvQuery));
+    const matchCtv = !ctvQuery || [row.ctv, row.loai_truc === 'moi' ? row.truc_ctv : ''].some(value => String(value ?? '').toLowerCase().includes(ctvQuery));
 
     let matchGiao = true;
     if (giaoFilter === 'giao') matchGiao = !!row.da_giao;
@@ -549,7 +549,44 @@ function filterStatsTable() {
     return matchQuery && matchMonth && matchStatus && matchColumnFilters && matchCtv && matchGiao && matchDateRange;
   });
 
-  renderStatsTable(filtered);
+  return sortStatsOrders(filtered);
+}
+
+function filterStatsTable() {
+  renderStatsTable(getFilteredStatsOrders());
+}
+
+function getStatsFilterColumn(key) {
+  const summary = statsColumnDefs.find(col => col.key === key);
+  if (summary) return summary;
+  if (!(statsDetailColumnsMap[getStatsOrderTypeKey()] || []).includes(key)) return null;
+  return { key, label: statsDetailColumnHeaders[key] || key, value: row => row[key] ?? '' };
+}
+
+function compareStatsValues(a, b, key) {
+  if (key === 'thoi_gian' || key === 'ngay_du_kien') {
+    a = a ? Date.parse(a) : NaN;
+    b = b ? Date.parse(b) : NaN;
+  } else if (statsCurrencyColumns.has(key) || ['so_luong', 'truc_so_luong', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'truc_chu_vi', 'hoa_hong', 'truc_hoa_hong'].includes(key)) {
+    a = a === null || a === undefined || a === '' ? NaN : Number(a);
+    b = b === null || b === undefined || b === '' ? NaN : Number(b);
+  }
+  const missing = value => value === null || value === undefined || value === '' || (typeof value === 'number' && !Number.isFinite(value));
+  if (missing(a) || missing(b)) return missing(a) === missing(b) ? 0 : (missing(a) ? 1 : -1);
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b), 'vi', { numeric: true, sensitivity: 'base' });
+}
+
+function sortStatsOrders(rows) {
+  if (!statsSort.key) return [...rows];
+  return [...rows].sort((a, b) => compareStatsValues(a[statsSort.key], b[statsSort.key], statsSort.key) * (statsSort.direction === 'desc' ? -1 : 1));
+}
+
+function setStatsSort(key, direction) {
+  if (!getStatsFilterColumn(key) || !['asc', 'desc'].includes(direction)) return;
+  statsSort = { key, direction };
+  closeStatsColumnFilterMenu();
+  filterStatsTable();
 }
 
 function openStatsColumnFilter(event, columnKey) {
@@ -557,19 +594,22 @@ function openStatsColumnFilter(event, columnKey) {
   event.stopPropagation();
 
   const menu = document.getElementById('stats-column-filter-menu');
-  const column = statsColumnDefs.find(col => col.key === columnKey);
+  const column = getStatsFilterColumn(columnKey);
   if (!menu || !column) return;
 
   closeStatsColumnFilterMenu();
 
-  const values = Array.from(new Set(statsAllOrders.map(row => String(column.value(row)))))
-    .filter(value => value !== '')
-    .sort((a, b) => a.localeCompare(b, 'vi'));
+  const rawValues = new Map(statsAllOrders.map(row => [String(column.value(row)), row[columnKey]]));
+  const values = [...rawValues.keys()].sort((a, b) => compareStatsValues(rawValues.get(a), rawValues.get(b), columnKey));
   const isFiltered = Object.prototype.hasOwnProperty.call(statsColumnFilters, columnKey);
   const activeValues = isFiltered ? statsColumnFilters[columnKey] : new Set(values);
 
   menu.innerHTML = `
     <div class="column-filter-title">${column.label}</div>
+    <div class="column-filter-actions column-sort-actions">
+      <button type="button" onclick="setStatsSort('${columnKey}', 'asc')">↑ Sắp xếp tăng dần</button>
+      <button type="button" onclick="setStatsSort('${columnKey}', 'desc')">↓ Sắp xếp giảm dần</button>
+    </div>
     <input class="column-filter-search" type="text" placeholder="Tìm giá trị..." oninput="filterColumnFilterValues(this.value)">
     <div class="column-filter-actions">
       <button type="button" onclick="setStatsColumnFilterAll('${columnKey}')">Tất cả</button>
@@ -582,7 +622,7 @@ function openStatsColumnFilter(event, columnKey) {
         return `
         <label class="column-filter-value">
           <input type="checkbox" ${activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
-          <span>${utils.escapeHtml(value)}</span>
+          <span>${utils.escapeHtml(value || '(Trống)')}</span>
         </label>
       `;
       }).join('')}
@@ -599,11 +639,7 @@ function openStatsColumnFilter(event, columnKey) {
       closeStatsColumnFilterMenu();
     }
   };
-  setTimeout(() => {
-    if (statsColumnFilterCloseHandler) {
-      document.addEventListener('mousedown', statsColumnFilterCloseHandler);
-    }
-  }, 50);
+  document.addEventListener('mousedown', statsColumnFilterCloseHandler);
 }
 
 function closeStatsColumnFilterMenu() {
@@ -616,10 +652,10 @@ function closeStatsColumnFilterMenu() {
 }
 
 function toggleStatsColumnFilterValue(columnKey, value, checked) {
-  const column = statsColumnDefs.find(col => col.key === columnKey);
+  const column = getStatsFilterColumn(columnKey);
   if (!column) return;
 
-  const allValues = new Set(statsAllOrders.map(row => String(column.value(row))).filter(Boolean));
+  const allValues = new Set(statsAllOrders.map(row => String(column.value(row))));
   if (!Object.prototype.hasOwnProperty.call(statsColumnFilters, columnKey)) {
     statsColumnFilters[columnKey] = new Set(allValues);
   }
@@ -630,7 +666,7 @@ function toggleStatsColumnFilterValue(columnKey, value, checked) {
     statsColumnFilters[columnKey].delete(value);
   }
 
-  if (statsColumnFilters[columnKey].size === allValues.size) {
+  if (allValues.size > 0 && [...allValues].every(value => statsColumnFilters[columnKey].has(value))) {
     delete statsColumnFilters[columnKey];
   }
   filterStatsTable();
@@ -665,6 +701,7 @@ function clearStatsColumnFilter(columnKey) {
 }
 
 function clearAllStatsFilters() {
+  statsSort = { key: null, direction: 'asc' };
   const defaults = {
     'stats-search': '',
     'stats-month-filter': 'all',
@@ -845,9 +882,9 @@ async function exportStatsExcel() {
   let rowsToExport = [];
 
   if (selectedIds.length === 0) {
-    rowsToExport = statsAllOrders;
+    rowsToExport = getFilteredStatsOrders();
   } else {
-    rowsToExport = statsAllOrders.filter(row => selectedIds.includes(row.id));
+    rowsToExport = getFilteredStatsOrders().filter(row => selectedIds.includes(row.id));
   }
 
   if (rowsToExport.length === 0) {
@@ -860,6 +897,7 @@ async function exportStatsExcel() {
     const excelData = buildStatsExcelRows(rowsToExport, orderType);
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
+    worksheet['!cols'] = Object.keys(excelData[0]).map(key => ({ wch: key === 'Tên Hàng' ? 42 : Math.max(16, key.length + 2) }));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Đơn hàng');
 
@@ -882,7 +920,7 @@ async function exportStatsExcel() {
 
 function buildStatsOrderExcelRow(row, orderType) {
   const exportObj = {};
-  const cols = statsDetailColumnsMap[orderType] || [];
+  const cols = (statsDetailColumnsMap[orderType] || []).filter(col => orderType !== 'bang_keo_in' || !(col.startsWith('truc_') || col === 'ten_truc'));
   cols.forEach(col => {
     const key = statsDetailColumnHeaders[col] || col;
     const val = row[col];
@@ -891,9 +929,16 @@ function buildStatsOrderExcelRow(row, orderType) {
     } else if (col === 'da_giao' || col === 'da_tat_toan' || col === 'da_gui_email') {
       exportObj[key] = val ? 'Rồi/Xong' : 'Chưa';
     } else {
-      exportObj[key] = val;
+      exportObj[key] = statsCurrencyColumns.has(col) || ['so_luong', 'hoa_hong', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay'].includes(col)
+        ? (val == null || val === '' ? '' : Number(val)) : val;
     }
   });
+  const total = Number(row.thanh_tien_ban) || 0;
+  const vat = Number(row.vat) || 0;
+  exportObj['VAT (%)'] = Number(row.vat_percent) > 0 ? Number(row.vat_percent) : (total > 0 ? vat / total * 100 : 0);
+  exportObj['Thành Tiền Gồm VAT'] = total + vat;
+  exportObj['Chu Vi Trục'] = '';
+  exportObj['Ghi Chú'] = '';
   return exportObj;
 }
 
@@ -903,21 +948,21 @@ function buildBkiAxisInlineExcelRow(axis) {
     'Ngày Tạo': axis['Ngày Tạo'],
     'Tên Hàng': `↳ Trục kèm BKI: ${axis['Tên Trục'] || ''}`,
     'Khách Hàng': axis['Khách Hàng'],
-    'Quy Cách (mm)': axis['Quy Cách BKI'],
     'Loại Trục': 'Trục kèm BKI',
-    'Tên Trục': axis['Tên Trục'],
     'Chu Vi Trục': axis['Chu Vi Trục'],
-    'SL Trục': axis['Số Lượng Trục'],
-    'Giá Gốc Trục': axis['Giá Gốc Trục'],
-    'Giá Bán Trục': axis['Giá Bán Trục'],
-    'VAT Trục': axis['Tiền VAT Trục'],
-    'Tiền Gốc Trục': axis['Thành Tiền Gốc Trục'],
-    'Tiền Bán Trục': axis['Thành Tiền Bán Trục'],
-    'CTV Trục': axis['CTV Trục'],
-    'HH Trục (%)': axis['Hoa Hồng Trục (%)'],
-    'Tiền H.Hồng Trục': axis['Tiền Hoa Hồng Trục'],
-    'Lãi Trục': axis['Lãi Trục'],
-    'Lãi Ròng Trục': axis['Lãi Ròng Trục'],
+    'Số Lượng': axis['Số Lượng Trục'],
+    'Giá Gốc': axis['Giá Gốc Trục'],
+    'Giá Bán': axis['Giá Bán Trục'],
+    'VAT': axis['Tiền VAT Trục'],
+    'VAT (%)': axis['VAT Trục (%)'],
+    'Thành Tiền Gồm VAT': axis['Giá Trục Gồm VAT'],
+    'Tiền Gốc': axis['Thành Tiền Gốc Trục'],
+    'Tiền Bán': axis['Thành Tiền Bán Trục'],
+    'CTV': axis['CTV Trục'],
+    'Hoa Hồng (%)': axis['Hoa Hồng Trục (%)'],
+    'Tiền H.Hồng': axis['Tiền Hoa Hồng Trục'],
+    'Lợi Nhuận': axis['Lãi Trục'],
+    'Lợi Nhuận Ròng': axis['Lãi Ròng Trục'],
     'Ghi Chú': `VAT ${axis['VAT Trục (%)']}% · Giá gồm VAT ${axis['Giá Trục Gồm VAT']}`
   };
 }
@@ -945,11 +990,12 @@ function parseBkiQuoteItemsForExcel(row = {}) {
 
 function buildBkiAxisExcelRow(order, axis, specification, axisIndex) {
   const quantity = Number(axis.quantity ?? axis.truc_so_luong ?? 0) || 0;
-  const costPrice = Number(axis.costPrice ?? axis.truc_gia_goc ?? 0) || 0;
+  const costPrice = Number(axis.costPrice ?? axis.truc_gia_goc ?? (quantity > 0 ? Number(axis.costTotal || 0) / quantity : 0)) || 0;
   const salePrice = Number(axis.unitPrice ?? axis.truc_gia_ban ?? 0) || 0;
   const saleTotal = Number(axis.total ?? axis.truc_thanh_tien_ban ?? (quantity * salePrice)) || 0;
-  const vatAmount = Number(axis.vat ?? axis.truc_vat ?? 0) || 0;
-  const vatPercent = Number(axis.vatPercent ?? axis.truc_vat_percent ?? (saleTotal > 0 ? vatAmount / saleTotal * 100 : 0)) || 0;
+  const storedPercent = Number(axis.vatPercent ?? axis.truc_vat_percent ?? 0) || 0;
+  const vatAmount = Number(axis.vat ?? axis.truc_vat ?? (saleTotal * storedPercent / 100)) || 0;
+  const vatPercent = storedPercent > 0 ? storedPercent : (saleTotal > 0 ? vatAmount / saleTotal * 100 : 0);
 
   return {
     'Mã Đơn Hàng': order.id || '',
@@ -984,7 +1030,7 @@ function buildBkiAxisExcelRows(orders = []) {
     let storedAxisCount = 0;
 
     items.forEach(item => {
-      const axes = Array.isArray(item?.axes) ? item.axes : [];
+      const axes = Array.isArray(item?.axes) ? item.axes.filter(axis => axis && typeof axis === 'object') : [];
       axes.forEach(axis => {
         result.push(buildBkiAxisExcelRow(order, axis, item.specification, storedAxisCount));
         storedAxisCount += 1;

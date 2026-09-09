@@ -45,7 +45,20 @@ const excelImportConfigs = {
   }
 };
 
+Object.entries(excelImportConfigs).forEach(([type, config]) => {
+  config.headers.push('VAT (%)');
+  config.sample.push(0);
+  if (type === 'bang_keo_in') {
+    config.headers.push('VAT Trục (%)');
+    config.sample.push(0);
+  }
+});
+
 const excelImportAliases = {
+  vat_percent: ['VAT (%)', 'VAT tổng (%)', 'vat_percent'],
+  vat: ['VAT', 'Tiền VAT', 'vat'],
+  truc_vat_percent: ['VAT Trục (%)', 'truc_vat_percent'],
+  truc_vat: ['VAT Trục', 'Tiền VAT Trục', 'truc_vat'],
   ten_hang: ['Tên hàng', 'Ten hang', 'ten_hang'],
   ten_khach_hang: ['Tên khách hàng', 'Khách hàng', 'Ten khach hang', 'ten_khach_hang'],
   ngay_du_kien: ['Ngày dự kiến', 'Ngày giao', 'Ngay du kien', 'ngay_du_kien'],
@@ -96,6 +109,7 @@ function normalizeExcelKey(value) {
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D')
     .toLowerCase()
+    .replace(/%/g, 'percent')
     .replace(/[^a-z0-9]/g, '');
 }
 
@@ -120,8 +134,16 @@ function buildExcelGetter(row) {
 function parseImportNumber(value) {
   if (value === null || value === undefined || value === '') return 0;
   if (typeof value === 'number') return value;
-  const text = String(value).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
-  const parsed = parseFloat(text);
+  let text = String(value).trim().replace(/[^\d,.-]/g, '');
+  if (text.includes(',') && text.includes('.')) {
+    const decimal = text.lastIndexOf(',') > text.lastIndexOf('.') ? ',' : '.';
+    text = text.replace(decimal === ',' ? /\./g : /,/g, '').replace(',', '.');
+  } else if (/^-?[1-9]\d{0,2}([,.]\d{3})+$/.test(text)) {
+    text = text.replace(/[,.]/g, '');
+  } else {
+    text = text.replace(',', '.');
+  }
+  const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -145,14 +167,26 @@ function parseImportDate(value) {
   }
   const text = String(value || '').trim();
   if (!text) return new Date(nextDateString());
-  const direct = new Date(text);
-  if (!Number.isNaN(direct.getTime())) return direct;
   const parts = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
   if (parts) {
     const year = parts[3].length === 2 ? `20${parts[3]}` : parts[3];
     return new Date(Number(year), Number(parts[2]) - 1, Number(parts[1]));
   }
+  const direct = new Date(text);
+  if (!Number.isNaN(direct.getTime())) return direct;
   return new Date(nextDateString());
+}
+
+function importVat(get, field, subtotal) {
+  const rawPercent = get(`${field}_percent`, '');
+  const rate = rawPercent === '' ? (subtotal > 0 ? parseImportNumber(get(field)) / subtotal * 100 : 0) : parseImportNumber(rawPercent);
+  const vatPercent = orderMath.percent(rate);
+  return { vatPercent, vat: subtotal * vatPercent / 100 };
+}
+
+function isInlineAxisImportRow(row) {
+  const get = buildExcelGetter(row);
+  return /^\s*↳/.test(String(get('ten_hang'))) || normalizeExcelKey(get('loai_truc')) === 'truckembki';
 }
 
 function calculateSimpleImport(data) {
@@ -162,10 +196,13 @@ function calculateSimpleImport(data) {
     salePrice: data.don_gia_ban,
     commissionPercent: data.hoa_hong,
     shipping: data.tien_ship,
+    vatPercent: data.vat_percent,
     settled: data.da_tat_toan
   });
   data.hoa_hong = result.commissionPercent;
   data.thanh_tien_goc = result.costTotal;
+  data.thanh_tien = result.costTotal;
+  data.vat = result.vat;
   data.thanh_tien_ban = result.saleTotal;
   data.cong_no_khach = result.outstanding;
   data.loi_nhuan = result.profit;
@@ -234,15 +271,22 @@ function mapBangKeoInImport(row) {
   data.truc_loi_nhuan = data.truc_thanh_tien_ban - data.truc_thanh_tien_goc;
   data.truc_tien_hoa_hong = Math.max(0, data.truc_loi_nhuan) * data.truc_hoa_hong / 100;
   data.truc_loi_nhuan_rong = data.truc_loi_nhuan - data.truc_tien_hoa_hong;
+  const productVat = importVat(get, 'vat', data.thanh_tien_ban);
+  const axisVat = importVat(get, 'truc_vat', data.truc_thanh_tien_ban);
+  data.vat = productVat.vat;
+  data.vat_percent = productVat.vatPercent;
+  data.truc_vat = isNewAxis ? axisVat.vat : 0;
+  data.truc_vat_percent = isNewAxis ? axisVat.vatPercent : 0;
   data.cong_no_khach = data.da_tat_toan
     ? 0
-    : Math.max(0, data.thanh_tien_ban + data.truc_thanh_tien_ban - data.tien_coc);
+    : Math.max(0, data.thanh_tien_ban + data.truc_thanh_tien_ban + data.vat + data.truc_vat - data.tien_coc);
 
   return data;
 }
 
 function mapSimpleImport(row, type) {
   const get = buildExcelGetter(row);
+  const vat = importVat(get, 'vat', parseImportNumber(get('so_luong')) * parseImportNumber(get('don_gia_ban')));
   return calculateSimpleImport({
     thoi_gian: new Date(),
     ten_hang: parseImportText(get('ten_hang')),
@@ -257,6 +301,7 @@ function mapSimpleImport(row, type) {
     ctv: parseImportText(get('ctv')),
     hoa_hong: parseImportNumber(get('hoa_hong')),
     tien_ship: parseImportNumber(get('tien_ship')),
+    vat_percent: vat.vatPercent,
     da_giao: parseImportBoolean(get('da_giao')),
     da_tat_toan: parseImportBoolean(get('da_tat_toan')),
     da_gui_email: false,
@@ -350,6 +395,10 @@ async function importOrdersFromExcel() {
     const mappedRows = [];
     const validationErrors = [];
     cleanRows.forEach((row, index) => {
+      if (isInlineAxisImportRow(row)) {
+        validationErrors.push(`Dòng ${index + 2}: trục kèm BKI là dòng chi tiết xuất báo cáo; hãy dùng mẫu nhập Excel và khai báo trục trên cùng dòng đơn hàng.`);
+        return;
+      }
       const data = orderType === 'bang_keo_in' ? mapBangKeoInImport(row) : mapSimpleImport(row, orderType);
       const rowNumber = index + 2;
       validationErrors.push(...validateImportData(data, rowNumber));
@@ -397,12 +446,13 @@ async function insertBangKeoInImport(orderId, data) {
       loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
       loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
       truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
-      truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong
+      truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong,
+      vat, vat_percent, truc_vat, truc_vat_percent
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
       $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
       $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-      $42, $43, $44, $45, $46, $47, $48, $49
+      $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53
     )
   `;
 
@@ -416,7 +466,8 @@ async function insertBangKeoInImport(orderId, data) {
     data.loi_nhuan_rong, data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote,
     data.loai_truc, data.ten_truc, data.truc_chu_vi, data.truc_so_luong, data.truc_gia_goc,
     data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
-    data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong
+    data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong,
+    data.vat, data.vat_percent, data.truc_vat, data.truc_vat_percent
   ]);
 }
 
@@ -428,10 +479,10 @@ async function insertSimpleImport(orderId, data, type) {
         quy_cach, so_luong, mau_sac, mau_keo, don_gia_goc, thanh_tien_goc,
         don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong,
         tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong,
-        da_giao, da_tat_toan, da_gui_email, is_quote
+        da_giao, da_tat_toan, da_gui_email, is_quote, vat, vat_percent
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20, $21, $22, $23, $24
+        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
       )
     `;
     return window.electronAPI.dbRun(sql, [
@@ -439,7 +490,7 @@ async function insertSimpleImport(orderId, data, type) {
       data.quy_cach, data.so_luong, data.mau_sac, data.mau_keo, data.don_gia_goc, data.thanh_tien_goc,
       data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
       data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote
+      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent
     ]);
   }
 
@@ -449,10 +500,10 @@ async function insertSimpleImport(orderId, data, type) {
       quy_cach, so_luong, mau_sac, don_gia_goc, thanh_tien,
       don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong,
       tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong,
-      da_giao, da_tat_toan, da_gui_email, is_quote
+      da_giao, da_tat_toan, da_gui_email, is_quote, vat, vat_percent
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-      $16, $17, $18, $19, $20, $21, $22, $23
+      $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
     )
   `;
   return window.electronAPI.dbRun(sql, [
@@ -460,6 +511,6 @@ async function insertSimpleImport(orderId, data, type) {
     data.quy_cach, data.so_luong, data.mau_sac, data.don_gia_goc, data.thanh_tien,
     data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
     data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-    data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote
+    data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent
   ]);
 }

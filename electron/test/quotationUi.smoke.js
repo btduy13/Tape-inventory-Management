@@ -442,7 +442,7 @@ async function evaluate(page, expression) {
     assert.equal(result.quotePreviewHasDeliveryDate, false);
     assert.equal(result.quotePreviewShowsVatPrices, true);
     assert.equal(result.noVatPreviewHidesVatPrices, true);
-    assert.deepEqual(result.filterActionLabels, ['Tất cả', 'Bỏ chọn tất cả', 'Xóa lọc']);
+    assert.deepEqual(result.filterActionLabels, ['↑ Sắp xếp tăng dần', '↓ Sắp xếp giảm dần', 'Tất cả', 'Bỏ chọn tất cả', 'Xóa lọc']);
     assert.equal(result.filteredCustomerRows, 1);
     assert.equal(result.rowsWhileStaleFilterAfterEdit, 0);
     assert.equal(result.rowsAfterColumnClearFollowingEdit, 2);

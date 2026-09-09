@@ -786,20 +786,20 @@ function clearQuoteItems(type) {
 async function loadQuotationsData() {
   try {
     const sql = `
-      SELECT id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien, so_luong, don_gia_ban, thanh_tien_ban, quote_items, 'bang_keo_in' AS type
-      FROM bang_keo_in_orders WHERE is_quote = TRUE
+      SELECT to_jsonb(q) AS order_data, thoi_gian, 'bang_keo_in' AS type
+      FROM bang_keo_in_orders q WHERE is_quote = TRUE
       UNION ALL
-      SELECT id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien, so_luong, don_gia_ban, thanh_tien_ban, quote_items, 'bang_keo' AS type
-      FROM bang_keo_orders WHERE is_quote = TRUE
+      SELECT to_jsonb(q) AS order_data, thoi_gian, 'bang_keo' AS type
+      FROM bang_keo_orders q WHERE is_quote = TRUE
       UNION ALL
-      SELECT id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien, so_luong, don_gia_ban, thanh_tien_ban, quote_items, 'truc_in' AS type
-      FROM truc_in_orders WHERE is_quote = TRUE
+      SELECT to_jsonb(q) AS order_data, thoi_gian, 'truc_in' AS type
+      FROM truc_in_orders q WHERE is_quote = TRUE
       ORDER BY thoi_gian DESC
     `;
 
     const res = await window.electronAPI.dbQuery(sql);
     if (res.ok) {
-      quotationsAllList = res.rows;
+      quotationsAllList = res.rows.map(row => ({ ...row.order_data, type: row.type }));
       renderQuotationsTable(quotationsAllList);
     } else {
       utils.showToast("Không thể tải danh sách báo giá", "danger");
