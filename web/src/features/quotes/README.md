@@ -32,3 +32,11 @@ quotes/
 ```
 
 Keep files under ~250 lines. Shared code goes to `src/lib/` only (ask the foundation owner).
+
+Security rules (SECURITY_REPORT.md W5 to W8):
+
+- Sending a quote cancels every other `sent` quote of the same lead and revokes its links. Only the
+  newest version can be answered.
+- An expired link is invalid even after it was used. No permanent read-only view.
+- In SQL (0012) a quote never goes back to `draft`. To change prices, create version + 1.
+- `/api/q/[token]/respond` reads at most 8 KB of the body (`readTextCapped`).

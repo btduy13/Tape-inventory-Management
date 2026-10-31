@@ -54,8 +54,9 @@ export function evaluateTokenAccess(
 ): TokenAccess {
   if (!token || !quote) return "invalid";
   const answered = quote.status === "accepted" || quote.status === "changes_requested";
+  // Expiry first: an answered link must not show the quote (names, prices) forever.
+  if (!(Date.parse(token.expires_at) > now.getTime())) return "invalid";
   if (token.revoked_at) return answered ? "used" : "invalid";
-  if (Date.parse(token.expires_at) <= now.getTime()) return "invalid";
   if (answered) return "used";
   if (quote.status !== "sent") return "invalid";
   if (quote.valid_until && validUntilEnd(quote.valid_until) < now.getTime()) return "quote_expired";

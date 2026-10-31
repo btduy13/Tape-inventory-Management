@@ -1,4 +1,4 @@
-// In-memory sender for local dev (no RESEND_API_KEY) and unit tests.
+// In-memory sender for local dev (no Resend API key configured) and unit tests.
 import type { EmailMessage, EmailSender, SendResult } from "./types";
 
 export class FakeSender implements EmailSender {

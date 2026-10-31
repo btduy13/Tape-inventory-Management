@@ -2,7 +2,7 @@
 
 export const ROUTES = {
   home: "/",
-  design: "/design",
+  design: "/thiet-ke",
   quoteView: (token: string) => `/q/${encodeURIComponent(token)}`,
   login: "/login",
   authCallback: "/auth/callback",

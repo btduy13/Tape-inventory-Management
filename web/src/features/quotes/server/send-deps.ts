@@ -64,6 +64,25 @@ export function createSendDeps(db: SupabaseClient<Database>): SendDeps {
         .eq("id", quoteId);
       if (error) throw new Error(error.message);
     },
+    async supersedeOtherQuotes(leadId, keepQuoteId) {
+      // As the user (RLS + quotes_guard); cancelled quotes fail evaluateTokenAccess anyway.
+      const { data, error } = await db
+        .from("quotes")
+        .update({ status: "cancelled" })
+        .eq("lead_id", leadId)
+        .eq("status", "sent")
+        .neq("id", keepQuoteId)
+        .select("id");
+      if (error) throw new Error(error.message);
+      const ids = (data ?? []).map((r) => r.id);
+      if (ids.length === 0) return;
+      const { error: revokeError } = await admin()
+        .from("quote_tokens")
+        .update({ revoked_at: new Date().toISOString() })
+        .in("quote_id", ids)
+        .is("revoked_at", null);
+      if (revokeError) throw new Error(revokeError.message);
+    },
     async setLeadStatus(leadId, to, note) {
       const { error } = await db.rpc("change_lead_status", { p_lead_id: leadId, p_to: to, p_note: note });
       if (error) throw new Error(error.message);

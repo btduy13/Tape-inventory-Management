@@ -6,7 +6,7 @@
 
 ## Routes
 
-- /design (embedded component)
+- /thiet-ke (embedded component)
 
 ## Data
 

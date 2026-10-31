@@ -44,3 +44,13 @@ export function oneLine(value: unknown, max = 150): string {
     .trim()
     .slice(0, max);
 }
+
+/**
+ * True when free text contains something a mail client would turn into a link
+ * (scheme, www., bare domain, e-mail address). Used to keep customer-typed text that
+ * goes to a customer-typed address (lead confirmation) from carrying phishing links.
+ */
+export function containsLink(value: unknown): boolean {
+  const s = String(value ?? "");
+  return /(?:[a-z][a-z0-9+.-]*:\/\/|www\.|@|[a-z0-9-]+\.[a-z]{2,}(?![a-z0-9-]))/i.test(s);
+}

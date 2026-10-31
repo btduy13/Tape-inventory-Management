@@ -45,6 +45,11 @@ describe("evaluateTokenAccess", () => {
     expect(evaluateTokenAccess({ ...tok, revoked_at: past }, { ...sent, status: "accepted" }, NOW)).toBe("used");
     expect(evaluateTokenAccess(tok, { ...sent, status: "changes_requested" }, NOW)).toBe("used");
   });
+  it("used links still expire (no permanent read-only view of prices)", () => {
+    const answered = { ...sent, status: "accepted" as const };
+    expect(evaluateTokenAccess({ expires_at: past, revoked_at: past }, answered, NOW)).toBe("invalid");
+    expect(evaluateTokenAccess({ expires_at: "garbage", revoked_at: past }, answered, NOW)).toBe("invalid");
+  });
   it("quote_expired after valid_until (end of day, VN time)", () => {
     expect(evaluateTokenAccess(tok, { ...sent, valid_until: "2026-10-31" }, NOW)).toBe("quote_expired");
     expect(evaluateTokenAccess(tok, { ...sent, valid_until: "2026-11-01" }, NOW)).toBe("open");
@@ -55,7 +60,16 @@ describe("totals estimate mirrors SQL rounding", () => {
   it("rounds lines to 2 decimals and VAT to integer", () => {
     expect(lineTotal(3, 0.335)).toBe(1.01);
     const t = estimateTotals([{ quantity: 100, unitPrice: 12_345 }, { quantity: 2.5, unitPrice: 1000 }], 8);
-    expect(t).toEqual({ subtotal: 1_236_999.5 - 0.5 + 0.5 - 0.5 + 0.5 - 0.5 + 2500 - 2500 + 0, vatAmount: 98960, total: 1_335_959.5 - 0.5 });
+    // 100 * 12345 + 2.5 * 1000 = 1_237_000; VAT 8% = 98_960 (round(.., 0) like SQL).
+    expect(t).toEqual({ subtotal: 1_237_000, vatAmount: 98_960, total: 1_335_960 });
+  });
+  it("VAT half rounds away from zero like Postgres numeric round()", () => {
+    // subtotal 125, VAT 10% = 12.5 -> 13 ; subtotal 1050.25, VAT 10% = 105.025 -> 105
+    expect(estimateTotals([{ quantity: 1, unitPrice: 125 }], 10)).toEqual({ subtotal: 125, vatAmount: 13, total: 138 });
+    expect(estimateTotals([{ quantity: 1, unitPrice: 1050.25 }], 10)).toEqual({ subtotal: 1050.25, vatAmount: 105, total: 1155.25 });
+    // float traps: 1.005 * 1 must be 1.01 (SQL exact decimal), 0.1 + 0.2 lines -> 0.3
+    expect(lineTotal(1, 1.005)).toBe(1.01);
+    expect(estimateTotals([{ quantity: 1, unitPrice: 0.1 }, { quantity: 1, unitPrice: 0.2 }], 0).subtotal).toBe(0.3);
   });
   it("NaN inputs count as 0", () => {
     expect(estimateTotals([{ quantity: Number.NaN, unitPrice: 5 }], Number.NaN)).toEqual({ subtotal: 0, vatAmount: 0, total: 0 });

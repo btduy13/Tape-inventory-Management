@@ -6,7 +6,7 @@
 
 ## Routes
 
-- /design (page UI, together with lead-intake form)
+- /thiet-ke (page UI, together with lead-intake form)
 
 ## Data
 

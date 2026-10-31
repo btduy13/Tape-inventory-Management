@@ -1,5 +1,6 @@
 // Send flow (pure orchestration; I/O injected so it is unit-testable).
-// Order: validate -> PDF -> upload -> token -> email -> revoke older links -> mark sent -> lead quoted.
+// Order: validate -> PDF -> upload -> token -> email -> revoke older links -> mark sent
+//        -> cancel other open versions of the lead -> lead quoted.
 // If the email fails the new token is revoked and the quote stays as it was.
 import type { LeadStatus } from "@/lib/types";
 import { leadStatusAfterSend, sendBlocker, type SendBlocker } from "../lib/rules";
@@ -25,6 +26,11 @@ export interface SendDeps {
     pdf: Uint8Array;
   }): Promise<{ ok: boolean }>;
   markSent(quoteId: string, pdfPath: string, sentAt: string): Promise<void>;
+  /**
+   * Cancels every OTHER still-open (`sent`) quote of the lead and revokes its links, so the
+   * customer can only answer the newest version (an older link must not accept old prices).
+   */
+  supersedeOtherQuotes(leadId: string, keepQuoteId: string): Promise<void>;
   setLeadStatus(leadId: string, to: LeadStatus, note: string): Promise<void>;
   ttlDays: number;
   now(): Date;
@@ -100,6 +106,10 @@ export async function sendQuote(deps: SendDeps, quoteId: string): Promise<SendOu
   } catch {
     return { ok: false, error: "store_failed" };
   }
+
+  await deps
+    .supersedeOtherQuotes(ctx.lead.id, ctx.quote.id)
+    .catch((e: unknown) => console.error("[quotes] superseding older versions failed", e));
 
   const nextLead = leadStatusAfterSend(ctx.lead.status);
   if (nextLead) {

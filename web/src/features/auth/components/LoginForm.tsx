@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { getDictionary } from "@/i18n";
 import { loginAction } from "../server/actions";
-import { IDLE } from "../lib/action-state";
+import { IDLE, fail } from "../lib/action-state";
 import { RESET_REQUEST_PATH } from "../lib/callback";
 import { FormMessage, buttonClass, inputClass } from "./FormMessage";
 
@@ -11,7 +11,7 @@ const t = getDictionary();
 
 /** `next` is validated again on the server with safeNextPath(). */
 export function LoginForm({ next, linkError }: { next: string; linkError?: boolean }) {
-  const [state, action, pending] = useActionState(loginAction, linkError ? { status: "error", message: t.auth.linkInvalid } : IDLE);
+  const [state, action, pending] = useActionState(loginAction, linkError ? fail(t.auth.linkInvalid) : IDLE);
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />

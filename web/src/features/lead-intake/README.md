@@ -7,7 +7,7 @@ Public quote request: landing sections, form (name, phone, email, company, quant
 ## Routes
 
 - / (landing sections)
-- /design (form part)
+- /thiet-ke (form part)
 - POST /api/leads
 
 ## Data

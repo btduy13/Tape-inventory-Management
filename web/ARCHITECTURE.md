@@ -14,7 +14,7 @@ Deploy: Vercel + own domain. Legacy Electron admin app keeps using the same Post
 ```
 supabase/
   config.toml                 local CLI config (signup disabled)
-  migrations/0001..0009_*.sql schema, RLS, triggers, helpers (one concern per file)
+  migrations/0001..0012_*.sql schema, RLS, triggers, helpers (one concern per file)
   seed.sql                    dev users (admin/manager/staff/ctv @local.test) + sample leads
   tests/rls/*.test.sql        pgTAP role-matrix tests (`npm run db:test`, needs Docker)
 web/
@@ -51,10 +51,10 @@ Files < ~250 lines. Features may import from `@/lib/*`, `@/i18n`, and another fe
 | Route | Owner feature |
 |---|---|
 | `/` landing | lead-intake (sections) |
-| `/design` | designer (2D) + mockup3d (3D) + lead-intake (form) |
+| `/thiet-ke` (`ROUTES.design`) | designer (2D) + mockup3d (3D) + lead-intake (`DesignLeadForm`, Turnstile key + CSP nonce from page) |
 | `POST /api/leads` | lead-intake |
-| `/login`, `/auth/callback`, logout | auth |
-| `/portal`, `/portal/leads/[id]` | orders (assignment + quotes components embedded) |
+| `/login`, `/auth/callback`, `/auth/reset`, `/auth/update-password`, logout | auth |
+| `/portal`, `/portal/leads/[id]` | orders; detail page embeds `AssignPanel` (assignment), `ProductionPanel` (admin) and `QuotePanel` (quotes, via `quotesSlot`) |
 | `/admin`, `/admin/users`, `/admin/presets`, `/admin/leads/[id]` | admin |
 | assign/unassign actions | assignment |
 | `/q/[token]`, `POST /api/q/[token]/respond`, quote editor/PDF/send | quotes |
@@ -119,6 +119,19 @@ Unassign => access disappears immediately (policies check `assigned_to = auth.ui
 | RESEND_API_KEY, EMAIL_FROM, ADMIN_NOTIFY_EMAILS | server | email (fake sender if key empty) |
 | IP_HASH_SALT | server | hashing IPs for rate limit / audit |
 | QUOTE_TOKEN_TTL_DAYS | server | customer link expiry |
+
+## Testing notes
+
+- Unit tests only (vitest + jsdom, mocks; no DB / Docker). `test/server-only-stub.ts` replaces `server-only`.
+- `lib/security/secret-exposure.test.ts` scans `src/`: any file mentioning a server secret name
+  (even in a comment) must `import "server-only"`.
+- `features/quotes/lib/totals.ts` mirrors SQL rounding (`round(qty*price,2)`, VAT `round(..,0)`,
+  half away from zero); tests in `quotes/lib/lib.test.ts`. Send / respond flows: `quotes/server/flows.test.ts`.
+- Vitest 5 quirk: a `vi.fn()` that returns a rejected promise in a file with a `beforeEach` hook was
+  reported as a test failure even when the code caught it. Avoid `beforeEach(mockReset)` there; set the
+  mock per test instead (see `designer/server/presets.test.ts`).
+- React Compiler lint (`react-hooks/set-state-in-effect`, `immutability`) is enforced: derive state
+  (`useMemo`, `useSyncExternalStore`) instead of syncing it in effects.
 
 ## Scripts
 

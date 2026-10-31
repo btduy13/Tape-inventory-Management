@@ -1,6 +1,6 @@
 "use client";
 // Loads the logo object URL and returns a single-ink canvas (palette enforcement for logos).
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { hexToRgb } from "../lib/palette";
 import type { LogoAsset } from "../lib/state";
 import { tintPixels } from "../lib/tint";
@@ -31,30 +31,28 @@ export function renderTinted(img: CanvasImageSource, w: number, h: number, ink: 
 }
 
 export function useTintedLogo(logo: LogoAsset | null, ink: string): HTMLCanvasElement | null {
-  const [img, setImg] = useState<HTMLImageElement | null>(null);
-  const [tinted, setTinted] = useState<HTMLCanvasElement | null>(null);
+  // Keyed by URL so a stale image is never shown for a newer logo (no sync setState in effects).
+  const [loaded, setLoaded] = useState<{ url: string; img: HTMLImageElement } | null>(null);
 
   useEffect(() => {
+    if (!logo) return;
     let cancelled = false;
-    if (!logo) {
-      setImg(null);
-      return;
-    }
-    loadImage(logo.url)
-      .then((i) => !cancelled && setImg(i))
-      .catch(() => !cancelled && setImg(null));
+    const url = logo.url;
+    loadImage(url)
+      .then((img) => {
+        if (!cancelled) setLoaded({ url, img });
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(null);
+      });
     return () => {
       cancelled = true;
     };
   }, [logo]);
 
-  useEffect(() => {
-    if (!img || !logo) {
-      setTinted(null);
-      return;
-    }
-    setTinted(renderTinted(img, logo.width, logo.height, ink));
-  }, [img, logo, ink]);
-
-  return tinted;
+  const img = logo && loaded?.url === logo.url ? loaded.img : null;
+  return useMemo(
+    () => (img && logo ? renderTinted(img, logo.width, logo.height, ink) : null),
+    [img, logo, ink],
+  );
 }

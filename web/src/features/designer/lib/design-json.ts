@@ -19,7 +19,6 @@ export const designJsonSchema = z
     backgroundColor: hex,
     textColor: hex,
     accentColor: hex.nullable().optional(),
-    // eslint-disable-next-line no-control-regex
     text: z.string().max(MAX_TEXT_LENGTH).refine((s) => !/[\u0000-\u001f\u007f]/.test(s)),
     fontFamily: z.enum(FONT_FAMILIES).optional(),
     fontSizePx: z.number().min(MIN_FONT_SIZE_PX).max(MAX_FONT_SIZE_PX).optional(),

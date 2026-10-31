@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => createClient() }));
@@ -15,7 +15,6 @@ function fakeClient(result: { data: unknown; error: unknown }) {
 }
 
 describe("getActivePresets", () => {
-  beforeEach(() => createClient.mockReset());
 
   it("maps active rows ordered by sort_order", async () => {
     const c = fakeClient({ data: [{ id: "a", label: "A", width_mm: "60", length_m: "100", thickness_mic: "45" }], error: null });
@@ -30,9 +29,7 @@ describe("getActivePresets", () => {
   it("falls back to defaults on error or missing env", async () => {
     createClient.mockResolvedValue(fakeClient({ data: null, error: { message: "x" } }));
     expect(await getActivePresets()).toHaveLength(4);
-    createClient.mockImplementation(async () => {
-      throw new Error("env");
-    });
+    createClient.mockRejectedValue(new Error("env"));
     expect(await getActivePresets()).toHaveLength(4);
   });
 });

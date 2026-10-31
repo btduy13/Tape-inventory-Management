@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, escapeMultiline, oneLine, safeUrl } from "./escape";
+import { containsLink, escapeHtml, escapeMultiline, oneLine, safeUrl } from "./escape";
 import { normalizeRecipients } from "./recipients";
 import { absoluteUrl } from "./site-url";
 
@@ -57,4 +57,14 @@ describe("absoluteUrl", () => {
     expect(absoluteUrl("https://x.vn", "/q/t")).toBe("https://x.vn/q/t");
     expect(absoluteUrl("https://x.vn/", "/q/t")).toBe("https://x.vn/q/t");
   });
+});
+
+describe("containsLink", () => {
+  it.each(["https://evil.vn", "Xem www.evil.vn", "trung thuong tai evil.com", "a@b.vn", "evil.vn/x", "hxxp://x"])(
+    "flags %s",
+    (v) => expect(containsLink(v)).toBe(true),
+  );
+  it.each(["Nguyễn Văn A", "Công ty TNHH A.B", "Trần Thị B - 0912", "Lê Văn C."])("allows %s", (v) =>
+    expect(containsLink(v)).toBe(false),
+  );
 });

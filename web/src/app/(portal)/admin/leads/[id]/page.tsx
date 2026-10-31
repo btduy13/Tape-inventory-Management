@@ -7,6 +7,7 @@ import { ROUTES } from "@/lib/routes";
 import { LeadDetailView, loadLeadDetail } from "@/features/orders";
 import { AssignPanel } from "@/features/assignment";
 import { ProductionPanel } from "@/features/admin";
+import { QuotePanel } from "@/features/quotes";
 
 const t = getDictionary();
 
@@ -20,6 +21,7 @@ export default async function AdminLeadPage({ params }: { params: Promise<{ id: 
       <LeadDetailView
         detail={detail}
         profile={profile}
+        quotesSlot={<QuotePanel leadId={detail.lead.id} profile={profile} />}
         aside={
           <>
             <AssignPanel profile={profile} leadId={detail.lead.id} currentAssigneeId={detail.lead.assigned_to} />

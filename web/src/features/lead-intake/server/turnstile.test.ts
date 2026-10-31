@@ -41,6 +41,16 @@ describe("verifyTurnstile", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("rejects tokens solved on another hostname", async () => {
+    const opts = { secret: "s", action: "lead_submit", hostnames: ["bangkeo.vn"] };
+    const other = reply({ success: true, action: "lead_submit", hostname: "evil.example" });
+    expect(await verifyTurnstile("tok", { ...opts, fetchImpl: other })).toBe(false);
+    const missing = reply({ success: true, action: "lead_submit" });
+    expect(await verifyTurnstile("tok", { ...opts, fetchImpl: missing })).toBe(false);
+    const own = reply({ success: true, action: "lead_submit", hostname: "BangKeo.vn" });
+    expect(await verifyTurnstile("tok", { ...opts, fetchImpl: own })).toBe(true);
+  });
+
   it("accepts the Cloudflare test action", async () => {
     expect(await verifyTurnstile("tok", { secret: "s", action: "lead_submit", fetchImpl: reply({ success: true, action: "test" }) })).toBe(true);
   });

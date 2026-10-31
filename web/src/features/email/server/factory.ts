@@ -13,10 +13,12 @@ export function getEmailSender(): EmailSender {
   const env = serverEnv();
   if (env.RESEND_API_KEY) {
     current = new ResendSender(env.RESEND_API_KEY, env.EMAIL_FROM);
+  } else if (isProductionRuntime(process.env)) {
+    // Fail closed: a fake "sent" in production would mark quotes as sent although the customer
+    // never got the link, and would log customer addresses. Callers see ok:false instead.
+    console.error("[email] RESEND_API_KEY missing in production: emails are NOT delivered");
+    current = new FakeSender({ failWith: "email not configured" });
   } else {
-    if (isProductionRuntime(process.env)) {
-      console.warn("[email] RESEND_API_KEY missing in production: emails are NOT delivered");
-    }
     current = new FakeSender({ log: true });
   }
   return current;

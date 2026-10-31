@@ -68,7 +68,6 @@ const clamp = (v: number, lo: number, hi: number) =>
 
 /** Strip control characters / newlines and cap length. */
 export function sanitizeText(input: string): string {
-  // eslint-disable-next-line no-control-regex
   return input.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, MAX_TEXT_LENGTH);
 }
 

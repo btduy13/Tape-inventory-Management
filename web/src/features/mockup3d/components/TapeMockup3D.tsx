@@ -1,7 +1,7 @@
 "use client";
 // Public 3D mockup: view toggle, WebGL detection, 2D fallback, client-only scene.
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { getDictionary } from "@/i18n";
 import type { RollPreset } from "../lib/geometry";
 import { hasWebGL } from "../lib/webgl";
@@ -22,6 +22,10 @@ export type TapeMockup3DProps = {
   stripLengthMm?: number;
   initialView?: MockupView;
 };
+
+let webglSupport: boolean | undefined;
+const cachedHasWebGL = () => (webglSupport ??= hasWebGL());
+const noopSubscribe = () => () => {};
 
 function Fallback({ source, version, message }: { source: HTMLCanvasElement | null; version: number; message: string }) {
   const src = useMemo(() => {
@@ -45,9 +49,8 @@ function Fallback({ source, version, message }: { source: HTMLCanvasElement | nu
 export function TapeMockup3D({ source, version, preset, stripLengthMm = 300, initialView = "roll" }: TapeMockup3DProps) {
   const t = getDictionary().mockup3d;
   const [view, setView] = useState<MockupView>(initialView);
-  const [webgl, setWebgl] = useState<boolean | null>(null);
-
-  useEffect(() => setWebgl(hasWebGL()), []);
+  // null on the server / first hydration pass, then the (cached) client capability.
+  const webgl = useSyncExternalStore<boolean | null>(noopSubscribe, cachedHasWebGL, () => null);
 
   const fallback = <Fallback source={source} version={version} message={t.noWebgl} />;
   const tab = (v: MockupView, label: string) => (

@@ -15,12 +15,16 @@ export function useStripTexture(source: HTMLCanvasElement | null, version: numbe
   }, [source]);
 
   useEffect(() => {
-    if (!texture) return;
-    texture.repeat.set(repeatX, 1);
-    texture.needsUpdate = true;
+    if (texture) refreshTexture(texture, repeatX);
   }, [texture, version, repeatX]);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
   return texture;
+}
+
+/** Re-upload the canvas pixels (content changed) and apply the surface repeat. */
+function refreshTexture(texture: CanvasTexture, repeatX: number): void {
+  texture.repeat.set(repeatX, 1);
+  texture.needsUpdate = true;
 }

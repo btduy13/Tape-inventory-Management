@@ -53,6 +53,8 @@ Scope:
 
 ### Not yet reviewable (features not written yet)
 
+Update: these items were reviewed in round 2. See "Feature code review (round 2)" below.
+
 The feature folders contain only READMEs, so these items **must be reviewed once the code exists**:
 `/q/[token]` page and API (IDOR, token hashing/expiry/revocation, `last_used_at`, constant-time lookup
 by hash), `/api/leads` (zod, Turnstile `siteverify` with `remoteip` and hostname check, rate limit before
@@ -90,6 +92,93 @@ the admin user invite flow.
 | `electron: npm test` | 200/200 pass |
 | pgTAP (`npm run db:test`) | **not run**: needs Docker / local Supabase |
 
+## Feature code review (round 2, 2026-10-31)
+
+Scope: the feature code that was "not yet reviewable" in round 1. This covers `POST /api/leads`,
+logo upload and SVG sanitizing, designer text and logo rendering, `/q/[token]` and
+`POST /api/q/[token]/respond`, email templates and sender, quote PDF, login, callback and redirect,
+every Server Action, admin invite and roles, realtime, client bundle secrets, and RPC grants.
+This was a static review with unit tests only. No database, Docker or Electron was used.
+
+### Findings and fixes
+
+| # | Finding | Severity | File(s) | Fix | Test |
+|---|---------|----------|---------|-----|------|
+| W5 | **Answered quote links never expired.** `evaluateTokenAccess` returned `used` (a read-only view with customer name, company, lines and prices) **before** it checked `expires_at`. A forwarded or leaked email therefore showed the quote forever. | Low | `web/src/features/quotes/lib/token.ts` | The link expiry is checked first. An expired link is `invalid` even when it was used. A malformed date also counts as expired. | `quotes/lib/lib.test.ts` ("used links still expire") |
+| W6 | **Older open versions stayed answerable.** "Create quote" while v1 was still `sent` made a v2 draft without cancelling v1. After v2 was sent, the v1 link still worked, so the customer could accept the old prices and the lead moved to `accepted`. | Medium | `quotes/server/send-quote.ts`, `send-deps.ts` | New `SendDeps.supersedeOtherQuotes`. After a successful send, every other `sent` quote of the lead is set to `cancelled` (through the user's RLS client), and its tokens are revoked (through the service role). Nothing changes when the send fails. | `quotes/server/flows.test.ts` (2 tests) |
+| W7 | **Price lock bypass through a status rollback.** `quotes_guard` (0011) locked lines and VAT only while `status <> 'draft'`, and it allowed any status change except the customer statuses. A manager or a stolen session could `PATCH` a sent quote to `draft`, change the prices, and set it to `sent` again. The customer's live link then showed prices that differed from the emailed PDF, with no audit trail. This undid S4c. | Medium | `supabase/migrations/0005`, `0011` | New `0012_quote_status_transitions.sql`: a BEFORE UPDATE OF status trigger. For anyone except server code, the allowed changes are draft→sent/cancelled, sent→cancelled/expired, changes_requested/expired→cancelled, and accepted→cancelled (admin only). Nothing can return to `draft`. EXECUTE is revoked. | `supabase/tests/rls/06_quote_status_transitions.test.sql` (9 assertions, **not run**: needs Docker) |
+| W8 | **Unbounded body read.** `/api/q/[token]/respond` called `req.text()` and checked the 8 KB limit only after the whole body was in memory. It is a public endpoint, rate-limited per IP only, so large bodies could exhaust memory. | Low | `quotes/server/respond-route.ts` | New `readTextCapped()`. It rejects a declared `Content-Length` above the cap, and it streams the body and cancels the read once the cap is passed. | `quotes/server/respond-route.test.ts` (CSRF, 415, 429, 413, plus the capped reader with and without Content-Length) |
+| W9 | **Turnstile hostname was not checked.** `siteverify` returns the hostname where the widget was solved, and it was ignored. A token solved on another site that embeds our sitekey would pass. This is defence in depth: the sitekey's domain list in Cloudflare is the main control. | Low | `lead-intake/server/turnstile.ts`, `deps.ts` | New `hostnames` option. The hostname must match `NEXT_PUBLIC_SITE_URL` or the request's Host, and a missing hostname fails. The check is skipped only for Cloudflare test keys (`action: "test"`), and W2 already blocks those in production. | `lead-intake/server/turnstile.test.ts` |
+| W10 | **Email failed open in production.** If `RESEND_API_KEY` was missing, production used the FakeSender, which reported success. A quote was then marked `sent` with a live token that the customer never received, and the fake logger wrote recipient addresses to the logs. | Low | `email/server/factory.ts` | In production the sender now always returns `ok:false` ("email not configured") and logs one error with no PII. The quote stays unsent and its new token is revoked by the existing `email_failed` path. Dev keeps the logging fake. | `email/server/factory.test.ts` |
+| W11 | **Lead form as a mail relay.** The customer confirmation goes to an address the requester typed, and it greets them with a name the requester typed (120 characters, HTML-escaped but still clickable as text). Bots that get past Turnstile could send phishing text (`evil.vn/...`) from our domain. | Low | `email/templates/lead-confirmation.ts`, `email/lib/escape.ts` | New `containsLink()` (scheme, `www.`, bare domain, `@`). If the name contains one, the greeting falls back to "Xin chào quý khách," in both the HTML and text parts. Turnstile and the 5 per hour per IP limit still apply. | `email/lib/escape.test.ts`, `email/templates/templates.test.ts` |
+
+### Reviewed with no change needed
+
+- **`POST /api/leads`:** the order is same-origin, then rate limit (fails closed), then a streamed
+  6 MB body cap, then honeypot, then Turnstile (fails closed, action checked), then zod (control
+  characters stripped, phone and email normalized, note limited to 2000), then the design schema
+  (`.strict()`, the preset must be active in the DB, `logo.path` is always reset), then a service-role
+  insert. Files go under `<lead_id>/` with random names. The whole insert is rolled back on failure.
+  Responses carry no PII, and logs contain the lead code only.
+- **Uploads:** the type is detected from magic bytes (PNG, JPEG, SVG). The declared MIME and filename
+  are ignored. SVG goes through DOMPurify with the svg profile; script, foreignObject, style, iframe,
+  object, embed, `a` and the `style` attribute are forbidden; every attribute value must match
+  `^(#…|[^:/]*)$`; external `url()` is replaced. The sanitized output is what gets stored, and the
+  buckets are private with MIME and size limits. Previews must be PNG.
+- **Designer:** text is drawn with Konva `Text` on a canvas. The `src/` tree has no
+  `dangerouslySetInnerHTML` or `innerHTML`. Logos are sanitized in the browser too and drawn as tinted
+  canvas pixels from a `blob:` URL. The server schema allows only fixed font families, hex colours,
+  bounded numbers, and text with no control characters.
+- **`/q/[token]`:** the raw token is 32 random bytes (base64url). Only its sha256 is stored and
+  looked up, with a strict regex first. Views are rate-limited per IP. The page sets
+  `robots: noindex`, `referrer: no-referrer` and is dynamic. A token is tied to exactly one quote, so
+  there is no IDOR. Answers are single-use: an atomic conditional `UPDATE quote_tokens … WHERE revoked_at
+  IS NULL AND expires_at > now`, then a quote update `WHERE status='sent'`. A replay or race returns
+  409. The route also checks the origin, accepts JSON only, and the browser fetch uses
+  `credentials: "omit"`. Brute force is not feasible (2^256).
+- **Email:** every customer field is HTML-escaped (including `=` and the backtick) in the 5 templates.
+  Links pass `safeUrl` (http/https/cid only). Subjects pass `oneLine` (no CR/LF), and `to`/`replyTo`
+  are validated email addresses. The quote token appears only in the customer email and is never
+  logged. The inline preview loader accepts only `<uuid>/<name>.png` from the `previews` bucket.
+- **PDF:** @react-pdf `Text` nodes with no HTML, links or images. Fonts are local files. The
+  filename is limited to `[A-Za-z0-9_-]`. Output is limited to 10 MB and stored at a path built from
+  DB ids.
+- **Login and redirects:** `loginAction` and `/login` use `safeNextPath`. Invite and recovery
+  callbacks always land on `/auth/update-password`. Inactive or uninvited users are signed out
+  straight after login. Reset does not reveal whether an account exists. Login and reset are
+  rate-limited per IP.
+- **Server Actions:** all 15 exported actions in the `"use server"` files call `assertRole` /
+  `adminOrNull` first, validate input with zod, and run as the user (RLS). The service role is used
+  only for tokens, storage, and invites after the admin check. Next.js checks the Origin of Server
+  Actions.
+- **Admin and roles:** the role comes only from `app_metadata` (only the service role can write it),
+  never from `user_metadata`. `profiles_guard_columns` blocks self-promotion and self-lockout, and the
+  UI mirrors this with `isSelfLockout`. Deactivation also bans the user in Supabase Auth.
+- **Realtime:** `postgres_changes` follows RLS for INSERT and UPDATE. Supabase does not filter DELETE
+  by RLS. With RLS on, the old record holds only the primary key, so the most an outsider learns is
+  that a row with that UUID was deleted (checklist item 22).
+- **Client bundle:** `.next/static` was grepped after this build for service-role, Turnstile secret,
+  salt and Resend names: no matches. `secret-exposure.test.ts` passes.
+- **RPC grants:** `convert_lead_to_production` and `assign_lead` check `is_admin()` inside the
+  function. `change_lead_status` is SECURITY INVOKER (RLS and transition trigger apply).
+  `check_rate_limit`, `quotes_recalc_totals`, `next_bang_keo_in_order_id` and every trigger function
+  are not executable by anon or authenticated. The new `quotes_status_transition()` is revoked too.
+- **Hand-off to Electron:** `convert_lead_to_production` copies customer text (name, print text) into
+  `bang_keo_in_orders`. The Electron views read it through `escapeHtml`/`escapeAppHtml`, and SheetJS
+  `json_to_sheet` writes strings as text cells (no formulas). No change was needed. The Electron tests
+  were not run, by rule.
+
+### Checks run (round 2)
+
+| Command (in `web/`) | Result |
+|---------|--------|
+| `npm run typecheck` | pass |
+| `npm run lint` | pass (0 problems) |
+| `npm run test` | 45 files, 298 tests pass (was 43 / 274) |
+| `npm run build` | pass, 16 routes |
+| grep of `.next/static` for secret names | no matches |
+| pgTAP `06_quote_status_transitions.test.sql` | **not run**: needs Docker |
+
 ## Needs live verification with Docker (later pentest)
 
 1. `supabase db reset` applies 0001 to 0011 cleanly, and `npm run db:test` passes all 5 pgTAP files.
@@ -115,7 +204,7 @@ the admin user invite flow.
 10. On Vercel: confirm that `x-real-ip` / `x-vercel-forwarded-for` cannot be overridden by the client, so the
     rate limit holds against spoofed `X-Forwarded-For` and per-/64 IPv6 rotation. Confirm that Turnstile
     `siteverify` rejects reused tokens and wrong hostnames.
-11. CSP in a real browser: no violations on `/`, `/design` (Konva + three.js + Turnstile iframe) and `/q/<token>`.
+11. CSP in a real browser: no violations on `/`, `/thiet-ke` (Konva + three.js + Turnstile iframe) and `/q/<token>`.
     Nonce-only `style-src` may block libraries that inject `<style>` tags or set the `style` attribute.
     Check routes skipped by the proxy matcher (paths ending in `.png`/`.svg`, which carry no CSP header).
 12. CSRF: cross-origin `fetch`/form POST to every route handler and Server Action with the auth cookie (expect 403).
@@ -123,3 +212,34 @@ the admin user invite flow.
     answer quote B, replay after acceptance, rate limit per IP and per token.
 14. Email (Resend): HTML injection through customer name, company or note in every template. Make sure
     customer input cannot change the recipient or headers.
+15. Quote status (W7, migration 0012): as manager over PostgREST, `PATCH /quotes?id=eq.<sent>` with
+    `status=draft` must return 42501. Edit lines, then set `sent` again: this must also fail. Admin can
+    cancel an accepted quote, manager cannot. Run `supabase/tests/rls/06_quote_status_transitions.test.sql`.
+16. Superseded versions (W6): send v1, create a new draft with "create" (not "new version"), send v2.
+    The v1 link must now show "link expired", and `POST /api/q/<v1 token>/respond` must return 404.
+17. Used links (W5): answer a quote, then move `quote_tokens.expires_at` into the past. `/q/<token>`
+    must no longer show prices or names.
+18. Body caps: `POST /api/q/<token>/respond` with a 1 MB chunked body and no Content-Length must
+    return 413 quickly, and server memory must not grow. Also send a 6 MB+ multipart to `/api/leads`.
+19. Turnstile hostname (W9): solve the widget on another origin that embeds our sitekey (localhost
+    with a real key), then post that token to `/api/leads`. Expect `captcha`. Check that both www and
+    apex hostnames still pass.
+20. Production email without `RESEND_API_KEY` (W10): sending a quote must show "email failed". The
+    quote must stay `draft`, no token may stay live, and logs must not contain recipient addresses.
+21. Lead confirmation relay (W11): submit a lead with a third-party email and a name that contains
+    `evil.vn` or `https://…`. The mail must greet "quý khách" and contain no link text. Also confirm
+    the 5 per hour per IP limit and Turnstile stop bulk sending.
+22. Realtime DELETE events: as a logged-in but inactive user (or staff on another lead), subscribe to
+    `postgres_changes` on `leads`/`lead_notes`/`quotes`. An admin then deletes a row. Supabase does not
+    apply RLS to DELETE events. Confirm that the payload carries only the primary key (`old.id`), with
+    no name, phone or price.
+23. Server Actions: replay each action ID (from the client bundle) as `POST /portal` with a staff
+    cookie and another lead's UUID: `sendQuoteAction`, `saveQuoteDraftAction`, `createQuoteVersionAction`,
+    `getQuotePdfUrlAction`, `assignLeadAction`, `updateUserAction`, `inviteUserAction`,
+    `convertToProductionAction`, `changeStatusAction` and `addNoteAction`. Expect a forbidden message
+    or an RLS empty result. Send a cross-origin `Origin` and expect Next.js to reject it.
+24. Auth callback: `/auth/callback?type=recovery&token_hash=…&next=https://evil` must land on
+    `/auth/update-password`. `next=//evil`, `/%5Cevil` and `/%252F%252Fevil` must fall back to `/portal`.
+25. Admin invite: invite an existing confirmed email and expect "email exists" with no role change.
+    As staff, `auth.updateUser({ data: { role: "admin" } })` (user_metadata) must not change
+    `profiles.role` or RLS results, because only `app_metadata` is read.

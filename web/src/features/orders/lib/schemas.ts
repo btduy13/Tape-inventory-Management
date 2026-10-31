@@ -19,7 +19,7 @@ export type ChangeStatusInput = z.infer<typeof changeStatusSchema>;
 
 export const addNoteSchema = z.object({
   leadId: z.string().uuid(),
-  body: z.string().trim().min(1).max(4000),
+  body: z.string().trim().min(1).max(2000),
 });
 export type AddNoteInput = z.infer<typeof addNoteSchema>;
 

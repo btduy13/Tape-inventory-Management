@@ -1,5 +1,5 @@
 "use client";
-// Quote request form shown next to the designer on /design.
+// Quote request form shown next to the designer on /thiet-ke.
 // The page passes `getDesign` from features/designer (see lib/design-contract.ts).
 import { useCallback, useRef, type FormEvent } from "react";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";

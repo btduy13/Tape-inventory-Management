@@ -10,11 +10,16 @@ export interface TurnstileOptions {
   remoteIp?: string;
   /** Expected widget action; checked only when Cloudflare returns one. */
   action?: string;
+  /**
+   * Hostnames the widget may be solved on (our own site). A token solved on another site
+   * that embeds our sitekey is rejected. Skipped for Cloudflare test keys (action "test").
+   */
+  hostnames?: readonly string[];
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
 
-type SiteverifyResponse = { success?: boolean; action?: string; "error-codes"?: string[] };
+type SiteverifyResponse = { success?: boolean; action?: string; hostname?: string; "error-codes"?: string[] };
 
 /** Returns true only on an explicit success from Cloudflare. Fails closed on any error. */
 export async function verifyTurnstile(token: unknown, opts: TurnstileOptions): Promise<boolean> {
@@ -33,6 +38,10 @@ export async function verifyTurnstile(token: unknown, opts: TurnstileOptions): P
     // Test keys return action "test"; real widgets echo the configured action.
     if (opts.action && data.action && data.action !== "test" && data.action !== opts.action) {
       return false;
+    }
+    if (opts.hostnames && opts.hostnames.length > 0 && data.action !== "test") {
+      const host = (data.hostname ?? "").toLowerCase();
+      if (!opts.hostnames.some((h) => h.toLowerCase() === host)) return false;
     }
     return true;
   } catch {

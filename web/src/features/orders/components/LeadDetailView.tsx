@@ -39,7 +39,13 @@ export function LeadDetailView({ detail, profile, aside, quotesSlot }: Props) {
       <LeadSummary lead={lead} design={detail.design} previewUrl={detail.previewUrl} assigneeName={assigneeName} />
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="flex flex-col gap-6">
-          <Card title={t.quotes.title}>{quotesSlot ?? <QuoteList quotes={detail.quotes} />}</Card>
+          {quotesSlot ? (
+            <section className="rounded-lg border border-neutral-200 p-4">{quotesSlot}</section>
+          ) : (
+            <Card title={t.quotes.title}>
+              <QuoteList quotes={detail.quotes} />
+            </Card>
+          )}
           <Card title={t.orders.timeline}>
             <Timeline entries={detail.timeline} names={detail.names} />
           </Card>

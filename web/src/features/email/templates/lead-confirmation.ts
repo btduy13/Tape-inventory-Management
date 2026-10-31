@@ -1,7 +1,7 @@
 // Customer confirmation after a quote request (optionally with the mockup image).
 import { format } from "@/i18n";
 import { vi } from "@/i18n/vi";
-import { escapeHtml, oneLine, safeUrl } from "../lib/escape";
+import { containsLink, escapeHtml, oneLine, safeUrl } from "../lib/escape";
 import { renderDetails, renderLayout, textDetails } from "../lib/layout";
 import type { RenderedEmail } from "../lib/types";
 
@@ -26,13 +26,16 @@ export function leadConfirmationEmail(input: LeadConfirmationInput): RenderedEma
     ? `<p><img src="${escapeHtml(img)}" alt="Mẫu băng keo" width="560" style="max-width:100%;height:auto;border:1px solid #e4e4e7;border-radius:6px"></p>`
     : "";
 
+  // This mail goes to an address typed by the requester, so the requester-typed name must
+  // not carry links (the form would otherwise relay phishing text to any inbox).
+  const greeting = containsLink(input.customerName) ? "Xin chào quý khách," : `Xin chào ${input.customerName},`;
   const html = renderLayout({
-    heading: escapeHtml(`Xin chào ${input.customerName},`),
+    heading: escapeHtml(greeting),
     bodyHtml: `<p>Chúng tôi đã nhận được yêu cầu báo giá băng keo in của bạn. Nhân viên sẽ liên hệ trong thời gian sớm nhất.</p>
 ${renderDetails(rows)}
 ${imgHtml}`,
   });
-  const text = `Xin chào ${input.customerName},
+  const text = `${greeting}
 
 Chúng tôi đã nhận được yêu cầu báo giá băng keo in của bạn. Nhân viên sẽ liên hệ trong thời gian sớm nhất.
 

@@ -16,6 +16,13 @@ describe("email templates", () => {
     expect(m.html).toContain('src="cid:mockup"');
   });
 
+  it("lead confirmation: a link in the requester-typed name is not relayed to the inbox", () => {
+    const m = leadConfirmationEmail({ code: "L", customerName: "Trúng thưởng tại evil.vn/nhan", quantity: 1 });
+    expect(m.html).not.toContain("evil.vn");
+    expect(m.text).not.toContain("evil.vn");
+    expect(m.html).toContain("Xin chào quý khách,");
+  });
+
   it("lead confirmation: drops javascript image src", () => {
     const m = leadConfirmationEmail({ code: "L", customerName: "A", quantity: 1, mockupImageSrc: "javascript:x" });
     expect(m.html).not.toContain("javascript:");
