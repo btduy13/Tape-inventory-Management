@@ -1,5 +1,5 @@
 // POST /api/leads orchestration. All I/O is injected (see deps.ts) so it is unit-testable.
-// Order: same-origin -> rate limit -> body cap -> honeypot -> Turnstile -> zod/files -> DB -> email.
+// Order: same-origin -> declared size -> rate limit -> body cap -> honeypot -> Turnstile -> zod/files -> DB -> email.
 import "server-only";
 import {
   LEAD_ERROR_STATUS,
@@ -11,7 +11,7 @@ import {
 import type { LeadNotifier } from "../lib/email-contract";
 import type { LeadStore } from "./lead-store";
 import { parseSubmission } from "./parse-submission";
-import { BodyTooLargeError, readFormDataCapped } from "./read-body";
+import { BodyTooLargeError, declaresTooLarge, discardBody, readFormDataCapped } from "./read-body";
 import { saveLead, UnknownPresetError } from "./save-lead";
 import { notifyNewLead, toEmailData } from "./notify";
 
@@ -36,13 +36,20 @@ function errorResponse(error: LeadErrorCode, fields?: Record<string, string>): R
 
 export async function handleLeadSubmit(req: Request, deps: LeadSubmitDeps): Promise<Response> {
   if (!deps.isSameOrigin(req)) return errorResponse("csrf");
+  // Answer an oversized declared body at once, before any DB work and without reading it.
+  if (declaresTooLarge(req, MAX_BODY_BYTES)) {
+    discardBody(req, 2 * MAX_BODY_BYTES);
+    return errorResponse("too_large");
+  }
   if (!(await deps.checkRateLimit(req.headers))) return errorResponse("rate_limited");
 
   let form: FormData;
   try {
     form = await readFormDataCapped(req, MAX_BODY_BYTES);
   } catch (err) {
-    return errorResponse(err instanceof BodyTooLargeError ? "too_large" : "validation");
+    if (!(err instanceof BodyTooLargeError)) return errorResponse("validation");
+    discardBody(req, 2 * MAX_BODY_BYTES);
+    return errorResponse("too_large");
   }
 
   // Bots that fill the hidden field get a fake success and nothing is stored.

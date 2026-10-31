@@ -51,6 +51,8 @@ export function oneLine(value: unknown, max = 150): string {
  * goes to a customer-typed address (lead confirmation) from carrying phishing links.
  */
 export function containsLink(value: unknown): boolean {
-  const s = String(value ?? "");
-  return /(?:[a-z][a-z0-9+.-]*:\/\/|www\.|@|[a-z0-9-]+\.[a-z]{2,}(?![a-z0-9-]))/i.test(s);
+  const s = String(value ?? "").normalize("NFC");
+  // Unicode-aware: IDN labels ("bánhmì.vn", "khuyến-mãi.vn") and IDN TLDs count as domains.
+  // Full stops that clients treat as dots (。．｡) count too.
+  return /(?:[\p{L}][\p{L}\p{N}+.-]*:\/\/|www[.。．｡]|@|＠|[\p{L}\p{N}\p{M}-]+[.。．｡]\p{L}[\p{L}\p{M}]+(?![\p{L}\p{N}\p{M}-]))/iu.test(s);
 }

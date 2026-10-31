@@ -34,6 +34,18 @@ describe("sanitizeSvg", () => {
     expect(out).toContain("href=\"#g\"");
   });
 
+  it("keeps raster data: images but removes nested SVG / other data: URIs", () => {
+    const ns = "xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const nested = "data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+PC9zdmc+";
+    const out = sanitizeSvg(
+      `<svg ${ns}><rect width="1" height="1"/><image href="${png}" width="1" height="1"/>` +
+        `<image href="${nested}" width="1" height="1"/><image xlink:href="data:text/html,x" width="1" height="1"/></svg>`,
+    )!;
+    expect(out).toContain(png);
+    expect(out).not.toMatch(/data:image\/svg|data:text/i);
+  });
+
   it("returns null when the root is not svg or nothing is left", () => {
     expect(sanitizeSvg("<script>alert(1)</script>")).toBeNull();
     expect(sanitizeSvg("<div>hi</div>")).toBeNull();

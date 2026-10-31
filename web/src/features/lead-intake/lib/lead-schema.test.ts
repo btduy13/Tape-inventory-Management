@@ -27,6 +27,16 @@ describe("leadFieldsSchema", () => {
     expect(r.name).toBe("A B");
   });
 
+  it("strips bidi overrides and isolates", () => {
+    const r = leadFieldsSchema.parse({ ...validFields(), name: "Invoice\u202Egnp.exe", company: "\u2067ABC\u2069" });
+    expect(r.name).toBe("Invoicegnp.exe");
+    expect(r.company).toBe("ABC");
+  });
+
+  it("accepts thousands separators in quantity", () => {
+    expect(leadFieldsSchema.parse({ ...validFields(), quantity: "1.000" }).quantity).toBe(1000);
+  });
+
   it.each([
     ["phone", "abc123456"],
     ["phone", "12345"],
@@ -34,6 +44,11 @@ describe("leadFieldsSchema", () => {
     ["quantity", "0"],
     ["quantity", "1.5e3x"],
     ["quantity", "10000001"],
+    ["quantity", "0x10"],
+    ["quantity", "0b101"],
+    ["quantity", "1e3"],
+    ["quantity", "Infinity"],
+    ["quantity", " "],
     ["name", ""],
     ["name", "x".repeat(121)],
     ["note", "x".repeat(2001)],

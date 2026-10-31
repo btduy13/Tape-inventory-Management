@@ -9,6 +9,7 @@
     "lint": "node node_modules/eslint/bin/eslint.js .",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node node_modules/vitest/vitest.mjs run",
+    "test:security": "node node_modules/vitest/vitest.mjs run --config vitest.security.config.mts tests/security",
     "test:watch": "node node_modules/vitest/vitest.mjs",
     "test:e2e": "node node_modules/@playwright/test/cli.js test",
     "db:start": "node node_modules/supabase/dist/supabase.js --workdir .. start",

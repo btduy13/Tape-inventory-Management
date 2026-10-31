@@ -179,67 +179,230 @@ This was a static review with unit tests only. No database, Docker or Electron w
 | grep of `.next/static` for secret names | no matches |
 | pgTAP `06_quote_status_transitions.test.sql` | **not run**: needs Docker |
 
+## Live pentest: electron_app role (local DB)
+
+| # | Finding | Severity | Fix | Test |
+|---|---------|----------|-----|------|
+| L1 | `electron_app` can `create extension dblink` (or any extension in `supautils.privileged_extensions`: dblink, http, pg_net, postgres_fdw, pg_cron, ...) although it has no CREATE on any schema or on the database and is a member of no role. Mechanism (confirmed in the local supautils build): supautils intercepts `CREATE EXTENSION` for every privileged extension and runs it as `supabase_admin` for **any** role, with no check of CREATE on the database or schema, and skips event triggers owned by non-superusers while it does. `supautils.privileged_extensions` is a `sighup` setting (no per-role override) and the before/after-create scripts live on the server file system. | High | **Not fixable from a migration or the hosted dashboard (platform limit).** Checked: database CREATE revoked (0014), no role membership (pgTAP), no schema CREATE; creation still succeeds. A `ddl_command_start` trigger owned by `postgres` never fires for it. Production steps for the owner: (1) keep the `electron_app` credential desktop-only, rotate the password, never expose it beyond the Supabase pooler; (2) best fix: replace the direct SQL login with server-side RPC/Edge Functions so no client holds a DB login; (3) optionally ask Supabase support to remove unused network extensions (`dblink`, `http`, `pg_net`, `postgres_fdw`) from `supautils.privileged_extensions` for the project; (4) after any incident run `select extname, extowner::regrole, extnamespace::regnamespace from pg_extension` and drop what you did not install. | `08_electron_role_lockdown.test.sql`: no CREATE on DB, no role membership; pgTAP TODO for creation itself (fails until the platform allows a block) |
+| L2 | `electron_app` can run `alter role electron_app set ...` (stock Postgres for a role's own settings) and so replace the 0010 guards (`search_path`, `statement_timeout`, `idle_in_transaction_session_timeout`) for its own later sessions. | Low | **Accepted risk, not fixed.** The `on login` event trigger from the first 0014 draft was removed: a failing login trigger blocks logins, and it caused lockout regression R1. Impact stays inside the role's own sessions: it cannot set superuser-only parameters, it has no CREATE on any schema (a changed `search_path` finds nothing new), and a drifted `role` / `session_authorization` setting is rejected at login with a WARNING (verified: login still works). A live session can always `SET` these USERSET values anyway. Owner repair, as `postgres`: `alter role electron_app reset all;` then re-run the three `alter role electron_app set ...` lines from 0010. | `08_*.test.sql`: no `login` event trigger installed, guard/restore functions absent |
+| L3 | `electron_app` could create temp tables and `pg_temp` functions, because TEMP on a database is granted to PUBLIC by default. | Low | 0014: on every connectable, non-template database owned by the migration role (`postgres`; locally also `_supabase` and `storage_vectors`), TEMP is revoked from PUBLIC and granted back to every other non-builtin role; `electron_app` loses TEMP and CREATE. On the databases other than the current one, CONNECT is also revoked from PUBLIC and granted back to the other roles, so `electron_app` can log in only to `postgres`. Not changeable: `template1` (owned by `supabase_admin`) keeps PUBLIC CONNECT (no PUBLIC TEMP), see R3. New roles do not get TEMP unless granted. | `08_*.test.sql`: no TEMP for `electron_app` on any database, no PUBLIC TEMP and no default ACL on owner databases, no CONNECT to the other owner databases, other roles keep TEMP, temp table and pg_temp function both fail with 42501 |
+| L4 | `electron_app` can call `pg_catalog.lo_from_bytea` / `lo_create` / `lowrite` and keep any amount of data in `pg_largeobject`, outside its five tables (disk fill, hidden storage). `postgres` could not remove it ("must be owner of large object"). | Low | **Partly fixed (platform limit).** The `lo_*` functions are owned by `supabase_admin` and granted to PUBLIC; a migration run as `postgres` cannot revoke them. `0015_electron_role_large_objects.sql`: `postgres` now inherits `electron_app` (one-way), so the owner can unlink its objects; owner-only `electron_app_purge_large_objects()` unlinks all of them. It no longer runs on login (login trigger removed, see L2); the owner runs it by hand or from a scheduled job. Full fix needs `revoke execute on function lo_* from public` run as `supabase_admin`. | `09_electron_role_large_objects.test.sql` (membership, owner-only purge, objects created as `electron_app` are removed by the purge); pgTAP TODO for creation itself |
+| L5 | `electron_app` can `notify pgrst, 'reload schema'`, which makes PostgREST reset its connection pool and reload the schema cache and config. Sent in a loop it degrades the web API (DoS). It cannot change PostgREST config. | Low | **Accepted risk, not fixed.** Postgres has no privilege check for NOTIFY and no per-channel ACL, and Supabase does not expose PostgREST's `db-channel` setting, so there is no cheap fix. Mitigation is the same as L1: keep `electron_app` desktop-only with a rotated password, or move to server-side RPC. Watch `supabase_rest` logs for repeated "Received a schema cache reload message". | `10_electron_role_notify.test.sql`, pgTAP TODO test (fails until the platform allows a block) |
+
+## Live pentest (local stack)
+
+Run on 2026-10-31 against the local stack only: web app `http://localhost:3000` (`next start`, production
+build), Supabase API `http://127.0.0.1:54321`, DB container `supabase_db_tape-portal` (PG 17.11), Mailpit
+`:54324`. No remote project or real database was touched. Electron was not started. All findings came from
+the `electron_app` direct SQL login. The rows L1 to L5 above give the fix detail; this table records status
+after the finalize round.
+
+### Findings
+
+| ID | Severity | Title | Location | Fixed | Verified | Regression test |
+|----|----------|-------|----------|-------|----------|-----------------|
+| electron-app-create-extension (L1) | High | `electron_app` can `CREATE EXTENSION dblink` with no CREATE privilege on the schema or database (supautils privileged-extension path) | `supabase/migrations/0010_electron_role.sql` (role setup); live DB | No (platform limit: supautils installs privileged extensions as `supabase_admin` for any role, with no privilege check, and skips non-superuser event triggers) | Gap re-confirmed 2026-10-31 in a rolled-back transaction (`seg` installed as `supabase_admin` in `public` while `has_database_privilege(..., 'CREATE')` = false); also works in `template1`, see R3. No leftover extensions | `supabase/tests/rls/08_electron_role_lockdown.test.sql` (pgTAP TODO, still reports "caught: no exception") |
+| electron-app-alter-own-role-settings (L2) | Low | `electron_app` can `alter role electron_app set ...` and override the 0010 `search_path` / `statement_timeout` / idle-timeout guards | `supabase/migrations/0010_electron_role.sql:46-48` | No, accepted risk (login trigger removed because of R1) | Yes: with a `role = 'postgres'` drift set by `electron_app`, the next `electron_app` login still works (WARNING only, `current_user` = `electron_app`); drift then reset by `postgres` | `08_electron_role_lockdown.test.sql` (no login event trigger, functions removed) |
+| electron-app-temp-objects (L3) | Low | `electron_app` can create temp tables and `pg_temp` functions (TEMP inherited from PUBLIC) | fix in `0014_electron_role_lockdown.sql` | Yes, on `postgres`, `_supabase`, `storage_vectors` | Yes: temp table fails in `postgres` and `template1`; login to `_supabase` and `storage_vectors` fails with "User does not have CONNECT privilege" | `08_electron_role_lockdown.test.sql` (checks every database in `pg_database`) |
+| electron-app-large-object-write (L4) | Low | `electron_app` can write and keep any data in `pg_largeobject` via `lo_from_bytea` / `lo_create` / `lowrite` | partial fix in `0015_electron_role_large_objects.sql` | Partly (`postgres` can unlink; owner-only purge function; no automatic purge) | Owner unlink and owner-only purge confirmed; `lo_from_bytea` still executable | `supabase/tests/rls/09_electron_role_large_objects.test.sql` (plus pgTAP TODO for creation itself) |
+| electron-app-notify-pgrst-reload (L5) | Low | `electron_app` can `NOTIFY pgrst`, forcing PostgREST to reset its pool and reload schema cache/config (DoS in a loop) | Postgres NOTIFY (no ACL); affects `supabase_rest` | No, accepted risk (no per-channel NOTIFY ACL, `db-channel` not configurable on Supabase) | Not re-verified (documented gap) | `supabase/tests/rls/10_electron_role_notify.test.sql` (pgTAP TODO, rolled-back transaction) |
+
+### Attack surfaces that held
+
+- `electron_app` schema isolation: `create table public.*` and `create function public.*` fail with
+  "permission denied for schema public"; `auth` schema stays "permission denied" even with `search_path`
+  changed; the role is a member of no other role (pgTAP).
+- Checklist item 3, re-checked 2026-10-31 (as `supabase_admin`, `set role electron_app`): `select
+  public.is_service_call()` fails with "permission denied for function is_service_call"; no SELECT on
+  `leads`, `quotes`, `profiles`; EXECUTE denied on `assign_lead`, `convert_lead_to_production`,
+  `check_rate_limit`.
+- Privilege escalation from `electron_app`: `set role postgres` denied, `set event_triggers = off` denied,
+  `alter large object ... owner to authenticator` denied, the purge SECURITY DEFINER function is not
+  executable by `electron_app` or `authenticated`. A drifted `role=postgres` setting is denied and never
+  applied to a session.
+- `0015` membership is one-way: `postgres` inherits `electron_app` (inherit=t, set=f); `electron_app` gains
+  nothing.
+- No `login` event trigger exists any more, so a broken trigger can no longer block logins (R1 closed).
+- `npm run db:test` on the local DB after the finalize round (0014/0015 changes applied by hand as
+  `postgres`, no `db reset`): 10 files, 113 tests, PASS; the L1, L4 and L5 gaps show as TODO failures.
+
+### Remaining risks
+
+- **R1 (closed):** the login event trigger and its guard/restore functions are removed (0014 drops them if
+  present). A drifted `role` setting now only causes a WARNING at login; verified that `electron_app` still
+  logs in.
+- **R2 (closed locally):** TEMP and CONNECT are revoked from PUBLIC on `_supabase` and `storage_vectors`.
+  On hosted Supabase these databases may not exist or may not be owned by `postgres`; the 0014 loop skips
+  any database `postgres` does not own. Check `select datname, datdba::regrole, datacl from pg_database`
+  on the hosted project after the first deploy.
+- **R3 (new, Low):** `electron_app` can connect to `template1` (PUBLIC CONNECT, owned by `supabase_admin`,
+  not changeable from a migration) and, through L1, create extensions there. Databases created later from
+  `template1` would inherit them. No TEMP there. Production step: ask Supabase support to
+  `revoke connect on database template1 from public`, or make sure only the pooler (database `postgres`)
+  is reachable.
+- **L1 (High), L4, L5:** platform limits remain. The real mitigation is the same for all three: keep
+  `electron_app` off the network (desktop only, rotated password), or replace the direct SQL login with
+  server-side RPC/Edge Functions. Full L4 fix needs `revoke execute on function lo_* from public` run as
+  `supabase_admin`.
+- **L2 (accepted):** the role can change its own role-level and session-level settings (own sessions only).
+- Web portal, REST, Storage, Realtime and Mailpit checks (items 5 to 25 below) were not part of the
+  `electron_app` round. The later "Security regression suite" covers most of them; see the ticks below.
+
+## Security regression suite
+
+Added 2026-10-31. These are integration tests that run against the local stack only: the web app as a production build
+(`next start`), local Docker Supabase and Mailpit. Run `npm run test:security` in `web/`. The config is
+`web/vitest.security.config.mts`, and the run is not part of `npm run test`. The SQL side runs with `npm run db:test`
+(pgTAP, `supabase/tests/rls/`).
+
+### Suites and rules covered
+
+| Suite (`web/tests/security/`) | Files | Rules covered |
+|---|---|---|
+| `access/` | 14 | Anonymous users cannot read or write lead data. Staff and ctv see only their assigned leads, and are isolated from other staff on leads, designs, quotes, lines, notes and history. Exact counts and embedded relations reveal no hidden rows. Staff cannot change assignment or customer fields. Price lines are locked for staff and editable only on drafts by admin or manager. History tables are append-only. Role and `is_active` changes are admin-only, with no self-promotion. RPCs match a reviewed allowlist, and server-only functions cannot be called. GraphQL follows the same rules. Sign-up, anonymous sign-in and OTP account creation are disabled. Storage `logos` list, download, signed URL and upload are denied to outsiders, including `../` paths. Realtime events stop after unassignment and after deactivation, and DELETE events carry only the primary key. Deactivated users with a still-valid token cannot act. |
+| `intake/` | 9 | Body caps: early 413 on Content-Length, and 413 on chunked bodies with no truncation. Captcha uses the Cloudflare test secrets and checks the action and hostname. The rate limit of 5 per hour cannot be bypassed with spoofed forwarding headers and shares one bucket per IPv6 /64. Schema checks cover types, lengths, control characters, bidi characters and decimal-only quantity. Server-owned fields and storage paths cannot be set by the client. Uploads are checked for size, type sniffing and SVG sanitizing. In emails, user fields are escaped, recipients are fixed, and the confirmation carries no requester-supplied link text. |
+| `quotes/` | 11 | Customer links (`/q/<token>`) use a body cap, reject bad Origin values (CSRF), expire, are single-use and get revoked when superseded. Invalid tokens get a uniform response. Concurrent answers produce exactly one record. A manager cannot answer. After a quote is sent, its price lines and its terms are locked (`notes`, `valid_until`, `pdf_path`, `sent_at`). |
+| `webapp/` | 13 | Auth cookies are HttpOnly, SameSite and Secure in production. Login and password reset do not reveal whether an account exists. Login `next=` allows only same-site paths. The client bundle has no secrets. Error pages do not leak data. CSP, nosniff and HSTS are sent on every route. Server Actions refuse a mismatched Origin. Staff cannot run admin actions or open admin pages. Portal pages, email templates and the quote PDF escape or neutralize hostile input. |
+| pgTAP `supabase/tests/rls/` | 11 | RLS, guards, quote status transitions (06) and the `electron_app` lockdown (08 to 10). `11_sent_quote_terms_inactive_profile.test.sql` is new and covers the 0016 fixes. |
+
+### Defects found and fixes
+
+All 14 defects are fixed. None is committed yet.
+
+| ID | Severity | Defect | Fix | Test |
+|----|----------|--------|-----|------|
+| INTAKE-RL-1 | High | `clientIp()` trusted `x-vercel-forwarded-for`, `x-real-ip` and the rightmost XFF entry without any proxy check. Under `next start`, each spoofed IP got its own bucket, so 8 of 8 requests passed and none returned 429. | `lib/security/client-ip.ts`: `clientIp(headers, mode)` trusts a header only when the new `TRUSTED_PROXY` env (`vercel`, `x-real-ip`, `xff` or `none`) says so. It defaults to `vercel` when `VERCEL=1`, and otherwise to `none`, which ignores every header (the client is then `unknown`). In production, `rate-limit.ts` warns once when no proxy is set. The env is documented in `.env.example`. | `intake/rate-limit.test.ts` |
+| WEBAPP-1 | High | Open redirect: `safeNextPath()` returned `url.pathname` after dot-segment removal, so `/.//evil.example`, `/..//…`, `/portal/..//…` and `/%2e//…` became `//evil.example`. This affected the 307 for a logged-in user, the `loginAction` redirect and the hidden `next` input. | `lib/security/safe-redirect.ts` checks the path again after URL parsing, and these inputs now fall back to `/portal`. | `webapp/login-next-redirect.test.ts`, unit test `safe-redirect.test.ts` |
+| INTAKE-BODY-1 | Medium | The proxy matcher included `/api/leads`, so Next.js buffered and cloned up to 10 MB before the route ran. A declared 50 MB with a slow sender got no answer. | `proxy.ts`: the matcher now skips `api/`. Both API routes set their own CSP through `withCsp()` (`lib/security/csp.ts`). `/api/leads` `GET` returns 405. `handle-lead-submit.ts` rejects an oversized Content-Length before the rate limit. After a 413, `read-body.ts` drains up to 2x the cap in the background, so the client gets the reply and the keep-alive socket is left clean. | `intake/body-size.test.ts` |
+| WEBAPP-2 | Medium | Auth cookie `sb-127-auth-token` was not HttpOnly (an `@supabase/ssr` default) and had a Max-Age of 400 days. | New `lib/supabase/cookie-options.ts` (`httpOnly: true`, `sameSite: lax`), used by `server.ts` and `proxy.ts`. The browser Realtime client (`client.ts`) now gets a short-lived access token from the Server Action `lib/supabase/realtime-token.ts` and caches it until just before expiry. The refresh token never reaches the browser. | `webapp/auth-cookie-flags.test.ts` |
+| WEBAPP-3 | Medium | The auth cookie had no `Secure` in the production build. | `cookie-options.ts` sets `secure` in production builds. | `webapp/auth-cookie-flags.test.ts` |
+| QUOTE-TERMS-1 | Medium | A manager or admin could change `notes` on a sent or accepted quote. `/q/<token>` then showed text that was not in the emailed PDF. | `0016_sent_quote_terms_inactive_profile.sql` replaces `quotes_guard()`. Once a quote is not `draft`, end users get 42501 when they change `notes`, `valid_until`, `pdf_path` or `sent_at`. The send flow still re-sends the same version, so `markSent` (`features/quotes/server/send-deps.ts`) now uses the service client. It updates only quotes in `draft` or `sent`, and it fails when no row changed. The caller still checks the role and reads the quote through RLS first. | `quotes/sent-terms-lock.test.ts`, pgTAP 11 |
+| QUOTE-TERMS-2 | Low | `valid_until` could be extended on a sent or accepted quote, which re-opened acceptance after expiry. | Same as QUOTE-TERMS-1. | same |
+| QUOTE-TERMS-3 | Low | `pdf_path` and `sent_at` (the audit record of what was sent) could be rewritten. | Same as QUOTE-TERMS-1. | same |
+| INTAKE-BODY-2 | Low | An 11 MB chunked body was cut to 10 MB by the proxy and returned 422 instead of 413. | Same as INTAKE-BODY-1: the proxy no longer handles `api/`. | `intake/body-size.test.ts` |
+| INTAKE-EMAIL-1 | Low | `containsLink()` missed IDN domains such as `bánhmì.vn`, so the requester's name reached the confirmation mail. | `features/email/lib/escape.ts` now matches Unicode letters, plus full-width dots and `＠`. | `intake/email-confirmation.test.ts`, unit test `escape.test.ts` |
+| INTAKE-SVG-1 | Low | `data:image/svg+xml` was kept on `<image>`, so a nested `<svg onload>` was stored. | `sanitize-svg.ts` adds a DOMPurify hook for each sanitize call only. It drops any `data:` href that is not base64 PNG or JPEG. | `intake/upload-svg.test.ts`, unit test `sanitize-svg.test.ts` |
+| INTAKE-SCHEMA-1 | Low | Bidi override and isolate characters (U+202E, U+2066 to U+2069) were stored in `customer_name` and `company`. | `lead-schema.ts` also strips U+061C, U+200E/F, U+202A to U+202E and U+2066 to U+2069. | `intake/schema-validation.test.ts`, unit test `lead-schema.test.ts` |
+| INTAKE-SCHEMA-2 | Low | `quantity='0x10'` was stored as 16, through `z.coerce.number()`. | New `parseQuantity()` removes `.`, `,` and spaces, then accepts only 1 to 9 decimal digits. `0x10`, `0b101`, `1e3` and `Infinity` now return 422. | `intake/schema-validation.test.ts`, unit test `lead-schema.test.ts` |
+| access-deactivated-profile-self-update | Low | A deactivated user with an old token could still `PATCH` their own `profiles.full_name` and `phone`. | `0016`: `profiles_update_self` now requires `id = auth.uid() and public.is_internal()` in both USING and WITH CHECK. | `access/deactivated.test.ts`, pgTAP 11 |
+
+Test infrastructure changed without weakening any assertion:
+
+- In `vitest.security.config.mts`, `fileParallelism: false` is set, because all files share one live rate-limit bucket now that spoofed IPs no longer split it.
+- The same config sets `TRUSTED_PROXY=x-real-ip` for the in-process handler tests only. These tests model a trusted edge. The live server runs with no proxy setting.
+- Suites that do not test rate limiting now clear their own buckets with the service key (`helpers/rate-limits.ts`). Before, they spoofed a new client IP.
+
+### Final results
+
+- `npm run test:security`, last full run against a fresh production build on `:3001`: **45 files, 426 tests passed**. Before that run, migration 0014 was re-applied by hand after `db:reset`, and one leftover rate-limit row was cleared in the local DB. The `:3001` server has been stopped. `:3000` and the Supabase containers were not touched.
+- `npm run db:test` after the `electron_app` finalize round: 10 files and 113 tests passed. The only failures are the expected TODO tests for L1, L4 and L5. pgTAP 11 (0016) was added later and is included in the suite.
+- New unit tests: `client-ip`, `safe-redirect`, `escape`, `sanitize-svg` and `lead-schema`.
+
+### Open after this round
+
+- **Realtime with HttpOnly cookies** has not been tested in a real browser. The token-from-Server-Action path is covered only indirectly by `access/realtime*.test.ts`, which use their own clients. Check live updates in the portal before launch.
+- **`TRUSTED_PROXY` must match the deployment.** On Vercel the default (`vercel`) is right. A self-hosted `next start` behind nginx or a CDN needs `x-real-ip` or `xff`, and that proxy must overwrite the header. With `none`, every client shares one `unknown` bucket. That is safe, but one abuser can then block all lead submissions (5 per hour in total).
+- **Fresh `db reset`.** The revised 0014 was applied by hand. Run one clean `supabase db reset` followed by `npm run db:test` and `npm run test:security` before the first hosted deploy.
+- The `electron_app` platform limits L1 (High), L4 and L5 and the residual risk R3 are unchanged. See above.
+- A manager can still set a quote from `sent` to `expired`. 0012 allows this by design.
+
 ## Needs live verification with Docker (later pentest)
 
-1. `supabase db reset` applies 0001 to 0011 cleanly, and `npm run db:test` passes all 5 pgTAP files.
+Items marked **[x]** were exercised in the local live pentest or the security regression suite above;
+**[~]** means partly (the rest is noted on the item).
+
+1. **[~]** `supabase db reset` applies 0001 to 0011 cleanly, and `npm run db:test` passes all 5 pgTAP files.
    File 05 has 24 assertions and has not been executed yet.
+   Live: DB reset done, migrations 0001 to 0015 applied. `npm run db:test` passed (10 files, 113 tests) after
+   the revised 0014/0015 were applied by hand; a fresh `db reset` with the revised files is still pending.
 2. Under the CLI version in use, `session_user` for migrations and seed is `postgres` or a member of it,
    so `is_service_call()` still treats seed/migration updates as server code. If the CLI logs in as
    another role, the seed's `update leads set assigned_to` fails.
-3. Connect as `electron_app` and confirm `select public.is_service_call()` returns false, no access to
+3. **[x]** Connect as `electron_app` and confirm `select public.is_service_call()` returns false, no access to
    `leads`/`quotes`/`profiles`, and EXECUTE denied on `convert_lead_to_production`, `assign_lead` and
    `check_rate_limit`.
+   Live: all hold (`is_service_call` is not even executable; see "Attack surfaces that held").
 4. Trigger functions still fire after `REVOKE EXECUTE` (expected: EXECUTE is checked only at CREATE TRIGGER).
-5. Realtime: staff stop receiving `leads`/`lead_status_log` events right after they are unassigned **and**
+5. **[x]** Realtime: staff stop receiving `leads`/`lead_status_log` events right after they are unassigned **and**
    right after they are deactivated. DELETE events do not leak old rows (replica identity full + RLS).
-6. PostgREST as staff: `PATCH /leads?id=eq.<other>`, `PATCH /quotes`, `POST /quote_lines`, `GET /quote_tokens`,
+    Suite: `access/realtime-revocation.test.ts` (unassign, deactivate) and `access/realtime.test.ts` (DELETE carries only the PK).
+6. **[x]** PostgREST as staff: `PATCH /leads?id=eq.<other>`, `PATCH /quotes`, `POST /quote_lines`, `GET /quote_tokens`,
    `POST /rpc/quotes_recalc_totals`, `POST /rpc/check_rate_limit`, `POST /rpc/next_bang_keo_in_order_id`.
    All must be denied or return empty.
-7. Storage as staff: list and download objects of unassigned leads in logos/previews/quotes (expect deny),
+    Suite: `access/lead-columns.test.ts`, `price-lines.test.ts`, `rpc-roles.test.ts`, `counts-embeds.test.ts`, `anonymous.test.ts`.
+7. **[~]** Storage as staff: list and download objects of unassigned leads in logos/previews/quotes (expect deny),
    upload (expect deny), path tricks (`../`, a non-uuid prefix, URL-encoded slashes).
-8. A sanitized SVG served from the Storage origin (signed URL) runs no script when opened directly.
+    Suite: `access/storage-logos.test.ts` covers list, download, signed URL, upload, delete and `../` for `logos`. The `previews` and `quotes` buckets are not covered yet.
+8. **[~]** A sanitized SVG served from the Storage origin (signed URL) runs no script when opened directly.
    Confirm the stored `Content-Type` and consider `Content-Disposition: attachment` for SVG downloads.
-9. Hosted project auth settings: sign-up disabled, email confirmations on, redirect allow-list limited to
+    Suite: `intake/upload-svg.test.ts` covers the sanitizing and the stored `image/svg+xml` type (and INTAKE-SVG-1). Opening the file in a browser and `Content-Disposition` are not tested.
+9. **[~]** Hosted project auth settings: sign-up disabled, email confirmations on, redirect allow-list limited to
    the production domain plus `/auth/callback`, JWT expiry, leaked-password protection.
-10. On Vercel: confirm that `x-real-ip` / `x-vercel-forwarded-for` cannot be overridden by the client, so the
+    Local only: `access/signup-disabled.test.ts`. The hosted project settings still need a check.
+10. **[~]** On Vercel: confirm that `x-real-ip` / `x-vercel-forwarded-for` cannot be overridden by the client, so the
     rate limit holds against spoofed `X-Forwarded-For` and per-/64 IPv6 rotation. Confirm that Turnstile
     `siteverify` rejects reused tokens and wrong hostnames.
-11. CSP in a real browser: no violations on `/`, `/thiet-ke` (Konva + three.js + Turnstile iframe) and `/q/<token>`.
+    Suite: `intake/rate-limit.test.ts` (spoofed headers, IPv6 /64; INTAKE-RL-1 fixed) and `intake/captcha.test.ts` (spent and foreign-hostname tokens). Confirming the Vercel header behaviour live is still open.
+11. **[~]** CSP in a real browser: no violations on `/`, `/thiet-ke` (Konva + three.js + Turnstile iframe) and `/q/<token>`.
     Nonce-only `style-src` may block libraries that inject `<style>` tags or set the `style` attribute.
     Check routes skipped by the proxy matcher (paths ending in `.png`/`.svg`, which carry no CSP header).
-12. CSRF: cross-origin `fetch`/form POST to every route handler and Server Action with the auth cookie (expect 403).
-13. `/q/<token>`: brute force and enumeration timing, expired or revoked token, token for quote A used to
+    Suite: `webapp/security-headers.test.ts` checks the headers and the nonce. A real-browser violation check is still open.
+12. **[x]** CSRF: cross-origin `fetch`/form POST to every route handler and Server Action with the auth cookie (expect 403).
+    Suite: `quotes/csrf-origin.test.ts`, `webapp/server-action-origin.test.ts`.
+13. **[~]** `/q/<token>`: brute force and enumeration timing, expired or revoked token, token for quote A used to
     answer quote B, replay after acceptance, rate limit per IP and per token.
-14. Email (Resend): HTML injection through customer name, company or note in every template. Make sure
+    Suite: `quotes/invalid-token`, `expired-token`, `single-use`, `superseded-version`, `concurrent-response`. Timing analysis and per-token rate-limit tests are not done.
+14. **[x]** Email (Resend): HTML injection through customer name, company or note in every template. Make sure
     customer input cannot change the recipient or headers.
-15. Quote status (W7, migration 0012): as manager over PostgREST, `PATCH /quotes?id=eq.<sent>` with
+    Suite: `webapp/xss-email-templates.test.ts`, `intake/email-confirmation.test.ts` (Mailpit, not Resend).
+15. **[x]** Quote status (W7, migration 0012): as manager over PostgREST, `PATCH /quotes?id=eq.<sent>` with
     `status=draft` must return 42501. Edit lines, then set `sent` again: this must also fail. Admin can
     cancel an accepted quote, manager cannot. Run `supabase/tests/rls/06_quote_status_transitions.test.sql`.
-16. Superseded versions (W6): send v1, create a new draft with "create" (not "new version"), send v2.
+    Suite: `quotes/price-lock.test.ts`, `sent-terms-lock.test.ts` (QUOTE-TERMS-1/2/3 fixed in 0016); pgTAP 06 runs in `db:test`.
+16. **[x]** Superseded versions (W6): send v1, create a new draft with "create" (not "new version"), send v2.
     The v1 link must now show "link expired", and `POST /api/q/<v1 token>/respond` must return 404.
-17. Used links (W5): answer a quote, then move `quote_tokens.expires_at` into the past. `/q/<token>`
+    Suite: `quotes/superseded-version.test.ts`.
+17. **[x]** Used links (W5): answer a quote, then move `quote_tokens.expires_at` into the past. `/q/<token>`
     must no longer show prices or names.
-18. Body caps: `POST /api/q/<token>/respond` with a 1 MB chunked body and no Content-Length must
+    Suite: `quotes/single-use.test.ts`.
+18. **[x]** Body caps: `POST /api/q/<token>/respond` with a 1 MB chunked body and no Content-Length must
     return 413 quickly, and server memory must not grow. Also send a 6 MB+ multipart to `/api/leads`.
-19. Turnstile hostname (W9): solve the widget on another origin that embeds our sitekey (localhost
+    Suite: `quotes/body-size.test.ts`, `intake/body-size.test.ts` (INTAKE-BODY-1/2 fixed).
+19. **[~]** Turnstile hostname (W9): solve the widget on another origin that embeds our sitekey (localhost
     with a real key), then post that token to `/api/leads`. Expect `captcha`. Check that both www and
     apex hostnames still pass.
+    Suite: `intake/captcha.test.ts` covers foreign hostname and action in-process, with a mocked siteverify. The real widget on another origin is not tested.
 20. Production email without `RESEND_API_KEY` (W10): sending a quote must show "email failed". The
     quote must stay `draft`, no token may stay live, and logs must not contain recipient addresses.
-21. Lead confirmation relay (W11): submit a lead with a third-party email and a name that contains
+21. **[x]** Lead confirmation relay (W11): submit a lead with a third-party email and a name that contains
     `evil.vn` or `https://…`. The mail must greet "quý khách" and contain no link text. Also confirm
     the 5 per hour per IP limit and Turnstile stop bulk sending.
-22. Realtime DELETE events: as a logged-in but inactive user (or staff on another lead), subscribe to
+    Suite: `intake/email-confirmation.test.ts` (INTAKE-EMAIL-1 fixed) and `intake/rate-limit.test.ts`.
+22. **[x]** Realtime DELETE events: as a logged-in but inactive user (or staff on another lead), subscribe to
     `postgres_changes` on `leads`/`lead_notes`/`quotes`. An admin then deletes a row. Supabase does not
     apply RLS to DELETE events. Confirm that the payload carries only the primary key (`old.id`), with
     no name, phone or price.
-23. Server Actions: replay each action ID (from the client bundle) as `POST /portal` with a staff
+    Suite: `access/realtime.test.ts` (staff on another lead). `access/deactivated.test.ts` covers the inactive user's reads.
+23. **[~]** Server Actions: replay each action ID (from the client bundle) as `POST /portal` with a staff
     cookie and another lead's UUID: `sendQuoteAction`, `saveQuoteDraftAction`, `createQuoteVersionAction`,
     `getQuotePdfUrlAction`, `assignLeadAction`, `updateUserAction`, `inviteUserAction`,
     `convertToProductionAction`, `changeStatusAction` and `addNoteAction`. Expect a forbidden message
     or an RLS empty result. Send a cross-origin `Origin` and expect Next.js to reject it.
-24. Auth callback: `/auth/callback?type=recovery&token_hash=…&next=https://evil` must land on
+    Suite: `webapp/staff-admin-actions.test.ts` (`assignLeadAction`, `updateUserAction`, `inviteUserAction`, `convertToProductionAction`) and `webapp/server-action-origin.test.ts`. The quote and note actions are not replayed yet.
+24. **[~]** Auth callback: `/auth/callback?type=recovery&token_hash=…&next=https://evil` must land on
     `/auth/update-password`. `next=//evil`, `/%5Cevil` and `/%252F%252Fevil` must fall back to `/portal`.
+    Suite: `webapp/login-next-redirect.test.ts` covers `/login?next=` and the login action (WEBAPP-1 fixed). `/auth/callback` is not tested yet.
 25. Admin invite: invite an existing confirmed email and expect "email exists" with no role change.
     As staff, `auth.updateUser({ data: { role: "admin" } })` (user_metadata) must not change
     `profiles.role` or RLS results, because only `app_metadata` is read.
+
+### Production step: lock down `storage_vectors` (after first deploy)
+
+The Storage service creates the `storage_vectors` database after migrations run, so migration 0014 cannot revoke its default `PUBLIC` `CONNECT`/`TEMP`. Run once as `postgres` after the production project is up, then re-run `supabase/tests/rls/08_electron_role_lockdown.test.sql` (its 4 TODO tests should pass):
+
+```sql
+revoke connect, temporary on database storage_vectors from electron_app;
+revoke temporary on database storage_vectors from public;
+```
+
+Risk if skipped: low. `electron_app` could connect to an empty database and create temporary objects there; it cannot reach any application data.

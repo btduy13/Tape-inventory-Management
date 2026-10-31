@@ -56,3 +56,19 @@ export function buildCsp({ nonce, isDev, supabaseUrl }: CspOptions): string {
   if (!isDev) parts.push("upgrade-insecure-requests");
   return parts.join("; ");
 }
+
+/**
+ * Sets a fresh-nonce CSP on a response produced outside src/proxy.ts (API route handlers are
+ * excluded from the proxy so their bodies are not buffered; see proxy.ts `config`).
+ */
+export function withCsp(response: Response): Response {
+  response.headers.set(
+    "Content-Security-Policy",
+    buildCsp({
+      nonce: generateNonce(),
+      isDev: process.env.NODE_ENV === "development",
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    }),
+  );
+  return response;
+}

@@ -60,7 +60,7 @@ describe("absoluteUrl", () => {
 });
 
 describe("containsLink", () => {
-  it.each(["https://evil.vn", "Xem www.evil.vn", "trung thuong tai evil.com", "a@b.vn", "evil.vn/x", "hxxp://x"])(
+  it.each(["https://evil.vn", "Xem www.evil.vn", "trung thuong tai evil.com", "a@b.vn", "evil.vn/x", "hxxp://x", "nhận quà ở bánhmì.vn", "xem tại khuyến-mãi.vn/qua", "ưu-đãi.việtnam"])(
     "flags %s",
     (v) => expect(containsLink(v)).toBe(true),
   );

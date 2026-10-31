@@ -2,6 +2,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types";
+import { authCookieOptions } from "./cookie-options";
 
 export interface SessionResult {
   response: NextResponse;
@@ -23,6 +24,7 @@ export async function updateSession(
   if (!url || !anonKey) return { response, userId: null }; // not configured (e.g. CI build)
 
   const supabase = createServerClient<Database>(url, anonKey, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

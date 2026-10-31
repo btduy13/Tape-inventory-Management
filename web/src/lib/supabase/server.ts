@@ -6,11 +6,13 @@ import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Profile } from "@/lib/types";
 import { publicEnv } from "@/lib/env";
+import { authCookieOptions } from "./cookie-options";
 
 export async function createClient(): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookies();
   const env = publicEnv();
   return createServerClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();

@@ -58,11 +58,17 @@ export function createSendDeps(db: SupabaseClient<Database>): SendDeps {
         pdf: { filename: quotePdfFilename(ctx.lead.code, ctx.quote.version), content: pdf },
       }),
     async markSent(quoteId, pdfPath, sentAt) {
-      const { error } = await db
+      // Service role: quotes_guard (0016) freezes sent_at / pdf_path for end users once a quote
+      // is sent, so a re-send of the same version is recorded by server code. The caller passed
+      // assertRole(pricing) and loadContext() read the quote through RLS first.
+      const { data, error } = await admin()
         .from("quotes")
         .update({ status: "sent", sent_at: sentAt, pdf_path: pdfPath })
-        .eq("id", quoteId);
+        .eq("id", quoteId)
+        .in("status", ["draft", "sent"])
+        .select("id");
       if (error) throw new Error(error.message);
+      if (!data || data.length === 0) throw new Error("quote is no longer sendable");
     },
     async supersedeOtherQuotes(leadId, keepQuoteId) {
       // As the user (RLS + quotes_guard); cancelled quotes fail evaluateTokenAccess anyway.

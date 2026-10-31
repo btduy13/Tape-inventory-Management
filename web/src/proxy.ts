@@ -40,8 +40,13 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      // Skip static assets and image optimisation; API routes still get session refresh.
-      source: "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+      // Skip static assets, image optimisation and the public API routes. For any matched
+      // request with a body, Next.js clones and buffers the body (up to 10 MB) for the proxy
+      // BEFORE the route runs, so the routes' early Content-Length / streamed byte caps
+      // (lead-intake read-body.ts, quotes respond-route.ts) never acted early, and bodies
+      // above 10 MB reached them truncated. The API routes need no session refresh and set
+      // their own CSP (withCsp in lib/security/csp.ts).
+      source: "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

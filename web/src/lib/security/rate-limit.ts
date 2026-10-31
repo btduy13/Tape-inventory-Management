@@ -1,9 +1,9 @@
 // Per-IP fixed-window rate limit backed by public.check_rate_limit (migration 0008).
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { serverEnv } from "@/lib/env.server";
+import { isProductionRuntime, serverEnv } from "@/lib/env.server";
 import { sha256Hex } from "@/lib/security/hash";
-import { clientIp, rateLimitSubject } from "@/lib/security/client-ip";
+import { clientIp, rateLimitSubject, trustedProxyMode } from "@/lib/security/client-ip";
 
 export interface RateLimitRule {
   /** Logical bucket, e.g. "lead-submit" or "quote-respond". */
@@ -26,8 +26,21 @@ export async function hashIp(ip: string): Promise<string> {
   return sha256Hex(`${serverEnv().IP_HASH_SALT}:${ip}`);
 }
 
+let warnedNoProxy = false;
+
+/** Production without a trusted proxy: every client shares one bucket (safe, but strict). */
+function warnIfNoTrustedProxy(): void {
+  if (warnedNoProxy || trustedProxyMode() !== "none" || !isProductionRuntime(process.env)) return;
+  warnedNoProxy = true;
+  console.warn(
+    "[rate-limit] TRUSTED_PROXY is not set: client IP headers are ignored and all clients share " +
+      "one rate-limit bucket. Set TRUSTED_PROXY=x-real-ip|xff behind your own reverse proxy.",
+  );
+}
+
 /** Returns true if allowed. Fails CLOSED (false) if the DB call errors. */
 export async function checkRateLimit(headers: Headers, rule: RateLimitRule): Promise<boolean> {
+  warnIfNoTrustedProxy();
   // IPv6 is bucketed per /64 (rateLimitSubject), otherwise one host rotates 2^64 addresses.
   const key = `${rule.name}:${await hashIp(rateLimitSubject(clientIp(headers)))}`;
   const { data, error } = await createAdminClient().rpc("check_rate_limit", {

@@ -1,11 +1,30 @@
 // Client IP for rate limiting / abuse hashing. Pure, so it is unit-testable.
 //
 // Security notes:
-//   * The LEFTMOST X-Forwarded-For entry is whatever the client sent; trusting it lets an
-//     attacker rotate fake IPs and bypass per-IP rate limits. We prefer headers that the
-//     hosting edge overwrites (Vercel: x-vercel-forwarded-for, x-real-ip), then the
-//     RIGHTMOST X-Forwarded-For entry (appended by the nearest trusted proxy).
+//   * Forwarding headers (X-Forwarded-For, X-Real-IP, x-vercel-forwarded-for) are plain
+//     request headers. They are only meaningful when a TRUSTED proxy in front of the app
+//     overwrites them; otherwise the client picks the value and rotates rate-limit buckets.
+//     `next start` itself never overwrites a client-sent X-Forwarded-For / X-Real-IP.
+//   * Which header is trusted is a deployment decision (TRUSTED_PROXY, see trustedProxyMode):
+//       vercel     x-vercel-forwarded-for, then x-real-ip (both overwritten by the Vercel edge).
+//                  Default when VERCEL=1.
+//       x-real-ip  a reverse proxy you run (nginx `proxy_set_header X-Real-IP $remote_addr`).
+//       xff        the RIGHTMOST X-Forwarded-For entry (appended by one trusted proxy).
+//       none       no trusted proxy (default off Vercel): every header is ignored and the
+//                  client is "unknown". All clients then share one rate-limit bucket, which
+//                  fails safe (strict) instead of letting each spoofed value get a bucket.
 //   * One IPv6 customer controls at least a /64, so IPv6 addresses are bucketed by /64.
+
+export type TrustedProxyMode = "vercel" | "x-real-ip" | "xff" | "none";
+
+const MODES: readonly TrustedProxyMode[] = ["vercel", "x-real-ip", "xff", "none"];
+
+/** Deployment's trusted proxy: TRUSTED_PROXY if valid, else "vercel" on Vercel, else "none". */
+export function trustedProxyMode(env: Record<string, string | undefined> = process.env): TrustedProxyMode {
+  const configured = env.TRUSTED_PROXY?.trim().toLowerCase();
+  if (configured && (MODES as readonly string[]).includes(configured)) return configured as TrustedProxyMode;
+  return env.VERCEL === "1" ? "vercel" : "none";
+}
 
 const MAX_IP_LENGTH = 64;
 
@@ -62,16 +81,25 @@ export function rateLimitSubject(ip: string): string {
   return `${hextets.slice(0, 4).join(":")}::/64`;
 }
 
-/** Best-effort client IP from trusted proxy headers; "unknown" when none is usable. */
-export function clientIp(headers: Headers): string {
-  const edge = firstValid(headers.get("x-vercel-forwarded-for")?.split(",")[0]) ??
-    firstValid(headers.get("x-real-ip"));
-  if (edge) return edge;
-  const fwd = headers.get("x-forwarded-for");
-  if (fwd) {
-    const parts = fwd.split(",");
-    const last = firstValid(parts[parts.length - 1]);
-    if (last) return last;
+/**
+ * Client IP as reported by the deployment's trusted proxy; "unknown" when there is none or
+ * its header is missing/malformed. Never reads a header the trusted proxy does not overwrite.
+ */
+export function clientIp(headers: Headers, mode: TrustedProxyMode = trustedProxyMode()): string {
+  switch (mode) {
+    case "vercel":
+      return (
+        firstValid(headers.get("x-vercel-forwarded-for")?.split(",")[0]) ??
+        firstValid(headers.get("x-real-ip")) ??
+        "unknown"
+      );
+    case "x-real-ip":
+      return firstValid(headers.get("x-real-ip")) ?? "unknown";
+    case "xff": {
+      const parts = (headers.get("x-forwarded-for") ?? "").split(",");
+      return firstValid(parts[parts.length - 1]) ?? "unknown";
+    }
+    default:
+      return "unknown";
   }
-  return "unknown";
 }

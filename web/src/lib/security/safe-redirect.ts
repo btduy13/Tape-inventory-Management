@@ -31,7 +31,12 @@ export function safeNextPath(next: string | null | undefined, fallback: string =
   try {
     const url = new URL(next, base);
     if (url.origin !== base) return fallback;
-    return `${url.pathname}${url.search}${url.hash}`;
+    // The parser removes dot segments, so "/.//host", "/..//host" or "/%2e//host" come back
+    // as "//host" (protocol-relative, off-site). Re-check what we would actually return.
+    const out = `${url.pathname}${url.search}${url.hash}`;
+    if (!out.startsWith("/") || out.startsWith("//") || out.includes("\\")) return fallback;
+    if (new URL(out, base).origin !== base) return fallback;
+    return out;
   } catch {
     return fallback;
   }

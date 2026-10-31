@@ -15,6 +15,12 @@ describe("safeNextPath (open redirect guard)", () => {
     "/%2F%2Fevil.test",
     "/%252F%252Fevil.test",
     "/%5Cevil.test",
+    // dot segments collapse to "//host" in the URL parser
+    "/.//evil.test",
+    "/..//evil.test",
+    "/portal/..//evil.test",
+    "/%2e//evil.test",
+    "/%2e%2e//evil.test",
     "javascript:alert(1)",
     "/\tevil",
     " /portal",

@@ -6,11 +6,21 @@ import type { LeadFieldName } from "./api-contract";
 
 const t = getDictionary().leadIntake.errors;
 
-// C0/C1 control chars except tab/newline (kept in the note only).
-const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
+// C0/C1 control chars except tab/newline (kept in the note only), plus the bidi controls
+// that reorder how text renders (Trojan-Source style "Invoice<RLO>gnp.exe"): ALM U+061C,
+// LRM/RLM U+200E-200F, embeddings/overrides U+202A-202E, isolates U+2066-2069.
+const CONTROL_CHARS =
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 
 export function cleanText(value: unknown): string {
   return typeof value === "string" ? value.replace(CONTROL_CHARS, "").trim() : "";
+}
+
+/** "1.000" / "1,000" / "1 000" -> 1000. Anything but plain decimal digits -> NaN (422). */
+export function parseQuantity(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const digits = cleanText(value).replace(/[.,\s]/g, "");
+  return /^\d{1,9}$/.test(digits) ? Number(digits) : Number.NaN;
 }
 
 /** "+84 912.345-678" -> "+84912345678". Returns "" when the shape is not a phone number. */
@@ -38,9 +48,10 @@ export const leadFieldsSchema = z.object({
     z.union([z.literal(""), z.email(t.email).max(254, t.tooLong)]),
   ).transform((v) => (v === "" ? null : v)),
   company: optionalLine(200),
+  // Decimal digits only: z.coerce.number() also took "0x10", "0b101", "1e3", "Infinity".
   quantity: z.preprocess(
-    (v) => (typeof v === "string" ? v.replace(/[.,\s]/g, "") : v),
-    z.coerce.number({ error: t.quantity }).int(t.quantity).min(1, t.quantity).max(10_000_000, t.quantity),
+    parseQuantity,
+    z.number({ error: t.quantity }).int(t.quantity).min(1, t.quantity).max(10_000_000, t.quantity),
   ),
   note: z.preprocess(
     (v) => cleanText(v),
