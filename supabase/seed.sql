@@ -2,8 +2,10 @@
 -- Test accounts, all with password: devpassword123
 --   admin@local.test   admin
 --   manager@local.test manager
---   staff@local.test   staff
---   ctv@local.test     ctv
+--   staff@local.test   staff   (lead b0001 assigned)
+--   staff2@local.test  staff   (no leads: cross-staff IDOR checks)
+--   ctv@local.test     ctv     (lead b0002 assigned)
+-- See supabase/SEED_USERS.md.
 -- tape_presets are seeded by migration 0002 (also needed in production).
 
 insert into auth.users (
@@ -22,7 +24,10 @@ insert into auth.users (
    '{"provider":"email","providers":["email"],"role":"staff"}', '{"full_name":"Nhân viên"}', now(), now(), '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000a004', 'authenticated', 'authenticated',
    'ctv@local.test', extensions.crypt('devpassword123', extensions.gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"],"role":"ctv"}', '{"full_name":"Cộng tác viên"}', now(), now(), '', '', '', '')
+   '{"provider":"email","providers":["email"],"role":"ctv"}', '{"full_name":"Cộng tác viên"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000a005', 'authenticated', 'authenticated',
+   'staff2@local.test', extensions.crypt('devpassword123', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"],"role":"staff"}', '{"full_name":"Nhân viên 2"}', now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, created_at, updated_at, last_sign_in_at)

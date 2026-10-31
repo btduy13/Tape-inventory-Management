@@ -44,8 +44,8 @@ select throws_ok(
 select pg_temp.logout();
 
 -- server code records an acceptance on a second quote
-insert into public.quotes (id, lead_id, vat_percent, status)
-values ('00000000-0000-0000-0000-0000000c0022', '00000000-0000-0000-0000-0000000b0001', 10, 'sent');
+insert into public.quotes (id, lead_id, version, vat_percent, status)
+values ('00000000-0000-0000-0000-0000000c0022', '00000000-0000-0000-0000-0000000b0001', 2, 10, 'sent');
 update public.quotes set status = 'accepted', responded_at = now()
  where id = '00000000-0000-0000-0000-0000000c0022';
 

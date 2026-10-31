@@ -1,6 +1,9 @@
 // Shared DB contract. MUST match supabase/migrations/*.sql.
-// When migrations change, update this file (or regenerate with
-// `npx supabase --workdir .. gen types typescript --local` once Docker is available).
+// When migrations change, update this file AND regenerate the raw schema with
+// `npm run db:types > src/lib/database.generated.ts` (local Docker Supabase).
+// The hand-written types below are narrower (DesignJson, non-null generated columns,
+// nullable RPC args); the drift check at the bottom fails typecheck if a table or
+// column is added/removed in SQL without updating this file.
 
 export type AppRole = "admin" | "manager" | "staff" | "ctv";
 
@@ -150,3 +153,23 @@ export type TablesUpdate<T extends keyof Database["public"]["Tables"]> = Databas
 /** Storage buckets (all private). Object path: `<lead_id>/<file>`. */
 export const STORAGE_BUCKETS = { logos: "logos", previews: "previews", quotes: "quotes" } as const;
 export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
+
+// ---------------------------------------------------------------------------
+// Schema drift check against the generated types (compile-time only)
+// ---------------------------------------------------------------------------
+export type { Database as GeneratedDatabase } from "./database.generated";
+import type { Database as GeneratedDatabase } from "./database.generated";
+
+type GenTables = GeneratedDatabase["public"]["Tables"];
+type AppTables = Database["public"]["Tables"];
+type SameKeys<A, B> = [Exclude<keyof A, keyof B> | Exclude<keyof B, keyof A>] extends [never] ? true : false;
+type AssertTrue<T extends true> = T;
+type ColumnDrift = {
+  [K in keyof AppTables]: K extends keyof GenTables ? SameKeys<AppTables[K]["Row"], GenTables[K]["Row"]> : false;
+}[keyof AppTables];
+type AppFunctionsMissing = Exclude<keyof Database["public"]["Functions"], keyof GeneratedDatabase["public"]["Functions"]>;
+/** Fails typecheck when types.ts and the migrations disagree on tables, columns or RPCs. */
+export type SchemaDriftCheck = [
+  AssertTrue<ColumnDrift extends true ? true : false>,
+  AssertTrue<[AppFunctionsMissing] extends [never] ? true : false>,
+];
