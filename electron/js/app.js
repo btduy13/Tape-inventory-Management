@@ -293,9 +293,7 @@ async function openEditOrderDialog(orderId, orderType) {
   // Mỗi lần mở có một mã yêu cầu riêng: phản hồi cũ về sau không được ghi đè form mới hơn.
   const requestId = ++editOrderRequestId;
 
-  const tableName = utils.getOrderTableName(orderType);
-
-  const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
+  const res = await window.electronAPI.dbQuery('order.getById', { orderType, id: orderId });
   if (requestId !== editOrderRequestId) return;
   if (!res?.ok || !res.rows?.length) {
     utils.showToast("Không tìm thấy dữ liệu đơn hàng", "danger");
@@ -584,7 +582,6 @@ async function submitEditOrder() {
   if (submitButton) submitButton.disabled = true;
   try {
 
-    const tableName = utils.getOrderTableName(editOrderType);
     const tenHang = document.getElementById('edit-ten-hang').value.trim();
     const tenKhachHang = document.getElementById('edit-ten-khach-hang').value.trim();
     const ngayDuKien = document.getElementById('edit-ngay-du-kien').value;
@@ -593,10 +590,11 @@ async function submitEditOrder() {
         utils.showToast('Vui lòng nhập đủ tên hàng, khách hàng và ngày giao', 'warning');
         return;
       }
-      const response = await window.electronAPI.dbRun(
-        `UPDATE ${tableName} SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3 WHERE id=$4`,
-        [tenHang, tenKhachHang, ngayDuKien, editOrderId]
-      );
+      const response = await window.electronAPI.dbRun('order.update', {
+        orderType: editOrderType,
+        id: editOrderId,
+        values: { ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien }
+      });
       if (!response.ok) {
         utils.showToast('Lỗi cập nhật đơn hàng: ' + response.error, 'danger');
         return;
@@ -620,8 +618,7 @@ async function submitEditOrder() {
       return;
     }
 
-    let sql;
-    let params;
+    let values;
 
     if (editOrderType === 'bang_keo_in') {
       const donGiaVon = utils.parseCurrency(document.getElementById('edit-don-gia-von').value);
@@ -647,40 +644,27 @@ async function submitEditOrder() {
         return;
       }
 
-      sql = `
-        UPDATE bang_keo_in_orders SET
-          ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach_mm=$4, quy_cach_m=$5,
-          quy_cach_mic=$6, cuon_cay=$7, so_luong=$8, phi_sl=$9, mau_keo=$10, phi_keo=$11,
-          mau_sac=$12, phi_mau=$13, phi_size=$14, phi_cat=$15, don_gia_von=$16,
-          don_gia_goc=$17, thanh_tien_goc=$18, don_gia_ban=$19, thanh_tien_ban=$20,
-          tien_coc=$21, cong_no_khach=$22, ctv=$23, hoa_hong=$24, tien_hoa_hong=$25,
-          loi_giay=$26, thung_bao=$27, loi_nhuan=$28, tien_ship=$29, loi_nhuan_rong=$30,
-          loai_truc=$31, ten_truc=$32, truc_chu_vi=$33, truc_so_luong=$34, truc_gia_goc=$35,
-          truc_gia_ban=$36, truc_thanh_tien_goc=$37, truc_thanh_tien_ban=$38, truc_ctv=$39,
-          truc_hoa_hong=$40, truc_tien_hoa_hong=$41, truc_loi_nhuan=$42, truc_loi_nhuan_rong=$43,
-          truc_vat=$44, truc_vat_percent=$45, vat=$46, vat_percent=$47
-        WHERE id=$48
-      `;
-      params = [
-        tenHang, tenKhachHang, ngayDuKien,
-        parseFloat(document.getElementById('edit-qc-mm').value) || null, quyCachM || null,
-        parseFloat(document.getElementById('edit-qc-mic').value) || null, cuonCay || null, soLuong,
-        utils.parseCurrency(document.getElementById('edit-phi-sl').value), document.getElementById('edit-mau-keo').value.trim() || null,
-        utils.parseCurrency(document.getElementById('edit-phi-keo').value), document.getElementById('edit-mau-sac').value.trim() || null,
-        utils.parseCurrency(document.getElementById('edit-phi-mau').value), utils.parseCurrency(document.getElementById('edit-phi-size').value),
-        utils.parseCurrency(document.getElementById('edit-phi-cat').value), donGiaVon,
-        result.product.costPrice, result.product.costTotal, donGiaBan, result.product.saleTotal,
-        tienCoc, result.outstanding, ctv, hoaHong, result.product.commission,
-        document.getElementById('edit-loi-giay').value.trim() || null, document.getElementById('edit-thung-bao').value.trim() || null,
-        result.product.profit, tienShip, result.product.netProfit, isNewAxis ? 'moi' : 'cu',
-        isNewAxis ? document.getElementById('edit-truc-ten').value.trim() : null,
-        isNewAxis ? (parseFloat(document.getElementById('edit-truc-chu-vi').value) || null) : null,
-        isNewAxis ? axisQuantity : 0, isNewAxis ? axisCostPrice : 0, isNewAxis ? axisSalePrice : 0,
-        result.axis.costTotal, result.axis.saleTotal,
-        isNewAxis ? (document.getElementById('edit-truc-ctv').value.trim() || null) : null,
-        isNewAxis ? result.axis.commissionPercent : 0, result.axis.commission, result.axis.profit, result.axis.netProfit, result.axis.vat, axisVatPercent, result.vat, vatPercent,
-        editOrderId
-      ];
+      values = {
+        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien,
+        quy_cach_mm: parseFloat(document.getElementById('edit-qc-mm').value) || null, quy_cach_m: quyCachM || null,
+        quy_cach_mic: parseFloat(document.getElementById('edit-qc-mic').value) || null, cuon_cay: cuonCay || null, so_luong: soLuong,
+        phi_sl: utils.parseCurrency(document.getElementById('edit-phi-sl').value), mau_keo: document.getElementById('edit-mau-keo').value.trim() || null,
+        phi_keo: utils.parseCurrency(document.getElementById('edit-phi-keo').value), mau_sac: document.getElementById('edit-mau-sac').value.trim() || null,
+        phi_mau: utils.parseCurrency(document.getElementById('edit-phi-mau').value), phi_size: utils.parseCurrency(document.getElementById('edit-phi-size').value),
+        phi_cat: utils.parseCurrency(document.getElementById('edit-phi-cat').value), don_gia_von: donGiaVon,
+        don_gia_goc: result.product.costPrice, thanh_tien_goc: result.product.costTotal, don_gia_ban: donGiaBan, thanh_tien_ban: result.product.saleTotal,
+        tien_coc: tienCoc, cong_no_khach: result.outstanding, ctv, hoa_hong: hoaHong, tien_hoa_hong: result.product.commission,
+        loi_giay: document.getElementById('edit-loi-giay').value.trim() || null, thung_bao: document.getElementById('edit-thung-bao').value.trim() || null,
+        loi_nhuan: result.product.profit, tien_ship: tienShip, loi_nhuan_rong: result.product.netProfit, loai_truc: isNewAxis ? 'moi' : 'cu',
+        ten_truc: isNewAxis ? document.getElementById('edit-truc-ten').value.trim() : null,
+        truc_chu_vi: isNewAxis ? (parseFloat(document.getElementById('edit-truc-chu-vi').value) || null) : null,
+        truc_so_luong: isNewAxis ? axisQuantity : 0, truc_gia_goc: isNewAxis ? axisCostPrice : 0, truc_gia_ban: isNewAxis ? axisSalePrice : 0,
+        truc_thanh_tien_goc: result.axis.costTotal, truc_thanh_tien_ban: result.axis.saleTotal,
+        truc_ctv: isNewAxis ? (document.getElementById('edit-truc-ctv').value.trim() || null) : null,
+        truc_hoa_hong: isNewAxis ? result.axis.commissionPercent : 0, truc_tien_hoa_hong: result.axis.commission,
+        truc_loi_nhuan: result.axis.profit, truc_loi_nhuan_rong: result.axis.netProfit,
+        truc_vat: result.axis.vat, truc_vat_percent: axisVatPercent, vat: result.vat, vat_percent: vatPercent
+      };
     } else {
       const donGiaGoc = utils.parseCurrency(document.getElementById('edit-don-gia-goc').value);
       if (donGiaGoc <= 0) {
@@ -688,30 +672,27 @@ async function submitEditOrder() {
         return;
       }
       const result = calculateEditOrder();
-      const common = [
-        tenHang, tenKhachHang, ngayDuKien, document.getElementById('edit-quy-cach').value.trim() || null,
-        soLuong, document.getElementById('edit-mau-sac').value.trim() || null
-      ];
+      const common = {
+        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien,
+        quy_cach: document.getElementById('edit-quy-cach').value.trim() || null,
+        so_luong: soLuong, mau_sac: document.getElementById('edit-mau-sac').value.trim() || null
+      };
 
       if (editOrderType === 'truc_in') {
-        sql = `UPDATE truc_in_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
-          so_luong=$5, mau_sac=$6, mau_keo=$7, don_gia_goc=$8, don_gia_ban=$9, ctv=$10,
-          hoa_hong=$11, tien_ship=$12, thanh_tien_goc=$13, thanh_tien_ban=$14, cong_no_khach=$15,
-          loi_nhuan=$16, tien_hoa_hong=$17, loi_nhuan_rong=$18, vat=$19, vat_percent=$20 WHERE id=$21`;
-        params = [...common, document.getElementById('edit-mau-keo').value.trim() || null, donGiaGoc, donGiaBan,
-          ctv, hoaHong, tienShip, result.costTotal, result.saleTotal, result.outstanding,
-          result.profit, result.commission, result.netProfit, result.vat, vatPercent, editOrderId];
+        values = { ...common, mau_keo: document.getElementById('edit-mau-keo').value.trim() || null,
+          don_gia_goc: donGiaGoc, don_gia_ban: donGiaBan, ctv, hoa_hong: hoaHong, tien_ship: tienShip,
+          thanh_tien_goc: result.costTotal, thanh_tien_ban: result.saleTotal, cong_no_khach: result.outstanding,
+          loi_nhuan: result.profit, tien_hoa_hong: result.commission, loi_nhuan_rong: result.netProfit,
+          vat: result.vat, vat_percent: vatPercent };
       } else {
-        sql = `UPDATE bang_keo_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
-          so_luong=$5, mau_sac=$6, don_gia_goc=$7, don_gia_ban=$8, ctv=$9, hoa_hong=$10,
-          tien_ship=$11, thanh_tien=$12, thanh_tien_ban=$13, cong_no_khach=$14,
-          loi_nhuan=$15, tien_hoa_hong=$16, loi_nhuan_rong=$17, vat=$18, vat_percent=$19 WHERE id=$20`;
-        params = [...common, donGiaGoc, donGiaBan, ctv, hoaHong, tienShip, result.costTotal,
-          result.saleTotal, result.outstanding, result.profit, result.commission, result.netProfit, result.vat, vatPercent, editOrderId];
+        values = { ...common, don_gia_goc: donGiaGoc, don_gia_ban: donGiaBan, ctv, hoa_hong: hoaHong,
+          tien_ship: tienShip, thanh_tien: result.costTotal, thanh_tien_ban: result.saleTotal,
+          cong_no_khach: result.outstanding, loi_nhuan: result.profit, tien_hoa_hong: result.commission,
+          loi_nhuan_rong: result.netProfit, vat: result.vat, vat_percent: vatPercent };
       }
     }
 
-    const res = await window.electronAPI.dbRun(sql, params);
+    const res = await window.electronAPI.dbRun('order.update', { orderType: editOrderType, id: editOrderId, values });
     if (res.ok) {
       utils.showToast(`Đã lưu thay đổi cho đơn ${editOrderId}`, "success");
       closeModal('modal-edit-order');

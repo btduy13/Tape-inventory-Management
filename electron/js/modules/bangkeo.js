@@ -29,17 +29,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Cột ghi khi tạo đơn (thứ tự giữ nguyên như câu INSERT cũ); SQL do tiến trình chính dựng
+const BANG_KEO_INSERT_COLUMNS = [
+  'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+  'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien',
+  'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
+  'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
+  'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote', 'vat', 'vat_percent', 'quote_items'
+];
+
 // 1. Tìm gợi ý tên hàng từ lịch sử đơn Băng Keo thường
 async function queryBangKeoSuggestions(query) {
-  const sql = `
-    SELECT ten_hang
-    FROM bang_keo_orders
-    WHERE ten_hang ILIKE $1 AND (is_quote = FALSE OR is_quote IS NULL)
-    GROUP BY ten_hang
-    ORDER BY MAX(thoi_gian) DESC
-    LIMIT 8
-  `;
-  const res = await window.electronAPI.dbQuery(sql, [`%${query}%`]);
+  const res = await window.electronAPI.dbQuery('order.suggestNames', { orderType: 'bang_keo', query: String(query ?? '') });
   if (res.ok) {
     return res.rows.map(r => r.ten_hang);
   }
@@ -50,13 +51,7 @@ async function queryBangKeoSuggestions(query) {
 async function autofillBangKeoData(tenHang, mode = 'order') {
   try {
     const prefix = (mode === 'quote') ? 'q-bk-' : 'bk-';
-    const sql = `
-      SELECT * FROM bang_keo_orders 
-      WHERE ten_hang ILIKE $1 AND (is_quote = FALSE OR is_quote IS NULL)
-      ORDER BY thoi_gian DESC 
-      LIMIT 1
-    `;
-    const res = await window.electronAPI.dbQuery(sql, [tenHang]);
+    const res = await window.electronAPI.dbQuery('order.latestByName', { orderType: 'bang_keo', name: tenHang });
     if (res.ok && res.rows.length > 0) {
       const order = res.rows[0];
       
@@ -189,34 +184,13 @@ async function saveBangKeo(event, mode = 'order') {
 
     // Tạo ID mới tự động (B-MM-YY-NNN hoặc BG-B-MM-YY-NNN)
     const idPrefix = (mode === 'quote') ? "BG-B" : "B";
-    const insertTable = "bang_keo_orders";
-
-    const sql = `
-      INSERT INTO bang_keo_orders (
-        id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien, 
-        quy_cach, so_luong, mau_sac, don_gia_goc, thanh_tien, 
-        don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong, 
-        tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong, 
-        da_giao, da_tat_toan, da_gui_email, is_quote, vat, vat_percent, quote_items
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
-      )
-    `;
-
-    const buildParams = orderId => [
-      orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
-      data.quy_cach, data.so_luong, data.mau_sac, data.don_gia_goc, data.thanh_tien,
-      data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
-      data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-        data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent,
-      JSON.stringify(data.quote_items || [])
-    ];
-
     const { orderId, result: res } = await runWithGeneratedOrderId(
       idPrefix,
-      insertTable,
-      id => window.electronAPI.dbRun(sql, buildParams(id))
+      'bang_keo',
+      id => window.electronAPI.dbRun('order.insert', {
+        orderType: 'bang_keo',
+        values: buildOrderInsertValues(id, data, BANG_KEO_INSERT_COLUMNS)
+      })
     );
 
     if (res.ok) {

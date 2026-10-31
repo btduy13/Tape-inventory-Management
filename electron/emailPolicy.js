@@ -38,12 +38,15 @@ function decodeBase64Strict(value, maxBytes = MAX_TOTAL_ATTACHMENT_BYTES) {
   return buffer;
 }
 
+const PRIVATE_IPV4_PATTERN = /^(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
+
 // Tùy chọn bảo mật SMTP: 465 dùng TLS ngay; cổng khác bắt buộc STARTTLS trừ relay cục bộ
 function smtpSecurityOptions(server, port) {
   const host = String(server || '').replace(/^\[|\]$/g, '').toLowerCase();
   // Relay cục bộ hoặc trong mạng LAN (10/8, 172.16/12, 192.168/16) có thể không hỗ trợ STARTTLS
+  // Chỉ địa chỉ IPv4 riêng đầy đủ 4 octet; tên miền như "10mail.example.com" vẫn bắt buộc TLS
   const isLocalRelay = host === 'localhost' || host === '127.0.0.1' || host === '::1'
-    || /^10./.test(host) || /^192.168./.test(host) || /^172.(1[6-9]|2d|3[01])./.test(host);
+    || PRIVATE_IPV4_PATTERN.test(host);
   const secure = Number(port) === 465;
   return {
     secure,

@@ -7,6 +7,8 @@ const xlsxContext = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../xlsx.full.min.js'), 'utf8'), xlsxContext);
 const XLSX = xlsxContext.XLSX;
 const orderMath = require('../js/orderMath');
+const { toStatement, toTransaction } = require('./helpers/ipcDb');
+const { settlementUpdateSql, settlementToggleSql, quoteConversionSql } = require('../db/writeActions');
 
 function harness() {
   const controls = Object.fromEntries(Object.entries({
@@ -132,21 +134,16 @@ const debtSampleRows = [
 ];
 
 test('debt SQL in settlement / toggle / quote conversion matches orderMath.outstandingFromOrder', () => {
-  const { context } = harness();
-  const quoteContext = vm.createContext({ console, orderMath, document: { addEventListener() {} }, utils: {}, window: {} });
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/modules/quotations.js'), 'utf8'), quoteContext);
-
   for (const [tableName, orderType] of [['bang_keo_in_orders', 'bang_keo_in'], ['bang_keo_orders', 'bang_keo'], ['truc_in_orders', 'truc_in']]) {
     const expression = orderMath.customerDebtSqlExpression(tableName);
     for (const row of debtSampleRows) {
       assert.equal(evaluateDebtSql(expression, row), orderMath.outstandingFromOrder(row, orderType), `${tableName} ${JSON.stringify(row)}`);
     }
-    // Every SQL string we send must embed exactly that shared formula.
-    const settlementSql = context.getSettlementUpdateSql(tableName);
-    const bulkSql = context.getSettlementUpdateSql(tableName, true);
-    const toggleSql = context.getSettlementToggleSql(tableName);
-    const conversionSql = quoteContext.getQuoteConversionSql(tableName).updateOrderSql;
-    for (const sql of [settlementSql, bulkSql, toggleSql, conversionSql]) {
+    // Every SQL string the main process builds must embed exactly that shared formula.
+    const settlementSql = settlementUpdateSql(tableName);
+    const toggleSql = settlementToggleSql(tableName);
+    const conversionSql = quoteConversionSql(tableName);
+    for (const sql of [settlementSql, toggleSql, conversionSql]) {
       assert.ok(sql.includes('cong_no_khach = '), sql);
       assert.ok(sql.includes(expression), `${tableName} SQL must reuse the shared debt formula:\n${sql}`);
       assert.match(sql, /\bWHERE\b/);
@@ -165,7 +162,7 @@ test('debt SQL in settlement / toggle / quote conversion matches orderMath.outst
 test('profit card only adds new-axis profit and uses Vietnam time for due dates', async () => {
   const { context } = harness();
   let sql;
-  context.window = { electronAPI: { dbQuery: async query => { sql = query; return { ok: true, rows: [] }; } } };
+  context.window = { electronAPI: { dbQuery: async (action, params) => { sql = toStatement(action, params, 'read').sql; return { ok: true, rows: [] }; } } };
   await context.loadStatsWarningMetrics();
   assert.match(sql, /SUM\(loi_nhuan_rong \+ CASE WHEN loai_truc = 'moi' THEN truc_loi_nhuan_rong ELSE 0 END\)/);
   assert.doesNotMatch(sql, /CURRENT_DATE/);
@@ -175,7 +172,7 @@ test('profit card only adds new-axis profit and uses Vietnam time for due dates'
 test('stale stats responses are dropped so rows always match the active subtab', async () => {
   const { context, run } = harness();
   const pending = [];
-  context.window = { electronAPI: { dbQuery: sql => new Promise(resolve => pending.push({ sql, resolve })) } };
+  context.window = { electronAPI: { dbQuery: (action, params) => new Promise(resolve => pending.push({ sql: toStatement(action, params, 'read').sql, resolve })) } };
   run('statsActiveSubtab = "bang-keo-in"');
   const first = context.loadStatsTableData();
   run('statsActiveSubtab = "truc-in"');
@@ -206,7 +203,7 @@ test('delivery and settlement toggles flip the fresh DB value atomically', async
   const { context, run } = harness();
   const calls = [];
   context.window = { electronAPI: {
-    dbRun: async (sql, params) => { calls.push({ sql, params }); return { ok: true, rowCount: 1, rows: [{ da_giao: true, da_tat_toan: true }] }; },
+    dbRun: async (action, params) => { calls.push(toStatement(action, params, 'write')); return { ok: true, rowCount: 1, rows: [{ da_giao: true, da_tat_toan: true }] }; },
     dbQuery: async () => ({ ok: true, rows: [] })
   } };
   context.utils.showToast = () => {};
@@ -289,7 +286,8 @@ test('deleting stats orders removes order + attachments in one transaction per o
   const { context, toasts, transactions } = statsActionHarness(['BK-1', 'BK-2']);
   context.window = { electronAPI: {
     dbRun: async () => { throw new Error('dbRun must not be used for the delete'); },
-    dbTransaction: async statements => {
+    dbTransaction: async steps => {
+      const statements = toTransaction(steps);
       transactions.push(statements);
       return statements[0].params[0] === 'BK-2' ? { ok: false, error: 'locked' } : { ok: true, results: [{ rowCount: 1 }, { rowCount: 3 }] };
     }
@@ -315,8 +313,8 @@ test('attachment manager pins the order once and decodes downloads into a Uint8A
   context.document.createElement = () => ({ click() { this.clicked = true; } });
   context.window = {
     electronAPI: {
-      dbQuery: async (sql, params) => { queries.push({ sql, params }); return { ok: true, rows: [] }; },
-      dbRun: async (sql, params) => { runs.push({ sql, params }); return { ok: true, rowCount: 1 }; }
+      dbQuery: async (action, params) => { queries.push(toStatement(action, params, 'read')); return { ok: true, rows: [] }; },
+      dbRun: async (action, params) => { runs.push(toStatement(action, params, 'write')); return { ok: true, rowCount: 1 }; }
     },
     URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} }
   };
@@ -348,7 +346,7 @@ test('attachment manager pins the order once and decodes downloads into a Uint8A
 
   // Delete is scoped to the pinned order.
   run('statsAttachmentContext = { orderId: "TI-7", orderType: "truc_in" }');
-  context.window.electronAPI.dbRun = async (sql, params) => { runs.push({ sql, params }); return { ok: true, rowCount: 1 }; };
+  context.window.electronAPI.dbRun = async (action, params) => { runs.push(toStatement(action, params, 'write')); return { ok: true, rowCount: 1 }; };
   await context.deleteAttachmentFile(42);
   assert.match(runs.at(-1).sql, /WHERE id = \$1 AND order_id = \$2 AND order_type = \$3/);
   assert.deepEqual(Array.from(runs.at(-1).params), [42, 'TI-7', 'truc_in']);

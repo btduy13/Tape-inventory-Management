@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const orderMath = require('../js/orderMath');
+const { toStatement } = require('./helpers/ipcDb');
 
 function editHarness(type) {
   const elements = new Map();
@@ -15,7 +16,7 @@ function editHarness(type) {
   for (const file of ['utils.js', 'app.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', file), 'utf8'), context);
   }
-  vm.runInContext(`editOrderTypeGlobal = '${type}'; editOrderDataGlobal = {};`, context);
+  vm.runInContext(`editOrderTypeGlobal = '${type}'; editOrderIdGlobal = 'TEST-1'; editOrderDataGlobal = {};`, context);
   const order = { id: 'test', ten_hang: 'Hàng', ten_khach_hang: 'Khách', ngay_du_kien: '2026-09-09',
     so_luong: 10, don_gia_goc: 600, don_gia_ban: 1000, hoa_hong: 20, vat_percent: 8,
     tien_ship: 100, don_gia_von: 600, quy_cach_m: 90, cuon_cay: 1,
@@ -57,7 +58,7 @@ for (const type of ['bang_keo', 'truc_in', 'bang_keo_in']) {
     const calls = [];
     const toasts = [];
     context.window.electronAPI = {
-      dbRun: async (sql, params) => { calls.push({ sql, params }); return { ok: true }; },
+      dbRun: async (action, params) => { calls.push(toStatement(action, params, 'write')); return { ok: true }; },
       writeLog: (_, message) => { throw new Error(message); }
     };
     context.captureToast = (...args) => toasts.push(args);
@@ -68,7 +69,7 @@ for (const type of ['bang_keo', 'truc_in', 'bang_keo_in']) {
     await context.submitEditOrder();
     assert.equal(calls.length, 1, JSON.stringify(toasts));
     const saved = column => {
-      const index = Number(calls[0].sql.match(new RegExp(`\\b${column}=\\$(\\d+)`))[1]);
+      const index = Number(calls[0].sql.match(new RegExp(`\\b${column} = \\$(\\d+)`))[1]);
       return calls[0].params[index - 1];
     };
     assert.equal(saved('tien_hoa_hong'), 1400);
@@ -92,7 +93,7 @@ test('converted quote edit preserves stored multi-size totals and only saves sha
   assert.equal(elements.get('edit-tien-hoa-hong').value, '50');
   assert.equal(elements.get('edit-tong-thanh-toan').value, '974');
   const calls = [];
-  context.window.electronAPI = { dbRun: async (sql, params) => { calls.push({ sql, params }); return { ok: true }; } };
+  context.window.electronAPI = { dbRun: async (action, params) => { calls.push(toStatement(action, params, 'write')); return { ok: true }; } };
   vm.runInContext('utils.showToast = () => {}; closeModal = () => {}; switchTab = async () => {};', context);
   elements.get('edit-ten-khach-hang').value = 'Khách đã sửa';
   await context.submitEditOrder();
@@ -142,7 +143,7 @@ function dialogHarness() {
       querySelector: selector => (selector.includes('modal-edit-order') ? submitButton : null)
     },
     window: { addEventListener() {}, electronAPI: {
-      dbQuery: (sql, params) => new Promise(resolve => pending.push({ id: params[0], resolve }))
+      dbQuery: (action, params) => new Promise(resolve => pending.push({ id: params.id, resolve }))
     } }
   });
   for (const file of ['utils.js', 'app.js']) {
@@ -177,7 +178,7 @@ test('submitEditOrder ignores double submit while the update is in flight', asyn
   let release;
   const calls = [];
   context.window.electronAPI = {
-    dbRun: (sql, params) => { calls.push(params); return new Promise(resolve => { release = resolve; }); }
+    dbRun: (action, params) => { calls.push(toStatement(action, params, 'write').params); return new Promise(resolve => { release = resolve; }); }
   };
   vm.runInContext('utils.showToast = () => {}; closeModal = () => {}; switchTab = async () => {}; editOrderIdGlobal = "STALE-ID";', context);
   const first = context.submitEditOrder();
@@ -195,7 +196,7 @@ for (const [field, value] of [['edit-qc-m', '0'], ['edit-cuon-cay', '']]) {
     const { context, elements } = editHarness('bang_keo_in');
     const calls = [];
     const toasts = [];
-    context.window.electronAPI = { dbRun: async (sql, params) => { calls.push({ sql, params }); return { ok: true }; } };
+    context.window.electronAPI = { dbRun: async (action, params) => { calls.push(toStatement(action, params, 'write')); return { ok: true }; } };
     context.captureToast = (...args) => toasts.push(args);
     vm.runInContext('utils.showToast = captureToast; closeModal = () => {}; switchTab = async () => {};', context);
     elements.get(field).value = value;

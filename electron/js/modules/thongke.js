@@ -71,12 +71,6 @@ const statsCurrencyColumns = new Set([
   'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong'
 ]);
 
-function getStatsTableName() {
-  if (statsActiveSubtab === 'truc-in') return 'truc_in_orders';
-  if (statsActiveSubtab === 'bang-keo') return 'bang_keo_orders';
-  return 'bang_keo_in_orders';
-}
-
 function updateStatsSelectionSummary() {
   const selectedIds = getSelectedStatsOrderIds();
   const summary = document.getElementById('stats-selection-summary');
@@ -118,25 +112,7 @@ async function loadStatsData() {
 
 // Tải số liệu Warnings và công nợ/lợi nhuận ròng ước tính
 async function loadStatsWarningMetrics() {
-  const sql = `
-    SELECT 
-      SUM(CASE WHEN NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND ngay_du_kien <= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + INTERVAL '3 days' THEN 1 ELSE 0 END) AS sap_han,
-      SUM(CASE WHEN NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date THEN 1 ELSE 0 END) AS qua_han,
-      SUM(CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN 1 ELSE 0 END) AS chua_tat_toan,
-      SUM(CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 1 ELSE 0 END) AS hoan_thanh,
-      SUM(CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_khach, 0) ELSE 0 END) AS tong_cong_no,
-      SUM(CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_ncc, 0) ELSE 0 END) AS tong_cong_no_ncc,
-      SUM(loi_nhuan_rong + CASE WHEN loai_truc = 'moi' THEN truc_loi_nhuan_rong ELSE 0 END) AS tong_loi_nhuan
-    FROM (
-      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, COALESCE(truc_loi_nhuan_rong, 0) AS truc_loi_nhuan_rong, loai_truc FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-    ) AS combined;
-  `;
-
-  const res = await window.electronAPI.dbQuery(sql);
+  const res = await window.electronAPI.dbQuery('stats.warningMetrics');
   if (res.ok && res.rows.length > 0) {
     const data = res.rows[0];
     const sapHan = parseInt(data.sap_han || 0);
@@ -203,21 +179,7 @@ function switchStatsViewMode(mode) {
 async function loadStatsTableData() {
   const requestToken = ++statsTableRequestToken;
   const requestedSubtab = statsActiveSubtab;
-  let tableName = 'bang_keo_in_orders';
-  if (statsActiveSubtab === 'truc-in') tableName = 'truc_in_orders';
-  if (statsActiveSubtab === 'bang-keo') tableName = 'bang_keo_orders';
-
-  const sql = `
-    SELECT * FROM ${tableName}
-    WHERE (is_quote = FALSE OR is_quote IS NULL)
-    ORDER BY 
-      split_part(id, '-', 3) DESC, 
-      split_part(id, '-', 2) DESC, 
-      NULLIF(regexp_replace(split_part(id, '-', 4), '[^0-9]', '', 'g'), '')::bigint DESC NULLS LAST,
-      split_part(id, '-', 4) DESC
-  `;
-
-  const res = await window.electronAPI.dbQuery(sql);
+  const res = await window.electronAPI.dbQuery('stats.listOrders', { orderType: getStatsOrderTypeKey() });
   // Người dùng đã chuyển subtab trong lúc chờ: bỏ kết quả cũ để statsAllOrders luôn khớp statsActiveSubtab.
   if (requestToken !== statsTableRequestToken || requestedSubtab !== statsActiveSubtab) return;
   if (res.ok) {
@@ -842,9 +804,7 @@ function closeStatsContextMenu() {
 // Trạng thái đích tính từ giá trị mới nhất trong DB (NOT da_giao) thay vì giá trị cũ trên màn hình,
 // tránh ghi đè khi máy khác vừa đổi trạng thái.
 async function toggleDeliveryStatus(orderId) {
-  const tableName = getStatsTableName();
-  const sql = `UPDATE ${tableName} SET da_giao = NOT COALESCE(da_giao, FALSE) WHERE id = $1 RETURNING da_giao`;
-  const res = await window.electronAPI.dbRun(sql, [orderId]);
+  const res = await window.electronAPI.dbRun('order.toggleDelivery', { orderType: getStatsOrderTypeKey(), id: orderId });
 
   if (res.ok && Number(res.rowCount ?? res.rows?.length ?? 0) > 0) {
     const delivered = !!res.rows?.[0]?.da_giao;
@@ -860,44 +820,10 @@ async function toggleDeliveryStatus(orderId) {
 }
 
 // 10. Thực hiện thay đổi trạng thái tất toán từ chuột phải
-function getSettlementUpdateSql(tableName, includeDelivery = false) {
-  // Công thức công nợ dùng chung với orderMath.outstandingFromOrder (xem test statsConsistency).
-  const customerDebtExpression = orderMath.customerDebtSqlExpression(tableName);
-  const supplierDebtExpression = orderMath.supplierDebtSqlExpression(tableName);
-
-  if (includeDelivery) {
-    return `UPDATE ${tableName}
-      SET da_giao = $1,
-          da_tat_toan = $2,
-          cong_no_khach = CASE WHEN $2 THEN 0 ELSE ${customerDebtExpression} END,
-          cong_no_ncc = CASE WHEN $2 THEN 0 ELSE ${supplierDebtExpression} END
-      WHERE id = $3`;
-  }
-
-  return `UPDATE ${tableName}
-    SET da_tat_toan = $1,
-        cong_no_khach = CASE WHEN $1 THEN 0 ELSE ${customerDebtExpression} END,
-        cong_no_ncc = CASE WHEN $1 THEN 0 ELSE ${supplierDebtExpression} END
-    WHERE id = $2`;
-}
-
-// Đảo trạng thái tất toán dựa trên giá trị hiện tại trong DB (vế phải UPDATE đọc giá trị cũ của dòng),
-// công nợ tính lại theo đúng trạng thái đích trong cùng câu lệnh.
-function getSettlementToggleSql(tableName) {
-  const customerDebtExpression = orderMath.customerDebtSqlExpression(tableName);
-  const supplierDebtExpression = orderMath.supplierDebtSqlExpression(tableName);
-  return `UPDATE ${tableName}
-    SET da_tat_toan = NOT COALESCE(da_tat_toan, FALSE),
-        cong_no_khach = CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN 0 ELSE ${customerDebtExpression} END,
-        cong_no_ncc = CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN 0 ELSE ${supplierDebtExpression} END
-    WHERE id = $1
-    RETURNING da_tat_toan`;
-}
-
+// Đảo trạng thái dựa trên giá trị hiện tại trong DB; công nợ tính lại trong cùng câu lệnh
+// (SQL dựng ở tiến trình chính: order.toggleSettlement / order.setDeliveryAndSettlement).
 async function toggleSettlementStatus(orderId) {
-  const tableName = getStatsTableName();
-  const sql = getSettlementToggleSql(tableName);
-  const res = await window.electronAPI.dbRun(sql, [orderId]);
+  const res = await window.electronAPI.dbRun('order.toggleSettlement', { orderType: getStatsOrderTypeKey(), id: orderId });
 
   if (res.ok && Number(res.rowCount ?? res.rows?.length ?? 0) === 0) {
     utils.showToast(`Không tìm thấy đơn ${orderId} để cập nhật`, "danger");
@@ -931,7 +857,6 @@ async function deleteSelectedStats() {
     return;
   }
 
-  const tableName = getStatsTableName();
   const orderType = getStatsOrderTypeKey();
   let successCount = 0;
   const failedIds = [];
@@ -941,8 +866,8 @@ async function deleteSelectedStats() {
     let res;
     try {
       res = await window.electronAPI.dbTransaction([
-        { sql: `DELETE FROM ${tableName} WHERE id = $1`, params: [id] },
-        { sql: 'DELETE FROM order_attachments WHERE order_id = $1 AND order_type = $2', params: [id, orderType] }
+        { action: 'order.delete', params: { orderType, id } },
+        { action: 'attachment.deleteForOrder', params: { orderId: id, orderType } }
       ]);
     } catch (err) {
       res = { ok: false, error: err?.message };
@@ -1214,16 +1139,9 @@ async function loadAttachmentsList(context = statsAttachmentContext) {
 
   body.innerHTML = '<tr><td colspan="3" style="text-align:center;">Đang tải tệp tin...</td></tr>';
 
-  const sql = `
-    SELECT id, file_name, file_size
-    FROM order_attachments
-    WHERE order_id = $1 AND order_type = $2
-    ORDER BY created_at DESC
-  `;
-
   let res;
   try {
-    res = await window.electronAPI.dbQuery(sql, [context.orderId, context.orderType]);
+    res = await window.electronAPI.dbQuery('attachment.listForOrder', { orderId: context.orderId, orderType: context.orderType });
   } catch (err) {
     res = { ok: false, error: err?.message };
   }
@@ -1268,8 +1186,7 @@ async function loadAttachmentsList(context = statsAttachmentContext) {
 async function downloadAttachmentFile(attId, fileName) {
   try {
     utils.showToast('Đang tải tệp tin...', 'warning');
-    const sql = "SELECT content_type, encode(data, 'base64') AS base64_data FROM order_attachments WHERE id = $1";
-    const res = await window.electronAPI.dbQuery(sql, [attId]);
+    const res = await window.electronAPI.dbQuery('attachment.getData', { id: attId });
 
     if (!res.ok || res.rows.length === 0) {
       utils.showToast('Lỗi tải tệp: file không tồn tại', 'danger');
@@ -1313,10 +1230,9 @@ async function deleteAttachmentFile(attId) {
 
   let res;
   try {
-    res = await window.electronAPI.dbRun(
-      'DELETE FROM order_attachments WHERE id = $1 AND order_id = $2 AND order_type = $3',
-      [attId, context.orderId, context.orderType]
-    );
+    res = await window.electronAPI.dbRun('attachment.delete', {
+      id: attId, orderId: context.orderId, orderType: context.orderType
+    });
   } catch (err) {
     res = { ok: false, error: err?.message };
   }
@@ -1364,19 +1280,14 @@ async function uploadAttachmentFile(input) {
     try {
       const base64Data = arrayBufferToBase64(this.result);
 
-      const sql = `
-        INSERT INTO order_attachments (order_type, order_id, file_name, content_type, file_size, data)
-        VALUES ($1, $2, $3, $4, $5, decode($6, 'base64'))
-      `;
-
-      const res = await window.electronAPI.dbRun(sql, [
-        context.orderType,
-        context.orderId,
-        file.name,
-        file.type || 'application/octet-stream',
-        file.size,
-        base64Data
-      ]);
+      const res = await window.electronAPI.dbRun('attachment.insert', {
+        orderType: context.orderType,
+        orderId: context.orderId,
+        fileName: file.name,
+        contentType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        base64: base64Data
+      });
 
       if (res.ok) {
         utils.showToast('Đã thêm tệp đính kèm mới!', 'success');
@@ -1430,14 +1341,13 @@ async function applyBulkStatsStatus() {
 
   const daGiao = document.getElementById('bulk-stats-da-giao').checked;
   const daTatToan = document.getElementById('bulk-stats-da-tat-toan').checked;
-  const tableName = getStatsTableName();
+  const orderType = getStatsOrderTypeKey();
 
   let successCount = 0;
   for (const id of selectedIds) {
-    const res = await window.electronAPI.dbRun(
-      getSettlementUpdateSql(tableName, true),
-      [daGiao, daTatToan, id]
-    );
+    const res = await window.electronAPI.dbRun('order.setDeliveryAndSettlement', {
+      orderType, id, delivered: daGiao, settled: daTatToan
+    });
     if (res.ok) successCount++;
   }
 

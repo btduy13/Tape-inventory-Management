@@ -573,7 +573,7 @@ async function runExcelImport() {
 
     // Lấy mã đầu tiên một lần rồi tăng dần trong lô để các đơn không trùng mã
     const buildStatements = async () => {
-      const firstOrderId = await generateOrderId(config.idPrefix, config.table);
+      const firstOrderId = await generateOrderId(config.idPrefix, orderType);
       const orderIds = buildSequentialOrderIds(firstOrderId, mappedRows.length);
       return mappedRows.map(({ data }, index) => (orderType === 'bang_keo_in'
         ? buildBangKeoInImportStatement(orderIds[index], data)
@@ -598,8 +598,8 @@ async function runExcelImport() {
       }
     } else {
       for (let index = 0; index < statements.length; index++) {
-        const { sql, params } = statements[index];
-        const result = await window.electronAPI.dbRun(sql, params);
+        const { action, params } = statements[index];
+        const result = await window.electronAPI.dbRun(action, params);
         if (result?.ok) imported++;
         else insertErrors.push(`Dòng ${mappedRows[index].rowNumber}: ${result?.error || 'Lỗi không xác định'}`);
       }
@@ -629,93 +629,60 @@ function showExcelImportErrors(errors, summary = '') {
   utils.showToast([summary, ...lines].filter(Boolean).join('\n'), 'danger');
 }
 
-function buildBangKeoInImportStatement(orderId, data) {
-  const sql = `
-    INSERT INTO bang_keo_in_orders (
-      id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien,
-      quy_cach_mm, quy_cach_m, quy_cach_mic, cuon_cay, so_luong,
-      phi_sl, mau_keo, phi_keo, mau_sac, phi_mau, phi_size,
-      phi_cat, don_gia_von, don_gia_goc, thanh_tien_goc, don_gia_ban,
-      thanh_tien_ban, tien_coc, cong_no_khach, ctv, hoa_hong,
-      tien_hoa_hong, loi_giay, thung_bao, loi_nhuan, tien_ship,
-      loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
-      loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
-      truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
-      truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong,
-      vat, vat_percent, truc_vat, truc_vat_percent
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-      $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-      $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-      $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53
-    )
-  `;
+// Cột ghi khi nhập Excel (thứ tự giữ nguyên như câu INSERT cũ); SQL do tiến trình chính dựng
+const IMPORT_INSERT_COLUMNS = {
+  bang_keo_in: [
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+    'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong',
+    'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size',
+    'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban',
+    'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv', 'hoa_hong',
+    'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship',
+    'loi_nhuan_rong', 'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote',
+    'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc',
+    'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv',
+    'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong',
+    'vat', 'vat_percent', 'truc_vat', 'truc_vat_percent'
+  ],
+  truc_in: [
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+    'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc',
+    'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
+    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
+    'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote', 'vat', 'vat_percent'
+  ],
+  bang_keo: [
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+    'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien',
+    'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
+    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
+    'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote', 'vat', 'vat_percent'
+  ]
+};
 
-  return { sql, params: [
-    orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
-    data.quy_cach_mm, data.quy_cach_m, data.quy_cach_mic, data.cuon_cay, data.so_luong,
-    data.phi_sl, data.mau_keo, data.phi_keo, data.mau_sac, data.phi_mau, data.phi_size,
-    data.phi_cat, data.don_gia_von, data.don_gia_goc, data.thanh_tien_goc, data.don_gia_ban,
-    data.thanh_tien_ban, data.tien_coc, data.cong_no_khach, data.ctv, data.hoa_hong,
-    data.tien_hoa_hong, data.loi_giay, data.thung_bao, data.loi_nhuan, data.tien_ship,
-    data.loi_nhuan_rong, data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote,
-    data.loai_truc, data.ten_truc, data.truc_chu_vi, data.truc_so_luong, data.truc_gia_goc,
-    data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
-    data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong,
-    data.vat, data.vat_percent, data.truc_vat, data.truc_vat_percent
-  ] };
+// Một bước order.insert: { action, params } dùng được cho cả dbTransaction và dbRun
+function buildImportInsertStatement(orderId, data, orderType) {
+  const values = {};
+  for (const column of IMPORT_INSERT_COLUMNS[orderType]) {
+    values[column] = column === 'id' ? orderId : data[column];
+  }
+  return { action: 'order.insert', params: { orderType, values } };
+}
+
+function buildBangKeoInImportStatement(orderId, data) {
+  return buildImportInsertStatement(orderId, data, 'bang_keo_in');
 }
 
 function buildSimpleImportStatement(orderId, data, type) {
-  if (type === 'truc_in') {
-    const sql = `
-      INSERT INTO truc_in_orders (
-        id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien,
-        quy_cach, so_luong, mau_sac, mau_keo, don_gia_goc, thanh_tien_goc,
-        don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong,
-        tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong,
-        da_giao, da_tat_toan, da_gui_email, is_quote, vat, vat_percent
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
-      )
-    `;
-    return { sql, params: [
-      orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
-      data.quy_cach, data.so_luong, data.mau_sac, data.mau_keo, data.don_gia_goc, data.thanh_tien_goc,
-      data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
-      data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-      data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent
-    ] };
-  }
-
-  const sql = `
-    INSERT INTO bang_keo_orders (
-      id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien,
-      quy_cach, so_luong, mau_sac, don_gia_goc, thanh_tien,
-      don_gia_ban, thanh_tien_ban, cong_no_khach, ctv, hoa_hong,
-      tien_hoa_hong, loi_nhuan, tien_ship, loi_nhuan_rong,
-      da_giao, da_tat_toan, da_gui_email, is_quote, vat, vat_percent
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-      $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
-    )
-  `;
-  return { sql, params: [
-    orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
-    data.quy_cach, data.so_luong, data.mau_sac, data.don_gia_goc, data.thanh_tien,
-    data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
-    data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
-    data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent
-  ] };
+  return buildImportInsertStatement(orderId, data, type === 'truc_in' ? 'truc_in' : 'bang_keo');
 }
 
 async function insertBangKeoInImport(orderId, data) {
   const statement = buildBangKeoInImportStatement(orderId, data);
-  return window.electronAPI.dbRun(statement.sql, statement.params);
+  return window.electronAPI.dbRun(statement.action, statement.params);
 }
 
 async function insertSimpleImport(orderId, data, type) {
   const statement = buildSimpleImportStatement(orderId, data, type);
-  return window.electronAPI.dbRun(statement.sql, statement.params);
+  return window.electronAPI.dbRun(statement.action, statement.params);
 }

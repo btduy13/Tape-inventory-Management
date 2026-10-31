@@ -117,6 +117,17 @@ const sslCa = resolveSslCa(
 );
 if (sslCa.error) configWarnings.push(sslCa.error);
 
+// main.js gọi sau khi app sẵn sàng để giải mã bí mật dạng "safe:v1:..." (safeStorage) trong tệp cấu hình.
+// resolve(value) trả về giá trị đã giải mã (hoặc '' nếu không giải mã được). Biến môi trường luôn được ưu tiên.
+function applySecretResolver(resolve) {
+  const fileDatabaseUrl = String(resolve(String(local.DATABASE_URL || '')) || '');
+  const filePassword = String(resolve(String(localEmail.password || '')) || '');
+  module.exports.FILE_VALUES.DATABASE_URL = fileDatabaseUrl;
+  module.exports.FILE_VALUES.EMAIL_CONFIG.password = filePassword;
+  if (!process.env.DATABASE_URL) module.exports.DATABASE_URL = fileDatabaseUrl;
+  if (!process.env.SMTP_PASSWORD) module.exports.EMAIL_CONFIG.password = filePassword;
+}
+
 module.exports = {
   DATABASE_URL: process.env.DATABASE_URL || local.DATABASE_URL || '',
   // 'env' | 'file' | '' — dùng để không ghi giá trị từ biến môi trường vào tệp cấu hình
@@ -140,6 +151,7 @@ module.exports = {
   CONFIG_SOURCE: loaded.source,
   CONFIG_ERROR: loaded.error || '',
   CONFIG_WARNINGS: configWarnings,
+  applySecretResolver,
   isLocalHost,
   parseSmtpPort,
   resolveDatabaseSsl,

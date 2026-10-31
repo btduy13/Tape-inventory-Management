@@ -51,7 +51,9 @@ test('saved quotations can be loaded into tabs and updated in place', () => {
   assert.match(quotationSource, /function openQuoteEditor\(quoteId, type\)/);
   assert.match(quotationSource, /function loadQuoteIntoEditor\(quoteId, type, data\)/);
   assert.match(quotationSource, /async function saveEditedQuoteIfNeeded\(type, data\)/);
-  assert.match(quotationSource, /UPDATE \$\{table\} SET \$\{assignments\}/);
+  // Cập nhật tại chỗ qua thao tác đặt tên order.update (quoteOnly) — renderer không còn tự dựng SQL
+  assert.match(quotationSource, /dbRun\('order\.update', \{[\s\S]*?quoteOnly: true/);
+  assert.doesNotMatch(quotationSource, /UPDATE \$\{table\}/);
   assert.match(quotationSource, /Cập nhật & Xem trước PDF/);
   assert.match(quotationSource, /fields: \{ \.\.\.fields \}/);
 });

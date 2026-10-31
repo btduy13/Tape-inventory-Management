@@ -103,15 +103,7 @@ function clearBangKeoInAxisFields(mode = 'order') {
 
 // 1. Tìm gợi ý tên hàng từ lịch sử đơn Băng Keo In
 async function queryBangKeoInSuggestions(query) {
-  const sql = `
-    SELECT ten_hang
-    FROM bang_keo_in_orders
-    WHERE ten_hang ILIKE $1 AND (is_quote = FALSE OR is_quote IS NULL)
-    GROUP BY ten_hang
-    ORDER BY MAX(thoi_gian) DESC
-    LIMIT 8
-  `;
-  const res = await window.electronAPI.dbQuery(sql, [`%${query}%`]);
+  const res = await window.electronAPI.dbQuery('order.suggestNames', { orderType: 'bang_keo_in', query: String(query ?? '') });
   if (res.ok) {
     return res.rows.map(r => r.ten_hang);
   }
@@ -122,13 +114,7 @@ async function queryBangKeoInSuggestions(query) {
 async function autofillBangKeoInData(tenHang, mode = 'order') {
   try {
     const prefix = (mode === 'quote') ? 'q-bki-' : 'bki-';
-    const sql = `
-      SELECT * FROM bang_keo_in_orders 
-      WHERE ten_hang ILIKE $1 AND (is_quote = FALSE OR is_quote IS NULL)
-      ORDER BY thoi_gian DESC 
-      LIMIT 1
-    `;
-    const res = await window.electronAPI.dbQuery(sql, [tenHang]);
+    const res = await window.electronAPI.dbQuery('order.latestByName', { orderType: 'bang_keo_in', name: tenHang });
     if (res.ok && res.rows.length > 0) {
       const order = res.rows[0];
       
@@ -380,44 +366,13 @@ async function saveBangKeoIn(event, mode = 'order') {
     // Tạo mã ID đơn hàng tự động
     const idPrefix = (mode === 'quote') ? "BG-BK" : "BK";
 
-    const sql = `
-      INSERT INTO bang_keo_in_orders (
-        id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien,
-        quy_cach_mm, quy_cach_m, quy_cach_mic, cuon_cay, so_luong,
-        phi_sl, mau_keo, phi_keo, mau_sac, phi_mau, phi_size,
-        phi_cat, don_gia_von, don_gia_goc, thanh_tien_goc, don_gia_ban,
-        thanh_tien_ban, tien_coc, cong_no_khach, ctv, hoa_hong,
-        tien_hoa_hong, loi_giay, thung_bao, loi_nhuan, tien_ship,
-        loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
-        loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
-        truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
-        truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, truc_vat, truc_vat_percent, vat, vat_percent, quote_items
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-        $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-        $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54
-      )
-    `;
-
-    const buildParams = orderId => [
-      orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
-      data.quy_cach_mm, data.quy_cach_m, data.quy_cach_mic, data.cuon_cay, data.so_luong,
-      data.phi_sl, data.mau_keo, data.phi_keo, data.mau_sac, data.phi_mau, data.phi_size,
-      data.phi_cat, data.don_gia_von, data.don_gia_goc, data.thanh_tien_goc, data.don_gia_ban,
-      data.thanh_tien_ban, data.tien_coc, data.cong_no_khach, data.ctv, data.hoa_hong,
-      data.tien_hoa_hong, data.loi_giay, data.thung_bao, data.loi_nhuan, data.tien_ship,
-      data.loi_nhuan_rong, data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote,
-      data.loai_truc, data.ten_truc, data.truc_chu_vi, data.truc_so_luong, data.truc_gia_goc,
-      data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
-      data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong, data.truc_vat, data.truc_vat_percent, data.vat, data.vat_percent,
-      JSON.stringify(data.quote_items || [])
-    ];
-
     const { orderId, result: res } = await runWithGeneratedOrderId(
       idPrefix,
-      "bang_keo_in_orders",
-      id => window.electronAPI.dbRun(sql, buildParams(id))
+      'bang_keo_in',
+      id => window.electronAPI.dbRun('order.insert', {
+        orderType: 'bang_keo_in',
+        values: buildOrderInsertValues(id, data, BANG_KEO_IN_INSERT_COLUMNS)
+      })
     );
 
     if (res.ok) {
@@ -486,12 +441,9 @@ async function saveOrderAttachments(orderId, orderType, filePaths) {
           'csv': 'text/csv'
         }[ext] || 'application/octet-stream';
 
-        const sql = `
-          INSERT INTO order_attachments (order_type, order_id, file_name, content_type, file_size, data)
-          VALUES ($1, $2, $3, $4, $5, decode($6, 'base64'))
-        `;
-        
-        const res = await window.electronAPI.dbRun(sql, [orderType, orderId, fileName, contentType, sizeBytes, base64Data]);
+        const res = await window.electronAPI.dbRun('attachment.insert', {
+          orderType, orderId, fileName, contentType, fileSize: sizeBytes, base64: base64Data
+        });
         if (res.ok) savedCount++;
       } catch (err) {
         console.error('Lỗi lưu tệp: ' + filePath, err);
@@ -505,22 +457,43 @@ async function saveOrderAttachments(orderId, orderType, filePaths) {
   }
 }
 
+// Cột ghi khi tạo đơn Băng Keo In (thứ tự giữ nguyên như câu INSERT cũ)
+const BANG_KEO_IN_INSERT_COLUMNS = [
+  'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+  'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong',
+  'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size',
+  'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban',
+  'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv', 'hoa_hong',
+  'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship',
+  'loi_nhuan_rong', 'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote',
+  'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc',
+  'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv',
+  'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'
+];
+
+// Dựng giá trị cho thao tác order.insert (tiến trình chính kiểm tra tên cột theo danh sách cho phép)
+function buildOrderInsertValues(orderId, data, columns) {
+  const values = {};
+  for (const column of columns) {
+    if (column === 'id') values.id = orderId;
+    else if (column === 'quote_items') values.quote_items = JSON.stringify(data.quote_items || []);
+    else values[column] = data[column];
+  }
+  return values;
+}
+
 // Helper tạo mã ID tự động (BK-MM-YY-NNN)
 // Số thứ tự lớn nhất được tính theo giá trị số (orderMath.nextOrderId), không theo thứ tự chữ:
 // "ORDER BY id DESC" coi "-999" > "-1000" nên trước đây bị kẹt mãi ở -1000.
-async function generateOrderId(prefix, tableName, minimumSequence = 0) {
+// orderType: 'bang_keo_in' | 'bang_keo' | 'truc_in'
+async function generateOrderId(prefix, orderType, minimumSequence = 0) {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const year = String(now.getFullYear()).substring(2);
 
   const basePrefix = `${prefix}-${month}-${year}`;
 
-  const sql = `
-    SELECT id FROM ${tableName}
-    WHERE id LIKE $1
-  `;
-
-  const res = await window.electronAPI.dbQuery(sql, [`${basePrefix}-%`]);
+  const res = await window.electronAPI.dbQuery('order.listIdsByPrefix', { orderType, prefix: basePrefix });
   if (!res.ok) {
     throw new Error(res.error || 'Không thể tạo mã đơn hàng mới');
   }
@@ -528,14 +501,14 @@ async function generateOrderId(prefix, tableName, minimumSequence = 0) {
   return orderMath.nextOrderId(basePrefix, (res.rows || []).map(row => row.id), minimumSequence);
 }
 
-// Chạy câu lệnh INSERT/UPDATE dùng mã đơn mới; nếu trùng khóa (pg 23505, do hai máy cùng lưu)
+// Chạy thao tác ghi dùng mã đơn mới; nếu trùng khóa (pg 23505, do hai máy cùng lưu)
 // thì lấy mã kế tiếp và thử lại vài lần.
-async function runWithGeneratedOrderId(prefix, tableName, runner, maxAttempts = 5) {
+async function runWithGeneratedOrderId(prefix, orderType, runner, maxAttempts = 5) {
   let minimumSequence = 0;
   let orderId = null;
   let result = null;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    orderId = await generateOrderId(prefix, tableName, minimumSequence);
+    orderId = await generateOrderId(prefix, orderType, minimumSequence);
     result = await runner(orderId);
     if (result?.ok || !orderMath.isUniqueViolation(result)) break;
     minimumSequence = orderMath.orderIdSequence(orderId);

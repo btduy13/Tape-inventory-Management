@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const orderMath = require('../js/orderMath');
+const { toStatement } = require('./helpers/ipcDb');
 
 function saveHarness(initialValues = {}, dbRunImpl) {
   const elements = new Map();
@@ -33,7 +34,11 @@ function saveHarness(initialValues = {}, dbRunImpl) {
     },
     window: { electronAPI: {
       dbQuery: async () => ({ ok: true, rows: [] }),
-      dbRun: async (sql, params) => { calls.push({ sql, params }); return dbRunImpl ? dbRunImpl(sql, params, calls.length) : { ok: true }; },
+      dbRun: async (action, params) => {
+        const statement = toStatement(action, params, 'write');
+        calls.push(statement);
+        return dbRunImpl ? dbRunImpl(statement.sql, statement.params, calls.length) : { ok: true };
+      },
       writeLog: () => {}
     } }
   });
@@ -109,9 +114,9 @@ test('inserts retry with the next id after a unique violation', async () => {
   ));
   context.window.electronAPI.dbQuery = async () => ({ ok: true, rows: [{ id: 'BK-10-26-999' }] });
   const ids = [];
-  const { orderId, result } = await context.runWithGeneratedOrderId('BK', 'bang_keo_in_orders', async id => {
+  const { orderId, result } = await context.runWithGeneratedOrderId('BK', 'bang_keo_in', async id => {
     ids.push(id);
-    return context.window.electronAPI.dbRun('INSERT', [id]);
+    return context.window.electronAPI.dbRun('order.insert', { orderType: 'bang_keo_in', values: { id } });
   });
   assert.equal(result.ok, true);
   assert.equal(ids.length, 2);
@@ -124,10 +129,11 @@ test('inserts retry with the next id after a unique violation', async () => {
 test('generateOrderId queries ids of the month without lexical ORDER BY', async () => {
   const { context } = saveHarness();
   let query;
-  context.window.electronAPI.dbQuery = async (sql, params) => { query = { sql, params }; return { ok: true, rows: [{ id: 'B-10-26-999' }, { id: 'B-10-26-1000' }] }; };
-  const id = await context.generateOrderId('B', 'bang_keo_orders');
+  context.window.electronAPI.dbQuery = async (action, params) => { query = toStatement(action, params, 'read'); return { ok: true, rows: [{ id: 'B-10-26-999' }, { id: 'B-10-26-1000' }] }; };
+  const id = await context.generateOrderId('B', 'bang_keo');
   assert.match(id, /^B-\d{2}-\d{2}-1001$/);
   assert.doesNotMatch(query.sql, /ORDER BY id/);
+  assert.match(query.sql, /FROM bang_keo_orders WHERE id LIKE \$1/);
   assert.match(query.params[0], /^B-\d{2}-\d{2}-%$/);
 });
 

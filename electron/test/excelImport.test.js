@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const orderMath = require('../js/orderMath');
+const { toStatement, toTransaction } = require('./helpers/ipcDb');
 
 function loadImport() {
   const calls = [];
   const context = vm.createContext({ Date, orderMath, window: { electronAPI: {
-    dbRun: async (sql, params) => { calls.push({ sql, params }); return { ok: true }; }
+    dbRun: async (action, params) => { calls.push(toStatement(action, params, 'write')); return { ok: true }; }
   } } });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/modules/excelImport.js'), 'utf8'), context);
   return { context, calls };
@@ -154,7 +155,7 @@ test('Excel import is all-or-nothing through dbTransaction and cannot run twice 
       showOpenDialog: async () => ({ canceled: false, filePaths: ['x.xlsx'] }),
       readFileAsBase64: async () => ({ ok: true, data: '' }),
       dbRun: async () => { throw new Error('dbRun must not be used when dbTransaction exists'); },
-      dbTransaction: async statements => { transactions.push(statements); return { ok: true, results: [] }; },
+      dbTransaction: async steps => { transactions.push(toTransaction(steps)); return { ok: true, results: [] }; },
       writeLog: () => {}
     } }
   });

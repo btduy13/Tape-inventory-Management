@@ -1,0 +1,38 @@
+# features/lead-intake
+
+**Owner:** `lead-intake` feature builder. Only this feature edits files in this folder.
+
+Public quote request: landing sections, form (name, phone, email, company, quantity, note) + design, Turnstile, per-IP rate limit, zod validation, server-side insert with service role, logo/preview upload, sanitize SVG.
+
+## Routes
+
+- / (landing sections)
+- /design (form part)
+- POST /api/leads
+
+## Data
+
+- leads (insert, service role)
+- designs (insert)
+- storage logos/, previews/
+- rate_limits via lib/security/rate-limit.ts
+
+## Rules
+
+- Call assertSameOrigin() + checkRateLimit(RATE_LIMITS.leadSubmit) + Turnstile verify BEFORE any DB write.
+- Sanitize SVG with isomorphic-dompurify (USE_PROFILES svg, no scripts/foreignObject) before upload.
+- Store hashIp() in leads.source_ip_hash, never the raw IP.
+- Trigger emails through features/email (customer confirmation, admin new lead).
+
+## Layout
+
+```
+lead-intake/
+  components/   React components (client components marked 'use client')
+  server/       server-only code: actions, queries, route handler logic ('server-only')
+  lib/          pure helpers + zod schemas
+  *.test.ts     unit tests next to the code
+  index.ts      public exports for pages/other features
+```
+
+Keep files under ~250 lines. Shared code goes to `src/lib/` only (ask the foundation owner).

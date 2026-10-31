@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const {
+  isAllowedRendererRequest,
   isTrustedAppUrl,
   isTrustedIpcSender,
   sanitizeDialogOptions,
@@ -53,8 +54,41 @@ test('dialog options are whitelisted', () => {
   assert.deepEqual(sanitizeDialogOptions('x', 'save'), {});
 });
 
-test('external URLs must be http or https', () => {
-  assert.equal(validateExternalUrl('https://example.com/a'), 'https://example.com/a');
-  assert.throws(() => validateExternalUrl('file:///C:/Windows/system32/calc.exe'));
-  assert.throws(() => validateExternalUrl('javascript:alert(1)'));
+test('external URLs must be HTTPS links on the allowlist', () => {
+  const release = 'https://github.com/btduy13/Tape-inventory-Management/releases/latest';
+  assert.equal(validateExternalUrl(release), release);
+  assert.equal(validateExternalUrl('https://GITHUB.com/btduy13/Tape-inventory-Management'), 'https://github.com/btduy13/Tape-inventory-Management');
+  for (const bad of [
+    'https://example.com/a',
+    'http://github.com/btduy13/Tape-inventory-Management',
+    'https://github.com/btduy13/Tape-inventory-Management-evil/x',
+    'https://github.com.evil.example/btduy13/Tape-inventory-Management',
+    'https://user:pass@github.com/btduy13/Tape-inventory-Management',
+    'https://github.com/other/repo',
+    'file:///C:/Windows/system32/calc.exe',
+    'javascript:alert(1)',
+    'ms-settings:',
+    'not a url'
+  ]) {
+    assert.throws(() => validateExternalUrl(bad), undefined, bad);
+  }
+  assert.equal(validateExternalUrl('https://docs.example.com/x', [{ host: 'docs.example.com', pathPrefix: '/x' }]), 'https://docs.example.com/x');
+});
+
+test('main window may only load app files, data/blob URLs and Google Fonts', () => {
+  const appRoot = path.join(__dirname, '..');
+  const ok = url => isAllowedRendererRequest(url, appRoot);
+  assert.equal(ok(indexUrl), true);
+  assert.equal(ok(pathToFileURL(path.join(appRoot, 'assets', 'logo.png')).toString()), true);
+  assert.equal(ok('data:image/png;base64,AAAA'), true);
+  assert.equal(ok('blob:file:///abc'), true);
+  assert.equal(ok('https://fonts.googleapis.com/css2?family=X'), true);
+  assert.equal(ok('https://fonts.gstatic.com/s/x.woff2'), true);
+  assert.equal(ok(pathToFileURL(path.join(appRoot, '..', 'secret.txt')).toString()), false);
+  assert.equal(ok(`${pathToFileURL(appRoot).toString()}/../../Windows/win.ini`), false);
+  assert.equal(ok('file://attacker-host/share/x.html'), false);
+  assert.equal(ok('https://evil.example/collect?x=1'), false);
+  assert.equal(ok('http://fonts.googleapis.com/css'), false);
+  assert.equal(ok('ws://localhost:1234'), false);
+  assert.equal(ok('garbage'), false);
 });

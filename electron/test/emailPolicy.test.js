@@ -102,13 +102,20 @@ test('SMTP requires STARTTLS except for port 465 and local relays', () => {
   assert.deepEqual(smtpSecurityOptions('127.0.0.1', 2525), { secure: false, requireTLS: false });
   assert.deepEqual(smtpSecurityOptions('localhost', 587), { secure: false, requireTLS: false });
   assert.deepEqual(smtpSecurityOptions('::1', 25), { secure: false, requireTLS: false });
+  // Relay LAN chỉ khi là IPv4 riêng thật; tên miền giống tiền tố IP vẫn phải dùng TLS
+  assert.deepEqual(smtpSecurityOptions('192.168.1.10', 25), { secure: false, requireTLS: false });
+  assert.deepEqual(smtpSecurityOptions('10.0.0.5', 25), { secure: false, requireTLS: false });
+  assert.deepEqual(smtpSecurityOptions('172.20.1.1', 25), { secure: false, requireTLS: false });
+  for (const host of ['100.mail.example.com', '10x.example.com', '192x168.example.com', '172.15.0.1', '172.32.0.1', 'smtp.172.16.example.com']) {
+    assert.deepEqual(smtpSecurityOptions(host, 587), { secure: false, requireTLS: true }, host);
+  }
 });
 
 // --- emailDialog.js (renderer) ---
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const { validateRendererSql } = require('../dbPolicy');
+const { toStatement } = require('./helpers/ipcDb');
 
 function loadEmailDialog({ dbRun, elements = {}, electronAPI = {} } = {}) {
   const toasts = [];
@@ -126,10 +133,11 @@ function loadEmailDialog({ dbRun, elements = {}, electronAPI = {} } = {}) {
       getOrderTableName: type => ({ bang_keo_in: 'bang_keo_in_orders', bang_keo: 'bang_keo_orders', truc_in: 'truc_in_orders' })[type]
     },
     window: { electronAPI: {
-      dbRun: async (sql, params) => {
-        validateRendererSql(sql, ['INSERT', 'UPDATE']);
-        runs.push({ sql, params });
-        return dbRun ? dbRun(sql, params) : { ok: true, rowCount: 1 };
+      // Renderer gửi tên thao tác; tiến trình chính dựng SQL (mô phỏng qua registry)
+      dbRun: async (action, params) => {
+        const { sql, params: values } = toStatement(action, params, 'write');
+        runs.push({ action, sql, params: values });
+        return dbRun ? dbRun(sql, values) : { ok: true, rowCount: 1 };
       },
       writeLog: (level, message) => logs.push({ level, message }),
       ...electronAPI

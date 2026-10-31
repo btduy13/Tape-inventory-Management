@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { pathToFileURL } = require('url');
-const { app, BrowserWindow, Menu, ipcMain, shell, dialog, nativeImage, session } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, dialog, nativeImage, session, safeStorage } = require('electron');
 
 // Tệp cấu hình người dùng nằm trong userData (đường dẫn thực tế phụ thuộc productName khi đóng gói).
 // Phải đặt TAPE_CONFIG_PATH TRƯỚC khi require('./config') để cấu hình đã nhập được đọc lại sau khi khởi động lại.
@@ -13,9 +13,12 @@ process.env.TAPE_CONFIG_PATH = USER_CONFIG_PATH;
 const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
 const config = require('./config');
-const { validateRendererSql, summarizeSqlForLog, toPublicDbError } = require('./dbPolicy');
+const { toPublicDbError } = require('./dbPolicy');
+const { buildDbAction, buildDbTransaction } = require('./db/registry');
 const { MAX_TOTAL_ATTACHMENT_BYTES, sanitizeAttachmentName, smtpSecurityOptions, validateEmailPayload } = require('./emailPolicy');
+const { decryptConfigSecrets, decryptValue, encryptConfigSecrets, hasPlaintextSecrets } = require('./secretStore');
 const {
+  isAllowedRendererRequest,
   isTrustedAppUrl,
   isTrustedIpcSender,
   normalizeLogEntry,
@@ -26,6 +29,8 @@ const { setupAutoUpdater, checkForUpdatesManual } = require('./updater');
 
 // Tăng heap size để tối ưu hiệu năng
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
+// Bắt buộc sandbox cho mọi renderer (kể cả cửa sổ in PDF), phải gọi trước khi app sẵn sàng
+app.enableSandbox();
 
 let mainWindow;
 let dbPool;
@@ -118,7 +123,9 @@ async function writeUserConfig(data) {
   // Ghi nguyên tử: ghi tệp tạm cùng thư mục rồi đổi tên, tránh để lại tệp cấu hình hỏng khi mất điện/treo máy.
   const tempPath = `${USER_CONFIG_PATH}.${process.pid}.${Date.now()}.tmp`;
   try {
-    await fs.promises.writeFile(tempPath, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600 });
+    // DATABASE_URL và mật khẩu SMTP được mã hóa bằng safeStorage (DPAPI) trước khi ghi xuống đĩa
+    const payload = encryptConfigSecrets(data, safeStorage);
+    await fs.promises.writeFile(tempPath, JSON.stringify(payload, null, 2), { encoding: 'utf8', mode: 0o600 });
     await fs.promises.rename(tempPath, USER_CONFIG_PATH);
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
@@ -449,7 +456,13 @@ async function initDatabaseOnce() {
     try {
       await runDatabaseMigrations(dbPool);
     } catch (migrationError) {
-      writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + migrationError.message);
+      if (migrationError.code === '42501') {
+        // Vai trò electron_app (supabase/migrations/0010_electron_role.sql) không có quyền DDL:
+        // schema do chủ sở hữu CSDL cập nhật qua migration, app chỉ đọc/ghi dữ liệu.
+        writeLogToFile('info', 'Vai trò CSDL hạn chế quyền: bỏ qua migration schema trong app.');
+      } else {
+        writeLogToFile('error', 'Lỗi khởi tạo bảng/migration: ' + migrationError.message);
+      }
     }
     return true;
   } catch (error) {
@@ -637,6 +650,57 @@ function handleTrusted(channel, handler) {
   });
 }
 
+// Cửa sổ chính chỉ tải tệp trong thư mục ứng dụng, data:/blob: và font Google (xem ipcPolicy)
+let defaultSessionHardened = false;
+const restrictedWebContentsIds = new Set();
+function restrictMainWindowRequests(contents) {
+  restrictedWebContentsIds.add(contents.id);
+  contents.once('destroyed', () => restrictedWebContentsIds.delete(contents.id));
+  if (defaultSessionHardened) return;
+  defaultSessionHardened = true;
+  const appRoot = path.resolve(__dirname);
+  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    if (!restrictedWebContentsIds.has(details.webContentsId)) return callback({ cancel: false });
+    const allowed = isAllowedRendererRequest(details.url, appRoot);
+    if (!allowed) writeLogToFile('warning', `Đã chặn yêu cầu mạng từ renderer: ${String(details.url).slice(0, 200)}`);
+    return callback({ cancel: !allowed });
+  });
+}
+
+// Từ chối mọi quyền (camera, micro, thông báo, vị trí, clipboard-read...) cho phiên mặc định
+function hardenDefaultSession() {
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
+}
+
+// Giải mã bí mật trong tệp cấu hình; tự mã hóa lại tệp userData còn lưu bí mật dạng văn bản thường
+async function resolveConfigSecrets() {
+  const errors = [];
+  config.applySecretResolver(value => {
+    try {
+      return decryptValue(value, safeStorage);
+    } catch (error) {
+      errors.push(error.message);
+      return '';
+    }
+  });
+  if (errors.length) {
+    config.CONFIG_ERROR = [config.CONFIG_ERROR, ...new Set(errors)].filter(Boolean).join(' ');
+    writeLogToFile('error', `Cấu hình: ${errors[0]}`);
+    return;
+  }
+  if (path.resolve(config.CONFIG_SOURCE || '') !== path.resolve(USER_CONFIG_PATH)) return;
+  try {
+    const raw = JSON.parse(await fs.promises.readFile(USER_CONFIG_PATH, 'utf8'));
+    if (raw && typeof raw === 'object' && !Array.isArray(raw) && hasPlaintextSecrets(raw) && safeStorage.isEncryptionAvailable()) {
+      await writeUserConfig(raw);
+      writeLogToFile('info', 'Đã mã hóa DATABASE_URL/mật khẩu SMTP trong tệp cấu hình bằng safeStorage.');
+    }
+  } catch (error) {
+    writeLogToFile('warning', `Không mã hóa lại được tệp cấu hình: ${error.message}`);
+  }
+}
+
 // 3. TẠO CỬA SỔ CHÍNH
 function createWindow() {
   const appIcon = getAppIcon();
@@ -653,13 +717,20 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: true
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
+      navigateOnDragDrop: false,
+      spellcheck: false,
+      // Bản cài đặt không mở được DevTools (tránh gọi electronAPI tùy ý từ console)
+      devTools: !app.isPackaged
     },
     show: false,
     backgroundColor: '#f3f3f3'
   });
 
   hardenWebContents(mainWindow.webContents, url => isTrustedAppUrl(url, APP_INDEX_URL));
+  restrictMainWindowRequests(mainWindow.webContents);
 
   // Electron mới: (event có message/level/lineNumber/sourceId); Electron cũ: (event, level, message, line, sourceId)
   mainWindow.webContents.on('console-message', (event, legacyLevel, legacyMessage, legacyLine, legacySourceId) => {
@@ -827,7 +898,8 @@ function createSmtpTransport(extraOptions = {}) {
 async function readUserConfigFile() {
   try {
     const parsed = JSON.parse(await fs.promises.readFile(USER_CONFIG_PATH, 'utf8'));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return decryptConfigSecrets(parsed, safeStorage).values;
   } catch (_) {
     return {};
   }
@@ -891,71 +963,51 @@ function setupIpcHandlers() {
     }
   });
 
-  // --- TRUY VẤN CƠ SỞ DỮ LIỆU POSTGRESQL ---
-  // Log chỉ ghi lệnh + bảng; renderer chỉ nhận thông báo ngắn và mã lỗi PostgreSQL (code)
-  handleTrusted('db-query', async (event, sql, params) => {
+  // --- THAO TÁC CƠ SỞ DỮ LIỆU THEO TÊN ---
+  // Renderer chỉ gửi tên thao tác + tham số; SQL được dựng tại db/registry.js (không nhận SQL từ renderer).
+  // Log chỉ ghi tên thao tác; renderer chỉ nhận thông báo ngắn và mã lỗi PostgreSQL (code).
+  handleTrusted('db-read', async (event, action, params) => {
     try {
-      const validatedSql = validateRendererSql(sql, ['SELECT']);
-      const res = await requireDatabasePool().query(validatedSql, Array.isArray(params) ? params : []);
-      return { ok: true, rows: res.rows };
+      const statement = buildDbAction(action, params, 'read');
+      const res = await requireDatabasePool().query(statement.sql, statement.values);
+      return { ok: true, rows: res.rows, rowCount: res.rowCount };
     } catch (err) {
-      writeLogToFile('error', `Lỗi DB Query: ${summarizeSqlForLog(sql)} | Mã: ${err.code || '-'} | Lỗi: ${err.message}`);
+      writeLogToFile('error', `Lỗi DB đọc: ${String(action).slice(0, 64)} | Mã: ${err.code || '-'} | Lỗi: ${err.message}`);
       return { ok: false, ...toPublicDbError(err) };
     }
   });
 
-  handleTrusted('db-run', async (event, sql, params) => {
+  handleTrusted('db-write', async (event, action, params) => {
     try {
-      const validatedSql = validateRendererSql(sql, ['INSERT', 'UPDATE', 'DELETE']);
-      const res = await requireDatabasePool().query(validatedSql, Array.isArray(params) ? params : []);
-      return {
-        ok: true,
-        rowCount: res.rowCount,
-        rows: res.rows,
-        oid: res.oid
-      };
+      const statement = buildDbAction(action, params, 'write');
+      const res = await requireDatabasePool().query(statement.sql, statement.values);
+      return { ok: true, rowCount: res.rowCount, rows: res.rows };
     } catch (err) {
-      writeLogToFile('error', `Lỗi DB Run: ${summarizeSqlForLog(sql)} | Mã: ${err.code || '-'} | Lỗi: ${err.message}`);
+      writeLogToFile('error', `Lỗi DB ghi: ${String(action).slice(0, 64)} | Mã: ${err.code || '-'} | Lỗi: ${err.message}`);
       return { ok: false, ...toPublicDbError(err) };
     }
   });
 
-  handleTrusted('db-transaction', async (event, statements) => {
-    if (!Array.isArray(statements) || statements.length === 0) {
-      return { ok: false, error: 'Transaction không có câu lệnh' };
-    }
-    if (statements.length > 5000) {
-      return { ok: false, error: 'Quá nhiều câu lệnh trong một lần (tối đa 5000 dòng), vui lòng chia nhỏ tệp' };
-    }
-
+  handleTrusted('db-transaction', async (event, steps) => {
     let client;
-    let currentSql = '';
+    let currentAction = '';
     try {
-      // Kiểm tra toàn bộ câu lệnh trước khi mở kết nối
-      const validated = statements.map(statement => {
-        if (!statement || typeof statement.sql !== 'string') {
-          throw appError('Câu lệnh transaction không hợp lệ');
-        }
-        currentSql = statement.sql;
-        return {
-          sql: validateRendererSql(statement.sql, ['INSERT', 'UPDATE', 'DELETE']),
-          params: Array.isArray(statement.params) ? statement.params : []
-        };
-      });
+      // Dựng và kiểm tra toàn bộ câu lệnh trước khi mở kết nối
+      const statements = buildDbTransaction(steps);
       client = await requireDatabasePool().connect();
       await client.query('BEGIN');
       await client.query('SET LOCAL lock_timeout = 3000');
       const results = [];
-      for (const statement of validated) {
-        currentSql = statement.sql;
-        const result = await client.query(statement.sql, statement.params);
+      for (const statement of statements) {
+        currentAction = statement.action;
+        const result = await client.query(statement.sql, statement.values);
         results.push({ rowCount: result.rowCount, rows: result.rows });
       }
       await client.query('COMMIT');
       return { ok: true, results };
     } catch (err) {
       if (client) await client.query('ROLLBACK').catch(() => {});
-      writeLogToFile('error', `Lỗi DB Transaction: ${summarizeSqlForLog(currentSql)} | Mã: ${err.code || '-'} | Lỗi: ${err.message}`);
+      writeLogToFile('error', `Lỗi DB Transaction: ${String(currentAction || '-').slice(0, 64)} | Mã: ${err.code || '-'} | Lỗi: ${err.message}`);
       return { ok: false, ...toPublicDbError(err) };
     } finally {
       if (client) client.release();
@@ -1209,8 +1261,26 @@ function setupIpcHandlers() {
 }
 
 // 5. VÒNG ĐỜI HỆ THỐNG
+// Lớp bảo vệ chung cho MỌI webContents (kể cả cửa sổ tạo sau): không webview, không cửa sổ mới,
+// không điều hướng ra ngoài trang đã nạp. Cửa sổ chính/PDF còn có kiểm tra chặt hơn trong hardenWebContents.
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault());
+  contents.setWindowOpenHandler(({ url }) => {
+    try {
+      const safeUrl = validateExternalUrl(url);
+      shell.openExternal(safeUrl).catch(err => writeLogToFile('error', 'Lỗi mở URL ngoài: ' + err.message));
+    } catch (_) {
+      writeLogToFile('warning', `Đã chặn mở cửa sổ mới: ${String(url || '').slice(0, 200)}`);
+    }
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, legacyUrl) => {
+    const targetUrl = typeof event?.url === 'string' ? event.url : legacyUrl;
+    const currentUrl = contents.getURL();
+    if (currentUrl && targetUrl !== currentUrl && !isTrustedAppUrl(targetUrl, APP_INDEX_URL)) {
+      event.preventDefault();
+    }
+  });
 });
 
 app.whenReady().then(async () => {
@@ -1219,6 +1289,8 @@ app.whenReady().then(async () => {
     writeLogToFile('warning', `Cấu hình: ${warning}`);
   }
   if (config.CONFIG_ERROR) writeLogToFile('error', `Cấu hình: ${config.CONFIG_ERROR}`);
+  hardenDefaultSession();
+  await resolveConfigSecrets();
   const configured = await ensureStartupConfiguration();
   if (!configured) {
     if (!app.isQuitting) app.quit();

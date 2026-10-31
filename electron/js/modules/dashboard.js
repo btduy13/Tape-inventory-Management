@@ -76,38 +76,9 @@ async function loadDashboardData() {
 
 // Tải số liệu thống kê tháng này cho các Cards
 async function loadDashboardMetrics() {
-  const sqlMetrics = `
-    SELECT 
-      COUNT(id) AS total_orders,
-      COALESCE(SUM(thanh_tien_ban), 0) AS total_revenue
-    FROM (
-      SELECT id, thoi_gian, COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END AS thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT id, thoi_gian, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
-    ) AS combined;
-  `;
-
-  const sqlTopProduct = `
-    SELECT 
-      ten_hang,
-      SUM(so_luong) AS total_qty
-    FROM (
-      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT ten_hang, thoi_gian, so_luong FROM truc_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
-    ) AS combined
-    GROUP BY ten_hang
-    ORDER BY total_qty DESC NULLS LAST
-    LIMIT 1;
-  `;
-
   const monthStart = getDashboardMonthStart();
-  const resMetrics = await window.electronAPI.dbQuery(sqlMetrics, [monthStart]);
-  const resTop = await window.electronAPI.dbQuery(sqlTopProduct, [monthStart]);
+  const resMetrics = await window.electronAPI.dbQuery('dashboard.monthMetrics', { since: monthStart });
+  const resTop = await window.electronAPI.dbQuery('dashboard.topProduct', { since: monthStart });
 
   if (resMetrics.ok && resMetrics.rows.length > 0) {
     const data = resMetrics.rows[0];
@@ -131,23 +102,7 @@ async function loadDashboardMetrics() {
 
 // Cập nhật biểu đồ đường biểu diễn doanh số
 async function loadDashboardAttentionMetrics() {
-  const sql = `
-    SELECT
-      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND ngay_du_kien <= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + INTERVAL '3 days' THEN 1 ELSE 0 END) AS due_soon,
-      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date THEN 1 ELSE 0 END) AS overdue,
-      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_khach, 0) ELSE 0 END) AS open_debt,
-      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_ncc, 0) ELSE 0 END) AS supplier_debt,
-      SUM(CASE WHEN COALESCE(is_quote, FALSE) THEN 1 ELSE 0 END) AS pending_quotes
-    FROM (
-      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, cong_no_ncc, is_quote FROM bang_keo_in_orders
-      UNION ALL
-      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, cong_no_ncc, is_quote FROM truc_in_orders
-      UNION ALL
-      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, cong_no_ncc, is_quote FROM bang_keo_orders
-    ) AS combined;
-  `;
-
-  const res = await window.electronAPI.dbQuery(sql);
+  const res = await window.electronAPI.dbQuery('dashboard.attention');
   if (!res.ok || res.rows.length === 0) return;
 
   const data = res.rows[0];
@@ -199,23 +154,7 @@ async function updateDashboardCharts(period = 'daily') {
     truncType = 'month';
   }
 
-  const sql = `
-    SELECT 
-      DATE_TRUNC($1, thoi_gian) AS period,
-      SUM(so_luong) AS quantity,
-      SUM(thanh_tien_ban) AS amount
-    FROM (
-      SELECT thoi_gian, so_luong, COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END AS thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= $2 AND (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT thoi_gian, so_luong, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $2 AND (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT thoi_gian, so_luong, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $2 AND (is_quote = FALSE OR is_quote IS NULL)
-    ) AS combined
-    GROUP BY period
-    ORDER BY period;
-  `;
-
-  const res = await window.electronAPI.dbQuery(sql, [truncType, startDate]);
+  const res = await window.electronAPI.dbQuery('dashboard.salesTrend', { period: truncType, since: startDate });
   // Bỏ phản hồi cũ nếu người dùng đã đổi bộ lọc trong lúc chờ
   if (requestId !== dashboardTrendRequestId) return;
 
@@ -313,22 +252,7 @@ async function updateDashboardCharts(period = 'daily') {
 // Cập nhật biểu đồ phân bố sản phẩm (Pie Chart)
 async function loadProductDistributionChart() {
   const requestId = ++dashboardDistRequestId;
-  const sql = `
-    SELECT 
-      ten_hang,
-      SUM(so_luong) AS total_quantity
-    FROM (
-      SELECT ten_hang, so_luong FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT ten_hang, so_luong FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-      UNION ALL
-      SELECT ten_hang, so_luong FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-    ) AS combined
-    GROUP BY ten_hang
-    ORDER BY total_quantity DESC;
-  `;
-
-  const res = await window.electronAPI.dbQuery(sql);
+  const res = await window.electronAPI.dbQuery('dashboard.productDistribution');
   if (requestId !== dashboardDistRequestId) return;
 
   if (!res.ok) {

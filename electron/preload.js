@@ -31,13 +31,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // In ấn màn hình hóa đơn/phiếu giao hàng
   printWindow: () => ipcRenderer.invoke('print-window'),
 
-  // --- TRUY VẤN DATABASE SUPABASE POSTGRESQL ---
-  // SELECT query trả về danh sách hàng/bản ghi
-  dbQuery: (sql, params) => ipcRenderer.invoke('db-query', sql, params),
-  
-  // INSERT/UPDATE/DELETE query trả về số bản ghi thay đổi
-  dbRun: (sql, params) => ipcRenderer.invoke('db-run', sql, params),
-  dbTransaction: (statements) => ipcRenderer.invoke('db-transaction', statements),
+  // --- THAO TÁC DATABASE THEO TÊN (renderer chỉ gửi tên thao tác + tham số) ---
+  // dbQuery: thao tác đọc đã đăng ký ở db/readActions.js, ví dụ dbQuery('order.getById', { orderType, id })
+  dbQuery: (action, params) => ipcRenderer.invoke('db-read', String(action || ''), params ?? {}),
+
+  // dbRun: thao tác ghi đã đăng ký ở db/writeActions.js, trả về rowCount/rows
+  dbRun: (action, params) => ipcRenderer.invoke('db-write', String(action || ''), params ?? {}),
+
+  // dbTransaction: [{ action, params }] — chỉ thao tác ghi, chạy trong một transaction
+  dbTransaction: (steps) => ipcRenderer.invoke('db-transaction', steps),
 
   // --- GỬI EMAIL ---
   sendEmail: (toAddress, subject, body, htmlBody, attachments, dbAttachmentIds) => 

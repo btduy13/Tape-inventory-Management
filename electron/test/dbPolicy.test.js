@@ -182,35 +182,43 @@ test('all representative real renderer queries pass', () => {
   }
 });
 
-test('static SQL literals in js/ modules pass the validator', () => {
-  // Quét các chuỗi SQL tĩnh (không có ${...}) được truyền trực tiếp vào dbQuery/dbRun
+test('renderer modules never build SQL and only call registered actions of the right kind', () => {
+  // Renderer chỉ gửi tên thao tác; mọi lời gọi dbQuery/dbRun phải dùng chuỗi tên đã đăng ký
+  const { listActions } = require('../db/registry');
+  const kinds = new Map(listActions().map(({ name, kind }) => [name, kind]));
   const jsDir = path.join(__dirname, '..', 'js');
   const files = [];
   const walk = dir => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
+      if (entry.isDirectory()) { if (entry.name !== 'graphify-out') walk(full); }
       else if (entry.name.endsWith('.js')) files.push(full);
     }
   };
   walk(jsDir);
-  const pattern = /electronAPI\.(dbQuery|dbRun)\(\s*(['"`])((?:(?!\2)[\s\S])*?)\2/g;
   let checked = 0;
   for (const file of files) {
     const source = fs.readFileSync(file, 'utf8');
-    let match;
-    while ((match = pattern.exec(source))) {
-      const [, method, , rawSql] = match;
-      const sql = rawSql
-        .replace(/\$\$\{[^}]+\}/g, () => '$1')
-        .replace(/SET \$\{[^}]+\}/g, () => 'SET ten_hang = $1')
-        .replace(/\$\{[^}]+\}/g, () => 'bang_keo_orders');
-      const commands = method === 'dbQuery' ? READ : WRITE;
-      assert.doesNotThrow(() => validateRendererSql(sql, commands), `${path.basename(file)}: ${sql}`);
+    const name = path.basename(file);
+    assert.doesNotMatch(source, /\b(SELECT\s[\s\S]{0,200}?\sFROM|INSERT\s+INTO|DELETE\s+FROM)\s+[a-z_]/i, `${name} must not contain SQL`);
+    assert.doesNotMatch(source, /\bUPDATE\s+[a-z_${}]+\s+SET\b/i, `${name} must not contain SQL`);
+    for (const match of source.matchAll(/electronAPI\.(dbQuery|dbRun)\(\s*([^,)]*)/g)) {
+      const [, method, firstArg] = match;
+      const literal = /^'([a-zA-Z.]+)'$/.exec(firstArg.trim());
+      if (!literal) {
+        // Chỉ chấp nhận biến khi là bước đã dựng sẵn { action, params } (vd. nhập Excel)
+        assert.match(firstArg.trim(), /^(action|statement\.action)$/, `${name}: ${method}(${firstArg})`);
+        continue;
+      }
+      const expected = method === 'dbQuery' ? 'read' : 'write';
+      assert.equal(kinds.get(literal[1]), expected, `${name}: ${method}('${literal[1]}') must be a registered ${expected} action`);
       checked++;
     }
+    for (const match of source.matchAll(/action:\s*'([a-zA-Z.]+)'/g)) {
+      assert.equal(kinds.get(match[1]), 'write', `${name}: transaction step ${match[1]} must be a write action`);
+    }
   }
-  assert.ok(checked > 0);
+  assert.ok(checked >= 30, `expected many action calls, found ${checked}`);
 });
 
 test('blocks known attack payloads', () => {

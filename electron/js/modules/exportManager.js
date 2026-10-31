@@ -28,6 +28,13 @@ function getExportTableNameByOrderId(orderId) {
   return 'bang_keo_orders';
 }
 
+// Loại đơn (khóa thao tác dữ liệu) suy từ tiền tố mã đơn, khớp getExportTableNameByOrderId
+function getExportOrderTypeByOrderId(orderId) {
+  if (orderId.startsWith('BK-')) return 'bang_keo_in';
+  if (orderId.startsWith('TI-')) return 'truc_in';
+  return 'bang_keo';
+}
+
 // Khởi động Modal chọn đơn hàng để xuất
 async function openMultiOrderExportDialog() {
   try {
@@ -80,15 +87,7 @@ function setExportDocumentType(docType) {
 
 // Tải tất cả đơn hàng từ database
 async function loadExportAllOrdersFromDb() {
-  const sql = `
-    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo_in' as type FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-    UNION ALL
-    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'truc_in' as type FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-    UNION ALL
-    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo' as type FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
-    ORDER BY thoi_gian DESC;
-  `;
-  const res = await window.electronAPI.dbQuery(sql);
+  const res = await window.electronAPI.dbQuery('export.listOrders');
   if (res.ok) {
     exportAllOrders = res.rows;
     loadExportOrdersTable();
@@ -246,7 +245,7 @@ async function proceedToExportPreview() {
 
     let res;
     try {
-      res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
+      res = await window.electronAPI.dbQuery('order.getById', { orderType: getExportOrderTypeByOrderId(orderId), id: orderId });
     } catch (err) {
       res = { ok: false, error: err?.message };
     }

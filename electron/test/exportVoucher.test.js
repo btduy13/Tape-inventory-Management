@@ -120,10 +120,12 @@ test('a failed or missing order aborts the export preview with the failing ids',
   const opened = [];
   element('modal-export-preview').classList = { add: () => opened.push('preview'), remove() {} };
   context.window.electronAPI = {
-    dbQuery: async (sql, params) => {
-      if (params[0] === 'B-2') return { ok: true, rows: [] };
-      if (params[0] === 'TI-3') return { ok: false, error: 'timeout' };
-      return { ok: true, rows: [{ id: params[0], ten_hang: 'X', so_luong: 1, don_gia_ban: 10, thanh_tien_ban: 10 }] };
+    dbQuery: async (action, params) => {
+      assert.equal(action, 'order.getById');
+      assert.equal(params.orderType, { BK: 'bang_keo_in', B: 'bang_keo', TI: 'truc_in' }[params.id.split('-')[0]]);
+      if (params.id === 'B-2') return { ok: true, rows: [] };
+      if (params.id === 'TI-3') return { ok: false, error: 'timeout' };
+      return { ok: true, rows: [{ id: params.id, ten_hang: 'X', so_luong: 1, don_gia_ban: 10, thanh_tien_ban: 10 }] };
     }
   };
   vm.runInContext(`selectedExportOrderIds.clear(); ['BK-1', 'B-2', 'TI-3'].forEach(id => selectedExportOrderIds.add(id));`, context);

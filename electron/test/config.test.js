@@ -73,3 +73,19 @@ test('resolveSslCa accepts PEM text or a file path', () => {
   assert.equal(missing.ca, '');
   assert.ok(missing.error);
 });
+
+test('applySecretResolver swaps in decrypted file secrets without touching env overrides', () => {
+  const seen = [];
+  config.applySecretResolver(value => { seen.push(value); return value ? `decrypted(${value.length})` : ''; });
+  try {
+    assert.ok(seen.includes('postgresql://user:pass@db.example.com:5432/tape'));
+    assert.ok(seen.includes('x'));
+    assert.equal(config.FILE_VALUES.DATABASE_URL, 'decrypted(47)');
+    assert.equal(config.FILE_VALUES.EMAIL_CONFIG.password, 'decrypted(1)');
+    if (!process.env.DATABASE_URL) assert.equal(config.DATABASE_URL, 'decrypted(47)');
+    if (!process.env.SMTP_PASSWORD) assert.equal(config.EMAIL_CONFIG.password, 'decrypted(1)');
+  } finally {
+    config.applySecretResolver(value => value);
+  }
+  assert.equal(config.FILE_VALUES.DATABASE_URL, 'postgresql://user:pass@db.example.com:5432/tape');
+});

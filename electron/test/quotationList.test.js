@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const orderMath = require('../js/orderMath');
+const { toStatement, toTransaction } = require('./helpers/ipcDb');
 
 test('quotation list includes legacy VAT and axes alongside JSON bundle totals', async () => {
   let query;
@@ -17,7 +18,7 @@ test('quotation list includes legacy VAT and axes alongside JSON bundle totals',
   const context = vm.createContext({ console, orderMath,
     document: { addEventListener() {}, getElementById: () => tbody, createElement: () => ({}) },
     utils: { formatCurrency: value => String(value || 0), formatDate: () => '2026-09-09', escapeHtml: value => String(value ?? '') },
-    window: { electronAPI: { dbQuery: async sql => { query = sql; return { ok: true, rows }; } } }
+    window: { electronAPI: { dbQuery: async (action, params) => { query = toStatement(action, params, 'read').sql; return { ok: true, rows }; } } }
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/modules/quotations.js'), 'utf8'), context);
   await context.loadQuotationsData();
@@ -78,9 +79,9 @@ test('convert-to-order disables the button, retries duplicate ids and reports 0 
   let attempt = 0;
   const { context, toasts } = quoteContext();
   context.window.electronAPI = {
-    dbQuery: async sql => ({ ok: true, rows: /SELECT id FROM/.test(sql) ? [{ id: 'B-10-26-999' }] : [] }),
-    dbTransaction: async statements => {
-      transactions.push(statements);
+    dbQuery: async (action, params) => ({ ok: true, rows: /SELECT id FROM/.test(toStatement(action, params, 'read').sql) ? [{ id: 'B-10-26-999' }] : [] }),
+    dbTransaction: async steps => {
+      transactions.push(toTransaction(steps));
       attempt += 1;
       if (attempt === 1) return { ok: false, error: 'duplicate key value violates unique constraint' };
       return { ok: true, results: [{ rowCount: 0 }, { rowCount: 0 }] };
@@ -213,7 +214,7 @@ test('quote conversion sends client-local creation time and tomorrow as paramete
   context.utils.tomorrowDateInputValue = () => '2026-10-12';
   context.window.electronAPI = {
     dbQuery: async () => ({ ok: true, rows: [] }),
-    dbTransaction: async statements => { transactions.push(statements); return { ok: true, results: [{ rowCount: 1 }, { rowCount: 0 }] }; }
+    dbTransaction: async steps => { transactions.push(toTransaction(steps)); return { ok: true, results: [{ rowCount: 1 }, { rowCount: 0 }] }; }
   };
   context.switchTab = async () => {};
   await context.convertQuoteToOrder('BG-1', 'bang_keo');
@@ -234,7 +235,7 @@ test('deleting a quote removes it and its attachments in one guarded transaction
   context.utils.confirmAction = async (message, options) => { confirmOptions = options; return true; };
   context.window.electronAPI = {
     dbQuery: async () => { reloads += 1; return { ok: true, rows: [] }; },
-    dbTransaction: async statements => { transactions.push(statements); return { ok: true, results: [{ rowCount: 2 }, { rowCount: 1 }] }; }
+    dbTransaction: async steps => { transactions.push(toTransaction(steps)); return { ok: true, results: [{ rowCount: 2 }, { rowCount: 1 }] }; }
   };
   const button = { disabled: false };
   await context.deleteQuote('BG-TI-10-26-001', 'truc_in', button);

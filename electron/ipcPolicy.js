@@ -1,7 +1,16 @@
-const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:']);
+const path = require('path');
+
 const ALLOWED_LOG_LEVELS = new Set(['debug', 'info', 'warning', 'error', 'critical']);
 
-function validateExternalUrl(value) {
+// Chỉ mở bằng trình duyệt hệ thống các liên kết thuộc danh sách này (HTTPS, đúng host + tiền tố đường dẫn)
+const EXTERNAL_URL_ALLOWLIST = Object.freeze([
+  Object.freeze({ host: 'github.com', pathPrefix: '/btduy13/Tape-inventory-Management' })
+]);
+
+// Tài nguyên ngoài mà cửa sổ chính được phép tải (font Google trong index.html)
+const ALLOWED_REMOTE_ORIGINS = new Set(['https://fonts.googleapis.com', 'https://fonts.gstatic.com']);
+
+function validateExternalUrl(value, allowlist = EXTERNAL_URL_ALLOWLIST) {
   let parsed;
   try {
     parsed = new URL(String(value || ''));
@@ -9,10 +18,47 @@ function validateExternalUrl(value) {
     throw new Error('Liên kết không hợp lệ');
   }
 
-  if (!ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol)) {
-    throw new Error('Chỉ được phép mở liên kết HTTP hoặc HTTPS');
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Chỉ được phép mở liên kết HTTPS');
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error('Liên kết không được chứa thông tin đăng nhập');
+  }
+  const host = parsed.hostname.toLowerCase();
+  const allowed = allowlist.some(entry => host === entry.host && (
+    parsed.pathname === entry.pathPrefix || parsed.pathname.startsWith(`${entry.pathPrefix}/`)
+  ));
+  if (!allowed) {
+    throw new Error('Liên kết không nằm trong danh sách được phép mở');
   }
   return parsed.toString();
+}
+
+// Đường dẫn tệp cục bộ của URL file:// (Windows: bỏ dấu "/" trước ký tự ổ đĩa)
+function fileUrlToLocalPath(url) {
+  return decodeURIComponent(new URL(url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
+}
+
+// Yêu cầu mạng của cửa sổ chính: chỉ tệp trong thư mục ứng dụng, data:/blob: và font Google
+function isAllowedRendererRequest(url, appRoot) {
+  let parsed;
+  try {
+    parsed = new URL(String(url || ''));
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === 'data:' || parsed.protocol === 'blob:' || parsed.protocol === 'devtools:') return true;
+  if (parsed.protocol === 'file:') {
+    if (parsed.host && parsed.host.toLowerCase() !== 'localhost') return false; // chặn đường dẫn mạng UNC (file://máy/chia-sẻ)
+    try {
+      const resolved = path.resolve(fileUrlToLocalPath(parsed.toString())).toLowerCase();
+      const root = path.resolve(appRoot).toLowerCase();
+      return resolved === root || resolved.startsWith(root + path.sep);
+    } catch {
+      return false;
+    }
+  }
+  return ALLOWED_REMOTE_ORIGINS.has(parsed.origin);
 }
 
 function normalizeLogEntry(level, message) {
@@ -99,6 +145,8 @@ function sanitizeDialogOptions(options, kind = 'save') {
 }
 
 module.exports = {
+  EXTERNAL_URL_ALLOWLIST,
+  isAllowedRendererRequest,
   isTrustedAppUrl,
   isTrustedIpcSender,
   normalizeLogEntry,

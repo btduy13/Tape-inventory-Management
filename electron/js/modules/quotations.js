@@ -754,8 +754,7 @@ function setQuoteEditingUi(type, quoteId = null) {
 async function openQuoteEditor(quoteId, type) {
   const config = quoteDraftConfigs[type];
   if (!config) return;
-  const table = type === 'bang_keo_in' ? 'bang_keo_in_orders' : (type === 'bang_keo' ? 'bang_keo_orders' : 'truc_in_orders');
-  const response = await window.electronAPI.dbQuery(`SELECT * FROM ${table} WHERE id = $1 AND is_quote = TRUE`, [quoteId]);
+  const response = await window.electronAPI.dbQuery('order.getById', { orderType: type, id: quoteId, quoteOnly: true });
   if (!response.ok || !response.rows?.length) {
     utils.showToast('Không tìm thấy báo giá để chỉnh sửa', 'danger');
     return;
@@ -810,15 +809,17 @@ const quoteUpdateColumns = {
 
 async function saveEditedQuoteIfNeeded(type, data) {
   if (!editingQuoteState || editingQuoteState.type !== type) return false;
-  const table = type === 'bang_keo_in' ? 'bang_keo_in_orders' : (type === 'bang_keo' ? 'bang_keo_orders' : 'truc_in_orders');
   const columns = quoteUpdateColumns[type];
-  const params = columns.map(column => column === 'quote_items' ? JSON.stringify(data[column] || []) : data[column]);
-  params.push(editingQuoteState.id);
-  const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(', ');
-  const response = await window.electronAPI.dbRun(
-    `UPDATE ${table} SET ${assignments} WHERE id = $${params.length} AND is_quote = TRUE`,
-    params
-  );
+  const values = {};
+  for (const column of columns) {
+    values[column] = column === 'quote_items' ? JSON.stringify(data[column] || []) : data[column];
+  }
+  const response = await window.electronAPI.dbRun('order.update', {
+    orderType: type,
+    id: editingQuoteState.id,
+    values,
+    quoteOnly: true
+  });
   if (!response.ok) {
     utils.showToast(`Không thể cập nhật báo giá: ${response.error}`, 'danger');
     return true;
@@ -901,19 +902,7 @@ function clearQuoteItems(type) {
 // 1. Tải danh sách báo giá
 async function loadQuotationsData() {
   try {
-    const sql = `
-      SELECT to_jsonb(q) AS order_data, thoi_gian, 'bang_keo_in' AS type
-      FROM bang_keo_in_orders q WHERE is_quote = TRUE
-      UNION ALL
-      SELECT to_jsonb(q) AS order_data, thoi_gian, 'bang_keo' AS type
-      FROM bang_keo_orders q WHERE is_quote = TRUE
-      UNION ALL
-      SELECT to_jsonb(q) AS order_data, thoi_gian, 'truc_in' AS type
-      FROM truc_in_orders q WHERE is_quote = TRUE
-      ORDER BY thoi_gian DESC
-    `;
-
-    const res = await window.electronAPI.dbQuery(sql);
+    const res = await window.electronAPI.dbQuery('quote.list');
     if (res.ok) {
       quotationsAllList = res.rows.map(row => ({ ...row.order_data, type: row.type }));
       renderQuotationsTable(quotationsAllList);
@@ -1035,11 +1024,7 @@ function applyQuotesFilters() {
 // 4. Tải và Lưu PDF bằng Quote ID (truy vấn DB trước)
 async function downloadQuotePDFById(quoteId, type) {
   try {
-    let tableName = 'bang_keo_in_orders';
-    if (type === 'bang_keo') tableName = 'bang_keo_orders';
-    if (type === 'truc_in') tableName = 'truc_in_orders';
-
-    const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [quoteId]);
+    const res = await window.electronAPI.dbQuery('order.getById', { orderType: getQuoteOrderType(type), id: quoteId });
     if (res.ok && res.rows.length > 0) {
       const data = res.rows[0];
       await generateAndSaveQuotePDF(quoteId, type, data);
@@ -1352,27 +1337,15 @@ async function exportQuotePreviewPDF() {
 // 6. Chuyển Báo giá thành Đơn đặt hàng
 const quoteConversionsInFlight = new Set();
 
-function getQuoteConversionSql(tableName) {
-  // Cập nhật đơn trước; tệp đính kèm chỉ chuyển theo khi đơn mới thực sự tồn tại trong cùng transaction.
-  // thoi_gian ($3) và ngay_du_kien ($4) lấy theo giờ máy như mọi thao tác ghi khác.
-  const updateOrderSql = `
-        UPDATE ${tableName}
-        SET id = $1,
-            is_quote = FALSE,
-            thoi_gian = $3,
-            ngay_du_kien = $4,
-            da_giao = FALSE,
-            da_tat_toan = FALSE,
-            cong_no_khach = ${orderMath.customerDebtSqlExpression(tableName)}
-        WHERE id = $2 AND is_quote = TRUE
-    `;
-  const updateAttachSql = `
-        UPDATE order_attachments
-        SET order_id = $1, order_type = $2
-        WHERE order_id = $3 AND order_type = $4
-          AND EXISTS (SELECT 1 FROM ${tableName} WHERE id = $1)
-    `;
-  return { updateOrderSql, updateAttachSql };
+// Bước transaction chuyển báo giá thành đơn: cập nhật đơn trước, tệp đính kèm chỉ chuyển theo khi đơn mới
+// thực sự tồn tại (SQL dựng ở tiến trình chính: quote.convertToOrder / quote.moveAttachments).
+// convertedAt/deliveryDate lấy theo giờ máy như mọi thao tác ghi khác.
+function getQuoteConversionSteps(type, quoteId, newOrderId, convertedAt, deliveryDate) {
+  const orderType = getQuoteOrderType(type);
+  return [
+    { action: 'quote.convertToOrder', params: { orderType, quoteId, newId: newOrderId, convertedAt, deliveryDate } },
+    { action: 'quote.moveAttachments', params: { orderType, quoteId, newId: newOrderId } }
+  ];
 }
 
 // Ngày mai theo giờ máy dạng 'YYYY-MM-DD' (dùng utils.tomorrowDateInputValue khi có).
@@ -1383,25 +1356,19 @@ function quoteTomorrowDateValue(now = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function getQuoteTableName(type) {
-  if (type === 'bang_keo') return 'bang_keo_orders';
-  if (type === 'truc_in') return 'truc_in_orders';
-  return 'bang_keo_in_orders';
+function getQuoteOrderType(type) {
+  if (type === 'bang_keo') return 'bang_keo';
+  if (type === 'truc_in') return 'truc_in';
+  return 'bang_keo_in';
 }
 
 // Xóa báo giá + tệp đính kèm trong MỘT transaction. Cả hai câu đều kiểm tra is_quote = TRUE
 // nên đơn đã chuyển thành đơn hàng thật không thể bị xóa từ danh sách báo giá.
 function getQuoteDeleteStatements(quoteId, type) {
-  const tableName = getQuoteTableName(type);
+  const orderType = getQuoteOrderType(type);
   return [
-    {
-      sql: `DELETE FROM order_attachments WHERE order_id = $1 AND order_type = $2 AND EXISTS (SELECT 1 FROM ${tableName} WHERE id = $1 AND is_quote = TRUE)`,
-      params: [quoteId, type]
-    },
-    {
-      sql: `DELETE FROM ${tableName} WHERE id = $1 AND is_quote = TRUE`,
-      params: [quoteId]
-    }
+    { action: 'quote.deleteAttachments', params: { orderType, id: quoteId } },
+    { action: 'quote.delete', params: { orderType, id: quoteId } }
   ];
 }
 
@@ -1457,25 +1424,15 @@ async function convertQuoteToOrder(quoteId, type, triggerButton = null) {
 
     utils.showToast("Đang thực hiện chuyển đơn hàng...", "warning");
 
-    let tableName = 'bang_keo_in_orders';
+    const orderType = getQuoteOrderType(type);
     let idPrefix = 'BK';
-    if (type === 'bang_keo') {
-      tableName = 'bang_keo_orders';
-      idPrefix = 'B';
-    }
-    if (type === 'truc_in') {
-      tableName = 'truc_in_orders';
-      idPrefix = 'TI';
-    }
+    if (orderType === 'bang_keo') idPrefix = 'B';
+    if (orderType === 'truc_in') idPrefix = 'TI';
 
     // 1-2. Tạo mã ID đơn hàng mới và cập nhật đơn + tệp đính kèm trên cùng một transaction;
     // nếu mã bị trùng (máy khác vừa dùng) thì thử lại với mã kế tiếp.
-    const { updateOrderSql, updateAttachSql } = getQuoteConversionSql(tableName);
-    const { orderId: newOrderId, result: res } = await runWithGeneratedOrderId(idPrefix, tableName, orderId =>
-      window.electronAPI.dbTransaction([
-        { sql: updateOrderSql, params: [orderId, quoteId, new Date(), quoteTomorrowDateValue()] },
-        { sql: updateAttachSql, params: [orderId, type, quoteId, type] }
-      ])
+    const { orderId: newOrderId, result: res } = await runWithGeneratedOrderId(idPrefix, orderType, orderId =>
+      window.electronAPI.dbTransaction(getQuoteConversionSteps(type, quoteId, orderId, new Date(), quoteTomorrowDateValue()))
     );
 
     if (!res.ok) {

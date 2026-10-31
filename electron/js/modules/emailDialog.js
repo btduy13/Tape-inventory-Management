@@ -17,9 +17,7 @@ async function openEmailDialog(orderId, orderType) {
     orderType = utils.normalizeOrderType(orderType);
 
     // 1. Tải thông tin đơn hàng để sinh mẫu email
-    const tableName = utils.getOrderTableName(orderType);
-
-    const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
+    const res = await window.electronAPI.dbQuery('order.getById', { orderType, id: orderId });
     if (!isCurrentRequest()) return;
     if (!res.ok || res.rows.length === 0) {
       utils.showToast("Không tìm thấy dữ liệu đơn hàng", "danger");
@@ -31,10 +29,7 @@ async function openEmailDialog(orderId, orderType) {
     // 2. Load attachments của đơn hàng này từ database (gom vào biến tạm, chỉ áp dụng khi còn là yêu cầu mới nhất)
     const loadedAttachments = [];
     if (orderId && orderId !== 'temp') {
-      const attsRes = await window.electronAPI.dbQuery(
-        'SELECT id, file_name, file_size FROM order_attachments WHERE order_id = $1 AND order_type = $2',
-        [orderId, orderType]
-      );
+      const attsRes = await window.electronAPI.dbQuery('attachment.listForOrder', { orderId, orderType });
       if (!isCurrentRequest()) return;
       if (attsRes.ok) {
         attsRes.rows.forEach(att => {
@@ -98,9 +93,7 @@ async function openEmailDialog(orderId, orderType) {
     renderEmailAttachmentsTable();
 
     // 3. Load email history suggestions
-    const suggestionsRes = await window.electronAPI.dbQuery(
-      'SELECT email_address, SUM(sent_count) as total_count FROM email_history GROUP BY email_address ORDER BY MAX(last_sent_at) DESC, total_count DESC LIMIT 50'
-    );
+    const suggestionsRes = await window.electronAPI.dbQuery('emailHistory.suggestions');
     if (!isCurrentRequest()) return;
     if (suggestionsRes.ok) {
       emailSuggestions = suggestionsRes.rows.map(row => String(row.email_address ?? '')).filter(Boolean);
@@ -556,11 +549,8 @@ async function recordEmailSent(orderType, orderId, toValue) {
   const describe = (res) => res?.error || 'Lỗi không xác định';
   try {
     if (orderId && orderId !== 'temp') {
-      const tableName = utils.getOrderTableName(orderType);
-      const statusRes = await window.electronAPI.dbRun(
-        `UPDATE ${tableName} SET da_gui_email = TRUE WHERE id = $1`,
-        [orderId]
-      );
+      // orderType đã được chuẩn hóa khi mở hộp thoại (openEmailDialog)
+      const statusRes = await window.electronAPI.dbRun('order.markEmailed', { orderType, id: orderId });
       if (!statusRes?.ok) warnings.push('trạng thái đơn hàng (' + describe(statusRes) + ')');
     }
   } catch (err) {
@@ -569,19 +559,13 @@ async function recordEmailSent(orderType, orderId, toValue) {
 
   for (const address of splitEmailRecipients(toValue)) {
     try {
-      const updateRes = await window.electronAPI.dbRun(
-        'UPDATE email_history SET sent_count = COALESCE(sent_count, 0) + 1, last_sent_at = CURRENT_TIMESTAMP WHERE lower(email_address) = $1',
-        [address]
-      );
+      const updateRes = await window.electronAPI.dbRun('emailHistory.increment', { address });
       if (!updateRes?.ok) {
         warnings.push(`lịch sử ${address} (${describe(updateRes)})`);
         continue;
       }
       if (Number(updateRes.rowCount) === 0) {
-        const insertRes = await window.electronAPI.dbRun(
-          'INSERT INTO email_history (email_address, last_sent_at, sent_count) VALUES ($1, CURRENT_TIMESTAMP, 1)',
-          [address]
-        );
+        const insertRes = await window.electronAPI.dbRun('emailHistory.insert', { address });
         if (!insertRes?.ok) warnings.push(`lịch sử ${address} (${describe(insertRes)})`);
       }
     } catch (err) {
