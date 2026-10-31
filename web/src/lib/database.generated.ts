@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "bang_keo_in_orders": {
                   Row: {
-                    "don_gia_ban": number | null,"id": string,"is_quote": boolean | null,"mau_sac": string | null,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien_ban": number | null,"thoi_gian": string | null
+                    "don_gia_ban": number | null,"id": string,"is_quote": boolean | null,"mau_sac": string | null,"ngay_du_kien": string,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien_ban": number | null,"thoi_gian": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "don_gia_ban"?: number | null,"id": string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null
+                    "don_gia_ban"?: number | null,"id": string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien": string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null
                   }
                   Update: {
-                    "don_gia_ban"?: number | null,"id"?: string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null
+                    "don_gia_ban"?: number | null,"id"?: string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null
                   }
                   Relationships: [
                     
@@ -345,6 +345,9 @@ isOneToOne: false
                            },
 "current_app_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["app_role"]
+                           },
+"electron_app_purge_large_objects":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
