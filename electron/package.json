@@ -15,11 +15,12 @@
     "test": "node --test test/*.test.js",
     "test:ui": "node test/quotationUi.smoke.js",
     "test:integration": "node test/integration/orderFlows.js",
-    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check config.js && node --check dbPolicy.js && node --check secretStore.js && node --check db/registry.js && node --check db/params.js && node --check db/orderColumns.js && node --check db/readActions.js && node --check db/writeActions.js && node --check emailPolicy.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/utils.js && node --check js/domActions.js && node --check js/orderMath.js && node --check js/modules/dashboard.js && node --check js/modules/bangkeoin.js && node --check js/modules/bangkeo.js && node --check js/modules/trucin.js && node --check js/modules/thongke.js && node --check js/modules/excelImport.js && node --check js/modules/emailDialog.js && node --check js/modules/exportManager.js && node --check js/modules/quotations.js && node --check js/modules/updateManager.js",
+    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check config.js && node --check dbPolicy.js && node --check secretStore.js && node --check portableConfigCrypto.js && node --check passphrasePrompt.js && node --check prompt/preload.js && node --check prompt/passphrase.js && node --check scripts/afterPack.js && node --check db/registry.js && node --check db/params.js && node --check db/orderColumns.js && node --check db/readActions.js && node --check db/writeActions.js && node --check emailPolicy.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/utils.js && node --check js/domActions.js && node --check js/orderMath.js && node --check js/modules/dashboard.js && node --check js/modules/bangkeoin.js && node --check js/modules/bangkeo.js && node --check js/modules/trucin.js && node --check js/modules/thongke.js && node --check js/modules/excelImport.js && node --check js/modules/emailDialog.js && node --check js/modules/exportManager.js && node --check js/modules/quotations.js && node --check js/modules/updateManager.js",
     "build:win": "node node_modules/electron-builder/cli.js --win nsis --x64",
     "release": "powershell -ExecutionPolicy Bypass -File scripts/release.ps1"
   },
   "devDependencies": {
+    "@electron/fuses": "^1.8.0",
     "electron": "^43.1.0",
     "electron-builder": "^26.15.3"
   },
@@ -43,6 +44,10 @@
       "emailPolicy.js",
       "ipcPolicy.js",
       "secretStore.js",
+      "portableConfigCrypto.js",
+      "passphrasePrompt.js",
+      "prompt/**/*",
+      "certs/*.crt",
       "db/**/*",
       "xlsx.full.min.js",
       "js/**/*",
@@ -51,9 +56,16 @@
       "package.json",
       "!config.local.json",
       "!config.local.example.json",
+      "!**/config.local*.json",
+      "!**/*.env",
+      "!**/.env",
+      "!**/.env.*",
       "!js/graphify-out/**",
       "!**/graphify-out/**"
     ],
+    "extraResources": [],
+    "extraFiles": [],
+    "afterPack": "scripts/afterPack.js",
     "win": {
       "target": [
         {

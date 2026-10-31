@@ -62,6 +62,24 @@ function resolveSslCa(value, baseDir) {
   }
 }
 
+// CA gốc Supabase đóng gói cùng ứng dụng (tùy chọn, xem certs/README.md).
+// Dùng khi không cấu hình DATABASE_SSL_CA, để kết nối PostgreSQL xác thực chứng chỉ máy chủ.
+const BUNDLED_SSL_CA_PATH = path.join(__dirname, 'certs', 'supabase-ca.crt');
+
+function loadBundledSslCa(caPath = BUNDLED_SSL_CA_PATH) {
+  let text;
+  try {
+    text = fs.readFileSync(caPath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return { ca: '', error: '' };
+    return { ca: '', error: `Không đọc được CA đóng gói (${caPath}): ${error.message}` };
+  }
+  if (!text.includes('-----BEGIN CERTIFICATE-----')) {
+    return { ca: '', error: `CA đóng gói (${caPath}) không phải chứng chỉ PEM` };
+  }
+  return { ca: text, error: '' };
+}
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const SSL_URL_PARAMS = ['sslmode', 'ssl', 'sslcert', 'sslkey', 'sslrootcert', 'sslpassword', 'uselibpqcompat'];
 
@@ -116,6 +134,16 @@ const sslCa = resolveSslCa(
   process.env.DATABASE_SSL_CA ? process.cwd() : (loaded.source ? path.dirname(loaded.source) : __dirname)
 );
 if (sslCa.error) configWarnings.push(sslCa.error);
+// 'env' | 'file' | 'bundled' | '': nguồn của CA dùng để xác thực chứng chỉ PostgreSQL
+let sslCaSource = sslCaInput ? (process.env.DATABASE_SSL_CA ? 'env' : 'file') : '';
+if (!sslCaInput) {
+  const bundled = loadBundledSslCa();
+  if (bundled.error) configWarnings.push(bundled.error);
+  if (bundled.ca) {
+    sslCa.ca = bundled.ca;
+    sslCaSource = 'bundled';
+  }
+}
 
 // main.js gọi sau khi app sẵn sàng để giải mã bí mật dạng "safe:v1:..." (safeStorage) trong tệp cấu hình.
 // resolve(value) trả về giá trị đã giải mã (hoặc '' nếu không giải mã được). Biến môi trường luôn được ưu tiên.
@@ -133,6 +161,7 @@ module.exports = {
   // 'env' | 'file' | '' — dùng để không ghi giá trị từ biến môi trường vào tệp cấu hình
   DATABASE_URL_SOURCE: process.env.DATABASE_URL ? 'env' : (local.DATABASE_URL ? 'file' : ''),
   DATABASE_SSL_CA: sslCa.ca,
+  DATABASE_SSL_CA_SOURCE: sslCa.ca ? sslCaSource : '',
   EMAIL_CONFIG: {
     server: process.env.SMTP_SERVER || localEmail.server || 'smtp.gmail.com',
     port: smtpPort,
@@ -152,7 +181,9 @@ module.exports = {
   CONFIG_ERROR: loaded.error || '',
   CONFIG_WARNINGS: configWarnings,
   applySecretResolver,
+  BUNDLED_SSL_CA_PATH,
   isLocalHost,
+  loadBundledSslCa,
   parseSmtpPort,
   resolveDatabaseSsl,
   resolveSslCa

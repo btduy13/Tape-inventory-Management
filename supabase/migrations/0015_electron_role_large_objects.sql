@@ -24,7 +24,17 @@
 -- Idempotent.
 
 -- 1. Owner can act on electron_app's objects ---------------------------------------------------
-grant electron_app to postgres with inherit true, set false;
+-- Postgres 16+: inherit only (no SET ROLE). Postgres 15 (the hosted project reports 15.14) has no
+-- per-grant INHERIT/SET options: a plain grant inherits because postgres has the INHERIT attribute.
+do $$
+begin
+  if current_setting('server_version_num')::int >= 160000 then
+    execute 'grant electron_app to postgres with inherit true, set false';
+  else
+    execute 'grant electron_app to postgres';
+  end if;
+end;
+$$;
 
 -- 2. Purge ------------------------------------------------------------------------------------
 create or replace function public.electron_app_purge_large_objects()

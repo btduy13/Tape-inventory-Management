@@ -106,3 +106,17 @@ test('index.html CSP blocks workers, media, plugins and remote scripts', () => {
   }
   assert.doesNotMatch(csp, /'unsafe-eval'|script-src[^;]*'unsafe-inline'|script-src[^;]*https?:/);
 });
+
+test('passphrase prompt is the only other IPC endpoint and it checks its own sender first', () => {
+  const promptSource = fs.readFileSync(path.join(root, 'passphrasePrompt.js'), 'utf8');
+  assert.equal((promptSource.match(/ipcMain\.handle\(/g) || []).length, 1);
+  assert.match(promptSource, /ipcMain\.handle\(CHANNEL, async \(event, payload\) => {\s*if \(!isPromptSender\(event\)\) {/);
+  assert.doesNotMatch(promptSource, /ipcMain\.on\(/);
+  assert.equal((promptSource.match(/new BrowserWindow\(/g) || []).length, 1);
+  const prefs = promptSource.slice(promptSource.indexOf('webPreferences: {'), promptSource.indexOf('}', promptSource.indexOf('webPreferences: {')));
+  assert.match(prefs, /nodeIntegration: false/);
+  assert.match(prefs, /contextIsolation: true/);
+  assert.match(prefs, /sandbox: true/);
+  assert.match(prefs, /devTools: false/);
+  assert.match(mainSource, /hardenWebContents\(contents, isAllowedNavigation\);\s*restrictMainWindowRequests\(contents\);/);
+});

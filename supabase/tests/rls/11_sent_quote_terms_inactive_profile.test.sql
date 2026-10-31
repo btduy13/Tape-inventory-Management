@@ -83,8 +83,9 @@ select is((select full_name from public.profiles where id = '00000000-0000-0000-
 
 select ok(not has_function_privilege('authenticated', 'public.quotes_guard()', 'execute'),
   'authenticated cannot call quotes_guard');
-select policy_cmd_is('public', 'profiles', 'profiles_update_self', 'update',
-  'profiles_update_self is an UPDATE policy');
+-- 0018 merged profiles_update_self and profiles_update_admin (advisor multiple_permissive_policies).
+select policy_cmd_is('public', 'profiles', 'profiles_update_self_or_admin', 'update',
+  'profiles_update_self_or_admin is an UPDATE policy');
 
 select * from finish();
 rollback;

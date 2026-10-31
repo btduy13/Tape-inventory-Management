@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'none'; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>Mật khẩu tệp cấu hình</title>
+  <link rel="stylesheet" href="passphrase.css">
+</head>
+<body>
+  <form id="passphraseForm" autocomplete="off" novalidate>
+    <h1 id="heading">Mật khẩu tệp cấu hình</h1>
+    <p id="description"></p>
+    <label for="passphrase">Mật khẩu</label>
+    <input id="passphrase" type="password" maxlength="1024" autocomplete="new-password" spellcheck="false" required>
+    <div id="confirmGroup" hidden>
+      <label for="confirm">Nhập lại mật khẩu</label>
+      <input id="confirm" type="password" maxlength="1024" autocomplete="new-password" spellcheck="false">
+    </div>
+    <p id="error" class="error" role="alert"></p>
+    <div class="actions">
+      <button type="button" id="cancelButton">Hủy</button>
+      <button type="submit" id="submitButton" class="primary">Đồng ý</button>
+    </div>
+  </form>
+  <script src="passphrase.js"></script>
+</body>
+</html>

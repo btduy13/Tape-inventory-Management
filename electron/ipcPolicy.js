@@ -61,14 +61,51 @@ function isAllowedRendererRequest(url, appRoot) {
   return ALLOWED_REMOTE_ORIGINS.has(parsed.origin);
 }
 
+// Giới hạn log từ renderer: mỗi dòng tối đa 4000 ký tự; chỉ xử lý tối đa 64 KiB đầu vào
+const MAX_LOG_MESSAGE_CHARS = 4000;
+const MAX_LOG_INPUT_CHARS = 64 * 1024;
+
 function normalizeLogEntry(level, message) {
   const normalizedLevel = String(level || '').toLowerCase();
   const safeLevel = ALLOWED_LOG_LEVELS.has(normalizedLevel) ? normalizedLevel : 'info';
-  const safeMessage = String(message ?? '')
+  const rawMessage = typeof message === 'string' ? message : String(message ?? '');
+  const safeMessage = rawMessage
+    .slice(0, MAX_LOG_INPUT_CHARS)
     .replace(/[\r\n]+/g, ' ')
     .trim()
-    .slice(0, 10000);
+    .slice(0, MAX_LOG_MESSAGE_CHARS);
   return { level: safeLevel, message: safeMessage };
+}
+
+// Giới hạn tốc độ ghi log từ renderer (cửa sổ cố định windowMs): tối đa maxEntries dòng và maxChars ký tự.
+// Dòng vượt giới hạn bị bỏ; số dòng đã bỏ được báo một lần khi cửa sổ mới bắt đầu.
+function createLogRateLimiter({ maxEntries = 120, maxChars = 200000, windowMs = 60000, now = Date.now } = {}) {
+  let windowStart = now();
+  let entries = 0;
+  let chars = 0;
+  let dropped = 0;
+  return {
+    // Trả về { allowed, droppedBefore }: droppedBefore > 0 khi cửa sổ trước có dòng bị bỏ
+    check(messageLength) {
+      const current = now();
+      let droppedBefore = 0;
+      if (current - windowStart >= windowMs || current < windowStart) {
+        droppedBefore = dropped;
+        windowStart = current;
+        entries = 0;
+        chars = 0;
+        dropped = 0;
+      }
+      const length = Math.max(0, Number(messageLength) || 0);
+      if (entries + 1 > maxEntries || chars + length > maxChars) {
+        dropped += 1;
+        return { allowed: false, droppedBefore };
+      }
+      entries += 1;
+      chars += length;
+      return { allowed: true, droppedBefore };
+    }
+  };
 }
 
 // Đường dẫn của URL file:// (bỏ query/hash, không phân biệt hoa thường vì chạy trên Windows)
@@ -149,6 +186,8 @@ module.exports = {
   isAllowedRendererRequest,
   isTrustedAppUrl,
   isTrustedIpcSender,
+  MAX_LOG_MESSAGE_CHARS,
+  createLogRateLimiter,
   normalizeLogEntry,
   sanitizeDialogOptions,
   validateExternalUrl

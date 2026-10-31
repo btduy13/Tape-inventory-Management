@@ -2,10 +2,17 @@
 -- Run: npm run db:test   (from web/)
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(15);
 
 -- The test runner (postgres) holds ADMIN on electron_app but not SET; add it for this transaction.
-grant electron_app to postgres with set true, inherit false;
+-- Postgres 16+ needs the SET option; Postgres 15 grants have no options (plain membership).
+do $grant$ begin
+  if current_setting('server_version_num')::int >= 160000 then
+    execute 'grant electron_app to postgres with set true, inherit false';
+  else
+    execute 'grant electron_app to postgres';
+  end if;
+end $grant$;
 
 -- TEMP / CREATE / CONNECT on databases -------------------------------------------------------------
 select ok(not has_database_privilege('electron_app', current_database(), 'TEMP'),
@@ -66,13 +73,19 @@ select ok(to_regprocedure('public.electron_app_login_guard()') is null
 
 -- Role-level settings drift is an accepted low risk (SECURITY_REPORT.md L2): not tested here.
 
--- CREATE EXTENSION (known gap) ---------------------------------------------------------------------
--- supautils creates privileged extensions as supabase_admin for any role, with no CREATE check on
--- the database or schema, and skips event triggers owned by non-superusers while doing so; a
--- migration cannot block it. See SECURITY_REPORT.md (L1).
-select todo('supautils privileged_extensions: not blockable from a migration', 1);
+-- CREATE EXTENSION ---------------------------------------------------------------------------------
+-- 0017 adds the electron_app_ddl_guard event trigger: every extension outside the supautils
+-- privileged list is refused with 42501 (also covered in 12_electron_role_ddl_guard.test.sql).
+select throws_ok($$set local role electron_app; create extension if not exists plpgsql; reset role$$, '42501', null,
+  'electron_app cannot install a non-privileged extension (event trigger)');
+-- Remaining platform gap (SECURITY_REPORT.md L1): supautils creates privileged extensions as
+-- supabase_admin for any role and skips event triggers owned by non-superusers while doing so, so
+-- neither privileges nor the 0017 trigger can block this path from a migration. Detective control:
+-- 0017 sets pgaudit.log = 'ddl, role' on electron_app (asserted in 12_*). TODO until the platform
+-- allows a block (pg_prove flags it as unexpectedly passing if that happens).
+select todo('supautils privileged_extensions: not blockable from a migration (platform limit, L1)', 1);
 select throws_ok($$set local role electron_app; create extension if not exists seg; reset role$$, '42501', null,
-  'electron_app cannot install extensions');
+  'electron_app cannot install privileged extensions');
 
 select * from finish();
 rollback;

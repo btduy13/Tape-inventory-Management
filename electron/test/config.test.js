@@ -89,3 +89,34 @@ test('applySecretResolver swaps in decrypted file secrets without touching env o
   }
   assert.equal(config.FILE_VALUES.DATABASE_URL, 'postgresql://user:pass@db.example.com:5432/tape');
 });
+
+test('bundled Supabase CA: loaded when present, ignored when missing, rejected when not PEM', () => {
+  assert.equal(config.BUNDLED_SSL_CA_PATH, path.join(__dirname, '..', 'certs', 'supabase-ca.crt'));
+  assert.deepEqual(config.loadBundledSslCa(path.join(tempDir, 'none.crt')), { ca: '', error: '' });
+  const pem = '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n';
+  const good = path.join(tempDir, 'supabase-ca.crt');
+  fs.writeFileSync(good, pem);
+  assert.deepEqual(config.loadBundledSslCa(good), { ca: pem, error: '' });
+  const bad = path.join(tempDir, 'bad.crt');
+  fs.writeFileSync(bad, 'not a certificate');
+  const result = config.loadBundledSslCa(bad);
+  assert.equal(result.ca, '');
+  assert.match(result.error, /PEM/);
+  // Với CA đóng gói, kết nối "sslmode=require" chuyển sang xác thực chứng chỉ
+  const verified = config.resolveDatabaseSsl('postgresql://u:p@aws-0-x.pooler.supabase.com:5432/postgres?sslmode=require', pem);
+  assert.deepEqual(verified.ssl, { ca: pem, rejectUnauthorized: true });
+  assert.equal(verified.insecure, false);
+});
+
+test('without any CA (env, file or bundled) the legacy unverified mode stays and is flagged insecure', () => {
+  // Test config file has no DATABASE_SSL_CA; the repo ships no certs/supabase-ca.crt by default
+  if (fs.existsSync(config.BUNDLED_SSL_CA_PATH)) {
+    assert.equal(config.DATABASE_SSL_CA_SOURCE, 'bundled');
+    return;
+  }
+  assert.equal(config.DATABASE_SSL_CA, '');
+  assert.equal(config.DATABASE_SSL_CA_SOURCE, '');
+  assert.equal(config.resolveDatabaseSsl(config.DATABASE_URL, config.DATABASE_SSL_CA).insecure, true);
+  const mainSource = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  assert.match(mainSource, /if \(sslSettings\.insecure && !insecureSslWarned\)[\s\S]{0,200}writeLogToFile\('warning'/);
+});

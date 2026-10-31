@@ -6,6 +6,9 @@ const vm = require('node:vm');
 const orderMath = require('../js/orderMath');
 const { toStatement } = require('./helpers/ipcDb');
 
+// Mã đơn dùng tháng/năm hiện tại (generateOrderId chỉ xét mã cùng tháng)
+const NOW_MONTH_YEAR = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getFullYear()).slice(2)}`;
+
 function saveHarness(initialValues = {}, dbRunImpl) {
   const elements = new Map();
   const element = id => {
@@ -112,7 +115,7 @@ test('inserts retry with the next id after a unique violation', async () => {
   const { context, calls } = saveHarness(validBki, (sql, params, attempt) => (
     attempt === 1 ? { ok: false, error: 'duplicate key value violates unique constraint "bang_keo_in_orders_pkey"' } : { ok: true }
   ));
-  context.window.electronAPI.dbQuery = async () => ({ ok: true, rows: [{ id: 'BK-10-26-999' }] });
+  context.window.electronAPI.dbQuery = async () => ({ ok: true, rows: [{ id: `BK-${NOW_MONTH_YEAR}-999` }] });
   const ids = [];
   const { orderId, result } = await context.runWithGeneratedOrderId('BK', 'bang_keo_in', async id => {
     ids.push(id);
@@ -129,7 +132,7 @@ test('inserts retry with the next id after a unique violation', async () => {
 test('generateOrderId queries ids of the month without lexical ORDER BY', async () => {
   const { context } = saveHarness();
   let query;
-  context.window.electronAPI.dbQuery = async (action, params) => { query = toStatement(action, params, 'read'); return { ok: true, rows: [{ id: 'B-10-26-999' }, { id: 'B-10-26-1000' }] }; };
+  context.window.electronAPI.dbQuery = async (action, params) => { query = toStatement(action, params, 'read'); return { ok: true, rows: [{ id: `B-${NOW_MONTH_YEAR}-999` }, { id: `B-${NOW_MONTH_YEAR}-1000` }] }; };
   const id = await context.generateOrderId('B', 'bang_keo');
   assert.match(id, /^B-\d{2}-\d{2}-1001$/);
   assert.doesNotMatch(query.sql, /ORDER BY id/);

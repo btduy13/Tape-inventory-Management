@@ -5,7 +5,14 @@ create extension if not exists pgtap with schema extensions;
 select plan(7);
 
 -- The test runner (postgres) holds ADMIN on electron_app but not SET; add it for this transaction.
-grant electron_app to postgres with set true;
+-- Postgres 16+ needs the SET option; Postgres 15 grants have no options (plain membership).
+do $grant$ begin
+  if current_setting('server_version_num')::int >= 160000 then
+    execute 'grant electron_app to postgres with set true';
+  else
+    execute 'grant electron_app to postgres';
+  end if;
+end $grant$;
 
 select ok(pg_has_role('postgres', 'electron_app', 'USAGE'),
   'postgres inherits electron_app privileges (can manage its large objects)');

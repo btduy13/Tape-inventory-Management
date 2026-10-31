@@ -20,12 +20,15 @@ const { decryptConfigSecrets, decryptValue, encryptConfigSecrets, hasPlaintextSe
 const {
   isAllowedRendererRequest,
   isTrustedAppUrl,
+  createLogRateLimiter,
   isTrustedIpcSender,
   normalizeLogEntry,
   sanitizeDialogOptions,
   validateExternalUrl
 } = require('./ipcPolicy');
 const { setupAutoUpdater, checkForUpdatesManual } = require('./updater');
+const { decryptPortableConfig, encryptPortableConfig, isEncryptedPortableConfig, validatePassphrase } = require('./portableConfigCrypto');
+const { createPassphrasePrompt } = require('./passphrasePrompt');
 
 // Tăng heap size để tối ưu hiệu năng
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
@@ -36,6 +39,10 @@ let mainWindow;
 let dbPool;
 let initDatabasePromise = null;
 let insecureSslWarned = false;
+// > 0 khi đang Xuất/Nhập cấu hình: đóng hộp thoại mật khẩu không được làm thoát ứng dụng (window-all-closed)
+let configFlowDepth = 0;
+// write-log từ renderer: tối đa 120 dòng / 200 000 ký tự mỗi phút (chống làm đầy đĩa bằng log)
+const rendererLogLimiter = createLogRateLimiter();
 let databaseStatus = { state: 'disconnected', error: '' };
 const LOG_DIR = path.join(app.getPath('userData'), 'logs');
 const APP_INDEX_PATH = path.join(__dirname, 'index.html');
@@ -141,8 +148,11 @@ async function importDatabaseConfig(ownerWindow = null) {
   });
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true };
 
+  configFlowDepth += 1;
   try {
-    const raw = JSON.parse(await fs.promises.readFile(result.filePaths[0], 'utf8'));
+    const fileContent = JSON.parse(await fs.promises.readFile(result.filePaths[0], 'utf8'));
+    const raw = await unlockPortableConfig(fileContent, ownerWindow);
+    if (!raw) return { ok: false, canceled: true };
     const imported = validatePortableConfig(raw);
     // Tệp nhập không có EMAIL_CONFIG: giữ nguyên cấu hình SMTP đang có, không xoá tài khoản/mật khẩu.
     const hasEmailConfig = raw && typeof raw === 'object' && raw.EMAIL_CONFIG && typeof raw.EMAIL_CONFIG === 'object';
@@ -163,7 +173,47 @@ async function importDatabaseConfig(ownerWindow = null) {
       detail: error.message
     });
     return { ok: false, error: error.message, dialogShown: true };
+  } finally {
+    configFlowDepth -= 1;
   }
+}
+
+// Tệp cấu hình v2 được mã hóa bằng mật khẩu: hỏi mật khẩu (tối đa 5 lần thử).
+// Tệp cũ dạng văn bản thường vẫn nhập được nhưng phải xác nhận cảnh báo trước.
+// Trả về object cấu hình đã giải mã, hoặc null nếu người dùng hủy.
+async function unlockPortableConfig(fileContent, ownerWindow) {
+  if (isEncryptedPortableConfig(fileContent)) {
+    const unlocked = await passphrasePrompt.prompt({
+      parent: ownerWindow,
+      mode: 'import',
+      verify: async (passphrase) => {
+        try {
+          return { ok: true, value: await decryptPortableConfig(fileContent, passphrase) };
+        } catch (error) {
+          writeLogToFile('warning', `Nhập cấu hình: giải mã thất bại (${error.code || 'error'})`);
+          return { ok: false, error: error.message };
+        }
+      }
+    });
+    if (unlocked.ok) return unlocked.value;
+    if (unlocked.canceled) return null;
+    throw new Error(unlocked.error);
+  }
+
+  const warning = await dialog.showMessageBox(ownerWindow || undefined, {
+    type: 'warning',
+    title: 'Tệp cấu hình không được mã hóa',
+    message: 'Tệp này dùng định dạng cũ, không có mật khẩu bảo vệ.',
+    detail: 'Bất kỳ ai có tệp đều đọc được thông tin kết nối cơ sở dữ liệu và mật khẩu email. '
+      + 'Chỉ nhập nếu tệp đến từ nguồn tin cậy. Sau khi nhập, hãy xóa tệp và xuất lại tệp mới có mật khẩu.',
+    buttons: ['Vẫn nhập', 'Hủy'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true
+  });
+  if (warning.response !== 0) return null;
+  writeLogToFile('warning', 'Đã nhập tệp cấu hình định dạng cũ (không mã hóa).');
+  return fileContent;
 }
 
 function relaunchApplication() {
@@ -408,7 +458,11 @@ function buildPoolOptions() {
   const sslSettings = config.resolveDatabaseSsl(config.DATABASE_URL, config.DATABASE_SSL_CA);
   if (sslSettings.insecure && !insecureSslWarned) {
     insecureSslWarned = true;
-    writeLogToFile('warning', 'Kết nối PostgreSQL dùng SSL nhưng KHÔNG xác thực chứng chỉ. Hãy cấu hình DATABASE_SSL_CA để bật xác thực.');
+    writeLogToFile('warning', 'Kết nối PostgreSQL dùng SSL nhưng KHÔNG xác thực chứng chỉ. '
+      + 'Hãy đặt CA Supabase vào certs/supabase-ca.crt khi build (xem certs/README.md) hoặc cấu hình DATABASE_SSL_CA.');
+  } else if (sslSettings.ssl && config.DATABASE_SSL_CA_SOURCE === 'bundled' && !insecureSslWarned) {
+    insecureSslWarned = true;
+    writeLogToFile('info', 'Kết nối PostgreSQL xác thực chứng chỉ bằng CA Supabase đóng gói (certs/supabase-ca.crt).');
   }
   return {
     connectionString: sslSettings.connectionString,
@@ -504,12 +558,14 @@ function getAppIcon() {
 }
 
 async function exportDatabaseConfig(ownerWindow = mainWindow) {
+  configFlowDepth += 1;
   try {
     const warning = await dialog.showMessageBox(ownerWindow || undefined, {
       type: 'warning',
       title: 'Xuất cấu hình dữ liệu',
       message: 'Tệp cấu hình chứa thông tin kết nối riêng.',
-      detail: 'Chỉ chuyển trực tiếp sang máy tin cậy. Không gửi lên GitHub, email công khai hoặc nhóm chat.',
+      detail: 'Tệp sẽ được mã hóa bằng mật khẩu bạn đặt ở bước tiếp theo. Chỉ chuyển sang máy tin cậy, '
+        + 'báo mật khẩu bằng kênh khác và xóa tệp sau khi nhập xong.',
       buttons: ['Tiếp tục xuất', 'Hủy'],
       defaultId: 0,
       cancelId: 1,
@@ -524,13 +580,31 @@ async function exportDatabaseConfig(ownerWindow = mainWindow) {
     });
     if (destination.canceled || !destination.filePath) return { ok: false, canceled: true };
 
-    await fs.promises.writeFile(destination.filePath, JSON.stringify(currentPortableConfig(), null, 2), {
+    const portable = currentPortableConfig();
+    const sealed = await passphrasePrompt.prompt({
+      parent: ownerWindow,
+      mode: 'export',
+      verify: async (passphrase) => {
+        try {
+          validatePassphrase(passphrase);
+          return { ok: true, value: await encryptPortableConfig(portable, passphrase) };
+        } catch (error) {
+          return { ok: false, error: error.message };
+        }
+      }
+    });
+    if (!sealed.ok) return sealed.canceled ? { ok: false, canceled: true } : { ok: false, error: sealed.error };
+
+    await fs.promises.writeFile(destination.filePath, JSON.stringify(sealed.value, null, 2), {
       encoding: 'utf8',
       mode: 0o600
     });
+    writeLogToFile('info', 'Đã xuất cấu hình dữ liệu (mã hóa bằng mật khẩu, định dạng v2).');
     return { ok: true, exported: true };
   } catch (error) {
     return { ok: false, error: error.message };
+  } finally {
+    configFlowDepth -= 1;
   }
 }
 
@@ -649,6 +723,17 @@ function handleTrusted(channel, handler) {
     return handler(event, ...args);
   });
 }
+
+// Hộp thoại mật khẩu cho Xuất/Nhập cấu hình (cửa sổ riêng, IPC riêng chỉ nhận từ chính hộp thoại đó)
+const passphrasePrompt = createPassphrasePrompt({
+  BrowserWindow,
+  ipcMain,
+  onWebContents: (contents, isAllowedNavigation) => {
+    hardenWebContents(contents, isAllowedNavigation);
+    restrictMainWindowRequests(contents);
+  },
+  log: (level, message) => writeLogToFile(level, message)
+});
 
 // Cửa sổ chính chỉ tải tệp trong thư mục ứng dụng, data:/blob: và font Google (xem ipcPolicy)
 let defaultSessionHardened = false;
@@ -934,6 +1019,9 @@ function setupIpcHandlers() {
   // Ghi log
   handleTrusted('write-log', (event, level, message) => {
     const normalized = normalizeLogEntry(level, message);
+    const { allowed, droppedBefore } = rendererLogLimiter.check(normalized.message.length);
+    if (droppedBefore > 0) writeLogToFile('warning', `Đã bỏ ${droppedBefore} dòng log từ renderer (vượt giới hạn tốc độ)`);
+    if (!allowed) return { ok: false, error: 'Vượt giới hạn ghi log' };
     writeLogToFile(normalized.level, normalized.message);
     return { ok: true };
   });
@@ -1313,6 +1401,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  if (configFlowDepth > 0) return;
   if (process.platform !== 'darwin') {
     app.quit();
   }

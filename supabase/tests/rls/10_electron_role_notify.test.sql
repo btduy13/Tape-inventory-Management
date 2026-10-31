@@ -7,7 +7,15 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(1);
 
-grant electron_app to postgres with set true;
+-- The test runner (postgres) must be able to SET ROLE electron_app for this transaction.
+-- Postgres 16+ needs the SET option; Postgres 15 grants have no options (plain membership).
+do $grant$ begin
+  if current_setting('server_version_num')::int >= 160000 then
+    execute 'grant electron_app to postgres with set true';
+  else
+    execute 'grant electron_app to postgres';
+  end if;
+end $grant$;
 
 -- NOTIFY is delivered only at top-level commit; this transaction rolls back, so nothing is sent.
 select todo('NOTIFY has no privilege check in Postgres', 1);

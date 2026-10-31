@@ -11,7 +11,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 17
+major_version = 15  # matches the hosted project (supabase link reports 15.14)
 
 [db.pooler]
 enabled = false

@@ -6,6 +6,9 @@ const vm = require('node:vm');
 const orderMath = require('../js/orderMath');
 const { toStatement, toTransaction } = require('./helpers/ipcDb');
 
+// Mã đơn dùng tháng/năm hiện tại (generateOrderId chỉ xét mã cùng tháng)
+const NOW_MONTH_YEAR = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getFullYear()).slice(2)}`;
+
 test('quotation list includes legacy VAT and axes alongside JSON bundle totals', async () => {
   let query;
   const rows = [
@@ -79,7 +82,7 @@ test('convert-to-order disables the button, retries duplicate ids and reports 0 
   let attempt = 0;
   const { context, toasts } = quoteContext();
   context.window.electronAPI = {
-    dbQuery: async (action, params) => ({ ok: true, rows: /SELECT id FROM/.test(toStatement(action, params, 'read').sql) ? [{ id: 'B-10-26-999' }] : [] }),
+    dbQuery: async (action, params) => ({ ok: true, rows: /SELECT id FROM/.test(toStatement(action, params, 'read').sql) ? [{ id: `B-${NOW_MONTH_YEAR}-999` }] : [] }),
     dbTransaction: async steps => {
       transactions.push(toTransaction(steps));
       attempt += 1;
