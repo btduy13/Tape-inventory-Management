@@ -175,3 +175,122 @@ test('voucher amount in words keeps million groups in the correct order', () => 
   assert.equal(orderMath.toVietnameseWords('4005000'), 'Bốn triệu không trăm lẻ năm nghìn');
   assert.equal(orderMath.toVietnameseWords(0), 'Không');
 });
+
+test('amount in words reads Vietnamese numbers correctly (PDF and voucher share this helper)', () => {
+  const cases = [
+    [12500000, 'Mười hai triệu năm trăm nghìn'],
+    [1005, 'Một nghìn không trăm lẻ năm'],
+    [1005000, 'Một triệu không trăm lẻ năm nghìn'],
+    [24, 'Hai mươi tư'],
+    [1080000, 'Một triệu không trăm tám mươi nghìn'],
+    [0, 'Không'],
+    [105, 'Một trăm lẻ năm'],
+    [1000000000, 'Một tỷ'],
+    [21, 'Hai mươi mốt'],
+    [15, 'Mười lăm'],
+    [115000, 'Một trăm mười lăm nghìn']
+  ];
+  for (const [amount, words] of cases) {
+    assert.equal(orderMath.toVietnameseWords(amount), words, String(amount));
+  }
+});
+
+test('negative amounts are read with an "Âm" prefix instead of being clamped to zero', () => {
+  assert.equal(orderMath.toVietnameseWords(-1005), 'Âm một nghìn không trăm lẻ năm');
+  assert.equal(orderMath.toVietnameseWords(-24), 'Âm hai mươi tư');
+});
+
+test('VAT is rounded once per line so subtotal + VAT equals the total exactly', () => {
+  const line = orderMath.calculateStandardOrder({ quantity: 3, salePrice: 33333, vatPercent: 10 });
+  assert.equal(line.saleTotal, 99999);
+  assert.equal(line.vat, 10000);
+  assert.ok(Number.isInteger(line.vat));
+  assert.equal(line.outstanding, line.saleTotal + line.vat);
+
+  const printed = orderMath.calculatePrintedTape({
+    quantity: 7, salePrice: 12345, vatPercent: 8, rollLength: 90, rollsPerTree: 60,
+    isNewAxis: true, axisQuantity: 3, axisCostPrice: 1000, axisSalePrice: 33333, axisVatPercent: 8
+  });
+  assert.equal(printed.vat, Math.round(86415 * 0.08));
+  assert.equal(printed.axis.vat, Math.round(99999 * 0.08));
+  assert.ok(Number.isInteger(printed.vat) && Number.isInteger(printed.axis.vat));
+  assert.equal(printed.outstanding, printed.combinedSaleTotal + printed.vat + printed.axis.vat);
+
+  const bundle = orderMath.calculateQuoteBundle([
+    { quantity: 1, total: 100.4, vat: 10.04 },
+    { quantity: 1, total: 100.4, vat: 10.04, axes: [{ quantity: 1, total: 50.6, vat: 5.06 }] }
+  ]);
+  assert.equal(bundle.productSubtotal, 200);
+  assert.equal(bundle.vat, 20);
+  assert.equal(bundle.axisSubtotal, 51);
+  assert.equal(bundle.axisVat, 5);
+  assert.equal(bundle.totalPayable, bundle.productSubtotal + bundle.axisSubtotal + bundle.vat + bundle.axisVat);
+});
+
+test('net profit is derived from already-rounded parts', () => {
+  const line = orderMath.calculateStandardOrder({ quantity: 3, costPrice: 1000.4, salePrice: 1999.7, commissionPercent: 7.5, shipping: 1000.6 });
+  for (const key of ['costTotal', 'saleTotal', 'commission', 'shipping', 'netProfit']) {
+    assert.ok(Number.isInteger(line[key]), key);
+  }
+  assert.equal(line.profit - line.commission - line.shipping, line.netProfit);
+});
+
+test('printed tape flags a zero or empty roll length / rolls per tree instead of silently costing 0', () => {
+  const base = { quantity: 10, baseCost: 900000, salePrice: 20000, rollsPerTree: 60, rollLength: 90 };
+  assert.equal(orderMath.calculatePrintedTape(base).valid, true);
+  assert.equal(orderMath.STANDARD_ROLL_LENGTH_M, 90);
+  assert.equal(orderMath.calculatePrintedTape(base).product.costPrice, 900000 / 90 * 90 / 60);
+
+  const zeroLength = orderMath.calculatePrintedTape({ ...base, rollLength: 0 });
+  assert.equal(zeroLength.valid, false);
+  assert.ok(zeroLength.errors.some(message => /Quy cách \(m\)/.test(message)));
+
+  const emptyRolls = orderMath.calculatePrintedTape({ ...base, rollsPerTree: '' });
+  assert.equal(emptyRolls.valid, false);
+  assert.ok(emptyRolls.errors.some(message => /cuộn\/cây/.test(message)));
+});
+
+test('negative quantity or prices never produce negative money', () => {
+  const result = orderMath.calculateStandardOrder({ quantity: -5, costPrice: 1000, salePrice: 2000, vatPercent: 10 });
+  assert.equal(result.quantity, 0);
+  assert.equal(result.saleTotal, 0);
+  assert.equal(result.vat, 0);
+  assert.equal(result.outstanding, 0);
+  const negativePrice = orderMath.calculateLine({ quantity: 2, salePrice: -100 });
+  assert.equal(negativePrice.saleTotal, 0);
+});
+
+test('next order id uses the numeric suffix so -999 rolls over to -1000 and beyond', () => {
+  assert.equal(orderMath.nextOrderId('BK-10-26', []), 'BK-10-26-001');
+  assert.equal(orderMath.nextOrderId('BK-10-26', ['BK-10-26-998', 'BK-10-26-999']), 'BK-10-26-1000');
+  // Lexically "-999" > "-1000"; the helper must still continue after -1000.
+  assert.equal(orderMath.nextOrderId('BK-10-26', ['BK-10-26-999', 'BK-10-26-1000']), 'BK-10-26-1001');
+  assert.equal(orderMath.nextOrderId('BK-10-26', ['BK-10-26-1000', 'BK-10-26-999', 'BK-10-26-1001']), 'BK-10-26-1002');
+  // Other prefixes / malformed ids are ignored.
+  assert.equal(orderMath.nextOrderId('B-10-26', ['BK-10-26-500', 'B-10-26-007', 'B-10-26-x']), 'B-10-26-008');
+  // Retry after a unique violation asks for a sequence above the colliding one.
+  assert.equal(orderMath.nextOrderId('TI-10-26', ['TI-10-26-004'], orderMath.orderIdSequence('TI-10-26-009')), 'TI-10-26-010');
+});
+
+test('unique violations are detected from pg code or message', () => {
+  assert.equal(orderMath.isUniqueViolation({ ok: false, code: '23505' }), true);
+  assert.equal(orderMath.isUniqueViolation({ ok: false, error: 'duplicate key value violates unique constraint "bang_keo_orders_pkey"' }), true);
+  assert.equal(orderMath.isUniqueViolation({ ok: false, error: 'connection refused' }), false);
+  assert.equal(orderMath.isUniqueViolation(null), false);
+});
+
+test('stored quote items are only trusted while they still match the order columns', () => {
+  const items = [{ quantity: 2, unitPrice: 100, total: 200, vat: 16, axes: [{ quantity: 1, unitPrice: 300, total: 300, vat: 30 }] }];
+  const order = { thanh_tien_ban: 200, loai_truc: 'moi', truc_thanh_tien_ban: 300, truc_vat: 30, quote_items: JSON.stringify(items) };
+  assert.equal(orderMath.quoteItemsMatchOrder(order), true);
+  assert.equal(orderMath.quoteItemsMatchOrder({ ...order, truc_thanh_tien_ban: 450 }), false);
+  assert.equal(orderMath.quoteItemsMatchOrder({ ...order, thanh_tien_ban: 999 }), false);
+  assert.equal(orderMath.quoteItemsMatchOrder({ ...order, quote_items: 'invalid' }), false);
+});
+
+test('nextOrderId reuses the highest sequence once it is freed (documented behaviour)', () => {
+  assert.equal(orderMath.nextOrderId('BK-10-26', ['BK-10-26-001', 'BK-10-26-002']), 'BK-10-26-003');
+  // Đơn 003 đã bị xóa: mã tiếp theo lại là 003, nên tệp đính kèm phải được xóa cùng đơn
+  assert.equal(orderMath.nextOrderId('BK-10-26', ['BK-10-26-001', 'BK-10-26-002']), 'BK-10-26-003');
+  assert.equal(orderMath.nextOrderId('BK-10-26', ['BK-10-26-001'], 5), 'BK-10-26-006');
+});

@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {
     "electron-updater": "^6.8.9",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.0.10",
     "pg": "^8.11.5"
   },
   "scripts": {
@@ -15,8 +15,9 @@
     "test": "node --test test/*.test.js",
     "test:ui": "node test/quotationUi.smoke.js",
     "test:integration": "node test/integration/orderFlows.js",
-    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check config.js && node --check dbPolicy.js && node --check emailPolicy.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/utils.js && node --check js/orderMath.js && node --check js/modules/dashboard.js && node --check js/modules/bangkeoin.js && node --check js/modules/bangkeo.js && node --check js/modules/trucin.js && node --check js/modules/thongke.js && node --check js/modules/excelImport.js && node --check js/modules/emailDialog.js && node --check js/modules/exportManager.js && node --check js/modules/quotations.js && node --check js/modules/updateManager.js",
-    "build:win": "node node_modules/electron-builder/cli.js --win nsis --x64"
+    "check": "node --check main.js && node --check preload.js && node --check updater.js && node --check config.js && node --check dbPolicy.js && node --check emailPolicy.js && node --check ipcPolicy.js && node --check js/app.js && node --check js/utils.js && node --check js/domActions.js && node --check js/orderMath.js && node --check js/modules/dashboard.js && node --check js/modules/bangkeoin.js && node --check js/modules/bangkeo.js && node --check js/modules/trucin.js && node --check js/modules/thongke.js && node --check js/modules/excelImport.js && node --check js/modules/emailDialog.js && node --check js/modules/exportManager.js && node --check js/modules/quotations.js && node --check js/modules/updateManager.js",
+    "build:win": "node node_modules/electron-builder/cli.js --win nsis --x64",
+    "release": "powershell -ExecutionPolicy Bypass -File scripts/release.ps1"
   },
   "devDependencies": {
     "electron": "^43.1.0",
@@ -31,12 +32,6 @@
     "directories": {
       "output": "dist-installer"
     },
-    "extraResources": [
-      {
-        "from": "config.local.json",
-        "to": "config.local.json"
-      }
-    ],
     "files": [
       "index.html",
       "styles.css",
@@ -53,7 +48,9 @@
       "icon.ico",
       "package.json",
       "!config.local.json",
-      "!config.local.example.json"
+      "!config.local.example.json",
+      "!js/graphify-out/**",
+      "!**/graphify-out/**"
     ],
     "win": {
       "target": [

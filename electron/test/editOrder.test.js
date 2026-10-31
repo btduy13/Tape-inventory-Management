@@ -123,3 +123,115 @@ test('edit attached axis: totals, VAT, commission and old-axis validation stay c
   assert.equal(elements.get('edit-truc-ten').disabled, false);
   assert.equal(elements.get('edit-truc-ten').required, true);
 });
+
+function dialogHarness() {
+  const pending = [];
+  const rendered = [];
+  const form = { dataset: {}, addEventListener() {}, checkValidity: () => true, querySelectorAll: () => [] };
+  const submitButton = { disabled: false };
+  const elements = new Map([
+    ['edit-modal-body', { set innerHTML(html) { rendered.push(html); } }],
+    ['edit-order-form', form],
+    ['modal-edit-order', { classList: { add() {} } }]
+  ]);
+  const context = vm.createContext({
+    orderMath,
+    document: {
+      addEventListener() {},
+      getElementById: id => elements.get(id),
+      querySelector: selector => (selector.includes('modal-edit-order') ? submitButton : null)
+    },
+    window: { addEventListener() {}, electronAPI: {
+      dbQuery: (sql, params) => new Promise(resolve => pending.push({ id: params[0], resolve }))
+    } }
+  });
+  for (const file of ['utils.js', 'app.js']) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', file), 'utf8'), context);
+  }
+  vm.runInContext(`utils.setupCurrencyInputs = () => {}; utils.showToast = () => {};
+    generateBangKeoEditForm = o => 'form:' + o.id; generateTrucInEditForm = generateBangKeoEditForm;
+    generateBangKeoInEditForm = generateBangKeoEditForm; updateEditOrderCalculations = () => {};`, context);
+  return { context, pending, rendered, form, submitButton, elements };
+}
+
+test('edit dialog ignores a stale response and saves the id of the rendered form', async () => {
+  const { context, pending, rendered, form } = dialogHarness();
+  const first = context.openEditOrderDialog('A', 'bang_keo');
+  const second = context.openEditOrderDialog('B', 'truc_in');
+  pending[1].resolve({ ok: true, rows: [{ id: 'B' }] });
+  await second;
+  pending[0].resolve({ ok: true, rows: [{ id: 'A' }] });
+  await first;
+  assert.deepEqual(rendered, ['form:B']);
+  assert.equal(vm.runInContext('editOrderIdGlobal', context), 'B');
+  assert.equal(vm.runInContext('editOrderTypeGlobal', context), 'truc_in');
+  assert.equal(form.dataset.orderId, 'B');
+  assert.equal(form.dataset.orderType, 'truc_in');
+});
+
+test('submitEditOrder ignores double submit while the update is in flight', async () => {
+  const { context, elements } = editHarness('bang_keo');
+  const submitButton = { disabled: false };
+  context.document.querySelector = () => submitButton;
+  elements.get('edit-order-form').dataset = { orderId: 'FORM-ID', orderType: 'bang_keo' };
+  let release;
+  const calls = [];
+  context.window.electronAPI = {
+    dbRun: (sql, params) => { calls.push(params); return new Promise(resolve => { release = resolve; }); }
+  };
+  vm.runInContext('utils.showToast = () => {}; closeModal = () => {}; switchTab = async () => {}; editOrderIdGlobal = "STALE-ID";', context);
+  const first = context.submitEditOrder();
+  await context.submitEditOrder();
+  assert.equal(calls.length, 1);
+  assert.equal(submitButton.disabled, true);
+  release({ ok: true });
+  await first;
+  assert.equal(submitButton.disabled, false);
+  assert.equal(calls[0].at(-1), 'FORM-ID');
+});
+
+for (const [field, value] of [['edit-qc-m', '0'], ['edit-cuon-cay', '']]) {
+  test(`edit bang_keo_in: invalid ${field} blocks save with the calculation errors`, async () => {
+    const { context, elements } = editHarness('bang_keo_in');
+    const calls = [];
+    const toasts = [];
+    context.window.electronAPI = { dbRun: async (sql, params) => { calls.push({ sql, params }); return { ok: true }; } };
+    context.captureToast = (...args) => toasts.push(args);
+    vm.runInContext('utils.showToast = captureToast; closeModal = () => {}; switchTab = async () => {};', context);
+    elements.get(field).value = value;
+    await context.submitEditOrder();
+    assert.equal(calls.length, 0, 'must not write an order with an invalid cost price');
+    assert.equal(toasts.length, 1);
+    assert.equal(toasts[0][1], 'warning');
+    assert.match(toasts[0][0], /phải lớn hơn 0/);
+  });
+}
+
+test('clearForm in quote mode leaves quote edit mode so the next save creates a new quote', () => {
+  const context = vm.createContext({
+    orderMath,
+    document: { addEventListener() {}, getElementById: () => null },
+    window: { addEventListener() {} }
+  });
+  for (const file of ['utils.js', 'app.js']) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', file), 'utf8'), context);
+  }
+  vm.runInContext(`
+    var editingQuoteState = { id: 'BG-1', type: 'bang_keo_in', original: {} };
+    var uiCalls = [];
+    var cleared = [];
+    function setQuoteEditingUi(type, quoteId = null) { uiCalls.push([type, quoteId]); }
+    function clearFormBangKeoIn(mode) { cleared.push(mode); }
+    function clearQuoteItems(type) { cleared.push(type); }
+  `, context);
+  context.clearForm('bang-keo', 'quote');
+  assert.equal(vm.runInContext('editingQuoteState && editingQuoteState.id', context), 'BG-1', 'other quote types keep their edit state');
+  context.clearForm('bang-keo-in', 'quote');
+  assert.equal(vm.runInContext('editingQuoteState', context), null);
+  assert.equal(vm.runInContext('JSON.stringify(uiCalls.at(-1))', context), JSON.stringify(['bang_keo_in', null]));
+  assert.equal(vm.runInContext('JSON.stringify(cleared)', context), JSON.stringify(['bang_keo', 'quote', 'bang_keo_in']));
+  vm.runInContext('editingQuoteState = { id: "BG-2", type: "truc_in" }; uiCalls = [];', context);
+  context.clearForm('truc-in', 'order');
+  assert.equal(vm.runInContext('editingQuoteState.id', context), 'BG-2', 'order forms never touch quote edit state');
+  assert.equal(vm.runInContext('uiCalls.length', context), 0);
+});

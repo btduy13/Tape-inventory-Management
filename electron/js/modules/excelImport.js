@@ -96,10 +96,37 @@ const excelImportAliases = {
   quy_cach: ['Quy cách', 'Quy cach', 'quy_cach']
 };
 
+let excelImportInProgress = false;
+
+// Ngày mai theo giờ máy (không dùng toISOString vì UTC lùi ngày ở UTC+7)
 function nextDateString() {
+  if (typeof utils !== 'undefined' && typeof utils.tomorrowDateInputValue === 'function') {
+    return utils.tomorrowDateInputValue();
+  }
   const date = new Date();
   date.setDate(date.getDate() + 1);
-  return date.toISOString().split('T')[0];
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function todayImportDateString() {
+  if (typeof utils !== 'undefined' && typeof utils.toDateInputValue === 'function') {
+    return utils.toDateInputValue(new Date());
+  }
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Tạo ngày local và từ chối ngày tràn (vd. 31/02 sẽ không bị đẩy sang tháng 3)
+function buildValidImportDate(year, month, day) {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  if (year < 1900 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
+function isValidImportDate(value) {
+  return Object.prototype.toString.call(value) === '[object Date]' && !Number.isNaN(value.getTime());
 }
 
 function normalizeExcelKey(value) {
@@ -153,35 +180,54 @@ function parseImportText(value) {
   return text || null;
 }
 
+// Chấp nhận cả giá trị do chính ứng dụng xuất ra (Rồi / Xong / Rồi/Xong / Đã giao / Đã tất toán / Có),
+// so khớp không dấu, không phân biệt hoa thường và bỏ ký tự phân cách.
+const IMPORT_TRUE_VALUES = ['1', 'true', 'yes', 'y', 'x', 'roi', 'xong', 'roixong', 'dagiao', 'datattoan', 'co'];
+
 function parseImportBoolean(value) {
   if (typeof value === 'boolean') return value;
-  const text = normalizeExcelKey(value);
-  return ['1', 'true', 'yes', 'x', 'roi', 'xong', 'dagiao', 'datattoan', 'co'].includes(text);
+  if (typeof value === 'number') return value === 1;
+  return IMPORT_TRUE_VALUES.includes(normalizeExcelKey(value));
 }
 
+// Trả về Date (giờ local) hoặc null nếu ngày không đọc được / không tồn tại.
+// Ô trống mặc định là ngày mai như form nhập tay.
 function parseImportDate(value) {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    if (!isValidImportDate(value)) return null;
+    // SheetJS (cellDates) có thể trả 23:59:30 ngày hôm trước do lệch múi giờ lịch sử; làm tròn về ngày gần nhất.
+    const rounded = new Date(value.getTime() + 12 * 60 * 60 * 1000);
+    return buildValidImportDate(rounded.getFullYear(), rounded.getMonth() + 1, rounded.getDate());
+  }
   if (typeof value === 'number') {
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (parsed) return new Date(parsed.y, parsed.m - 1, parsed.d);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    const parsed = typeof XLSX !== 'undefined' ? XLSX.SSF.parse_date_code(value) : null;
+    return parsed ? buildValidImportDate(parsed.y, parsed.m, parsed.d) : null;
   }
-  const text = String(value || '').trim();
-  if (!text) return new Date(nextDateString());
-  const parts = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  const text = String(value ?? '').trim();
+  if (!text) {
+    const [y, m, d] = nextDateString().split('-').map(Number);
+    return buildValidImportDate(y, m, d);
+  }
+  const parts = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
   if (parts) {
-    const year = parts[3].length === 2 ? `20${parts[3]}` : parts[3];
-    return new Date(Number(year), Number(parts[2]) - 1, Number(parts[1]));
+    const year = parts[3].length === 2 ? Number(`20${parts[3]}`) : Number(parts[3]);
+    return buildValidImportDate(year, Number(parts[2]), Number(parts[1]));
   }
-  const direct = new Date(text);
-  if (!Number.isNaN(direct.getTime())) return direct;
-  return new Date(nextDateString());
+  const iso = text.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})(?:[T\s].*)?$/);
+  if (iso) {
+    return buildValidImportDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  }
+  return null;
 }
 
+// Ưu tiên cột VAT (%); file cũ chỉ có số tiền VAT thì suy ra tỷ lệ từ thành tiền (đã làm tròn đồng).
 function importVat(get, field, subtotal) {
+  const roundedSubtotal = orderMath.money(subtotal);
   const rawPercent = get(`${field}_percent`, '');
-  const rate = rawPercent === '' ? (subtotal > 0 ? parseImportNumber(get(field)) / subtotal * 100 : 0) : parseImportNumber(rawPercent);
+  const rate = rawPercent === '' ? (roundedSubtotal > 0 ? parseImportNumber(get(field)) / roundedSubtotal * 100 : 0) : parseImportNumber(rawPercent);
   const vatPercent = orderMath.percent(rate);
-  return { vatPercent, vat: subtotal * vatPercent / 100 };
+  return { vatPercent, vat: orderMath.vatAmount(roundedSubtotal, vatPercent) };
 }
 
 function isInlineAxisImportRow(row) {
@@ -200,6 +246,8 @@ function calculateSimpleImport(data) {
     settled: data.da_tat_toan
   });
   data.hoa_hong = result.commissionPercent;
+  // Làm tròn tiền ship về đồng nhưng giữ dấu để kiểm tra dữ liệu vẫn bắt được số âm
+  data.tien_ship = orderMath.money(data.tien_ship);
   data.thanh_tien_goc = result.costTotal;
   data.thanh_tien = result.costTotal;
   data.vat = result.vat;
@@ -244,42 +292,76 @@ function mapBangKeoInImport(row) {
     is_quote: false
   };
 
-  const canCalculateUnitCost = data.cuon_cay > 0 && data.quy_cach_m > 0;
-  data.don_gia_goc = canCalculateUnitCost
-    ? (data.don_gia_von + data.phi_sl + data.phi_mau + data.phi_keo + data.phi_size + data.phi_cat) / 90 * data.quy_cach_m / data.cuon_cay
-    : parseImportNumber(get('don_gia_goc'));
-  data.thanh_tien_goc = data.don_gia_goc * data.so_luong;
-  data.thanh_tien_ban = data.don_gia_ban * data.so_luong;
-  data.cong_no_khach = Math.max(0, data.thanh_tien_ban - data.tien_coc);
-  data.loi_nhuan = data.thanh_tien_ban - data.thanh_tien_goc;
-  data.hoa_hong = orderMath.percent(data.hoa_hong);
-  data.tien_hoa_hong = Math.max(0, data.loi_nhuan) * (data.hoa_hong / 100);
-  data.loi_nhuan_rong = data.loi_nhuan - data.tien_hoa_hong - data.tien_ship;
-
   const axisType = normalizeExcelKey(get('loai_truc', 'Trục cũ'));
   const isNewAxis = ['moi', 'trucmoi', 'new'].includes(axisType);
   data.loai_truc = isNewAxis ? 'moi' : 'cu';
   data.ten_truc = isNewAxis ? parseImportText(get('ten_truc')) : null;
+  // Chu vi trục là tùy chọn
   data.truc_chu_vi = isNewAxis ? (parseImportNumber(get('truc_chu_vi')) || null) : null;
   data.truc_so_luong = isNewAxis ? parseImportNumber(get('truc_so_luong')) : 0;
   data.truc_gia_goc = isNewAxis ? parseImportNumber(get('truc_gia_goc')) : 0;
   data.truc_gia_ban = isNewAxis ? parseImportNumber(get('truc_gia_ban')) : 0;
-  data.truc_thanh_tien_goc = data.truc_so_luong * data.truc_gia_goc;
-  data.truc_thanh_tien_ban = data.truc_so_luong * data.truc_gia_ban;
   data.truc_ctv = isNewAxis ? parseImportText(get('truc_ctv')) : null;
   data.truc_hoa_hong = isNewAxis ? orderMath.percent(parseImportNumber(get('truc_hoa_hong'))) : 0;
-  data.truc_loi_nhuan = data.truc_thanh_tien_ban - data.truc_thanh_tien_goc;
-  data.truc_tien_hoa_hong = Math.max(0, data.truc_loi_nhuan) * data.truc_hoa_hong / 100;
-  data.truc_loi_nhuan_rong = data.truc_loi_nhuan - data.truc_tien_hoa_hong;
-  const productVat = importVat(get, 'vat', data.thanh_tien_ban);
-  const axisVat = importVat(get, 'truc_vat', data.truc_thanh_tien_ban);
-  data.vat = productVat.vat;
-  data.vat_percent = productVat.vatPercent;
-  data.truc_vat = isNewAxis ? axisVat.vat : 0;
-  data.truc_vat_percent = isNewAxis ? axisVat.vatPercent : 0;
-  data.cong_no_khach = data.da_tat_toan
-    ? 0
-    : Math.max(0, data.thanh_tien_ban + data.truc_thanh_tien_ban + data.vat + data.truc_vat - data.tien_coc);
+  data.hoa_hong = orderMath.percent(data.hoa_hong);
+
+  // Tính tiền giống hệt form nhập tay (orderMath.calculatePrintedTape): mọi cột tiền là số đồng nguyên
+  // và loi_nhuan_rong == loi_nhuan - tien_hoa_hong - tien_ship.
+  const productVat = importVat(get, 'vat', data.so_luong * data.don_gia_ban);
+  const axisVat = importVat(get, 'truc_vat', data.truc_so_luong * data.truc_gia_ban);
+  const result = orderMath.calculatePrintedTape({
+    quantity: data.so_luong,
+    baseCost: data.don_gia_von,
+    quantityFee: data.phi_sl,
+    glueFee: data.phi_keo,
+    colorFee: data.phi_mau,
+    sizeFee: data.phi_size,
+    cuttingFee: data.phi_cat,
+    salePrice: data.don_gia_ban,
+    deposit: data.tien_coc,
+    vatPercent: productVat.vatPercent,
+    commissionPercent: data.hoa_hong,
+    shipping: data.tien_ship,
+    rollLength: data.quy_cach_m,
+    rollsPerTree: data.cuon_cay,
+    isNewAxis,
+    axisQuantity: data.truc_so_luong,
+    axisCostPrice: data.truc_gia_goc,
+    axisSalePrice: data.truc_gia_ban,
+    axisVatPercent: axisVat.vatPercent,
+    axisCommissionPercent: data.truc_hoa_hong,
+    settled: data.da_tat_toan
+  });
+  data._importCalcErrors = result.valid ? [] : result.errors.slice();
+
+  data.don_gia_goc = result.product.costPrice;
+  data.thanh_tien_goc = result.product.costTotal;
+  data.thanh_tien_ban = result.product.saleTotal;
+  // Giữ dấu của tiền cọc / tiền ship (chỉ làm tròn) để validateImportData vẫn bắt được số âm
+  data.tien_coc = orderMath.money(data.tien_coc);
+  data.tien_ship = orderMath.money(data.tien_ship);
+  data.loi_nhuan = result.product.profit;
+  data.tien_hoa_hong = result.product.commission;
+  data.loi_nhuan_rong = result.product.netProfit;
+  data.vat = result.vat;
+  data.vat_percent = result.vatPercent;
+
+  const axis = isNewAxis ? result.axis : null;
+  data.truc_thanh_tien_goc = axis ? axis.costTotal : 0;
+  data.truc_thanh_tien_ban = axis ? axis.saleTotal : 0;
+  data.truc_tien_hoa_hong = axis ? axis.commission : 0;
+  data.truc_loi_nhuan = axis ? axis.profit : 0;
+  data.truc_loi_nhuan_rong = axis ? axis.netProfit : 0;
+  data.truc_vat = axis ? axis.vat : 0;
+  data.truc_vat_percent = axis ? result.axisVatPercent : 0;
+  data.cong_no_khach = result.outstanding;
+  // Giữ giá trị % gốc (trước khi bị kẹp 0-100) để kiểm tra dữ liệu
+  data._importRawPercents = {
+    hoa_hong: parseImportNumber(get('hoa_hong')),
+    vat_percent: parseImportNumber(get('vat_percent')),
+    truc_hoa_hong: isNewAxis ? parseImportNumber(get('truc_hoa_hong')) : 0,
+    truc_vat_percent: isNewAxis ? parseImportNumber(get('truc_vat_percent')) : 0
+  };
 
   return data;
 }
@@ -287,7 +369,7 @@ function mapBangKeoInImport(row) {
 function mapSimpleImport(row, type) {
   const get = buildExcelGetter(row);
   const vat = importVat(get, 'vat', parseImportNumber(get('so_luong')) * parseImportNumber(get('don_gia_ban')));
-  return calculateSimpleImport({
+  const data = calculateSimpleImport({
     thoi_gian: new Date(),
     ten_hang: parseImportText(get('ten_hang')),
     ten_khach_hang: parseImportText(get('ten_khach_hang')),
@@ -307,19 +389,78 @@ function mapSimpleImport(row, type) {
     da_gui_email: false,
     is_quote: false
   });
+  // Giữ giá trị % gốc (trước khi bị kẹp 0-100) để kiểm tra dữ liệu
+  data._importRawPercents = {
+    hoa_hong: parseImportNumber(get('hoa_hong')),
+    vat_percent: parseImportNumber(get('vat_percent'))
+  };
+  return data;
 }
+
+// Giới hạn độ dài theo cột varchar trong DB để báo lỗi theo dòng thay vì lỗi 22001 chung.
+const IMPORT_TEXT_LIMITS = { ten_hang: 255, ten_khach_hang: 255, mau_keo: 100, mau_sac: 100, ctv: 100, loi_giay: 100, thung_bao: 100, quy_cach: 100 };
 
 function validateImportData(data, rowNumber) {
   const errors = [];
+  Object.entries(IMPORT_TEXT_LIMITS).forEach(([column, limit]) => {
+    if (data[column] != null && String(data[column]).length > limit) {
+      errors.push(`Dòng ${rowNumber}: ${column} dài quá ${limit} ký tự`);
+    }
+  });
   if (!data.ten_hang) errors.push(`Dòng ${rowNumber}: thiếu Tên hàng`);
   if (!data.ten_khach_hang) errors.push(`Dòng ${rowNumber}: thiếu Tên khách hàng`);
   if (!data.so_luong || data.so_luong <= 0) errors.push(`Dòng ${rowNumber}: Số lượng phải lớn hơn 0`);
   if (!data.don_gia_ban || data.don_gia_ban <= 0) errors.push(`Dòng ${rowNumber}: Đơn giá bán phải lớn hơn 0`);
-  if ('don_gia_goc' in data && data.don_gia_goc <= 0) errors.push(`Dòng ${rowNumber}: Đơn giá gốc phải lớn hơn 0`);
-  if (data.loai_truc === 'moi' && (!data.ten_truc || data.truc_so_luong <= 0 || data.truc_gia_ban <= 0)) {
-    errors.push(`Dòng ${rowNumber}: Trục mới cần Tên Trục, Số lượng Trục và Giá bán Trục`);
+  (data._importCalcErrors || []).forEach(message => errors.push(`Dòng ${rowNumber}: ${message}`));
+  if ('don_gia_goc' in data && data.don_gia_goc <= 0 && !(data._importCalcErrors || []).length) {
+    errors.push(`Dòng ${rowNumber}: Đơn giá gốc phải lớn hơn 0`);
   }
+  // Giống form: Trục mới bắt buộc Tên, Số lượng, Giá gốc và Giá bán (Chu vi trục không bắt buộc)
+  if (data.loai_truc === 'moi' && (!data.ten_truc || !(data.truc_so_luong > 0) || !(data.truc_gia_goc > 0) || !(data.truc_gia_ban > 0))) {
+    errors.push(`Dòng ${rowNumber}: Trục mới cần Tên Trục, Số lượng Trục, Giá gốc Trục và Giá bán Trục`);
+  }
+  if (!isValidImportDate(data.ngay_du_kien)) {
+    errors.push(`Dòng ${rowNumber}: Ngày dự kiến không hợp lệ (dùng dd/mm/yyyy, ví dụ 25/12/2026)`);
+  }
+
+  // Không chấp nhận số âm cho giá, phí, tiền cọc, tiền ship, quy cách, trục
+  // (Số lượng, Đơn giá bán, Đơn giá gốc đã được kiểm tra phải > 0 ở trên)
+  const nonNegativeFields = {
+    don_gia_von: 'Đơn giá vốn',
+    phi_sl: 'Phí SL', phi_keo: 'Phí keo', phi_mau: 'Phí màu', phi_size: 'Phí size', phi_cat: 'Phí cắt',
+    tien_coc: 'Tiền cọc', tien_ship: 'Tiền ship', quy_cach_mm: 'Quy cách (mm)', quy_cach_m: 'Quy cách (m)',
+    quy_cach_mic: 'Quy cách (mic)', cuon_cay: 'Cuộn/Cây', truc_chu_vi: 'Chu vi Trục',
+    truc_so_luong: 'Số lượng Trục', truc_gia_goc: 'Giá gốc Trục', truc_gia_ban: 'Giá bán Trục'
+  };
+  Object.entries(nonNegativeFields).forEach(([field, label]) => {
+    if (!(field in data) || data[field] === null || data[field] === undefined) return;
+    const value = Number(data[field]);
+    if (!Number.isFinite(value) || value < 0) errors.push(`Dòng ${rowNumber}: ${label} không được âm`);
+  });
+
+  const percentLabels = { hoa_hong: 'Hoa hồng (%)', vat_percent: 'VAT (%)', truc_hoa_hong: 'Hoa hồng Trục (%)', truc_vat_percent: 'VAT Trục (%)' };
+  const rawPercents = data._importRawPercents || {};
+  Object.entries(percentLabels).forEach(([field, label]) => {
+    const raw = field in rawPercents ? rawPercents[field] : data[field];
+    if (raw === null || raw === undefined) return;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0 || value > 100) errors.push(`Dòng ${rowNumber}: ${label} phải từ 0 đến 100`);
+  });
   return errors;
+}
+
+// Sinh dãy mã đơn liên tiếp cho một lần nhập, từ mã đầu tiên lấy trên DB (vd. BK-10-26-007 -> 008, 009...)
+function buildSequentialOrderIds(firstId, count) {
+  const text = String(firstId || '');
+  const dashIndex = text.lastIndexOf('-');
+  const seqText = dashIndex >= 0 ? text.slice(dashIndex + 1) : '';
+  const start = Number.parseInt(seqText, 10);
+  if (dashIndex < 0 || !/^\d+$/.test(seqText) || !Number.isFinite(start)) {
+    throw new Error('Không tạo được mã đơn hàng cho lần nhập');
+  }
+  const base = text.slice(0, dashIndex);
+  const width = Math.max(3, seqText.length);
+  return Array.from({ length: count }, (_, index) => `${base}-${String(start + index).padStart(width, '0')}`);
 }
 
 async function exportImportTemplate() {
@@ -344,7 +485,7 @@ async function exportImportTemplate() {
 
     const savePath = await window.electronAPI.showSaveDialog({
       title: `Lưu mẫu nhập ${config.label}`,
-      defaultPath: `${config.templateName}_${new Date().toISOString().split('T')[0]}.xlsx`,
+      defaultPath: `${config.templateName}_${todayImportDateString()}.xlsx`,
       filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
     });
 
@@ -363,6 +504,20 @@ async function exportImportTemplate() {
 }
 
 async function importOrdersFromExcel() {
+  // Không cho chạy hai lần nhập cùng lúc (bấm đúp / mở lại từ bảng lệnh)
+  if (excelImportInProgress) {
+    utils.showToast('Đang nhập Excel, vui lòng chờ hoàn tất', 'warning');
+    return;
+  }
+  excelImportInProgress = true;
+  try {
+    await runExcelImport();
+  } finally {
+    excelImportInProgress = false;
+  }
+}
+
+async function runExcelImport() {
   const orderType = typeof getStatsOrderTypeKey === 'function' ? getStatsOrderTypeKey() : 'bang_keo_in';
   const config = excelImportConfigs[orderType];
   if (!config) return;
@@ -402,11 +557,11 @@ async function importOrdersFromExcel() {
       const data = orderType === 'bang_keo_in' ? mapBangKeoInImport(row) : mapSimpleImport(row, orderType);
       const rowNumber = index + 2;
       validationErrors.push(...validateImportData(data, rowNumber));
-      mappedRows.push(data);
+      mappedRows.push({ data, rowNumber });
     });
 
     if (validationErrors.length > 0) {
-      utils.showToast(validationErrors.slice(0, 4).join('\n'), 'danger');
+      showExcelImportErrors(validationErrors);
       return;
     }
 
@@ -416,25 +571,65 @@ async function importOrdersFromExcel() {
     );
     if (!confirmed) return;
 
+    // Lấy mã đầu tiên một lần rồi tăng dần trong lô để các đơn không trùng mã
+    const buildStatements = async () => {
+      const firstOrderId = await generateOrderId(config.idPrefix, config.table);
+      const orderIds = buildSequentialOrderIds(firstOrderId, mappedRows.length);
+      return mappedRows.map(({ data }, index) => (orderType === 'bang_keo_in'
+        ? buildBangKeoInImportStatement(orderIds[index], data)
+        : buildSimpleImportStatement(orderIds[index], data, orderType)));
+    };
+    let statements = await buildStatements();
+
     let imported = 0;
-    for (const data of mappedRows) {
-      const orderId = await generateOrderId(config.idPrefix, config.table);
-      const result = orderType === 'bang_keo_in'
-        ? await insertBangKeoInImport(orderId, data)
-        : await insertSimpleImport(orderId, data, orderType);
-      if (result.ok) imported++;
+    const insertErrors = [];
+    if (typeof window.electronAPI.dbTransaction === 'function') {
+      // Nhập toàn bộ trong một transaction: lỗi một dòng thì không đơn nào được ghi
+      let result = await window.electronAPI.dbTransaction(statements);
+      // Máy khác vừa lưu đơn cùng mã (23505): lấy lại dãy mã mới và thử lại
+      for (let attempt = 0; attempt < 3 && !result?.ok && String(result?.code || '') === '23505'; attempt++) {
+        statements = await buildStatements();
+        result = await window.electronAPI.dbTransaction(statements);
+      }
+      if (result?.ok) {
+        imported = mappedRows.length;
+      } else {
+        insertErrors.push(`Không đơn nào được nhập (đã hoàn tác): ${result?.error || 'Lỗi không xác định'}`);
+      }
+    } else {
+      for (let index = 0; index < statements.length; index++) {
+        const { sql, params } = statements[index];
+        const result = await window.electronAPI.dbRun(sql, params);
+        if (result?.ok) imported++;
+        else insertErrors.push(`Dòng ${mappedRows[index].rowNumber}: ${result?.error || 'Lỗi không xác định'}`);
+      }
     }
 
-    utils.showToast(`Đã nhập ${imported}/${mappedRows.length} đơn ${config.label}`, imported === mappedRows.length ? 'success' : 'warning');
-    await loadStatsData();
-    if (typeof loadDashboardData === 'function') loadDashboardData();
+    if (insertErrors.length > 0) {
+      window.electronAPI.writeLog('error', 'Lỗi nhập Excel: ' + insertErrors.join(' | '));
+      showExcelImportErrors(insertErrors, `Đã nhập ${imported}/${mappedRows.length} đơn ${config.label}.`);
+    } else {
+      utils.showToast(`Đã nhập ${imported}/${mappedRows.length} đơn ${config.label}`, 'success');
+    }
+    if (imported > 0) {
+      await loadStatsData();
+      if (typeof loadDashboardData === 'function') loadDashboardData();
+    }
   } catch (err) {
     window.electronAPI.writeLog('error', 'Lỗi nhập Excel: ' + err.message);
     utils.showToast('Lỗi nhập Excel: ' + err.message, 'danger');
   }
 }
 
-async function insertBangKeoInImport(orderId, data) {
+// Hiển thị danh sách lỗi theo dòng (toast chỉ đủ chỗ cho vài dòng đầu)
+function showExcelImportErrors(errors, summary = '') {
+  const maxShown = 4;
+  const lines = errors.slice(0, maxShown);
+  if (errors.length > maxShown) lines.push(`... và ${errors.length - maxShown} lỗi khác`);
+  utils.showToast([summary, ...lines].filter(Boolean).join('\n'), 'danger');
+}
+
+function buildBangKeoInImportStatement(orderId, data) {
   const sql = `
     INSERT INTO bang_keo_in_orders (
       id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien,
@@ -456,7 +651,7 @@ async function insertBangKeoInImport(orderId, data) {
     )
   `;
 
-  return window.electronAPI.dbRun(sql, [
+  return { sql, params: [
     orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
     data.quy_cach_mm, data.quy_cach_m, data.quy_cach_mic, data.cuon_cay, data.so_luong,
     data.phi_sl, data.mau_keo, data.phi_keo, data.mau_sac, data.phi_mau, data.phi_size,
@@ -468,10 +663,10 @@ async function insertBangKeoInImport(orderId, data) {
     data.truc_gia_ban, data.truc_thanh_tien_goc, data.truc_thanh_tien_ban, data.truc_ctv,
     data.truc_hoa_hong, data.truc_tien_hoa_hong, data.truc_loi_nhuan, data.truc_loi_nhuan_rong,
     data.vat, data.vat_percent, data.truc_vat, data.truc_vat_percent
-  ]);
+  ] };
 }
 
-async function insertSimpleImport(orderId, data, type) {
+function buildSimpleImportStatement(orderId, data, type) {
   if (type === 'truc_in') {
     const sql = `
       INSERT INTO truc_in_orders (
@@ -485,13 +680,13 @@ async function insertSimpleImport(orderId, data, type) {
         $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
       )
     `;
-    return window.electronAPI.dbRun(sql, [
+    return { sql, params: [
       orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
       data.quy_cach, data.so_luong, data.mau_sac, data.mau_keo, data.don_gia_goc, data.thanh_tien_goc,
       data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
       data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
       data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent
-    ]);
+    ] };
   }
 
   const sql = `
@@ -506,11 +701,21 @@ async function insertSimpleImport(orderId, data, type) {
       $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
     )
   `;
-  return window.electronAPI.dbRun(sql, [
+  return { sql, params: [
     orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
     data.quy_cach, data.so_luong, data.mau_sac, data.don_gia_goc, data.thanh_tien,
     data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
     data.tien_hoa_hong, data.loi_nhuan, data.tien_ship, data.loi_nhuan_rong,
     data.da_giao, data.da_tat_toan, data.da_gui_email, data.is_quote, data.vat, data.vat_percent
-  ]);
+  ] };
+}
+
+async function insertBangKeoInImport(orderId, data) {
+  const statement = buildBangKeoInImportStatement(orderId, data);
+  return window.electronAPI.dbRun(statement.sql, statement.params);
+}
+
+async function insertSimpleImport(orderId, data, type) {
+  const statement = buildSimpleImportStatement(orderId, data, type);
+  return window.electronAPI.dbRun(statement.sql, statement.params);
 }

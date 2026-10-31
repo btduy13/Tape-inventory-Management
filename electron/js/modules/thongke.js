@@ -3,6 +3,8 @@ let statsActiveSubtab = 'bang-keo-in';
 let statsColumnFilters = {};
 let statsSort = { key: null, direction: 'asc' };
 let statsColumnFilterCloseHandler = null;
+// Mỗi lần tải bảng thống kê có một mã yêu cầu; phản hồi cũ (subtab trước) bị bỏ qua.
+let statsTableRequestToken = 0;
 
 const statsColumnDefs = [
   { key: 'id', label: 'Mã đơn hàng', value: row => row.id || '' },
@@ -20,6 +22,8 @@ let statsAllOrders = []; // Lưu trữ để tìm kiếm filter offline nhanh ch
 let statsLastSelectedIndex = -1;
 let statsViewMode = 'summary';
 let selectedOrderIdForAttachments = null;
+// Đơn đang mở trong hộp thoại đính kèm: chốt một lần khi mở, không đọc lại tab/lựa chọn hiện tại.
+let statsAttachmentContext = null;
 
 const statsDetailColumnHeaders = {
   id: 'Mã Đơn Hàng', thoi_gian: 'Ngày Tạo', ten_hang: 'Tên Hàng', ten_khach_hang: 'Khách Hàng',
@@ -116,19 +120,19 @@ async function loadStatsData() {
 async function loadStatsWarningMetrics() {
   const sql = `
     SELECT 
-      SUM(CASE WHEN NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= CURRENT_DATE AND ngay_du_kien <= CURRENT_DATE + INTERVAL '3 days' THEN 1 ELSE 0 END) AS sap_han,
-      SUM(CASE WHEN NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < CURRENT_DATE THEN 1 ELSE 0 END) AS qua_han,
+      SUM(CASE WHEN NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND ngay_du_kien <= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + INTERVAL '3 days' THEN 1 ELSE 0 END) AS sap_han,
+      SUM(CASE WHEN NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date THEN 1 ELSE 0 END) AS qua_han,
       SUM(CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN 1 ELSE 0 END) AS chua_tat_toan,
       SUM(CASE WHEN COALESCE(da_tat_toan, FALSE) THEN 1 ELSE 0 END) AS hoan_thanh,
       SUM(CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_khach, 0) ELSE 0 END) AS tong_cong_no,
       SUM(CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_ncc, 0) ELSE 0 END) AS tong_cong_no_ncc,
-      SUM(loi_nhuan_rong + truc_loi_nhuan_rong) AS tong_loi_nhuan
+      SUM(loi_nhuan_rong + CASE WHEN loai_truc = 'moi' THEN truc_loi_nhuan_rong ELSE 0 END) AS tong_loi_nhuan
     FROM (
-      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, COALESCE(truc_loi_nhuan_rong, 0) AS truc_loi_nhuan_rong FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
+      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, COALESCE(truc_loi_nhuan_rong, 0) AS truc_loi_nhuan_rong, loai_truc FROM bang_keo_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
+      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM truc_in_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
+      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM bang_keo_orders WHERE (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined;
   `;
 
@@ -197,6 +201,8 @@ function switchStatsViewMode(mode) {
 
 // Tải bảng dữ liệu thống kê
 async function loadStatsTableData() {
+  const requestToken = ++statsTableRequestToken;
+  const requestedSubtab = statsActiveSubtab;
   let tableName = 'bang_keo_in_orders';
   if (statsActiveSubtab === 'truc-in') tableName = 'truc_in_orders';
   if (statsActiveSubtab === 'bang-keo') tableName = 'bang_keo_orders';
@@ -207,10 +213,13 @@ async function loadStatsTableData() {
     ORDER BY 
       split_part(id, '-', 3) DESC, 
       split_part(id, '-', 2) DESC, 
+      NULLIF(regexp_replace(split_part(id, '-', 4), '[^0-9]', '', 'g'), '')::bigint DESC NULLS LAST,
       split_part(id, '-', 4) DESC
   `;
 
   const res = await window.electronAPI.dbQuery(sql);
+  // Người dùng đã chuyển subtab trong lúc chờ: bỏ kết quả cũ để statsAllOrders luôn khớp statsActiveSubtab.
+  if (requestToken !== statsTableRequestToken || requestedSubtab !== statsActiveSubtab) return;
   if (res.ok) {
     statsAllOrders = res.rows;
     filterStatsTable();
@@ -333,12 +342,13 @@ function renderStatsTable(rows) {
   // 1. Tạo headers tiếng Việt
   header.innerHTML = statsColumnDefs.map(col => `
     <th>
-      <button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col.key) ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col.key}')">
+      <button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col.key) ? 'active' : ''}" data-stats-column="${utils.escapeHtml(col.key)}">
         <span>${col.label}</span>
         <span class="filter-caret">${statsSort.key === col.key ? (statsSort.direction === 'asc' ? '↑' : '↓') : '▾'}</span>
       </button>
     </th>
   `).join('');
+  bindStatsHeaderFilterButtons(header);
 
   // 2. Chèn dữ liệu
   body.innerHTML = "";
@@ -414,7 +424,8 @@ function renderStatsDetailTable(rows) {
   const orderType = getStatsOrderTypeKey();
   const cols = statsDetailColumnsMap[orderType] || [];
 
-  header.innerHTML = cols.map(col => `<th><button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col) ? 'active' : ''}" onclick="openStatsColumnFilter(event, '${col}')">${statsDetailColumnHeaders[col] || col} <span>${statsSort.key === col ? (statsSort.direction === 'asc' ? '↑' : '↓') : '▾'}</span></button></th>`).join('');
+  header.innerHTML = cols.map(col => `<th><button type="button" class="table-filter-button ${Object.prototype.hasOwnProperty.call(statsColumnFilters, col) ? 'active' : ''}" data-stats-column="${utils.escapeHtml(col)}">${utils.escapeHtml(statsDetailColumnHeaders[col] || col)} <span>${statsSort.key === col ? (statsSort.direction === 'asc' ? '↑' : '↓') : '▾'}</span></button></th>`).join('');
+  bindStatsHeaderFilterButtons(header);
   body.innerHTML = "";
   statsLastSelectedIndex = -1;
   updateStatsSelectionSummary();
@@ -462,6 +473,13 @@ function renderStatsDetailTable(rows) {
   updateStatsLayoutDebug('render-detail');
 }
 
+// Nút lọc trên tiêu đề cột: gắn sự kiện bằng addEventListener (không dùng onclick nội tuyến).
+function bindStatsHeaderFilterButtons(header) {
+  header.querySelectorAll?.('[data-stats-column]').forEach(button => {
+    button.addEventListener('click', event => openStatsColumnFilter(event, button.dataset.statsColumn));
+  });
+}
+
 function bindStatsRowEvents(tr, row) {
   tr.addEventListener('mousedown', function(e) {
     if (e.shiftKey) e.preventDefault();
@@ -502,8 +520,7 @@ function getFilteredStatsOrders() {
       [row.id, row.ten_hang, row.ten_khach_hang, row.ten_truc].some(value => String(value ?? '').toLowerCase().includes(query));
 
     // B. Lọc tháng đặt hàng
-    const dateObj = new Date(row.thoi_gian);
-    const matchMonth = monthFilter === 'all' || (dateObj.getMonth() + 1).toString() === monthFilter;
+    const matchMonth = statsMonthFilterMatches(row.thoi_gian, monthFilter, today);
 
     // C. Lọc trạng thái
     const dueDate = new Date(row.ngay_du_kien || NaN);
@@ -550,6 +567,29 @@ function getFilteredStatsOrders() {
   });
 
   return sortStatsOrders(filtered);
+}
+
+// Lọc theo tháng phải so cả NĂM, không chỉ getMonth(). Giá trị "YYYY-MM" dùng trực tiếp;
+// giá trị chỉ có tháng lấy năm từ ô stats-year-filter (nếu có), nếu không thì lấy lần gần nhất
+// của tháng đó: năm nay, hoặc năm trước nếu tháng đó chưa tới.
+function statsMonthFilterMatches(dateValue, monthFilter, now = new Date()) {
+  if (!monthFilter || monthFilter === 'all') return true;
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+  let year;
+  let month;
+  const yearMonth = /^(\d{4})-(\d{1,2})$/.exec(String(monthFilter));
+  if (yearMonth) {
+    year = Number(yearMonth[1]);
+    month = Number(yearMonth[2]);
+  } else {
+    month = Number(monthFilter);
+    const yearControl = typeof document !== 'undefined' ? document.getElementById('stats-year-filter')?.value : '';
+    year = /^\d{4}$/.test(String(yearControl || ''))
+      ? Number(yearControl)
+      : (month <= now.getMonth() + 1 ? now.getFullYear() : now.getFullYear() - 1);
+  }
+  return date.getFullYear() === year && date.getMonth() + 1 === month;
 }
 
 function filterStatsTable() {
@@ -605,37 +645,47 @@ function openStatsColumnFilter(event, columnKey) {
   const activeValues = isFiltered ? statsColumnFilters[columnKey] : new Set(values);
 
   menu.innerHTML = `
-    <div class="column-filter-title">${column.label}</div>
+    <div class="column-filter-title">${utils.escapeHtml(column.label)}</div>
     <div class="column-filter-actions column-sort-actions">
-      <button type="button" onclick="setStatsSort('${columnKey}', 'asc')">↑ Sắp xếp tăng dần</button>
-      <button type="button" onclick="setStatsSort('${columnKey}', 'desc')">↓ Sắp xếp giảm dần</button>
+      <button type="button" data-stats-sort="asc">↑ Sắp xếp tăng dần</button>
+      <button type="button" data-stats-sort="desc">↓ Sắp xếp giảm dần</button>
     </div>
-    <input class="column-filter-search" type="text" placeholder="Tìm giá trị..." oninput="filterColumnFilterValues(this.value)">
+    <input class="column-filter-search" type="text" placeholder="Tìm giá trị...">
     <div class="column-filter-actions">
-      <button type="button" onclick="setStatsColumnFilterAll('${columnKey}')">Tất cả</button>
-      <button type="button" onclick="deselectAllStatsColumnFilter('${columnKey}')">Bỏ chọn tất cả</button>
-      <button type="button" class="column-filter-clear-action" onclick="clearStatsColumnFilter('${columnKey}')">Xóa lọc</button>
+      <button type="button" data-stats-filter-action="all">Tất cả</button>
+      <button type="button" data-stats-filter-action="none">Bỏ chọn tất cả</button>
+      <button type="button" class="column-filter-clear-action" data-stats-filter-action="clear">Xóa lọc</button>
     </div>
     <div class="column-filter-values">
-      ${values.map(value => {
-        const encodedValue = encodeURIComponent(value).replace(/'/g, '%27');
-        return `
+      ${values.map((value, index) => `
         <label class="column-filter-value">
-          <input type="checkbox" ${activeValues.has(value) ? 'checked' : ''} onchange="toggleStatsColumnFilterValue('${columnKey}', decodeURIComponent('${encodedValue}'), this.checked)">
+          <input type="checkbox" ${activeValues.has(value) ? 'checked' : ''} data-value-index="${index}">
           <span>${utils.escapeHtml(value || '(Trống)')}</span>
         </label>
-      `;
-      }).join('')}
+      `).join('')}
     </div>
   `;
 
-  const rect = event.currentTarget.getBoundingClientRect();
+  menu.querySelectorAll('[data-stats-sort]').forEach(button => {
+    button.addEventListener('click', () => setStatsSort(columnKey, button.dataset.statsSort));
+  });
+  menu.querySelector('.column-filter-search')?.addEventListener('input', e => filterColumnFilterValues(e.target.value));
+  const filterActions = { all: setStatsColumnFilterAll, none: deselectAllStatsColumnFilter, clear: clearStatsColumnFilter };
+  menu.querySelectorAll('[data-stats-filter-action]').forEach(button => {
+    button.addEventListener('click', () => filterActions[button.dataset.statsFilterAction]?.(columnKey));
+  });
+  menu.querySelectorAll('input[data-value-index]').forEach(input => {
+    input.addEventListener('change', () => toggleStatsColumnFilterValue(columnKey, values[Number(input.dataset.valueIndex)], input.checked));
+  });
+
+  const trigger = event.currentTarget;
+  const rect = trigger.getBoundingClientRect();
   menu.style.display = 'block';
   menu.style.left = `${Math.min(rect.left, window.innerWidth - 300)}px`;
   menu.style.top = `${rect.bottom + 6}px`;
 
   statsColumnFilterCloseHandler = function closeMenu(e) {
-    if (!menu.contains(e.target) && e.target !== event.currentTarget) {
+    if (!menu.contains(e.target) && e.target !== trigger && !trigger?.contains?.(e.target)) {
       closeStatsColumnFilterMenu();
     }
   };
@@ -735,55 +785,75 @@ function showStatsContextMenu(e, row) {
 
   const typeLabel = statsActiveSubtab === 'bang-keo-in' ? 'Băng Keo In' : (statsActiveSubtab === 'truc-in' ? 'Trục In' : 'Băng Keo');
   
+  const orderId = row.id;
+  const subtab = statsActiveSubtab;
   menu.innerHTML = `
-    <div class="context-menu-item" onclick="toggleDeliveryStatus('${row.id}', ${row.da_giao})">
+    <div class="context-menu-item" data-stats-menu-action="delivery">
       <span>🚚</span> <span>Đánh dấu ${row.da_giao ? 'Chưa giao' : 'Đã giao'}</span>
     </div>
-    <div class="context-menu-item" onclick="toggleSettlementStatus('${row.id}', ${row.da_tat_toan})">
+    <div class="context-menu-item" data-stats-menu-action="settlement">
       <span>💳</span> <span>Đánh dấu ${row.da_tat_toan ? 'Chưa tất toán' : 'Đã tất toán'}</span>
     </div>
     <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
-    <div class="context-menu-item" onclick="openOrderExportDialog('${row.id}', '${statsActiveSubtab}')">
+    <div class="context-menu-item" data-stats-menu-action="export">
       <span>🖨️</span> <span>Xem & In phiếu giao hàng</span>
     </div>
-    <div class="context-menu-item" onclick="sendOrderNotificationEmail('${row.id}', '${statsActiveSubtab}')">
+    <div class="context-menu-item" data-stats-menu-action="email">
       <span>📧</span> <span>Gửi email thông báo đơn</span>
     </div>
-    <div class="context-menu-item" onclick="openEditOrderDialog('${row.id}', '${statsActiveSubtab}')">
+    <div class="context-menu-item" data-stats-menu-action="edit">
       <span>✏️</span> <span>Sửa đổi đơn hàng</span>
     </div>
     <hr style="border:0; border-top: 1px solid var(--border-color); margin: 4px 0;">
-    <div class="context-menu-item" onclick="deleteSelectedStats()">
+    <div class="context-menu-item" data-stats-menu-action="delete">
       <span>🗑️</span> <span>Xóa đơn hàng</span>
     </div>
   `;
+
+  // Mã đơn nằm trong closure, không chèn thô vào HTML/JS nội tuyến.
+  const actions = {
+    delivery: () => toggleDeliveryStatus(orderId),
+    settlement: () => toggleSettlementStatus(orderId),
+    export: () => openOrderExportDialog(orderId, subtab),
+    email: () => sendOrderNotificationEmail(orderId, subtab),
+    edit: () => openEditOrderDialog(orderId, subtab),
+    delete: () => deleteSelectedStats()
+  };
+  menu.querySelectorAll('[data-stats-menu-action]').forEach(item => {
+    item.addEventListener('click', () => actions[item.dataset.statsMenuAction]?.());
+  });
 
   menu.style.display = 'block';
   menu.style.left = `${e.pageX}px`;
   menu.style.top = `${e.pageY}px`;
 
-  // Tự động đóng menu khi click ra ngoài
-  function closeMenu() {
-    menu.style.display = 'none';
-    document.removeEventListener('click', closeMenu);
-  }
-  setTimeout(() => document.addEventListener('click', closeMenu), 100);
+  // Tự động đóng menu khi click ra ngoài: luôn dùng cùng một hàm nên không cộng dồn listener.
+  document.removeEventListener('click', closeStatsContextMenu);
+  setTimeout(() => document.addEventListener('click', closeStatsContextMenu), 100);
+}
+
+function closeStatsContextMenu() {
+  const menu = document.getElementById('custom-context-menu');
+  if (menu) menu.style.display = 'none';
+  document.removeEventListener('click', closeStatsContextMenu);
 }
 
 // 9. Thực hiện thay đổi trạng thái giao hàng từ chuột phải
-async function toggleDeliveryStatus(orderId, currentStatus) {
-  let tableName = 'bang_keo_in_orders';
-  if (statsActiveSubtab === 'truc-in') tableName = 'truc_in_orders';
-  if (statsActiveSubtab === 'bang-keo') tableName = 'bang_keo_orders';
+// Trạng thái đích tính từ giá trị mới nhất trong DB (NOT da_giao) thay vì giá trị cũ trên màn hình,
+// tránh ghi đè khi máy khác vừa đổi trạng thái.
+async function toggleDeliveryStatus(orderId) {
+  const tableName = getStatsTableName();
+  const sql = `UPDATE ${tableName} SET da_giao = NOT COALESCE(da_giao, FALSE) WHERE id = $1 RETURNING da_giao`;
+  const res = await window.electronAPI.dbRun(sql, [orderId]);
 
-  const newStatus = !currentStatus;
-  const sql = `UPDATE ${tableName} SET da_giao = $1 WHERE id = $2`;
-  const res = await window.electronAPI.dbRun(sql, [newStatus, orderId]);
-  
-  if (res.ok) {
-    utils.showToast(`Đã chuyển trạng thái giao hàng đơn ${orderId}`, "success");
+  if (res.ok && Number(res.rowCount ?? res.rows?.length ?? 0) > 0) {
+    const delivered = !!res.rows?.[0]?.da_giao;
+    utils.showToast(`Đã chuyển đơn ${orderId} sang ${delivered ? 'Đã giao' : 'Chưa giao'}`, "success");
     loadStatsData();
     if (typeof loadDashboardData === 'function') loadDashboardData();
+  } else if (res.ok) {
+    utils.showToast(`Không tìm thấy đơn ${orderId} để cập nhật`, "danger");
+    loadStatsData();
   } else {
     utils.showToast("Không thể thay đổi trạng thái giao hàng", "danger");
   }
@@ -791,14 +861,9 @@ async function toggleDeliveryStatus(orderId, currentStatus) {
 
 // 10. Thực hiện thay đổi trạng thái tất toán từ chuột phải
 function getSettlementUpdateSql(tableName, includeDelivery = false) {
-  const customerDebtExpression = tableName === 'bang_keo_in_orders'
-    ? `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`
-    : `GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0)`;
-  const supplierDebtExpression = tableName === 'bang_keo_in_orders'
-    ? `GREATEST(COALESCE(thanh_tien_goc, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_goc, 0) ELSE 0 END, 0)`
-    : tableName === 'bang_keo_orders'
-      ? `GREATEST(COALESCE(thanh_tien, 0), 0)`
-      : `GREATEST(COALESCE(thanh_tien_goc, 0), 0)`;
+  // Công thức công nợ dùng chung với orderMath.outstandingFromOrder (xem test statsConsistency).
+  const customerDebtExpression = orderMath.customerDebtSqlExpression(tableName);
+  const supplierDebtExpression = orderMath.supplierDebtSqlExpression(tableName);
 
   if (includeDelivery) {
     return `UPDATE ${tableName}
@@ -816,16 +881,28 @@ function getSettlementUpdateSql(tableName, includeDelivery = false) {
     WHERE id = $2`;
 }
 
-async function toggleSettlementStatus(orderId, currentStatus) {
-  let tableName = 'bang_keo_in_orders';
-  if (statsActiveSubtab === 'truc-in') tableName = 'truc_in_orders';
-  if (statsActiveSubtab === 'bang-keo') tableName = 'bang_keo_orders';
+// Đảo trạng thái tất toán dựa trên giá trị hiện tại trong DB (vế phải UPDATE đọc giá trị cũ của dòng),
+// công nợ tính lại theo đúng trạng thái đích trong cùng câu lệnh.
+function getSettlementToggleSql(tableName) {
+  const customerDebtExpression = orderMath.customerDebtSqlExpression(tableName);
+  const supplierDebtExpression = orderMath.supplierDebtSqlExpression(tableName);
+  return `UPDATE ${tableName}
+    SET da_tat_toan = NOT COALESCE(da_tat_toan, FALSE),
+        cong_no_khach = CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN 0 ELSE ${customerDebtExpression} END,
+        cong_no_ncc = CASE WHEN NOT COALESCE(da_tat_toan, FALSE) THEN 0 ELSE ${supplierDebtExpression} END
+    WHERE id = $1
+    RETURNING da_tat_toan`;
+}
 
-  const newStatus = !currentStatus;
-  const sql = getSettlementUpdateSql(tableName);
-  const res = await window.electronAPI.dbRun(sql, [newStatus, orderId]);
-  
-  if (res.ok) {
+async function toggleSettlementStatus(orderId) {
+  const tableName = getStatsTableName();
+  const sql = getSettlementToggleSql(tableName);
+  const res = await window.electronAPI.dbRun(sql, [orderId]);
+
+  if (res.ok && Number(res.rowCount ?? res.rows?.length ?? 0) === 0) {
+    utils.showToast(`Không tìm thấy đơn ${orderId} để cập nhật`, "danger");
+    loadStatsData();
+  } else if (res.ok) {
     utils.showToast(`Đã cập nhật trạng thái tất toán đơn ${orderId}`, "success");
     loadStatsData();
     if (typeof loadDashboardData === 'function') loadDashboardData();
@@ -857,22 +934,34 @@ async function deleteSelectedStats() {
   const tableName = getStatsTableName();
   const orderType = getStatsOrderTypeKey();
   let successCount = 0;
+  const failedIds = [];
 
   for (const id of selectedIds) {
-    const res = await window.electronAPI.dbRun(`DELETE FROM ${tableName} WHERE id = $1`, [id]);
-    if (res.ok) {
-      await window.electronAPI.dbRun(
-        `DELETE FROM order_attachments WHERE order_id = $1 AND order_type = $2`,
-        [id, orderType]
-      );
+    // Xóa đơn và tệp đính kèm trong cùng một transaction để không để lại tệp mồ côi.
+    let res;
+    try {
+      res = await window.electronAPI.dbTransaction([
+        { sql: `DELETE FROM ${tableName} WHERE id = $1`, params: [id] },
+        { sql: 'DELETE FROM order_attachments WHERE order_id = $1 AND order_type = $2', params: [id, orderType] }
+      ]);
+    } catch (err) {
+      res = { ok: false, error: err?.message };
+    }
+    if (res?.ok && Number(res.results?.[0]?.rowCount || 0) > 0) {
       successCount++;
+    } else {
+      failedIds.push(id);
     }
   }
 
-  utils.showToast(
-    `Đã xóa thành công ${successCount}/${selectedIds.length} đơn hàng`,
-    successCount === selectedIds.length ? "success" : "warning"
-  );
+  if (failedIds.length > 0) {
+    utils.showToast(
+      `Đã xóa ${successCount}/${selectedIds.length} đơn hàng. Không xóa được: ${failedIds.join(', ')}`,
+      successCount > 0 ? "warning" : "danger"
+    );
+  } else {
+    utils.showToast(`Đã xóa thành công ${successCount}/${selectedIds.length} đơn hàng`, "success");
+  }
   loadStatsData();
   if (typeof loadDashboardData === 'function') loadDashboardData();
 }
@@ -903,7 +992,7 @@ async function exportStatsExcel() {
 
     const savePath = await window.electronAPI.showSaveDialog({
       title: 'Lưu file xuất Excel',
-      defaultPath: `don_hang_${orderType}_${new Date().toISOString().split('T')[0]}.xlsx`,
+      defaultPath: `don_hang_${orderType}_${statsTodayFileDate()}.xlsx`,
       filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
     });
 
@@ -918,6 +1007,12 @@ async function exportStatsExcel() {
   }
 }
 
+function statsTodayFileDate() {
+  if (typeof utils.toDateInputValue === 'function') return utils.toDateInputValue(new Date());
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 function buildStatsOrderExcelRow(row, orderType) {
   const exportObj = {};
   const cols = (statsDetailColumnsMap[orderType] || []).filter(col => orderType !== 'bang_keo_in' || !(col.startsWith('truc_') || col === 'ten_truc'));
@@ -927,15 +1022,18 @@ function buildStatsOrderExcelRow(row, orderType) {
     if (col === 'thoi_gian' || col === 'ngay_du_kien') {
       exportObj[key] = utils.formatDate(val);
     } else if (col === 'da_giao' || col === 'da_tat_toan' || col === 'da_gui_email') {
-      exportObj[key] = val ? 'Rồi/Xong' : 'Chưa';
+      // Một từ duy nhất mà parseImportBoolean (excelImport.js) đọc lại được: 'roi' / 'xong'.
+      exportObj[key] = val ? (col === 'da_tat_toan' ? 'Xong' : 'Rồi') : 'Chưa';
     } else {
       exportObj[key] = statsCurrencyColumns.has(col) || ['so_luong', 'hoa_hong', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay'].includes(col)
-        ? (val == null || val === '' ? '' : Number(val)) : val;
+        ? (val == null || val === '' ? '' : (statsCurrencyColumns.has(col) ? orderMath.money(val) : Number(val))) : val;
     }
   });
-  const total = Number(row.thanh_tien_ban) || 0;
-  const vat = Number(row.vat) || 0;
-  exportObj['VAT (%)'] = Number(row.vat_percent) > 0 ? Number(row.vat_percent) : (total > 0 ? vat / total * 100 : 0);
+  // Cùng số đã làm tròn như màn hình/PDF: VAT (%) 2 chữ số thập phân, tiền làm tròn đồng.
+  const total = Math.max(0, orderMath.money(row.thanh_tien_ban));
+  const vat = Math.max(0, orderMath.money(row.vat));
+  if (Object.prototype.hasOwnProperty.call(exportObj, 'VAT')) exportObj['VAT'] = vat;
+  exportObj['VAT (%)'] = orderMath.vatPercentFromAmount(vat, total, row.vat_percent);
   exportObj['Thành Tiền Gồm VAT'] = total + vat;
   exportObj['Chu Vi Trục'] = '';
   exportObj['Ghi Chú'] = '';
@@ -963,7 +1061,7 @@ function buildBkiAxisInlineExcelRow(axis) {
     'Tiền H.Hồng': axis['Tiền Hoa Hồng Trục'],
     'Lợi Nhuận': axis['Lãi Trục'],
     'Lợi Nhuận Ròng': axis['Lãi Ròng Trục'],
-    'Ghi Chú': `VAT ${axis['VAT Trục (%)']}% · Giá gồm VAT ${axis['Giá Trục Gồm VAT']}`
+    'Ghi Chú': `VAT ${axis['VAT Trục (%)']}% · Giá gồm VAT ${utils.formatCurrency(axis['Giá Trục Gồm VAT'])}đ`
   };
 }
 
@@ -988,14 +1086,27 @@ function parseBkiQuoteItemsForExcel(row = {}) {
   return Array.isArray(items) ? items : [];
 }
 
+function bkiQuoteAxesMatchOrder(order = {}) {
+  const items = parseBkiQuoteItemsForExcel(order);
+  const axes = items.flatMap(item => (Array.isArray(item?.axes) ? item.axes : []).filter(axis => axis && typeof axis === 'object'));
+  if (axes.length === 0) return true;
+  const hasDbAxisTotals = order.truc_thanh_tien_ban !== null && order.truc_thanh_tien_ban !== undefined && order.truc_thanh_tien_ban !== '';
+  if (!hasDbAxisTotals) return true;
+  if (order.loai_truc !== 'moi') return false;
+  const jsonSale = axes.reduce((sum, axis) => sum + Math.max(0, orderMath.money(axis.total ?? orderMath.number(axis.quantity) * orderMath.number(axis.unitPrice))), 0);
+  const jsonVat = axes.reduce((sum, axis) => sum + Math.max(0, orderMath.money(axis.vat)), 0);
+  return jsonSale === Math.max(0, orderMath.money(order.truc_thanh_tien_ban))
+    && jsonVat === Math.max(0, orderMath.money(order.truc_vat));
+}
+
 function buildBkiAxisExcelRow(order, axis, specification, axisIndex) {
   const quantity = Number(axis.quantity ?? axis.truc_so_luong ?? 0) || 0;
   const costPrice = Number(axis.costPrice ?? axis.truc_gia_goc ?? (quantity > 0 ? Number(axis.costTotal || 0) / quantity : 0)) || 0;
   const salePrice = Number(axis.unitPrice ?? axis.truc_gia_ban ?? 0) || 0;
-  const saleTotal = Number(axis.total ?? axis.truc_thanh_tien_ban ?? (quantity * salePrice)) || 0;
+  const saleTotal = Math.max(0, orderMath.money(axis.total ?? axis.truc_thanh_tien_ban ?? (quantity * salePrice)));
   const storedPercent = Number(axis.vatPercent ?? axis.truc_vat_percent ?? 0) || 0;
-  const vatAmount = Number(axis.vat ?? axis.truc_vat ?? (saleTotal * storedPercent / 100)) || 0;
-  const vatPercent = storedPercent > 0 ? storedPercent : (saleTotal > 0 ? vatAmount / saleTotal * 100 : 0);
+  const vatAmount = Math.max(0, orderMath.money(axis.vat ?? axis.truc_vat ?? orderMath.vatAmount(saleTotal, storedPercent)));
+  const vatPercent = orderMath.vatPercentFromAmount(vatAmount, saleTotal, storedPercent);
 
   return {
     'Mã Đơn Hàng': order.id || '',
@@ -1009,7 +1120,7 @@ function buildBkiAxisExcelRow(order, axis, specification, axisIndex) {
     'Số Lượng Trục': quantity,
     'Giá Gốc Trục': costPrice,
     'Giá Bán Trục': salePrice,
-    'Thành Tiền Gốc Trục': Number(axis.costTotal ?? axis.truc_thanh_tien_goc ?? (quantity * costPrice)) || 0,
+    'Thành Tiền Gốc Trục': Math.max(0, orderMath.money(axis.costTotal ?? axis.truc_thanh_tien_goc ?? (quantity * costPrice))),
     'Thành Tiền Bán Trục': saleTotal,
     'VAT Trục (%)': vatPercent,
     'Tiền VAT Trục': vatAmount,
@@ -1026,7 +1137,9 @@ function buildBkiAxisExcelRows(orders = []) {
   const result = [];
 
   orders.forEach(order => {
-    const items = parseBkiQuoteItemsForExcel(order);
+    // quote_items có thể đã cũ nếu đơn được sửa sau khi chuyển từ báo giá (qua các cột truc_*):
+    // khi tổng trục trong JSON lệch các cột DB thì dùng cột DB để Excel khớp cong_no_khach.
+    const items = bkiQuoteAxesMatchOrder(order) ? parseBkiQuoteItemsForExcel(order) : [];
     let storedAxisCount = 0;
 
     items.forEach(item => {
@@ -1085,14 +1198,19 @@ async function openAttachmentsManager() {
   }
 
   selectedOrderIdForAttachments = selectedIds[0];
+  statsAttachmentContext = { orderId: selectedIds[0], orderType: getStatsOrderTypeKey() };
   document.getElementById('attach-status-label').innerText = `Đơn hàng: ${selectedOrderIdForAttachments}`;
   await loadAttachmentsList();
   document.getElementById('modal-attachments').classList.add('active');
 }
 
-async function loadAttachmentsList() {
+async function loadAttachmentsList(context = statsAttachmentContext) {
   const body = document.getElementById('attachments-table-body');
   if (!body) return;
+  if (!context?.orderId) {
+    body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Chưa chọn đơn hàng</td></tr>';
+    return;
+  }
 
   body.innerHTML = '<tr><td colspan="3" style="text-align:center;">Đang tải tệp tin...</td></tr>';
 
@@ -1103,7 +1221,14 @@ async function loadAttachmentsList() {
     ORDER BY created_at DESC
   `;
 
-  const res = await window.electronAPI.dbQuery(sql, [selectedOrderIdForAttachments, getStatsOrderTypeKey()]);
+  let res;
+  try {
+    res = await window.electronAPI.dbQuery(sql, [context.orderId, context.orderType]);
+  } catch (err) {
+    res = { ok: false, error: err?.message };
+  }
+  // Hộp thoại đã chuyển sang đơn khác trong lúc chờ: bỏ kết quả cũ.
+  if (context !== statsAttachmentContext) return;
   if (!res.ok) {
     body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--color-danger);">Không thể tải tệp tin</td></tr>';
     return;
@@ -1152,35 +1277,66 @@ async function downloadAttachmentFile(attId, fileName) {
     }
 
     const att = res.rows[0];
-    const byteCharacters = atob(att.base64_data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const blob = new Blob([new Uint8Array(byteNumbers)], { type: att.content_type });
+    const bytes = base64ToUint8Array(att.base64_data);
+    const blob = new Blob([bytes], { type: att.content_type || 'application/octet-stream' });
     const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
+    const objectUrl = window.URL.createObjectURL(blob);
+    link.href = objectUrl;
     link.download = String(fileName || 'tep-dinh-kem').replace(/[\\/:*?"<>|]/g, '_');
     link.click();
-    utils.showToast('Đã tải tệp tin thành công!', 'success');
+    // Giải phóng bộ nhớ của Blob sau khi trình duyệt đã nhận lệnh tải.
+    setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+    utils.showToast('Đã tải xuống tệp tin', 'success');
   } catch (err) {
     console.error('Lỗi tải tệp: ', err);
+    utils.showToast('Lỗi tải tệp: ' + (err?.message || 'không đọc được dữ liệu'), 'danger');
   }
 }
 
+// Giải mã base64 thẳng vào Uint8Array (không tạo mảng số JS trung gian với tệp lớn).
+function base64ToUint8Array(base64) {
+  const binary = atob(String(base64 || ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 async function deleteAttachmentFile(attId) {
+  const context = statsAttachmentContext;
+  if (!context?.orderId) return;
   if (!await utils.confirmAction(
     'Bạn có chắc muốn xóa tệp đính kèm này?',
     { title: 'Xóa tệp đính kèm', confirmText: 'Xóa', danger: true }
   )) return;
 
-  const res = await window.electronAPI.dbRun('DELETE FROM order_attachments WHERE id = $1', [attId]);
-  if (res.ok) {
+  let res;
+  try {
+    res = await window.electronAPI.dbRun(
+      'DELETE FROM order_attachments WHERE id = $1 AND order_id = $2 AND order_type = $3',
+      [attId, context.orderId, context.orderType]
+    );
+  } catch (err) {
+    res = { ok: false, error: err?.message };
+  }
+  if (res.ok && Number(res.rowCount ?? 1) > 0) {
     utils.showToast('Đã xóa tệp đính kèm thành công', 'success');
-    loadAttachmentsList();
+    loadAttachmentsList(context);
   } else {
     utils.showToast('Không thể xóa tệp đính kèm', 'danger');
   }
+}
+
+// Chuyển ArrayBuffer sang base64 theo từng khối (cộng chuỗi từng byte là O(n^2) với tệp lớn).
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  const parts = [];
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    parts.push(String.fromCharCode.apply(null, bytes.subarray(offset, offset + chunkSize)));
+  }
+  return btoa(parts.join(''));
 }
 
 async function uploadAttachmentFile(input) {
@@ -1193,34 +1349,50 @@ async function uploadAttachmentFile(input) {
     return;
   }
 
+  // Chốt đơn đích trước khi FileReader chạy: người dùng có thể đổi tab/đơn trong lúc đọc tệp.
+  const context = statsAttachmentContext ? { ...statsAttachmentContext } : null;
+  if (!context?.orderId) {
+    utils.showToast('Chưa chọn đơn hàng để đính kèm tệp', 'warning');
+    input.value = '';
+    return;
+  }
+
   utils.showToast('Đang tải tệp lên...', 'warning');
   const fileReader = new FileReader();
 
   fileReader.onload = async function() {
-    const base64Data = btoa(
-      new Uint8Array(this.result).reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
+    try {
+      const base64Data = arrayBufferToBase64(this.result);
 
-    const sql = `
-      INSERT INTO order_attachments (order_type, order_id, file_name, content_type, file_size, data)
-      VALUES ($1, $2, $3, $4, $5, decode($6, 'base64'))
-    `;
+      const sql = `
+        INSERT INTO order_attachments (order_type, order_id, file_name, content_type, file_size, data)
+        VALUES ($1, $2, $3, $4, $5, decode($6, 'base64'))
+      `;
 
-    const res = await window.electronAPI.dbRun(sql, [
-      getStatsOrderTypeKey(),
-      selectedOrderIdForAttachments,
-      file.name,
-      file.type || 'application/octet-stream',
-      file.size,
-      base64Data
-    ]);
+      const res = await window.electronAPI.dbRun(sql, [
+        context.orderType,
+        context.orderId,
+        file.name,
+        file.type || 'application/octet-stream',
+        file.size,
+        base64Data
+      ]);
 
-    if (res.ok) {
-      utils.showToast('Đã thêm tệp đính kèm mới!', 'success');
-      loadAttachmentsList();
-    } else {
-      utils.showToast('Lỗi đính kèm: ' + res.error, 'danger');
+      if (res.ok) {
+        utils.showToast('Đã thêm tệp đính kèm mới!', 'success');
+        if (statsAttachmentContext?.orderId === context.orderId && statsAttachmentContext?.orderType === context.orderType) {
+          loadAttachmentsList();
+        }
+      } else {
+        utils.showToast('Lỗi đính kèm: ' + (res.error || 'không lưu được tệp'), 'danger');
+      }
+    } catch (err) {
+      console.error('Lỗi đính kèm tệp: ', err);
+      utils.showToast('Lỗi đính kèm: ' + (err?.message || 'không lưu được tệp'), 'danger');
     }
+  };
+  fileReader.onerror = function() {
+    utils.showToast('Không đọc được tệp đính kèm', 'danger');
   };
 
   fileReader.readAsArrayBuffer(file);
@@ -1290,61 +1462,4 @@ async function openOrderExportDialog(orderId, orderType) {
 // 11. Gửi Email thông báo trực tiếp
 async function sendOrderNotificationEmail(orderId, orderType) {
   openEmailDialog(orderId, orderType);
-}
-
-// Hàm phụ: Chuyển đổi số tiền thành chữ Tiếng Việt
-function convertNumberToVietnameseWords(number) {
-  if (number === 0) return "Không";
-  
-  const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-  const placeValues = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
-  
-  let stringNumber = Math.round(number).toString();
-  let len = stringNumber.length;
-  
-  if (len > 18) return "Số quá lớn";
-  
-  let numberGroups = [];
-  while (stringNumber.length > 0) {
-    numberGroups.push(stringNumber.substring(Math.max(0, stringNumber.length - 3)));
-    stringNumber = stringNumber.substring(0, Math.max(0, stringNumber.length - 3));
-  }
-  
-  let words = [];
-  
-  for (let i = 0; i < numberGroups.length; i++) {
-    let groupVal = parseInt(numberGroups[i]);
-    if (groupVal === 0) continue;
-    
-    let groupWords = [];
-    let hundreds = Math.floor(groupVal / 100);
-    let tens = Math.floor((groupVal % 100) / 10);
-    let ones = groupVal % 10;
-    
-    if (hundreds > 0 || words.length > 0) {
-      groupWords.push(units[hundreds] + " trăm");
-    }
-    
-    if (tens > 1) {
-      groupWords.push(units[tens] + " mươi");
-      if (ones === 1) groupWords.push("mốt");
-      else if (ones === 5) groupWords.push("lăm");
-      else if (ones > 0) groupWords.push(units[ones]);
-    } else if (tens === 1) {
-      groupWords.push("mười");
-      if (ones === 5) groupWords.push("lăm");
-      else if (ones > 0) groupWords.push(units[ones]);
-    } else if (hundreds > 0 && ones > 0) {
-      groupWords.push("lẻ");
-      groupWords.push(units[ones]);
-    } else if (ones > 0) {
-      groupWords.push(units[ones]);
-    }
-    
-    words.unshift(groupWords.join(" ") + " " + placeValues[i]);
-  }
-  
-  let finalResult = words.join(" ").trim();
-  finalResult = finalResult.replace(/\s+/g, ' ');
-  return finalResult.charAt(0).toUpperCase() + finalResult.slice(1);
 }

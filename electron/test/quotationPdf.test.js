@@ -57,7 +57,7 @@ test('saved quotations can be loaded into tabs and updated in place', () => {
 });
 
 test('quotation preview opens before PDF export and omits delivery date', () => {
-  assert.match(quotationSource, /function openQuotePdfPreview\(quoteId, htmlContent\)/);
+  assert.match(quotationSource, /function openQuotePdfPreview\(quoteId, htmlContent(, previewLogoSrc[^)]*)?\)/);
   assert.match(quotationSource, /async function exportQuotePreviewPDF\(\)/);
   assert.match(quotationSource, /frame\.srcdoc = htmlContent\.replace/);
   assert.doesNotMatch(quotationSource, /<tr><td class="label">Ngày giao hàng<\/td>/);
@@ -91,4 +91,16 @@ test('quotation declaration fields are grouped and axis mode uses one switch', (
   assert.match(quotationSource, /Sản lượng & thành phẩm/);
   assert.match(quotationSource, /Giá bán & phụ phí/);
   assert.match(quotationSource, /Thanh toán & cộng tác/);
+});
+
+test('quote PDF reads the amount in words with the shared orderMath helper', () => {
+  assert.match(quotationSource, /orderMath\.toVietnameseWords\(quoteRemaining\)/);
+  assert.doesNotMatch(quotationSource, /convertNumberToVietnameseWords/);
+  assert.match(quotationSource, /orderMath\.calculateQuoteBundle\(quoteItems\)/);
+});
+
+test('quotation HTML has no inline event handlers and the draft input listener is attached once', () => {
+  assert.doesNotMatch(quotationSource, /\son(click|input|change)="/);
+  assert.match(quotationSource, /quoteDraftFormsWithListeners/);
+  assert.match(quotationSource, /String\(value \?\? ''\)\.toLowerCase\(\)\.includes\(query\)/);
 });

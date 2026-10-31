@@ -1,6 +1,48 @@
 // JS/MODULES/DASHBOARD.JS - LOGIC XỬ LÝ BẢNG TỔNG QUAN & BIỂU ĐỒ
 let salesTrendChartInst = null;
 let productDistChartInst = null;
+let dashboardTrendRequestId = 0;
+let dashboardDistRequestId = 0;
+
+// Mốc đầu tháng theo giờ máy (Việt Nam). Truyền dạng tham số để không phụ thuộc múi giờ phiên DB (UTC trên cloud).
+function getDashboardMonthStart() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+// Chart.js tải từ CDN: khi offline sẽ không có biến Chart. Hiện ghi chú nhẹ thay vì báo lỗi kết nối DB.
+function showDashboardChartPlaceholder(canvasId, message) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  canvas.style.display = 'none';
+  let note = container?.querySelector('.chart-placeholder');
+  if (container && !note) {
+    note = document.createElement('div');
+    note.className = 'chart-placeholder';
+    note.setAttribute('role', 'note');
+    note.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center;';
+    container.appendChild(note);
+  }
+  if (note) note.textContent = message;
+}
+
+function getDashboardChartContext(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  if (typeof Chart === 'undefined') {
+    showDashboardChartPlaceholder(canvasId, 'Không tải được thư viện biểu đồ (có thể đang offline). Số liệu vẫn được cập nhật.');
+    return null;
+  }
+  canvas.style.display = '';
+  canvas.parentElement?.querySelector('.chart-placeholder')?.remove();
+  return canvas.getContext('2d');
+}
+
+function truncateDashboardLabel(value, maxLength, keepLength) {
+  const text = String(value ?? '');
+  return text.length > maxLength ? text.substring(0, keepLength) + "..." : text;
+}
 
 async function loadDashboardData() {
   try {
@@ -39,11 +81,11 @@ async function loadDashboardMetrics() {
       COUNT(id) AS total_orders,
       COALESCE(SUM(thanh_tien_ban), 0) AS total_revenue
     FROM (
-      SELECT id, thoi_gian, COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END AS thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
+      SELECT id, thoi_gian, COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) ELSE 0 END AS thanh_tien_ban FROM bang_keo_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT id, thoi_gian, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
+      SELECT id, thoi_gian, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
+      SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined;
   `;
 
@@ -52,34 +94,35 @@ async function loadDashboardMetrics() {
       ten_hang,
       SUM(so_luong) AS total_qty
     FROM (
-      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
+      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT ten_hang, thoi_gian, so_luong FROM truc_in_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
+      SELECT ten_hang, thoi_gian, so_luong FROM truc_in_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
       UNION ALL
-      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_orders WHERE thoi_gian >= DATE_TRUNC('month', NOW()) AND (is_quote = FALSE OR is_quote IS NULL)
+      SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_orders WHERE thoi_gian >= $1 AND (is_quote = FALSE OR is_quote IS NULL)
     ) AS combined
     GROUP BY ten_hang
-    ORDER BY total_qty DESC
+    ORDER BY total_qty DESC NULLS LAST
     LIMIT 1;
   `;
 
-  const resMetrics = await window.electronAPI.dbQuery(sqlMetrics);
-  const resTop = await window.electronAPI.dbQuery(sqlTopProduct);
+  const monthStart = getDashboardMonthStart();
+  const resMetrics = await window.electronAPI.dbQuery(sqlMetrics, [monthStart]);
+  const resTop = await window.electronAPI.dbQuery(sqlTopProduct, [monthStart]);
 
   if (resMetrics.ok && resMetrics.rows.length > 0) {
     const data = resMetrics.rows[0];
-    const totalOrders = parseInt(data.total_orders);
-    const totalRevenue = parseFloat(data.total_revenue);
+    const totalOrders = parseInt(data.total_orders, 10) || 0;
+    const totalRevenue = parseFloat(data.total_revenue) || 0;
     const avgOrder = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
 
-    document.getElementById('dash-total-orders').innerText = totalOrders.toLocaleString();
+    document.getElementById('dash-total-orders').innerText = totalOrders.toLocaleString('vi-VN');
     document.getElementById('dash-revenue').innerText = utils.formatCurrency(totalRevenue) + "đ";
     document.getElementById('dash-avg-order').innerText = utils.formatCurrency(avgOrder) + "đ";
   }
 
   if (resTop.ok && resTop.rows.length > 0) {
-    const topProd = resTop.rows[0].ten_hang;
-    document.getElementById('dash-top-product').innerText = topProd.length > 18 ? topProd.substring(0, 16) + "..." : topProd;
+    const topProd = String(resTop.rows[0].ten_hang ?? '') || 'N/A';
+    document.getElementById('dash-top-product').innerText = truncateDashboardLabel(topProd, 18, 16);
     document.getElementById('dash-top-product').title = topProd;
   } else {
     document.getElementById('dash-top-product').innerText = "N/A";
@@ -90,8 +133,8 @@ async function loadDashboardMetrics() {
 async function loadDashboardAttentionMetrics() {
   const sql = `
     SELECT
-      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= CURRENT_DATE AND ngay_du_kien <= CURRENT_DATE + INTERVAL '3 days' THEN 1 ELSE 0 END) AS due_soon,
-      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < CURRENT_DATE THEN 1 ELSE 0 END) AS overdue,
+      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien >= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND ngay_du_kien <= (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + INTERVAL '3 days' THEN 1 ELSE 0 END) AS due_soon,
+      SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_giao, FALSE) AND ngay_du_kien < (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date THEN 1 ELSE 0 END) AS overdue,
       SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_khach, 0) ELSE 0 END) AS open_debt,
       SUM(CASE WHEN NOT COALESCE(is_quote, FALSE) AND NOT COALESCE(da_tat_toan, FALSE) THEN COALESCE(cong_no_ncc, 0) ELSE 0 END) AS supplier_debt,
       SUM(CASE WHEN COALESCE(is_quote, FALSE) THEN 1 ELSE 0 END) AS pending_quotes
@@ -108,11 +151,11 @@ async function loadDashboardAttentionMetrics() {
   if (!res.ok || res.rows.length === 0) return;
 
   const data = res.rows[0];
-  const dueSoon = parseInt(data.due_soon || 0);
-  const overdue = parseInt(data.overdue || 0);
+  const dueSoon = parseInt(data.due_soon || 0, 10) || 0;
+  const overdue = parseInt(data.overdue || 0, 10) || 0;
   const openDebt = parseFloat(data.open_debt || 0);
   const supplierDebt = parseFloat(data.supplier_debt || 0);
-  const pendingQuotes = parseInt(data.pending_quotes || 0);
+  const pendingQuotes = parseInt(data.pending_quotes || 0, 10) || 0;
 
   const overdueEl = document.getElementById('dash-overdue-count');
   const dueSoonEl = document.getElementById('dash-due-soon-count');
@@ -120,29 +163,38 @@ async function loadDashboardAttentionMetrics() {
   const supplierDebtEl = document.getElementById('dash-supplier-debt');
   const quotesEl = document.getElementById('dash-pending-quotes');
 
-  if (overdueEl) overdueEl.innerText = overdue.toLocaleString();
-  if (dueSoonEl) dueSoonEl.innerText = dueSoon.toLocaleString();
+  if (overdueEl) overdueEl.innerText = overdue.toLocaleString('vi-VN');
+  if (dueSoonEl) dueSoonEl.innerText = dueSoon.toLocaleString('vi-VN');
   if (debtEl) debtEl.innerText = utils.formatCurrency(openDebt) + "đ";
   if (supplierDebtEl) supplierDebtEl.innerText = utils.formatCurrency(supplierDebt) + "đ";
-  if (quotesEl) quotesEl.innerText = pendingQuotes.toLocaleString();
+  if (quotesEl) quotesEl.innerText = pendingQuotes.toLocaleString('vi-VN');
 }
 
 async function updateDashboardCharts(period = 'daily') {
-  // Thay đổi trạng thái các nút lọc
-  document.querySelectorAll('.chart-filters button').forEach(btn => btn.classList.remove('active'));
-  document.getElementById(`filter-${period}`).classList.add('active');
+  if (!['daily', 'weekly', 'monthly'].includes(period)) period = 'daily';
+  const requestId = ++dashboardTrendRequestId;
+
+  // Thay đổi trạng thái các nút lọc (chỉ nhóm nút của biểu đồ doanh số, không đụng tab Thống kê)
+  const activeButton = document.getElementById(`filter-${period}`);
+  const filterGroup = activeButton?.closest('.chart-filters');
+  filterGroup?.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+  activeButton?.classList.add('active');
 
   // Tính toán khoảng thời gian
   let startDate = new Date();
   let truncType = 'day';
 
+  // Bắt đầu đúng đầu kỳ (ngày / thứ Hai / ngày 1) để kỳ đầu tiên không bị cắt dở
+  startDate.setHours(0, 0, 0, 0);
   if (period === 'daily') {
     startDate.setDate(startDate.getDate() - 30);
     truncType = 'day';
   } else if (period === 'weekly') {
     startDate.setDate(startDate.getDate() - 84); // 12 tuần
+    startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
     truncType = 'week';
   } else { // monthly
+    startDate.setDate(1);
     startDate.setMonth(startDate.getMonth() - 12); // 12 tháng
     truncType = 'month';
   }
@@ -164,6 +216,8 @@ async function updateDashboardCharts(period = 'daily') {
   `;
 
   const res = await window.electronAPI.dbQuery(sql, [truncType, startDate]);
+  // Bỏ phản hồi cũ nếu người dùng đã đổi bộ lọc trong lúc chờ
+  if (requestId !== dashboardTrendRequestId) return;
 
   if (!res.ok) {
     utils.showToast("Lỗi tải biểu đồ doanh số", "danger");
@@ -181,16 +235,17 @@ async function updateDashboardCharts(period = 'daily') {
     if (period === 'daily') {
       label = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
     } else if (period === 'weekly') {
-      label = `T.${dateObj.getMonth() + 1}/${dateObj.getFullYear().toString().substring(2)}`;
+      label = `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear().toString().substring(2)}`;
     } else {
-      label = `Th.${dateObj.getMonth() + 1}`;
+      label = `Th.${dateObj.getMonth() + 1}/${dateObj.getFullYear().toString().substring(2)}`;
     }
     labels.push(label);
     quantities.push(parseFloat(row.quantity || 0));
     amounts.push(parseFloat(row.amount || 0));
   });
 
-  const ctx = document.getElementById('salesTrendChart').getContext('2d');
+  const ctx = getDashboardChartContext('salesTrendChart');
+  if (!ctx) return;
   
   if (salesTrendChartInst) {
     salesTrendChartInst.destroy();
@@ -257,6 +312,7 @@ async function updateDashboardCharts(period = 'daily') {
 
 // Cập nhật biểu đồ phân bố sản phẩm (Pie Chart)
 async function loadProductDistributionChart() {
+  const requestId = ++dashboardDistRequestId;
   const sql = `
     SELECT 
       ten_hang,
@@ -273,6 +329,7 @@ async function loadProductDistributionChart() {
   `;
 
   const res = await window.electronAPI.dbQuery(sql);
+  if (requestId !== dashboardDistRequestId) return;
 
   if (!res.ok) {
     utils.showToast("Lỗi tải biểu đồ phân bố sản phẩm", "danger");
@@ -288,7 +345,7 @@ async function loadProductDistributionChart() {
   res.rows.forEach(row => {
     const qty = parseFloat(row.total_quantity || 0);
     if (total > 0 && (qty / total >= 0.03)) {
-      mainProducts.push({ label: row.ten_hang, value: qty });
+      mainProducts.push({ label: String(row.ten_hang ?? '') || '(Không tên)', value: qty });
     } else {
       otherSum += qty;
     }
@@ -298,10 +355,11 @@ async function loadProductDistributionChart() {
     mainProducts.push({ label: 'Khác', value: otherSum });
   }
 
-  const labels = mainProducts.map(p => p.label.length > 12 ? p.label.substring(0, 10) + "..." : p.label);
+  const labels = mainProducts.map(p => truncateDashboardLabel(p.label, 12, 10));
   const data = mainProducts.map(p => p.value);
 
-  const ctx = document.getElementById('productDistChart').getContext('2d');
+  const ctx = getDashboardChartContext('productDistChart');
+  if (!ctx) return;
   
   if (productDistChartInst) {
     productDistChartInst.destroy();

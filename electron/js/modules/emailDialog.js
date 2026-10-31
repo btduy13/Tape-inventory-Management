@@ -6,32 +6,61 @@ let emailBaseSubject = "";
 let emailAttachments = []; // Chứa danh sách { filename, size, type: 'db'|'local', id, content, checked }
 let emailSuggestions = [];
 let emailSendInProgress = false;
+let emailDialogRequestId = 0;
 
 // Khởi tạo và mở email dialog
 async function openEmailDialog(orderId, orderType) {
+  // Mã yêu cầu: nếu người dùng mở email cho đơn khác trong lúc đang tải, bỏ kết quả của lần mở cũ.
+  const requestId = ++emailDialogRequestId;
+  const isCurrentRequest = () => requestId === emailDialogRequestId;
   try {
     orderType = utils.normalizeOrderType(orderType);
-    activeEmailOrderId = orderId;
-    activeEmailOrderType = orderType;
-    emailAttachments = [];
 
     // 1. Tải thông tin đơn hàng để sinh mẫu email
     const tableName = utils.getOrderTableName(orderType);
 
     const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
+    if (!isCurrentRequest()) return;
     if (!res.ok || res.rows.length === 0) {
       utils.showToast("Không tìm thấy dữ liệu đơn hàng", "danger");
       return;
     }
 
     const order = res.rows[0];
+
+    // 2. Load attachments của đơn hàng này từ database (gom vào biến tạm, chỉ áp dụng khi còn là yêu cầu mới nhất)
+    const loadedAttachments = [];
+    if (orderId && orderId !== 'temp') {
+      const attsRes = await window.electronAPI.dbQuery(
+        'SELECT id, file_name, file_size FROM order_attachments WHERE order_id = $1 AND order_type = $2',
+        [orderId, orderType]
+      );
+      if (!isCurrentRequest()) return;
+      if (attsRes.ok) {
+        attsRes.rows.forEach(att => {
+          loadedAttachments.push({
+            id: att.id,
+            filename: String(att.file_name ?? ''),
+            size: att.file_size,
+            type: 'db',
+            checked: true
+          });
+        });
+      }
+    }
+
+    // Áp dụng đồng bộ toàn bộ trạng thái của đơn này (không còn await xen giữa)
+    activeEmailOrderId = orderId;
+    activeEmailOrderType = orderType;
+    emailAttachments = loadedAttachments;
     const typeLabel = orderType === 'bang_keo_in' ? 'Băng Keo In' : (orderType === 'truc_in' ? 'Trục In' : 'Băng Keo');
     const formattedTitle = `${typeLabel} ${order.ten_hang || ''}`.replace(/[\r\n]+/g, ' ').trim();
     
     // Đặt Tiêu đề gốc
     emailBaseSubject = formattedTitle;
     document.getElementById('email-subject').value = "";
-    document.getElementById('email-is-new-axis').checked = true;
+    // Chỉ Băng Keo In mới có loại trục; đơn khác mặc định không đánh dấu TRỤC MỚI
+    document.getElementById('email-is-new-axis').checked = orderType === 'bang_keo_in' && order.loai_truc === 'moi';
     
     // Tự động thiết lập người nhận mặc định
     document.getElementById('email-to').value = "tque197@gmail.com";
@@ -43,10 +72,10 @@ async function openEmailDialog(orderId, orderType) {
     } else if (orderType === 'truc_in') {
       specText = `Quy cách: ${order.quy_cach || 'Mặc định'}`;
     } else {
-      specText = `Quy cách: ${order.quy_cach || 0} KG`;
+      specText = `Quy cách: ${formatBangKeoEmailSpec(order.quy_cach)}`;
     }
 
-    let qtyText = order.so_luong.toLocaleString() + (orderType === 'bang_keo' ? ' KG' : ' cuộn');
+    let qtyText = Number(order.so_luong || 0).toLocaleString('vi-VN') + (orderType === 'bang_keo' ? ' KG' : ' cuộn');
 
     const bodyTemplate = `Chào bác,<br><br>` +
       `Bác làm giúp con đơn hàng ${typeLabel} "<strong>${utils.escapeHtml(order.ten_hang)}</strong>" này nhé:<br>` +
@@ -65,51 +94,184 @@ async function openEmailDialog(orderId, orderType) {
     // Cập nhật tiêu đề email lần đầu
     updateEmailSubjectPrefix();
 
-    // 2. Load attachments của đơn hàng này từ database
-    if (orderId && orderId !== 'temp') {
-      const attsRes = await window.electronAPI.dbQuery(
-        'SELECT id, file_name, file_size FROM order_attachments WHERE order_id = $1 AND order_type = $2',
-        [orderId, orderType]
-      );
-      if (attsRes.ok) {
-        attsRes.rows.forEach(att => {
-          emailAttachments.push({
-            id: att.id,
-            filename: att.file_name,
-            size: att.file_size,
-            type: 'db',
-            checked: true
-          });
-        });
-      }
-    }
+    // Cập nhật giao diện đính kèm
+    renderEmailAttachmentsTable();
 
     // 3. Load email history suggestions
     const suggestionsRes = await window.electronAPI.dbQuery(
       'SELECT email_address, SUM(sent_count) as total_count FROM email_history GROUP BY email_address ORDER BY MAX(last_sent_at) DESC, total_count DESC LIMIT 50'
     );
+    if (!isCurrentRequest()) return;
     if (suggestionsRes.ok) {
-      emailSuggestions = suggestionsRes.rows.map(row => row.email_address);
+      emailSuggestions = suggestionsRes.rows.map(row => String(row.email_address ?? '')).filter(Boolean);
     }
 
-    // Cập nhật giao diện đính kèm
-    renderEmailAttachmentsTable();
     await loadEmailSmtpSettings();
+    if (!isCurrentRequest()) return;
 
     // Mở modal
     document.getElementById('modal-email-dialog').classList.add('active');
   } catch (err) {
+    if (!isCurrentRequest()) return;
     utils.showToast("Lỗi tải thông tin email: " + err.message, "danger");
   }
 }
 
-async function loadEmailSmtpSettings() {
-  // Cấu hình SMTP đã được thiết lập mặc định trong tệp cấu hình
+// Quy cách Băng Keo là chữ tự do (vd. '48mm x 100y'): in nguyên văn, chỉ thêm ' KG' khi là số thuần.
+function formatBangKeoEmailSpec(quyCach) {
+  const text = String(quyCach ?? '').trim();
+  if (!text) return 'Mặc định';
+  return /^\d+(?:[.,]\d+)?$/.test(text) ? `${text} KG` : text;
 }
 
-function toggleEmailSmtpSettings(forceOpen = false) {}
-async function saveEmailSmtpSettings() { return true; }
-async function testEmailSmtpSettings() {}
+// Tách danh sách người nhận (phân cách bằng dấu phẩy / chấm phẩy), bỏ khoảng trắng, chữ thường, bỏ trùng.
+function splitEmailRecipients(value) {
+  const seen = new Set();
+  return String(value ?? '')
+    .split(/[,;]/)
+    .map(address => address.trim().toLowerCase())
+    .filter(address => address && !seen.has(address) && seen.add(address));
+}
+
+// --- CẤU HÌNH SMTP ---
+const EMAIL_SMTP_FIELD_IDS = {
+  server: 'smtp-server',
+  port: 'smtp-port',
+  username: 'smtp-username',
+  password: 'smtp-password',
+  sender: 'smtp-sender'
+};
+
+function getEmailSmtpFields() {
+  const fields = {};
+  for (const [key, id] of Object.entries(EMAIL_SMTP_FIELD_IDS)) {
+    fields[key] = document.getElementById(id);
+  }
+  return fields;
+}
+
+function getEmailSmtpContainer() {
+  return document.getElementById('email-smtp-settings')
+    || document.getElementById(EMAIL_SMTP_FIELD_IDS.server)?.parentElement
+    || null;
+}
+
+async function loadEmailSmtpSettings() {
+  const fields = getEmailSmtpFields();
+  // Giao diện chưa có ô cấu hình SMTP thì bỏ qua (cấu hình vẫn lấy từ tệp cấu hình)
+  if (!fields.server || typeof window.electronAPI?.getEmailConfig !== 'function') return;
+  try {
+    const res = await window.electronAPI.getEmailConfig();
+    if (!res?.ok || !res.config) {
+      window.electronAPI.writeLog?.('warning', 'Không tải được cấu hình SMTP: ' + (res?.error || 'không có phản hồi'));
+      return;
+    }
+    const config = res.config;
+    fields.server.value = config.server || '';
+    if (fields.port) fields.port.value = config.port ?? '';
+    if (fields.username) fields.username.value = config.username || '';
+    if (fields.sender) fields.sender.value = config.sender || '';
+    if (fields.password) {
+      // Main không bao giờ trả mật khẩu về giao diện: để trống = giữ mật khẩu đã lưu
+      fields.password.value = '';
+      fields.password.placeholder = config.hasPassword ? 'Để trống để giữ mật khẩu đã lưu' : 'Nhập mật khẩu ứng dụng SMTP';
+    }
+  } catch (err) {
+    window.electronAPI.writeLog?.('warning', 'Lỗi tải cấu hình SMTP: ' + err.message);
+  }
+}
+
+function toggleEmailSmtpSettings(forceOpen = false) {
+  const container = getEmailSmtpContainer();
+  if (!container) {
+    console.warn('toggleEmailSmtpSettings: không tìm thấy khung cấu hình SMTP (#email-smtp-settings)');
+    return;
+  }
+  const isHidden = container.hidden || container.style.display === 'none';
+  const open = forceOpen === true || isHidden;
+  container.hidden = !open;
+  container.style.display = open ? 'block' : 'none';
+  if (open) document.getElementById(EMAIL_SMTP_FIELD_IDS.server)?.focus?.();
+}
+
+// Đọc và kiểm tra dữ liệu trên form SMTP. Trả về { config } hoặc { error }.
+function readEmailSmtpForm() {
+  const fields = getEmailSmtpFields();
+  if (!fields.server || !fields.port || !fields.username) {
+    return { error: 'Không tìm thấy ô cấu hình SMTP trên giao diện' };
+  }
+  const server = fields.server.value.trim();
+  const portText = String(fields.port.value ?? '').trim();
+  const username = fields.username.value.trim();
+  const password = fields.password ? fields.password.value : '';
+  const sender = fields.sender ? fields.sender.value.trim() : '';
+  if (!server) return { error: 'Vui lòng nhập máy chủ SMTP' };
+  const port = Number(portText);
+  if (!/^\d+$/.test(portText) || !Number.isInteger(port) || port < 1 || port > 65535) {
+    return { error: 'Cổng SMTP phải là số nguyên từ 1 đến 65535' };
+  }
+  if (!username) return { error: 'Vui lòng nhập tài khoản SMTP' };
+  return { config: { server, port, username, password, sender } };
+}
+
+async function saveEmailSmtpSettings(options = {}) {
+  const silent = options && options.silent === true;
+  if (typeof window.electronAPI?.saveEmailConfig !== 'function') {
+    console.warn('saveEmailSmtpSettings: thiếu electronAPI.saveEmailConfig');
+    return false;
+  }
+  const form = readEmailSmtpForm();
+  if (form.error) {
+    if (!document.getElementById(EMAIL_SMTP_FIELD_IDS.server)) console.warn('saveEmailSmtpSettings: ' + form.error);
+    utils.showToast(form.error, 'warning');
+    return false;
+  }
+  try {
+    // Mật khẩu để trống: main giữ mật khẩu đã lưu
+    const res = await window.electronAPI.saveEmailConfig(form.config);
+    if (!res?.ok) {
+      utils.showToast('Không lưu được cấu hình SMTP: ' + (res?.error || 'Lỗi không xác định'), 'danger');
+      return false;
+    }
+    const passwordField = document.getElementById(EMAIL_SMTP_FIELD_IDS.password);
+    if (passwordField) {
+      passwordField.value = '';
+      passwordField.placeholder = 'Để trống để giữ mật khẩu đã lưu';
+    }
+    if (!silent) utils.showToast('Đã lưu cấu hình SMTP', 'success');
+    return true;
+  } catch (err) {
+    window.electronAPI.writeLog?.('error', 'Lỗi lưu cấu hình SMTP: ' + err.message);
+    utils.showToast('Lỗi lưu cấu hình SMTP: ' + err.message, 'danger');
+    return false;
+  }
+}
+
+async function testEmailSmtpSettings() {
+  if (typeof window.electronAPI?.testEmailConfig !== 'function') {
+    console.warn('testEmailSmtpSettings: thiếu electronAPI.testEmailConfig');
+    return false;
+  }
+  // Main chỉ kiểm tra được cấu hình đã lưu, nên lưu thông tin đang nhập trước khi kiểm tra
+  if (document.getElementById(EMAIL_SMTP_FIELD_IDS.server)) {
+    const saved = await saveEmailSmtpSettings({ silent: true });
+    if (!saved) return false;
+  }
+  try {
+    utils.showToast('Đang kiểm tra kết nối SMTP...', 'info');
+    const res = await window.electronAPI.testEmailConfig();
+    if (res?.ok) {
+      utils.showToast('Kết nối SMTP thành công', 'success');
+      return true;
+    }
+    utils.showToast('Kiểm tra SMTP thất bại: ' + (res?.error || 'Lỗi không xác định'), 'danger');
+    return false;
+  } catch (err) {
+    window.electronAPI.writeLog?.('error', 'Lỗi kiểm tra SMTP: ' + err.message);
+    utils.showToast('Lỗi kiểm tra SMTP: ' + err.message, 'danger');
+    return false;
+  }
+}
 
 // Cập nhật tiền tố tiêu đề TRỤC MỚI / TRỤC CŨ
 function updateEmailSubjectPrefix() {
@@ -163,7 +325,7 @@ function renderEmailAttachmentsTable() {
 
     tr.innerHTML = `
       <td style="text-align: center;">
-        <input type="checkbox" ${att.checked ? 'checked' : ''} onchange="toggleEmailAttachment(${idx}, this.checked)">
+        <input type="checkbox" ${att.checked ? 'checked' : ''} data-email-attachment-index="${utils.escapeHtml(idx)}">
       </td>
       <td>${utils.escapeHtml(att.filename)}</td>
       <td>${sizeStr}</td>
@@ -173,15 +335,25 @@ function renderEmailAttachmentsTable() {
   });
 }
 
+// Ủy quyền sự kiện cho checkbox đính kèm (không dùng onchange inline để tương thích CSP)
+document.addEventListener('change', (e) => {
+  const checkbox = e.target?.closest?.('#email-attachments-tbody [data-email-attachment-index]');
+  if (!checkbox) return;
+  toggleEmailAttachment(Number(checkbox.dataset.emailAttachmentIndex), checkbox.checked);
+});
+
 function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value <= 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  const i = Math.min(sizes.length - 1, Math.max(0, Math.floor(Math.log(value) / Math.log(k))));
+  return parseFloat((value / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+
 function toggleEmailAttachment(idx, checked) {
+  if (!emailAttachments[idx]) return;
   emailAttachments[idx].checked = checked;
 }
 
@@ -197,7 +369,7 @@ async function addEmailLocalAttachment() {
     properties: ['openFile', 'multiSelections']
   });
 
-  if (res.canceled || res.filePaths.length === 0) return;
+  if (!res || res.canceled || !res.filePaths?.length) return;
 
   for (const filePath of res.filePaths) {
     const fileRes = await window.electronAPI.readFileAsBase64(filePath);
@@ -337,6 +509,10 @@ async function submitSendEmail() {
       dbAttachmentIds
     );
 
+    if (mailRes?.canceled) {
+      utils.showToast("Đã hủy gửi email", "warning");
+      return;
+    }
     if (!mailRes?.ok) {
       utils.showToast("Lỗi gửi email: " + (mailRes?.error || 'Không có phản hồi từ dịch vụ email'), "danger");
       return;
@@ -345,32 +521,11 @@ async function submitSendEmail() {
     utils.showToast("Đã gửi email thành công!", "success");
     closeEmailDialogModal();
 
-    try {
-      const tableName = utils.getOrderTableName(sentOrderType);
-      await window.electronAPI.dbRun(
-        `UPDATE ${tableName} SET da_gui_email = TRUE WHERE id = $1`,
-        [sentOrderId]
-      );
-
-      const checkHist = await window.electronAPI.dbQuery(
-        'SELECT id, sent_count FROM email_history WHERE LOWER(email_address) = LOWER($1)',
-        [to]
-      );
-
-      if (checkHist.ok && checkHist.rows.length > 0) {
-        const row = checkHist.rows[0];
-        await window.electronAPI.dbRun(
-          'UPDATE email_history SET last_sent_at = NOW(), sent_count = $1 WHERE id = $2',
-          [(Number(row.sent_count) || 0) + 1, row.id]
-        );
-      } else {
-        await window.electronAPI.dbRun(
-          'INSERT INTO email_history (email_address, last_sent_at, sent_count) VALUES ($1, NOW(), 1)',
-          [to]
-        );
-      }
-    } catch (trackingError) {
-      window.electronAPI.writeLog('warning', 'Email đã gửi nhưng không lưu được trạng thái: ' + trackingError.message);
+    const trackingWarnings = await recordEmailSent(sentOrderType, sentOrderId, to);
+    if (trackingWarnings.length > 0) {
+      const message = 'Email đã gửi nhưng không lưu được trạng thái: ' + trackingWarnings.join('; ');
+      window.electronAPI.writeLog('warning', message);
+      utils.showToast(message, 'warning');
     }
 
     if (typeof loadStatsData === 'function') {
@@ -391,4 +546,47 @@ async function submitSendEmail() {
       sendButton.textContent = '📧 Gửi Email';
     }
   }
+}
+
+// Ghi trạng thái "đã gửi email" và lịch sử người nhận. Không ném lỗi; trả về danh sách cảnh báo.
+// Bộ đếm tăng nguyên tử trong một câu UPDATE (không đọc rồi ghi) nên không mất lượt đếm khi gửi song song.
+// Hai máy cùng gửi lần đầu tới một địa chỉ mới có thể (hiếm) tạo hai dòng trùng; gợi ý đã gộp theo địa chỉ.
+async function recordEmailSent(orderType, orderId, toValue) {
+  const warnings = [];
+  const describe = (res) => res?.error || 'Lỗi không xác định';
+  try {
+    if (orderId && orderId !== 'temp') {
+      const tableName = utils.getOrderTableName(orderType);
+      const statusRes = await window.electronAPI.dbRun(
+        `UPDATE ${tableName} SET da_gui_email = TRUE WHERE id = $1`,
+        [orderId]
+      );
+      if (!statusRes?.ok) warnings.push('trạng thái đơn hàng (' + describe(statusRes) + ')');
+    }
+  } catch (err) {
+    warnings.push('trạng thái đơn hàng (' + err.message + ')');
+  }
+
+  for (const address of splitEmailRecipients(toValue)) {
+    try {
+      const updateRes = await window.electronAPI.dbRun(
+        'UPDATE email_history SET sent_count = COALESCE(sent_count, 0) + 1, last_sent_at = CURRENT_TIMESTAMP WHERE lower(email_address) = $1',
+        [address]
+      );
+      if (!updateRes?.ok) {
+        warnings.push(`lịch sử ${address} (${describe(updateRes)})`);
+        continue;
+      }
+      if (Number(updateRes.rowCount) === 0) {
+        const insertRes = await window.electronAPI.dbRun(
+          'INSERT INTO email_history (email_address, last_sent_at, sent_count) VALUES ($1, CURRENT_TIMESTAMP, 1)',
+          [address]
+        );
+        if (!insertRes?.ok) warnings.push(`lịch sử ${address} (${describe(insertRes)})`);
+      }
+    } catch (err) {
+      warnings.push(`lịch sử ${address} (${err.message})`);
+    }
+  }
+  return warnings;
 }

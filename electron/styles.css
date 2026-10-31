@@ -183,6 +183,16 @@ body {
   cursor: pointer;
 }
 
+.menu-item a:focus-visible,
+.breadcrumb-item[role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.breadcrumb-item[role="button"] {
+  cursor: pointer;
+}
+
 .menu-item a:hover {
   background-color: var(--bg-tertiary);
   color: var(--text-primary);
@@ -1235,6 +1245,12 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Toast chỉ để đọc: không chặn click vào nút Lưu/Xuất nằm bên dưới */
+  pointer-events: none;
+}
+
+.toast-container .toast {
+  pointer-events: none;
 }
 
 .toast {
@@ -1359,6 +1375,12 @@ kbd {
     display: block !important;
   }
   .sidebar, .header, .table-controls, .btn-row, .toast-container, .modal-footer, .modal-header button {
+    display: none !important;
+  }
+  /* In phiếu: ẩn toàn bộ khung modal (tiêu đề, nút) và các modal khác, chỉ giữ nội dung chứng từ */
+  #modal-view-voucher .modal-header,
+  .modal-overlay:not(#modal-view-voucher),
+  .modal-close {
     display: none !important;
   }
   .content-container {

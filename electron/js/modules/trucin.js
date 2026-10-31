@@ -113,16 +113,23 @@ function calculateTrucIn(mode = 'order') {
     document.getElementById(`${prefix}loi-nhuan`).value = utils.formatCurrency(result.profit);
     document.getElementById(`${prefix}loi-nhuan-rong`).value = utils.formatCurrency(result.netProfit);
 
+    return result;
   } catch (err) {
     console.error('Lỗi tính toán Trục in:', err);
+    return null;
   }
 }
 
 // 4. Lưu đơn Trục In mới
+// Chặn bấm lưu hai lần (kể cả Ctrl+S trong lúc form đang gửi).
+const trucInSavingModes = new Set();
+
 async function saveTrucIn(event, mode = 'order') {
   if (event) event.preventDefault();
   const formId = mode === 'quote' ? 'form-quote-truc-in' : 'form-truc-in';
+  if (trucInSavingModes.has(mode)) return;
   if (!utils.beginFormSubmit(event, formId)) return;
+  trucInSavingModes.add(mode);
 
   try {
     const prefix = (mode === 'quote') ? 'q-ti-' : 'ti-';
@@ -137,32 +144,42 @@ async function saveTrucIn(event, mode = 'order') {
       return;
     }
 
-    calculateTrucIn(mode);
-    const vatPercent = orderMath.percent(document.getElementById(`${prefix}vat`)?.value);
-    const vatAmount = orderMath.calculateStandardOrder({ quantity: soLuong, costPrice: donGiaGoc, salePrice: donGiaBan, vatPercent }).vat;
+    const deliveryDate = mode === 'quote' ? new Date() : parseDeliveryDateInput(document.getElementById(`${prefix}ngay-du-kien`)?.value);
+    if (!deliveryDate) {
+      utils.showToast("Ngày giao dự kiến không hợp lệ, vui lòng chọn lại ngày", "warning");
+      return;
+    }
+
+    // Mọi số tiền lưu xuống DB lấy trực tiếp từ kết quả tính (đã làm tròn), không đọc lại chữ hiển thị.
+    const result = calculateTrucIn(mode);
+    if (!result) {
+      utils.showToast("Không thể tính toán đơn hàng, vui lòng kiểm tra lại số liệu", "danger");
+      return;
+    }
 
     const data = {
       thoi_gian: new Date(),
       ten_hang: tenHang,
       ten_khach_hang: tenKhachHang,
-      ngay_du_kien: mode === 'quote' ? new Date() : new Date(document.getElementById(`${prefix}ngay-du-kien`).value),
+      ngay_du_kien: deliveryDate,
       quy_cach: document.getElementById(`${prefix}quy-cach`).value.trim() || null,
       so_luong: soLuong,
       mau_sac: document.getElementById(`${prefix}mau-sac`).value.trim() || null,
       mau_keo: document.getElementById(`${prefix}mau-keo`).value.trim() || null,
       don_gia_goc: donGiaGoc,
-      thanh_tien_goc: utils.parseCurrency(document.getElementById(`${prefix}thanh-tien-goc`).value),
+      thanh_tien_goc: result.costTotal,
       don_gia_ban: donGiaBan,
-      thanh_tien_ban: utils.parseCurrency(document.getElementById(`${prefix}thanh-tien-ban`).value),
-      cong_no_khach: utils.parseCurrency(document.getElementById(`${prefix}cong-no-khach`).value),
+      thanh_tien_ban: result.saleTotal,
+      cong_no_khach: result.outstanding,
       ctv: document.getElementById(`${prefix}ctv`).value.trim() || null,
       hoa_hong: parseFloat(document.getElementById(`${prefix}hoa-hong-percent`).value) || 0,
-      tien_hoa_hong: utils.parseCurrency(document.getElementById(`${prefix}tien-hoa-hong`).value),
-      loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
-      tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
-      loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
-      vat: vatAmount,
-      vat_percent: vatPercent,
+      tien_hoa_hong: result.commission,
+      loi_nhuan: result.profit,
+      tien_ship: result.shipping,
+      // loi_nhuan - tien_hoa_hong - tien_ship == loi_nhuan_rong (các phần đã làm tròn)
+      loi_nhuan_rong: result.netProfit,
+      vat: result.vat,
+      vat_percent: result.vatPercent,
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,
@@ -174,7 +191,7 @@ async function saveTrucIn(event, mode = 'order') {
 
     // Tạo ID mới tự động (TI-MM-YY-NNN hoặc BG-TI-MM-YY-NNN)
     const idPrefix = (mode === 'quote') ? "BG-TI" : "TI";
-    const orderId = await generateOrderId(idPrefix, "truc_in_orders");
+    const insertTable = "truc_in_orders";
 
     const sql = `
       INSERT INTO truc_in_orders (
@@ -189,7 +206,7 @@ async function saveTrucIn(event, mode = 'order') {
       )
     `;
 
-    const params = [
+    const buildParams = orderId => [
       orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
       data.quy_cach, data.so_luong, data.mau_sac, data.mau_keo, data.don_gia_goc, data.thanh_tien_goc,
       data.don_gia_ban, data.thanh_tien_ban, data.cong_no_khach, data.ctv, data.hoa_hong,
@@ -198,7 +215,11 @@ async function saveTrucIn(event, mode = 'order') {
       JSON.stringify(data.quote_items || [])
     ];
 
-    const res = await window.electronAPI.dbRun(sql, params);
+    const { orderId, result: res } = await runWithGeneratedOrderId(
+      idPrefix,
+      insertTable,
+      id => window.electronAPI.dbRun(sql, buildParams(id))
+    );
 
     if (res.ok) {
       if (mode === 'quote') {
@@ -222,6 +243,7 @@ async function saveTrucIn(event, mode = 'order') {
     window.electronAPI.writeLog('error', 'Lỗi lưu đơn Trục In: ' + err.message);
     utils.showToast("Không thể lưu đơn hàng", "danger");
   } finally {
+    trucInSavingModes.delete(mode);
     utils.endFormSubmit(event, formId);
   }
 }
@@ -253,8 +275,7 @@ function clearFormTrucIn(mode = 'order') {
   const vatAmountEl = document.getElementById(`${prefix}vat-amount`);
   if (vatAmountEl) vatAmountEl.value = "0";
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Ngày giao mặc định: ngày mai theo giờ địa phương (không dùng toISOString/UTC)
   const deliveryDate = document.getElementById(`${prefix}ngay-du-kien`);
-  if (deliveryDate) deliveryDate.value = tomorrow.toISOString().split('T')[0];
+  if (deliveryDate) deliveryDate.value = tomorrowDeliveryDateValue();
 }

@@ -50,10 +50,13 @@ function setBangKeoInAxisMode(mode = 'order', axisMode = 'cu', options = {}) {
     switchButton.setAttribute('aria-label', isNewAxis ? 'Đang dùng trục mới. Nhấn để chuyển sang trục cũ' : 'Đang dùng trục cũ. Nhấn để chuyển sang trục mới');
   }
 
-  ['truc-ten', 'truc-chu-vi', 'truc-so-luong', 'truc-gia-goc', 'truc-gia-ban'].forEach(suffix => {
+  ['truc-ten', 'truc-so-luong', 'truc-gia-goc', 'truc-gia-ban'].forEach(suffix => {
     const el = document.getElementById(`${prefix}${suffix}`);
     if (el) el.required = isNewAxis;
   });
+  // Chu vi trục là thông tin tùy chọn, không bắt buộc kể cả khi dùng trục mới
+  const axisCircumferenceEl = document.getElementById(`${prefix}truc-chu-vi`);
+  if (axisCircumferenceEl) axisCircumferenceEl.required = false;
 
   if (!isNewAxis && !options.preserveFields) {
     clearBangKeoInAxisFields(mode);
@@ -222,8 +225,10 @@ function calculateBangKeoIn(mode = 'order') {
     calculateBangKeoInAxis(mode, result.axis);
     document.getElementById(`${prefix}loi-nhuan-rong`).value = utils.formatCurrency(result.product.netProfit);
 
+    return result;
   } catch (err) {
     console.error('Lỗi tính toán Băng Keo In:', err);
+    return null;
   }
 }
 
@@ -249,7 +254,7 @@ function calculateBangKeoInAxis(mode = 'order', axisResult = null) {
   document.getElementById(`${prefix}truc-thanh-tien-goc`).value = utils.formatCurrency(result.costTotal);
   document.getElementById(`${prefix}truc-thanh-tien-ban`).value = utils.formatCurrency(result.saleTotal);
   if (axisVatAmountEl) {
-    const axisVatAmount = axisResult?.vat ?? result.saleTotal * orderMath.percent(document.getElementById(`${prefix}truc-vat`)?.value) / 100;
+    const axisVatAmount = axisResult?.vat ?? orderMath.vatAmount(result.saleTotal, document.getElementById(`${prefix}truc-vat`)?.value);
     axisVatAmountEl.value = utils.formatCurrency(axisVatAmount);
   }
   document.getElementById(`${prefix}truc-tien-hoa-hong`).value = utils.formatCurrency(result.commission);
@@ -257,10 +262,15 @@ function calculateBangKeoInAxis(mode = 'order', axisResult = null) {
   document.getElementById(`${prefix}truc-loi-nhuan-rong`).value = utils.formatCurrency(result.netProfit);
 }
 
+// Chặn bấm lưu hai lần (kể cả Ctrl+S trong lúc form đang gửi).
+const bangKeoInSavingModes = new Set();
+
 async function saveBangKeoIn(event, mode = 'order') {
   if (event) event.preventDefault();
   const formId = mode === 'quote' ? 'form-quote-bang-keo-in' : 'form-bang-keo-in';
+  if (bangKeoInSavingModes.has(mode)) return;
   if (!utils.beginFormSubmit(event, formId)) return;
+  bangKeoInSavingModes.add(mode);
 
   try {
     const prefix = (mode === 'quote') ? 'q-bki-' : 'bki-';
@@ -268,18 +278,30 @@ async function saveBangKeoIn(event, mode = 'order') {
     const tenKhachHang = document.getElementById(`${prefix}ten-khach-hang`).value.trim();
     const soLuong = parseFloat(document.getElementById(`${prefix}so-luong`).value) || 0;
     const donGiaBan = utils.parseCurrency(document.getElementById(`${prefix}don-gia-ban`).value);
-    
+
     if (!tenHang || !tenKhachHang || soLuong <= 0 || donGiaBan <= 0) {
       utils.showToast("Vui lòng điền đủ Tên hàng, Khách hàng, Số lượng & Đơn giá bán", "warning");
       return;
     }
 
+    const deliveryDate = mode === 'quote' ? new Date() : parseDeliveryDateInput(document.getElementById(`${prefix}ngay-du-kien`)?.value);
+    if (!deliveryDate) {
+      utils.showToast("Ngày giao dự kiến không hợp lệ, vui lòng chọn lại ngày", "warning");
+      return;
+    }
+
     const isNewAxis = document.getElementById(`${prefix}loai-truc`)?.value === 'moi';
-    calculateBangKeoIn(mode);
-    const vatPercent = orderMath.percent(document.getElementById(`${prefix}vat`)?.value);
-    const vatAmount = utils.parseCurrency(document.getElementById(`${prefix}thanh-tien-ban`).value) * vatPercent / 100;
-    const axisVatPercent = isNewAxis ? orderMath.percent(document.getElementById(`${prefix}truc-vat`)?.value) : 0;
-    const axisVatAmount = isNewAxis ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-ban`).value) * axisVatPercent / 100 : 0;
+    // Mọi số tiền lưu xuống DB lấy trực tiếp từ kết quả tính (đã làm tròn), không đọc lại chữ hiển thị.
+    const result = calculateBangKeoIn(mode);
+    if (!result) {
+      utils.showToast("Không thể tính toán đơn hàng, vui lòng kiểm tra lại số liệu", "danger");
+      return;
+    }
+    if (!result.valid) {
+      utils.showToast("Quy cách (m) và Số cuộn/cây phải lớn hơn 0 để tính giá gốc", "warning");
+      return;
+    }
+    const axis = isNewAxis ? result.axis : null;
 
     if (isNewAxis) {
       const savedAxisCount = mode === 'quote' && typeof getActiveQuoteDraft === 'function'
@@ -300,7 +322,7 @@ async function saveBangKeoIn(event, mode = 'order') {
       thoi_gian: new Date(),
       ten_hang: tenHang,
       ten_khach_hang: tenKhachHang,
-      ngay_du_kien: mode === 'quote' ? new Date() : new Date(document.getElementById(`${prefix}ngay-du-kien`).value),
+      ngay_du_kien: deliveryDate,
       quy_cach_mm: parseFloat(document.getElementById(`${prefix}qc-mm`).value) || null,
       quy_cach_m: parseFloat(document.getElementById(`${prefix}qc-m`).value) || null,
       quy_cach_mic: parseFloat(document.getElementById(`${prefix}qc-mic`).value) || null,
@@ -314,41 +336,42 @@ async function saveBangKeoIn(event, mode = 'order') {
       phi_size: utils.parseCurrency(document.getElementById(`${prefix}phi-size`).value),
       phi_cat: utils.parseCurrency(document.getElementById(`${prefix}phi-cat`).value),
       don_gia_von: utils.parseCurrency(document.getElementById(`${prefix}don-gia-von`).value),
-      don_gia_goc: utils.parseCurrency(document.getElementById(`${prefix}don-gia-goc`).value),
-      thanh_tien_goc: utils.parseCurrency(document.getElementById(`${prefix}thanh-tien-goc`).value),
+      don_gia_goc: result.product.costPrice,
+      thanh_tien_goc: result.product.costTotal,
       don_gia_ban: donGiaBan,
-      thanh_tien_ban: utils.parseCurrency(document.getElementById(`${prefix}thanh-tien-ban`).value),
-      tien_coc: utils.parseCurrency(document.getElementById(`${prefix}tien-coc`).value),
-      cong_no_khach: utils.parseCurrency(document.getElementById(`${prefix}cong-no-khach`).value),
+      thanh_tien_ban: result.product.saleTotal,
+      tien_coc: result.deposit,
+      cong_no_khach: result.outstanding,
       ctv: document.getElementById(`${prefix}ctv`).value.trim() || null,
       hoa_hong: parseFloat(document.getElementById(`${prefix}hoa-hong-percent`).value) || 0,
-      tien_hoa_hong: utils.parseCurrency(document.getElementById(`${prefix}tien-hoa-hong`).value),
+      tien_hoa_hong: result.product.commission,
       loi_giay: document.getElementById(`${prefix}loi-giay`).value.trim() || null,
       thung_bao: document.getElementById(`${prefix}thung-bao`).value.trim() || null,
-      loi_nhuan: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan`).value),
-      tien_ship: utils.parseCurrency(document.getElementById(`${prefix}tien-ship`).value),
-      loi_nhuan_rong: utils.parseCurrency(document.getElementById(`${prefix}loi-nhuan-rong`).value),
-      vat: vatAmount,
-      vat_percent: vatPercent,
+      loi_nhuan: result.product.profit,
+      tien_ship: result.product.shipping,
+      // loi_nhuan - tien_hoa_hong - tien_ship == loi_nhuan_rong (các phần đã làm tròn)
+      loi_nhuan_rong: result.product.netProfit,
+      vat: result.vat,
+      vat_percent: result.vatPercent,
       da_giao: false,
       da_tat_toan: false,
       da_gui_email: false,
       is_quote: (mode === 'quote'),
-      loai_truc: document.getElementById(`${prefix}loai-truc`)?.value || 'cu',
-      ten_truc: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (document.getElementById(`${prefix}truc-ten`).value.trim() || null) : null,
-      truc_chu_vi: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (parseFloat(document.getElementById(`${prefix}truc-chu-vi`).value) || null) : null,
-      truc_so_luong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (parseFloat(document.getElementById(`${prefix}truc-so-luong`).value) || 0) : 0,
-      truc_gia_goc: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-gia-goc`).value) : 0,
-      truc_gia_ban: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-gia-ban`).value) : 0,
-      truc_thanh_tien_goc: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-goc`).value) : 0,
-      truc_thanh_tien_ban: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-thanh-tien-ban`).value) : 0,
-      truc_vat: axisVatAmount,
-      truc_vat_percent: axisVatPercent,
-      truc_ctv: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (document.getElementById(`${prefix}truc-ctv`).value.trim() || null) : null,
-      truc_hoa_hong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? (parseFloat(document.getElementById(`${prefix}truc-hoa-hong-percent`).value) || 0) : 0,
-      truc_tien_hoa_hong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-tien-hoa-hong`).value) : 0,
-      truc_loi_nhuan: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-loi-nhuan`).value) : 0,
-      truc_loi_nhuan_rong: document.getElementById(`${prefix}loai-truc`)?.value === 'moi' ? utils.parseCurrency(document.getElementById(`${prefix}truc-loi-nhuan-rong`).value) : 0
+      loai_truc: isNewAxis ? 'moi' : (document.getElementById(`${prefix}loai-truc`)?.value || 'cu'),
+      ten_truc: isNewAxis ? (document.getElementById(`${prefix}truc-ten`).value.trim() || null) : null,
+      truc_chu_vi: isNewAxis ? (parseFloat(document.getElementById(`${prefix}truc-chu-vi`).value) || null) : null,
+      truc_so_luong: axis ? axis.quantity : 0,
+      truc_gia_goc: axis ? axis.costPrice : 0,
+      truc_gia_ban: axis ? axis.salePrice : 0,
+      truc_thanh_tien_goc: axis ? axis.costTotal : 0,
+      truc_thanh_tien_ban: axis ? axis.saleTotal : 0,
+      truc_vat: axis ? axis.vat : 0,
+      truc_vat_percent: axis ? result.axisVatPercent : 0,
+      truc_ctv: isNewAxis ? (document.getElementById(`${prefix}truc-ctv`).value.trim() || null) : null,
+      truc_hoa_hong: isNewAxis ? (parseFloat(document.getElementById(`${prefix}truc-hoa-hong-percent`).value) || 0) : 0,
+      truc_tien_hoa_hong: axis ? axis.commission : 0,
+      truc_loi_nhuan: axis ? axis.profit : 0,
+      truc_loi_nhuan_rong: axis ? axis.netProfit : 0
     };
 
     if (mode === 'quote' && !prepareQuoteItems('bang_keo_in', data)) return;
@@ -356,29 +379,28 @@ async function saveBangKeoIn(event, mode = 'order') {
 
     // Tạo mã ID đơn hàng tự động
     const idPrefix = (mode === 'quote') ? "BG-BK" : "BK";
-    const orderId = await generateOrderId(idPrefix, "bang_keo_in_orders");
-    
+
     const sql = `
       INSERT INTO bang_keo_in_orders (
-        id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien, 
-        quy_cach_mm, quy_cach_m, quy_cach_mic, cuon_cay, so_luong, 
-        phi_sl, mau_keo, phi_keo, mau_sac, phi_mau, phi_size, 
-        phi_cat, don_gia_von, don_gia_goc, thanh_tien_goc, don_gia_ban, 
-        thanh_tien_ban, tien_coc, cong_no_khach, ctv, hoa_hong, 
-        tien_hoa_hong, loi_giay, thung_bao, loi_nhuan, tien_ship, 
+        id, thoi_gian, ten_hang, ten_khach_hang, ngay_du_kien,
+        quy_cach_mm, quy_cach_m, quy_cach_mic, cuon_cay, so_luong,
+        phi_sl, mau_keo, phi_keo, mau_sac, phi_mau, phi_size,
+        phi_cat, don_gia_von, don_gia_goc, thanh_tien_goc, don_gia_ban,
+        thanh_tien_ban, tien_coc, cong_no_khach, ctv, hoa_hong,
+        tien_hoa_hong, loi_giay, thung_bao, loi_nhuan, tien_ship,
         loi_nhuan_rong, da_giao, da_tat_toan, da_gui_email, is_quote,
         loai_truc, ten_truc, truc_chu_vi, truc_so_luong, truc_gia_goc,
         truc_gia_ban, truc_thanh_tien_goc, truc_thanh_tien_ban, truc_ctv,
         truc_hoa_hong, truc_tien_hoa_hong, truc_loi_nhuan, truc_loi_nhuan_rong, truc_vat, truc_vat_percent, vat, vat_percent, quote_items
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
         $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
         $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54
       )
     `;
 
-    const params = [
+    const buildParams = orderId => [
       orderId, data.thoi_gian, data.ten_hang, data.ten_khach_hang, data.ngay_du_kien,
       data.quy_cach_mm, data.quy_cach_m, data.quy_cach_mic, data.cuon_cay, data.so_luong,
       data.phi_sl, data.mau_keo, data.phi_keo, data.mau_sac, data.phi_mau, data.phi_size,
@@ -392,8 +414,12 @@ async function saveBangKeoIn(event, mode = 'order') {
       JSON.stringify(data.quote_items || [])
     ];
 
-    const res = await window.electronAPI.dbRun(sql, params);
-    
+    const { orderId, result: res } = await runWithGeneratedOrderId(
+      idPrefix,
+      "bang_keo_in_orders",
+      id => window.electronAPI.dbRun(sql, buildParams(id))
+    );
+
     if (res.ok) {
       if (mode === 'quote') {
         utils.showToast(`Đã lưu báo giá thành công! Mã: ${orderId}`, "success");
@@ -417,6 +443,7 @@ async function saveBangKeoIn(event, mode = 'order') {
     window.electronAPI.writeLog('error', 'Lỗi lưu đơn hàng Băng Keo In: ' + err.message);
     utils.showToast("Không thể lưu đơn hàng", "danger");
   } finally {
+    bangKeoInSavingModes.delete(mode);
     utils.endFormSubmit(event, formId);
   }
 }
@@ -479,31 +506,65 @@ async function saveOrderAttachments(orderId, orderType, filePaths) {
 }
 
 // Helper tạo mã ID tự động (BK-MM-YY-NNN)
-async function generateOrderId(prefix, tableName) {
+// Số thứ tự lớn nhất được tính theo giá trị số (orderMath.nextOrderId), không theo thứ tự chữ:
+// "ORDER BY id DESC" coi "-999" > "-1000" nên trước đây bị kẹt mãi ở -1000.
+async function generateOrderId(prefix, tableName, minimumSequence = 0) {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const year = String(now.getFullYear()).substring(2);
-  
+
   const basePrefix = `${prefix}-${month}-${year}`;
-  
+
   const sql = `
-    SELECT id FROM ${tableName} 
+    SELECT id FROM ${tableName}
     WHERE id LIKE $1
-    ORDER BY id DESC 
-    LIMIT 1
   `;
-  
-  const res = await window.electronAPI.dbQuery(sql, [`${basePrefix}%`]);
-  
-  let newSequence = "001";
-  if (res.ok && res.rows.length > 0) {
-    const lastId = res.rows[0].id;
-    const parts = lastId.split('-');
-    const lastSeq = parseInt(parts[parts.length - 1]);
-    newSequence = String(lastSeq + 1).padStart(3, '0');
+
+  const res = await window.electronAPI.dbQuery(sql, [`${basePrefix}-%`]);
+  if (!res.ok) {
+    throw new Error(res.error || 'Không thể tạo mã đơn hàng mới');
   }
-  
-  return `${basePrefix}-${newSequence}`;
+
+  return orderMath.nextOrderId(basePrefix, (res.rows || []).map(row => row.id), minimumSequence);
+}
+
+// Chạy câu lệnh INSERT/UPDATE dùng mã đơn mới; nếu trùng khóa (pg 23505, do hai máy cùng lưu)
+// thì lấy mã kế tiếp và thử lại vài lần.
+async function runWithGeneratedOrderId(prefix, tableName, runner, maxAttempts = 5) {
+  let minimumSequence = 0;
+  let orderId = null;
+  let result = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    orderId = await generateOrderId(prefix, tableName, minimumSequence);
+    result = await runner(orderId);
+    if (result?.ok || !orderMath.isUniqueViolation(result)) break;
+    minimumSequence = orderMath.orderIdSequence(orderId);
+  }
+  return { orderId, result: result || { ok: false, error: 'Không thể tạo mã đơn hàng mới' } };
+}
+
+// Giá trị mặc định cho ô ngày giao: ngày mai theo giờ địa phương (YYYY-MM-DD).
+function tomorrowDeliveryDateValue() {
+  if (typeof utils !== 'undefined' && typeof utils.tomorrowDateInputValue === 'function') {
+    return utils.tomorrowDateInputValue();
+  }
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+}
+
+// Ctrl+S có thể bỏ qua kiểm tra của form, nên tự kiểm tra ngày giao (YYYY-MM-DD) trước khi lưu.
+function parseDeliveryDateInput(value) {
+  const text = String(value ?? '').trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const check = new Date(year, month - 1, day);
+  if (check.getFullYear() !== year || check.getMonth() !== month - 1 || check.getDate() !== day) return null;
+  // Nửa đêm giờ máy (không phải UTC) để pg gửi đúng ngày cho cột DATE ở mọi múi giờ.
+  return check;
 }
 
 // 6. Xóa trắng form Băng Keo In
@@ -546,9 +607,7 @@ function clearFormBangKeoIn(mode = 'order') {
   if (vatAmountEl) vatAmountEl.value = "0";
   setBangKeoInAxisMode(mode, 'cu');
   
-  // Đặt ngày dự kiến mặc định là hôm sau
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Đặt ngày dự kiến mặc định là hôm sau (theo giờ địa phương, không dùng toISOString/UTC)
   const deliveryDate = document.getElementById(`${prefix}ngay-du-kien`);
-  if (deliveryDate) deliveryDate.value = tomorrow.toISOString().split('T')[0];
+  if (deliveryDate) deliveryDate.value = tomorrowDeliveryDateValue();
 }

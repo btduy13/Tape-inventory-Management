@@ -2,6 +2,7 @@
 
 var activeExportDocType = 'don_dat_hang';
 var selectedExportOrderIds = new Set();
+var exportVisibleOrderIds = null;
 var exportAllOrders = [];
 var exportPreviewData = null;
 
@@ -12,6 +13,13 @@ function escapeExportHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Một bộ định dạng số lượng dùng chung cho bảng chọn đơn, bảng xem trước và phiếu in (không bao giờ ra "NaN").
+function formatExportQuantity(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '0';
+  return parsed.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
 }
 
 function getExportTableNameByOrderId(orderId) {
@@ -118,11 +126,16 @@ function loadExportOrdersTable() {
     return matchYear && matchMonth && matchType && matchSearch;
   });
 
+  // Giữ lựa chọn qua các lần tìm kiếm (chọn đơn của nhiều khách); bộ đếm báo rõ số đơn đang bị bộ lọc ẩn.
+  exportVisibleOrderIds = new Set(filtered.map(row => row.id));
+
   // Render bảng
   const tbody = document.getElementById('export-orders-tbody');
   tbody.innerHTML = "";
 
-  document.getElementById('export-orders-select-all').checked = false;
+  const selectAll = document.getElementById('export-orders-select-all');
+  if (selectAll) selectAll.checked = filtered.length > 0 && filtered.every(row => selectedExportOrderIds.has(row.id));
+  updateExportSelectedCount();
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Không tìm thấy đơn hàng nào khớp bộ lọc</td></tr>`;
@@ -138,15 +151,18 @@ function loadExportOrdersTable() {
 
     tr.innerHTML = `
       <td style="text-align: center;">
-        <input type="checkbox" ${selectedExportOrderIds.has(row.id) ? 'checked' : ''} onchange="toggleSelectOrder('${row.id}', this.checked)">
+        <input type="checkbox" ${selectedExportOrderIds.has(row.id) ? 'checked' : ''}>
       </td>
-      <td><strong>${row.id}</strong></td>
+      <td><strong>${escapeExportHtml(row.id)}</strong></td>
       <td>${escapeExportHtml(utils.formatDate(row.thoi_gian))}</td>
       <td>${escapeExportHtml(row.ten_hang)}</td>
       <td>${escapeExportHtml(row.ten_khach_hang)}</td>
-      <td style="text-align: right;">${Number(row.so_luong || 0).toLocaleString()}${qtyLabel}</td>
+      <td style="text-align: right;">${formatExportQuantity(row.so_luong)}${qtyLabel}</td>
       <td style="text-align: right;">${utils.formatCurrency(row.don_gia_ban)}đ</td>
     `;
+    tr.querySelector('input[type="checkbox"]')?.addEventListener('change', event => {
+      toggleSelectOrder(row.id, event.target.checked);
+    });
     tr.addEventListener('click', (event) => {
       if (event.target.tagName === 'INPUT') return;
       const checkbox = tr.querySelector('input[type="checkbox"]');
@@ -169,6 +185,33 @@ function toggleSelectOrder(id, checked) {
   } else {
     selectedExportOrderIds.delete(id);
   }
+  updateExportSelectedCount();
+}
+
+// Hiển thị số đơn đang chọn cạnh nút Tiếp tục (phần tử tạo bằng JS, không cần sửa markup).
+function updateExportSelectedCount() {
+  if (typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+  let label = document.getElementById('export-selected-count');
+  if (!label && typeof document.querySelector === 'function' && typeof document.createElement === 'function') {
+    const proceedButton = document.querySelector('#modal-order-export [data-action-click="proceedToExportPreview"]');
+    if (proceedButton?.parentNode) {
+      label = document.createElement('span');
+      label.id = 'export-selected-count';
+      label.className = 'export-selected-count';
+      label.style.marginRight = 'auto';
+      label.style.alignSelf = 'center';
+      label.style.color = 'var(--text-muted)';
+      label.style.fontSize = '12px';
+      proceedButton.parentNode.insertBefore(label, proceedButton.parentNode.firstChild);
+    }
+  }
+  if (!label) return;
+  const hidden = exportVisibleOrderIds
+    ? Array.from(selectedExportOrderIds).filter(id => !exportVisibleOrderIds.has(id)).length
+    : 0;
+  label.textContent = hidden > 0
+    ? `Đã chọn ${selectedExportOrderIds.size} đơn (${hidden} đơn đang bị bộ lọc ẩn)`
+    : `Đã chọn ${selectedExportOrderIds.size} đơn`;
 }
 
 function toggleAllExportOrders(checked) {
@@ -194,70 +237,47 @@ async function proceedToExportPreview() {
   // Nạp chi tiết các đơn hàng đã chọn
   const products = [];
   let firstOrder = null;
+  let depositTotal = 0;
+
+  const failedIds = [];
 
   for (const orderId of selectedExportOrderIds) {
     const tableName = getExportTableNameByOrderId(orderId);
 
-    const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
-    if (res.ok && res.rows.length > 0) {
+    let res;
+    try {
+      res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
+    } catch (err) {
+      res = { ok: false, error: err?.message };
+    }
+    if (res?.ok && res.rows?.length > 0) {
       const order = res.rows[0];
       if (!firstOrder) firstOrder = order;
-
-      // Quy cách và đơn vị tính
-      let specs = "";
-      let unit = "cuộn";
-      if (tableName === 'bang_keo_in_orders') {
-        specs = `${parseInt(order.quy_cach_mm || 0)}mm x ${parseInt(order.quy_cach_m || 0)}m x ${parseInt(order.quy_cach_mic || 0)}mic`;
-      } else if (tableName === 'truc_in_orders') {
-        specs = order.quy_cach ? (order.quy_cach.toLowerCase().endsWith('mm') ? order.quy_cach : `${order.quy_cach}mm`) : "";
-      } else {
-        specs = order.quy_cach ? `${order.quy_cach}kg` : "";
-        unit = "KG";
-      }
-
-      products.push({
-        id: order.id,
-        product: order.ten_hang,
-        specs: specs,
-        text_color: order.mau_sac || "",
-        bg_color: order.mau_keo || "",
-        unit: unit,
-        quantity: orderMath.number(order.so_luong),
-        price: orderMath.number(order.don_gia_ban),
-        vat: orderMath.number(order.vat),
-        total: orderMath.number(order.thanh_tien_ban || order.thanh_tien_goc)
-      });
-
-      if (tableName === 'bang_keo_in_orders' && order.loai_truc === 'moi') {
-        products.push({
-          id: `${order.id}-TRUC`,
-          product: order.ten_truc || 'Trục mới',
-          specs: order.truc_chu_vi ? `Chu vi ${order.truc_chu_vi}` : '',
-          text_color: '',
-          bg_color: 'Trục mới',
-          unit: 'trục',
-          quantity: orderMath.number(order.truc_so_luong),
-          price: orderMath.number(order.truc_gia_ban),
-          vat: orderMath.number(order.truc_vat),
-          total: orderMath.number(order.truc_thanh_tien_ban) || (
-            orderMath.number(order.truc_so_luong) * orderMath.number(order.truc_gia_ban)
-          )
-        });
-      }
+      depositTotal += Math.max(0, orderMath.money(order.tien_coc));
+      products.push(...buildExportProductsFromOrder(order, tableName));
+    } else {
+      failedIds.push(orderId);
     }
+  }
+
+  // Thiếu đơn nào thì dừng hẳn: chứng từ thiếu dòng hàng/tiền cọc sẽ sai tổng tiền.
+  if (failedIds.length > 0) {
+    utils.showToast(`Không tải được dữ liệu đơn: ${failedIds.join(', ')}. Đã hủy xuất chứng từ.`, "danger");
+    return;
   }
 
   exportPreviewData = {
     customer_name: firstOrder ? firstOrder.ten_khach_hang : "",
     address: "",
     products: products,
-    deposit: 0
+    deposit: depositTotal
   };
 
   // Prefill form review
   document.getElementById('preview-customer-name').value = exportPreviewData.customer_name;
   document.getElementById('preview-customer-address').value = "";
-  document.getElementById('preview-deposit').value = "0";
+  // Tiền cọc mặc định = tổng tiền cọc của các đơn đã chọn (vẫn sửa được trước khi in).
+  document.getElementById('preview-deposit').value = String(depositTotal);
 
   // Vẽ bảng review các dòng đơn hàng
   renderPreviewProductsTable();
@@ -265,6 +285,116 @@ async function proceedToExportPreview() {
   // Đóng modal chọn đơn, mở modal review preview
   document.getElementById('modal-order-export').classList.remove('active');
   document.getElementById('modal-export-preview').classList.add('active');
+}
+
+function getExportSpecsAndUnit(order, tableName) {
+  let specs = "";
+  let unit = "cuộn";
+  if (tableName === 'bang_keo_in_orders') {
+    specs = `${parseInt(order.quy_cach_mm || 0)}mm x ${parseInt(order.quy_cach_m || 0)}m x ${parseInt(order.quy_cach_mic || 0)}mic`;
+  } else if (tableName === 'truc_in_orders') {
+    const quyCach = String(order.quy_cach ?? '');
+    specs = quyCach ? (quyCach.toLowerCase().endsWith('mm') ? quyCach : `${quyCach}mm`) : "";
+  } else {
+    // quy_cach là chữ tự do (vd '48mm x 100y'): chỉ thêm 'kg' khi giá trị chỉ là một con số.
+    const quyCach = String(order.quy_cach ?? '').trim();
+    specs = /^\d+(?:[.,]\d+)?$/.test(quyCach) ? `${quyCach}kg` : quyCach;
+    unit = "KG";
+  }
+  return { specs, unit };
+}
+
+function buildExportLine(fields) {
+  const quantity = Math.max(0, orderMath.number(fields.quantity));
+  const price = Math.max(0, orderMath.number(fields.price));
+  const storedTotal = Math.max(0, orderMath.money(fields.total));
+  const total = storedTotal || orderMath.money(quantity * price);
+  const vat = Math.max(0, orderMath.money(fields.vat));
+  return {
+    id: fields.id,
+    product: fields.product,
+    specs: fields.specs,
+    text_color: fields.text_color || "",
+    bg_color: fields.bg_color || "",
+    unit: fields.unit,
+    quantity,
+    price,
+    vat,
+    // Tỷ lệ VAT được giữ lại để khi sửa số lượng/đơn giá thì VAT được tính lại đúng tỷ lệ.
+    vatPercent: orderMath.vatPercentFromAmount(vat, total, fields.vatPercent),
+    total
+  };
+}
+
+// Dòng hàng trên phiếu = giá trị BÁN cho khách (không bao giờ lấy giá vốn). Đơn chuyển từ báo giá nhiều
+// kích thước dùng từng dòng quote_items (giống PDF/Excel) để số lượng × đơn giá = thành tiền.
+function buildExportProductsFromOrder(order, tableName) {
+  const { specs, unit } = getExportSpecsAndUnit(order, tableName);
+  const lines = [];
+  const items = orderMath.parseQuoteItems(order.quote_items);
+  if (items.length > 0 && orderMath.quoteItemsMatchOrder(order, items)) {
+    items.forEach((item, itemIndex) => {
+      lines.push(buildExportLine({
+        id: `${order.id}-${itemIndex + 1}`,
+        product: order.ten_hang,
+        specs: item.specification && item.specification !== '-' ? item.specification : specs,
+        text_color: item.details?.printColor || item.details?.color || order.mau_sac || "",
+        bg_color: item.details?.glueColor || order.mau_keo || "",
+        unit,
+        quantity: item.quantity,
+        price: item.unitPrice,
+        vat: item.vat,
+        vatPercent: item.vatPercent,
+        total: item.total
+      }));
+      (Array.isArray(item.axes) ? item.axes : []).filter(axis => axis && typeof axis === 'object').forEach((axis, axisIndex) => {
+        lines.push(buildExportLine({
+          id: `${order.id}-${itemIndex + 1}-TRUC-${axisIndex + 1}`,
+          product: axis.name || 'Trục mới',
+          specs: axis.circumference ? `Chu vi ${axis.circumference}` : '',
+          bg_color: 'Trục mới',
+          unit: 'trục',
+          quantity: axis.quantity,
+          price: axis.unitPrice,
+          vat: axis.vat,
+          vatPercent: axis.vatPercent,
+          total: axis.total
+        }));
+      });
+    });
+    return lines;
+  }
+
+  lines.push(buildExportLine({
+    id: order.id,
+    product: order.ten_hang,
+    specs,
+    text_color: order.mau_sac || "",
+    bg_color: order.mau_keo || "",
+    unit,
+    quantity: order.so_luong,
+    price: order.don_gia_ban,
+    vat: order.vat,
+    vatPercent: order.vat_percent,
+    // Mọi bảng đều lưu giá bán ở thanh_tien_ban (bang_keo dùng thanh_tien cho giá vốn).
+    total: order.thanh_tien_ban
+  }));
+
+  if (tableName === 'bang_keo_in_orders' && order.loai_truc === 'moi') {
+    lines.push(buildExportLine({
+      id: `${order.id}-TRUC`,
+      product: order.ten_truc || 'Trục mới',
+      specs: order.truc_chu_vi ? `Chu vi ${order.truc_chu_vi}` : '',
+      bg_color: 'Trục mới',
+      unit: 'trục',
+      quantity: order.truc_so_luong,
+      price: order.truc_gia_ban,
+      vat: order.truc_vat,
+      vatPercent: order.truc_vat_percent,
+      total: order.truc_thanh_tien_ban
+    }));
+  }
+  return lines;
 }
 
 // Trở lại màn hình chọn đơn hàng
@@ -286,19 +416,26 @@ function renderPreviewProductsTable() {
   exportPreviewData.products.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.product)}" oninput="updatePreviewProduct(${idx}, 'product', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.specs)}" oninput="updatePreviewProduct(${idx}, 'specs', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.bg_color)}" oninput="updatePreviewProduct(${idx}, 'bg_color', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.text_color)}" oninput="updatePreviewProduct(${idx}, 'text_color', this.value)"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.unit)}" oninput="updatePreviewProduct(${idx}, 'unit', this.value)"></td>
-      <td><input type="number" class="preview-input" style="text-align: right;" value="${p.quantity}" oninput="updatePreviewProductNumeric(${idx}, 'quantity', this.value)"></td>
-      <td><input type="number" class="preview-input" style="text-align: right;" value="${p.price}" oninput="updatePreviewProductNumeric(${idx}, 'price', this.value)"></td>
-      <td><input type="number" class="preview-input" style="text-align: right;" value="${p.vat || 0}" oninput="updatePreviewProductNumeric(${idx}, 'vat', this.value)"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.product)}" data-preview-field="product"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.specs)}" data-preview-field="specs"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.bg_color)}" data-preview-field="bg_color"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.text_color)}" data-preview-field="text_color"></td>
+      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.unit)}" data-preview-field="unit"></td>
+      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${escapeExportHtml(p.quantity)}" data-preview-numeric="quantity"></td>
+      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${escapeExportHtml(p.price)}" data-preview-numeric="price"></td>
+      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${escapeExportHtml(p.vat || 0)}" data-preview-numeric="vat"></td>
       <td style="text-align: right; font-weight: 500;" id="preview-product-total-${idx}">${utils.formatCurrency(p.total)}đ</td>
       <td style="text-align: center;">
-        <button class="btn btn-danger btn-sm" onclick="deletePreviewProduct(${idx})" style="padding: 2px 6px;">×</button>
+        <button class="btn btn-danger btn-sm" data-preview-delete style="padding: 2px 6px;">×</button>
       </td>
     `;
+    tr.querySelectorAll('[data-preview-field]').forEach(input => {
+      input.addEventListener('input', () => updatePreviewProduct(idx, input.dataset.previewField, input.value));
+    });
+    tr.querySelectorAll('[data-preview-numeric]').forEach(input => {
+      input.addEventListener('input', () => updatePreviewProductNumeric(idx, input.dataset.previewNumeric, input.value, input));
+    });
+    tr.querySelector('[data-preview-delete]')?.addEventListener('click', () => deletePreviewProduct(idx));
     tbody.appendChild(tr);
   });
 
@@ -309,15 +446,33 @@ function updatePreviewProduct(idx, field, value) {
   exportPreviewData.products[idx][field] = value;
 }
 
-function updatePreviewProductNumeric(idx, field, value) {
-  const num = parseFloat(value) || 0;
-  exportPreviewData.products[idx][field] = num;
+function updatePreviewProductNumeric(idx, field, value, inputEl = null) {
+  const product = exportPreviewData.products[idx];
+  if (!product) return;
+  const text = String(value ?? '').trim();
+  if (text === '') return; // đang xóa để gõ lại: giữ giá trị cũ
+  const num = Number(text);
+  if (!Number.isFinite(num) || num < 0) {
+    utils.showToast("Số lượng, đơn giá và VAT không được âm", "warning");
+    if (inputEl) inputEl.value = String(product[field] ?? 0);
+    return;
+  }
 
-  // Tính lại thành tiền của dòng
-  const rowTotal = exportPreviewData.products[idx].quantity * exportPreviewData.products[idx].price;
-  exportPreviewData.products[idx].total = rowTotal;
+  if (field === 'vat') {
+    // Sửa trực tiếp tiền VAT: ghi nhận tỷ lệ mới để lần sửa số lượng/đơn giá sau dùng tỷ lệ này.
+    product.vat = orderMath.money(num);
+    product.vatPercent = orderMath.vatPercentFromAmount(product.vat, product.total);
+  } else {
+    product[field] = num;
+    // Tính lại thành tiền của dòng và VAT theo tỷ lệ VAT đã lưu
+    product.total = orderMath.money(product.quantity * product.price);
+    product.vat = orderMath.vatAmount(product.total, product.vatPercent);
+    const vatInput = inputEl?.closest?.('tr')?.querySelector?.('[data-preview-numeric="vat"]');
+    if (vatInput) vatInput.value = String(product.vat);
+  }
 
-  document.getElementById(`preview-product-total-${idx}`).innerText = utils.formatCurrency(rowTotal) + "đ";
+  const totalCell = document.getElementById(`preview-product-total-${idx}`);
+  if (totalCell) totalCell.innerText = utils.formatCurrency(product.total) + "đ";
   recalculatePreviewTotals();
 }
 
@@ -344,6 +499,12 @@ function buildVoucherPdfHtml() {
   `;
 }
 
+function exportTodayFileDate() {
+  if (typeof utils.toDateInputValue === 'function') return utils.toDateInputValue(new Date());
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 async function saveCurrentVoucherPdf() {
   const printArea = document.getElementById('voucher-print-area');
   if (!printArea || !printArea.innerHTML.trim()) {
@@ -354,7 +515,7 @@ async function saveCurrentVoucherPdf() {
   const prefix = activeExportDocType === 'phieu_giao_hang' ? 'phieu_giao_hang' : 'don_dat_hang';
   const savePath = await window.electronAPI.showSaveDialog({
     title: "Lưu chứng từ PDF",
-    defaultPath: `${prefix}_${new Date().toISOString().split('T')[0]}.pdf`,
+    defaultPath: `${prefix}_${exportTodayFileDate()}.pdf`,
     filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
   });
 
@@ -382,6 +543,11 @@ async function triggerPrint() {
 }
 
 function recalculatePreviewTotals() {
+  const depositInput = document.getElementById('preview-deposit');
+  if (Number(depositInput.value) < 0) {
+    depositInput.value = '0';
+    utils.showToast('Tiền cọc không được âm', 'warning');
+  }
   const totals = orderMath.calculateVoucherTotals(
     exportPreviewData.products,
     document.getElementById('preview-deposit').value
@@ -420,7 +586,7 @@ function generateCombinedPrintInvoice() {
         <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.text_color || "")}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.bg_color || "")}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.unit)}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${parseFloat(p.quantity).toLocaleString()}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${formatExportQuantity(p.quantity)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.price)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.vat || 0)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.total)}</td>
@@ -499,7 +665,7 @@ function generateCombinedPrintInvoice() {
 
       <!-- Title -->
       <div style="text-align: center; font-size: 20pt; font-weight: bold; margin-top: 15px; margin-bottom: 25px; text-transform: uppercase;">
-        ${title}
+        ${escapeExportHtml(title)}
       </div>
 
       <!-- Khách hàng -->
@@ -561,7 +727,7 @@ function generateCombinedPrintInvoice() {
 
       <!-- Tiền bằng chữ -->
       <div style="font-style: italic; margin-bottom: 30px; font-size: 10pt;">
-        Số tiền bằng chữ: <strong>${wordsAmount} đồng chẵn.</strong>
+        Số tiền bằng chữ: <strong>${escapeExportHtml(wordsAmount)} đồng chẵn.</strong>
       </div>
 
       <!-- Ký tá -->

@@ -1,212 +1,272 @@
 {
-  "accounting.js": {
-    "mtime": 1783914432.1647673,
-    "ast_hash": "2a18aa3596f481c70480bb4c81502b07",
-    "semantic_hash": "2a18aa3596f481c70480bb4c81502b07"
+  "electron/config.js": {
+    "mtime": 1784641165.743023,
+    "ast_hash": "5933ae5a8a476a5a87dea794d501e362",
+    "semantic_hash": "5933ae5a8a476a5a87dea794d501e362"
   },
-  "cloud-sync.js": {
-    "mtime": 1783999341.683345,
-    "ast_hash": "96acd74a9f846f55d80e7fe2b00204dc",
-    "semantic_hash": "96acd74a9f846f55d80e7fe2b00204dc"
+  "electron/config.local.example.json": {
+    "mtime": 1784018180.0,
+    "ast_hash": "bc690387bfe390d345493ba19946e3e8",
+    "semantic_hash": "bc690387bfe390d345493ba19946e3e8"
   },
-  "core/accounting-engine.js": {
-    "mtime": 1783911060.028205,
-    "ast_hash": "16714cb2dc379c376e9b0f76ac535846",
-    "semantic_hash": "16714cb2dc379c376e9b0f76ac535846"
+  "electron/dbPolicy.js": {
+    "mtime": 1784641165.7440224,
+    "ast_hash": "20a68fdf092434e86664727fde09049b",
+    "semantic_hash": "20a68fdf092434e86664727fde09049b"
   },
-  "core/backup-store.js": {
-    "mtime": 1783911060.0377269,
-    "ast_hash": "89f53363a8f41186c2b1e6370ab0c91c",
-    "semantic_hash": "89f53363a8f41186c2b1e6370ab0c91c"
+  "electron/emailPolicy.js": {
+    "mtime": 1784641165.7440224,
+    "ast_hash": "33aa3a8eb0b23b25827967b662977085",
+    "semantic_hash": "33aa3a8eb0b23b25827967b662977085"
   },
-  "core/online-write-gate.js": {
-    "mtime": 1783934470.708079,
-    "ast_hash": "9e8fd6e03c35e028e811247d5ab037e5",
-    "semantic_hash": "9e8fd6e03c35e028e811247d5ab037e5"
+  "electron/ipcPolicy.js": {
+    "mtime": 1784641165.745023,
+    "ast_hash": "6c5471f446c54970e2c63aeef3b1cc84",
+    "semantic_hash": "6c5471f446c54970e2c63aeef3b1cc84"
   },
-  "core/partner-identity.js": {
-    "mtime": 1783911060.0377269,
-    "ast_hash": "a38a4e41cf67c3ab9700b1103194f7ae",
-    "semantic_hash": "a38a4e41cf67c3ab9700b1103194f7ae"
+  "electron/js/app.js": {
+    "mtime": 1785599770.110421,
+    "ast_hash": "69aacfef29e195186418a86deb2cdc6b",
+    "semantic_hash": "69aacfef29e195186418a86deb2cdc6b"
   },
-  "core/partner-merge.js": {
-    "mtime": 1783911060.0377269,
-    "ast_hash": "d67228b26730d583149d6a25131a88c9",
-    "semantic_hash": "d67228b26730d583149d6a25131a88c9"
+  "electron/js/modules/bangkeo.js": {
+    "mtime": 1785742531.4389188,
+    "ast_hash": "d6d98d6e7ad88bddcf7c29640cbacb8a",
+    "semantic_hash": "d6d98d6e7ad88bddcf7c29640cbacb8a"
   },
-  "core/persistence-bridge.js": {
-    "mtime": 1783911060.0377269,
-    "ast_hash": "667f6089fee04a6811eb7732464e4856",
-    "semantic_hash": "667f6089fee04a6811eb7732464e4856"
+  "electron/js/modules/bangkeoin.js": {
+    "mtime": 1785742531.439921,
+    "ast_hash": "f4f27e98b2b995c83006e90d1a3c6a2e",
+    "semantic_hash": "f4f27e98b2b995c83006e90d1a3c6a2e"
   },
-  "core/platform-paths.js": {
-    "mtime": 1783911060.0518289,
-    "ast_hash": "953b4308fc5bf6b69fb67e5ed12a6d19",
-    "semantic_hash": "953b4308fc5bf6b69fb67e5ed12a6d19"
+  "electron/js/modules/dashboard.js": {
+    "mtime": 1784641165.747022,
+    "ast_hash": "c21b24fac912051e31fcdc480cf74af6",
+    "semantic_hash": "c21b24fac912051e31fcdc480cf74af6"
   },
-  "core/print-settings.js": {
-    "mtime": 1783911060.0518289,
-    "ast_hash": "1df3c3e80fcfc4718516ce60da5dde21",
-    "semantic_hash": "1df3c3e80fcfc4718516ce60da5dde21"
+  "electron/js/modules/emailDialog.js": {
+    "mtime": 1785293247.4254243,
+    "ast_hash": "de1cb3be585713e6d1f902877a0a2168",
+    "semantic_hash": "de1cb3be585713e6d1f902877a0a2168"
   },
-  "core/printer-job.js": {
-    "mtime": 1783911060.0518289,
-    "ast_hash": "2d5e25fe4b142a72cc788edcc7491427",
-    "semantic_hash": "2d5e25fe4b142a72cc788edcc7491427"
+  "electron/js/modules/excelImport.js": {
+    "mtime": 1784641165.7482877,
+    "ast_hash": "dae91c3a2df7bc9a325114a986f8bc1f",
+    "semantic_hash": "dae91c3a2df7bc9a325114a986f8bc1f"
   },
-  "core/product-case-dedupe.js": {
-    "mtime": 1783911060.0518289,
-    "ast_hash": "5beb7b05a136de19d74082b0f7516dc2",
-    "semantic_hash": "5beb7b05a136de19d74082b0f7516dc2"
+  "electron/js/modules/exportManager.js": {
+    "mtime": 1785600000.1266496,
+    "ast_hash": "a4581741b7f78e4fb4d2591b80b84b9b",
+    "semantic_hash": "a4581741b7f78e4fb4d2591b80b84b9b"
   },
-  "core/product-identity.js": {
-    "mtime": 1783911060.0604095,
-    "ast_hash": "a3f260c9ab834b156f3a1541a1564b66",
-    "semantic_hash": "a3f260c9ab834b156f3a1541a1564b66"
+  "electron/js/modules/quotations.js": {
+    "mtime": 1785680279.8967886,
+    "ast_hash": "80d330b8601d2754b038683133404237",
+    "semantic_hash": "80d330b8601d2754b038683133404237"
   },
-  "core/sqlite-migration-guard.js": {
-    "mtime": 1783911060.0614052,
-    "ast_hash": "b3441bb0d20c176ba19eba4f3628f1ae",
-    "semantic_hash": "b3441bb0d20c176ba19eba4f3628f1ae"
+  "electron/js/modules/thongke.js": {
+    "mtime": 1785742531.4409208,
+    "ast_hash": "cc6b15a1fdd0fadcf416f6c0dd48716f",
+    "semantic_hash": "cc6b15a1fdd0fadcf416f6c0dd48716f"
   },
-  "core/state-diff.js": {
-    "mtime": 1783911060.0614052,
-    "ast_hash": "bf45bb7947f315974885d99466b09e8b",
-    "semantic_hash": "bf45bb7947f315974885d99466b09e8b"
+  "electron/js/modules/trucin.js": {
+    "mtime": 1785600978.2808807,
+    "ast_hash": "11e1a8788743d849a5f986722b966dbe",
+    "semantic_hash": "11e1a8788743d849a5f986722b966dbe"
   },
-  "core/state-types.js": {
-    "mtime": 1783911060.062416,
-    "ast_hash": "a88af8f6d745f51d3c8f1f4efd4a14db",
-    "semantic_hash": "a88af8f6d745f51d3c8f1f4efd4a14db"
+  "electron/js/modules/updateManager.js": {
+    "mtime": 1784641165.7507997,
+    "ast_hash": "c9775e98cdca3d0805655b3bca0ed675",
+    "semantic_hash": "c9775e98cdca3d0805655b3bca0ed675"
   },
-  "core/table-render.js": {
-    "mtime": 1783911060.0685072,
-    "ast_hash": "17b2b497ae8bdb42f18928bff384725f",
-    "semantic_hash": "17b2b497ae8bdb42f18928bff384725f"
+  "electron/js/orderMath.js": {
+    "mtime": 1785599706.4741716,
+    "ast_hash": "2b6b6524f8a009ebdf9d06aa26f92f53",
+    "semantic_hash": "2b6b6524f8a009ebdf9d06aa26f92f53"
   },
-  "core/url-security.js": {
-    "mtime": 1783911060.068887,
-    "ast_hash": "d48806353aa25c7eb5728dfe8695948c",
-    "semantic_hash": "d48806353aa25c7eb5728dfe8695948c"
+  "electron/js/utils.js": {
+    "mtime": 1784641165.7517998,
+    "ast_hash": "f7ca061a027eddccafcf07b140542fbb",
+    "semantic_hash": "f7ca061a027eddccafcf07b140542fbb"
   },
-  "core/user-preferences.js": {
-    "mtime": 1783911060.068887,
-    "ast_hash": "d3a2b74caf1d034ec4d49b3fa978da24",
-    "semantic_hash": "d3a2b74caf1d034ec4d49b3fa978da24"
+  "electron/main.js": {
+    "mtime": 1785742531.4409208,
+    "ast_hash": "36cd55eb890e63d4124bad8e5449d00d",
+    "semantic_hash": "36cd55eb890e63d4124bad8e5449d00d"
   },
-  "core/voucher-filters.js": {
-    "mtime": 1783911060.0709069,
-    "ast_hash": "bce0866b9d7e01cb533b6f8abd1f264c",
-    "semantic_hash": "bce0866b9d7e01cb533b6f8abd1f264c"
+  "electron/package.json": {
+    "mtime": 1785742531.4429212,
+    "ast_hash": "225eee2b8ae342c5f00bc8a09bd14362",
+    "semantic_hash": "225eee2b8ae342c5f00bc8a09bd14362"
   },
-  "core/voucher-form-ui.js": {
-    "mtime": 1783911060.076793,
-    "ast_hash": "01608ec4244655745f1972aea1f853cf",
-    "semantic_hash": "01608ec4244655745f1972aea1f853cf"
+  "electron/preload.js": {
+    "mtime": 1784641165.7527997,
+    "ast_hash": "0a9a99f137369382d86bd4807ee8d81d",
+    "semantic_hash": "0a9a99f137369382d86bd4807ee8d81d"
   },
-  "core/voucher-print-document.js": {
-    "mtime": 1783911060.076793,
-    "ast_hash": "2894dd82ebc444b8664a7e7b3d51f480",
-    "semantic_hash": "2894dd82ebc444b8664a7e7b3d51f480"
+  "electron/scripts/release.ps1": {
+    "mtime": 1785293932.6249483,
+    "ast_hash": "8eb19d41c751d7cff0ce69f936d4a274",
+    "semantic_hash": "8eb19d41c751d7cff0ce69f936d4a274"
   },
-  "core/voucher-template-editor.js": {
-    "mtime": 1783911060.076793,
-    "ast_hash": "1e96fb479bfe79ff38253398094652cb",
-    "semantic_hash": "1e96fb479bfe79ff38253398094652cb"
+  "electron/scripts/setup-gh.ps1": {
+    "mtime": 1784018180.0,
+    "ast_hash": "d713181f7ff7f13f6cfe6302e684964e",
+    "semantic_hash": "d713181f7ff7f13f6cfe6302e684964e"
   },
-  "core/workspace-tabs.js": {
-    "mtime": 1783911060.08087,
-    "ast_hash": "567173977f82976e8307bd766e649226",
-    "semantic_hash": "567173977f82976e8307bd766e649226"
+  "electron/test/dbPolicy.test.js": {
+    "mtime": 1784018180.0,
+    "ast_hash": "42b194e10d33eda4e5deba598193456b",
+    "semantic_hash": "42b194e10d33eda4e5deba598193456b"
   },
-  "excel-integration.js": {
-    "mtime": 1783912507.8790402,
-    "ast_hash": "19d6ac3f131200648951f2b8346f7585",
-    "semantic_hash": "19d6ac3f131200648951f2b8346f7585"
+  "electron/test/emailPolicy.test.js": {
+    "mtime": 1784018180.0,
+    "ast_hash": "b057214520cc1137260dba00c4a0993b",
+    "semantic_hash": "b057214520cc1137260dba00c4a0993b"
   },
-  "logger.js": {
-    "mtime": 1783911060.0854914,
-    "ast_hash": "bd456ff59039db6ab7f292ca1dc7c655",
-    "semantic_hash": "bd456ff59039db6ab7f292ca1dc7c655"
+  "electron/test/integration/orderFlows.js": {
+    "mtime": 1785742531.4429212,
+    "ast_hash": "252a99b8fc099519c0edcb68d5283f72",
+    "semantic_hash": "252a99b8fc099519c0edcb68d5283f72"
   },
-  "modules/auth.js": {
-    "mtime": 1783911060.0854914,
-    "ast_hash": "8a304bde13c524e6b8ac2fe5b36b5ad6",
-    "semantic_hash": "8a304bde13c524e6b8ac2fe5b36b5ad6"
+  "electron/test/orderMath.test.js": {
+    "mtime": 1785599960.3128033,
+    "ast_hash": "38c0bbec8f64b31bb6fcdbcd79ff181f",
+    "semantic_hash": "38c0bbec8f64b31bb6fcdbcd79ff181f"
   },
-  "modules/autosave.js": {
-    "mtime": 1783912507.8728912,
-    "ast_hash": "ee74360ff17b20e7ac86cfb9229a28e3",
-    "semantic_hash": "ee74360ff17b20e7ac86cfb9229a28e3"
+  "electron/test/quotationPdf.test.js": {
+    "mtime": 1785680372.3498576,
+    "ast_hash": "e3de525da6bd0d29686252adb305c5a4",
+    "semantic_hash": "e3de525da6bd0d29686252adb305c5a4"
   },
-  "modules/cash.js": {
-    "mtime": 1783912507.8810403,
-    "ast_hash": "92444091aa7435e3304f583502cd7a44",
-    "semantic_hash": "92444091aa7435e3304f583502cd7a44"
+  "electron/updater.js": {
+    "mtime": 1784641165.7537994,
+    "ast_hash": "133b92e4c105071d758e36def7d4d78f",
+    "semantic_hash": "133b92e4c105071d758e36def7d4d78f"
   },
-  "modules/dashboard.js": {
-    "mtime": 1783911060.0946517,
-    "ast_hash": "8537dbb8db07acfd2883aeb2ecb87e78",
-    "semantic_hash": "8537dbb8db07acfd2883aeb2ecb87e78"
+  "electron/xlsx.full.min.js": {
+    "mtime": 1784641165.7547984,
+    "ast_hash": "77d0f6efddb422e33cf3e29b5ca89471",
+    "semantic_hash": "77d0f6efddb422e33cf3e29b5ca89471"
   },
-  "modules/debts.js": {
-    "mtime": 1783913418.1683207,
-    "ast_hash": "3595088722f9c76402d1452396a660a9",
-    "semantic_hash": "3595088722f9c76402d1452396a660a9"
+  "js/ui-interactions.js": {
+    "mtime": 1784640332.2964387,
+    "ast_hash": "30b0451dc87e377fbab07f458e41ea0b",
+    "semantic_hash": "30b0451dc87e377fbab07f458e41ea0b"
   },
-  "modules/inventory.js": {
-    "mtime": 1784004404.3485115,
-    "ast_hash": "9c3219cffcb42a937aba40c0e555bc57",
-    "semantic_hash": "9c3219cffcb42a937aba40c0e555bc57"
+  "electron/ELECTRON_RELEASE.md": {
+    "mtime": 1784018180.0,
+    "ast_hash": "b34928017f4452c7d8c8b450a635b3a7",
+    "semantic_hash": "b34928017f4452c7d8c8b450a635b3a7"
   },
-  "modules/partners.js": {
-    "mtime": 1783914454.9740798,
-    "ast_hash": "de8edc1757ec4080172e477680d48ee4",
-    "semantic_hash": "de8edc1757ec4080172e477680d48ee4"
+  "electron/RELEASE_NOTES_1.5.10.md": {
+    "mtime": 1784641276.2042513,
+    "ast_hash": "6c5a42500b50b8ce007cc7e4fcd11b58",
+    "semantic_hash": "6c5a42500b50b8ce007cc7e4fcd11b58"
   },
-  "modules/purchase.js": {
-    "mtime": 1783911060.1167264,
-    "ast_hash": "3203abe8212d6f012666c311d90dfc3b",
-    "semantic_hash": "3203abe8212d6f012666c311d90dfc3b"
+  "electron/index.html": {
+    "mtime": 1785742531.4389188,
+    "ast_hash": "ba15d2cc4de6a1acd117ab898a0ea250",
+    "semantic_hash": "ba15d2cc4de6a1acd117ab898a0ea250"
   },
-  "modules/reports.js": {
-    "mtime": 1783911060.1167264,
-    "ast_hash": "9b5cb87098707f78fde5c9a2da385230",
-    "semantic_hash": "9b5cb87098707f78fde5c9a2da385230"
+  "graphify-out/memory/query_20260715_030610_which_is_the_correct_folder_that_has_all_the_sourc.md": {
+    "mtime": 1784640332.292934,
+    "ast_hash": "808e159b608082cd1fca48f0a9afd824",
+    "semantic_hash": "808e159b608082cd1fca48f0a9afd824"
   },
-  "modules/sales.js": {
-    "mtime": 1783911060.118825,
-    "ast_hash": "7298544822d87cedbf50acbe3f02d772",
-    "semantic_hash": "7298544822d87cedbf50acbe3f02d772"
+  "graphify-out/memory/query_20260715_031158_inspect_printing_module__a5_paper_size_cannot_pass.md": {
+    "mtime": 1784640332.292934,
+    "ast_hash": "0b388e4ae36c08362777201359eb9be8",
+    "semantic_hash": "0b388e4ae36c08362777201359eb9be8"
   },
-  "modules/sales_templates_data.js": {
-    "mtime": 1783911060.118825,
-    "ast_hash": "52e90f2a531821369b205ee986dc74ca",
-    "semantic_hash": "52e90f2a531821369b205ee986dc74ca"
+  "graphify-out/memory/query_20260715_042310_ki\u1ec3m_tra_v\u00e0_s\u1eeda_vi\u1ec7c_\u1ea9n_s\u1ed1_ti\u1ec1n_chi\u1ebft_kh\u1ea5u_tr\u00ean_ph.md": {
+    "mtime": 1784640332.2939327,
+    "ast_hash": "4f38566700b5668184fece5b51dc37cb",
+    "semantic_hash": "4f38566700b5668184fece5b51dc37cb"
   },
-  "modules/settings.js": {
-    "mtime": 1783914666.0981855,
-    "ast_hash": "3164791181356b4e3b6b28e4c8304e9e",
-    "semantic_hash": "3164791181356b4e3b6b28e4c8304e9e"
+  "graphify-out/memory/query_20260715_043152_kh\u00f4ng_ph\u1ea3i_ch\u1ec9_m\u1ed7i_b\u00e1o_gi\u00e1__m\u00e0_l\u00e0_to\u00e0n_b\u1ed9_app.md": {
+    "mtime": 1784640332.2939327,
+    "ast_hash": "a571c9b9e98ddc5ad75b752576ae06bc",
+    "semantic_hash": "a571c9b9e98ddc5ad75b752576ae06bc"
   },
-  "state.js": {
-    "mtime": 1783998712.4837742,
-    "ast_hash": "58be12d0eb561a0a3a3ef7e47525272f",
-    "semantic_hash": "58be12d0eb561a0a3a3ef7e47525272f"
+  "graphify-out/memory/query_20260715_044546_commit_gh__build_new_release.md": {
+    "mtime": 1784640332.2939327,
+    "ast_hash": "43063125e2c5cfbf44ea4d21f5bb7b8a",
+    "semantic_hash": "43063125e2c5cfbf44ea4d21f5bb7b8a"
   },
-  "ui-framework.js": {
-    "mtime": 1783911060.1412377,
-    "ast_hash": "5ebf8cc30aac0d988837bf86c6340b94",
-    "semantic_hash": "5ebf8cc30aac0d988837bf86c6340b94"
+  "graphify-out/memory/query_20260716_085557_t\u00f4i_c\u1ea7n_n\u00e2ng_c\u1ea5p_th\u00eam_ph\u1ea7n_m\u1ec1m_nh\u01b0ng_ch\u01b0a_bi\u1ebft_n\u00e2n.md": {
+    "mtime": 1784640332.2939327,
+    "ast_hash": "db2dd39b7e527b6a5157deecbcc67fe7",
+    "semantic_hash": "db2dd39b7e527b6a5157deecbcc67fe7"
   },
-  "ui-interactions.js": {
-    "mtime": 1783998866.2482142,
-    "ast_hash": "3df13f2df55a9284b3f1540c0fc777c3",
-    "semantic_hash": "3df13f2df55a9284b3f1540c0fc777c3"
+  "graphify-out/memory/query_20260721_034921_c\u00f3_online_database_n\u00e0o_free_kh\u00f4ng__suprabase_\u0111\u1ea7y_m.md": {
+    "mtime": 1784640332.2939327,
+    "ast_hash": "7ca4dd51c1c619c96e529baa80ec4d88",
+    "semantic_hash": "7ca4dd51c1c619c96e529baa80ec4d88"
   },
-  "utils.js": {
-    "mtime": 1783912507.8810403,
-    "ast_hash": "e75f5c2e848ff96cec027aeafe1a8d73",
-    "semantic_hash": "e75f5c2e848ff96cec027aeafe1a8d73"
+  "graphify-out/memory/query_20260721_035601_ergress_\u0111\u1ea7y_r\u1ed3i_l\u00e0m_sao.md": {
+    "mtime": 1784640332.2939327,
+    "ast_hash": "c2cca33602345fc029fe1db1ec1b1b59",
+    "semantic_hash": "c2cca33602345fc029fe1db1ec1b1b59"
+  },
+  "graphify-out/memory/query_20260721_041423_\u0111\u00e2y_l\u00e0_k\u1ebft_qu\u1ea3_t\u1eeb_suprabase__th\u1eed_query_xem_d\u1eef_li\u1ec7u.md": {
+    "mtime": 1784640332.2954352,
+    "ast_hash": "de226fe5574763cf1a158060e2b6852c",
+    "semantic_hash": "de226fe5574763cf1a158060e2b6852c"
+  },
+  "graphify-out/memory/query_20260721_041738_c\u00f3_c\u00e1ch_n\u00e0o_gi\u1ea3m_b\u1edbt_egress_kh\u00f4ng__h\u01b0\u1edbng_s\u1eed_d\u1ee5ng_r.md": {
+    "mtime": 1784640332.2954352,
+    "ast_hash": "5dc4a81c9a350dd0407d715dc2371ada",
+    "semantic_hash": "5dc4a81c9a350dd0407d715dc2371ada"
+  },
+  "graphify-out/memory/query_20260721_043233_t\u00f4i_c\u1ea7n_gi\u1ea3m_b\u1edbt_egress__c\u00f3_c\u00e1ch_n\u00e0o_\u00e1p_d\u1ee5ng_\u0111\u01b0\u1ee3c.md": {
+    "mtime": 1784640332.2954352,
+    "ast_hash": "f6cac50559fadcfb471744c5ee9718c4",
+    "semantic_hash": "f6cac50559fadcfb471744c5ee9718c4"
+  },
+  "electron/assets/app-icon.png": {
+    "mtime": 1784641165.7420218,
+    "ast_hash": "c743a7c5c98565009cc5378f2597a488",
+    "semantic_hash": "c743a7c5c98565009cc5378f2597a488"
+  },
+  "electron/assets/icon.png": {
+    "mtime": 1784641165.7420218,
+    "ast_hash": "8579193238ca51a6a0adb643236e221e",
+    "semantic_hash": "8579193238ca51a6a0adb643236e221e"
+  },
+  "electron/assets/logo.png": {
+    "mtime": 1784641165.743023,
+    "ast_hash": "8579193238ca51a6a0adb643236e221e",
+    "semantic_hash": "8579193238ca51a6a0adb643236e221e"
+  },
+  "electron/assets/logo.svg": {
+    "mtime": 1784641165.743023,
+    "ast_hash": "6fe2d0f0753c17c4b543f58788fe0050",
+    "semantic_hash": "6fe2d0f0753c17c4b543f58788fe0050"
+  },
+  "electron/test/domContract.test.js": {
+    "mtime": 1785577075.663697,
+    "ast_hash": "8931fd4f7a2b6bbf900f1c61fad38641",
+    "semantic_hash": "8931fd4f7a2b6bbf900f1c61fad38641"
+  },
+  "electron/test/quotationUi.smoke.js": {
+    "mtime": 1785742531.4439213,
+    "ast_hash": "6e0d9c6469c9980a232459f75c933054",
+    "semantic_hash": "6e0d9c6469c9980a232459f75c933054"
+  },
+  "electron/RELEASE_NOTES_1.5.12.md": {
+    "mtime": 1785601126.635577,
+    "ast_hash": "d7ab9fbfa0a2fc03c5872cf5cd138eec",
+    "semantic_hash": "d7ab9fbfa0a2fc03c5872cf5cd138eec"
+  },
+  "electron/RELEASE_NOTES_1.5.13.md": {
+    "mtime": 1785680815.307894,
+    "ast_hash": "bceca90612d5083e90cac8f6c22d600b",
+    "semantic_hash": "bceca90612d5083e90cac8f6c22d600b"
+  },
+  "electron/RELEASE_NOTES_1.5.14.md": {
+    "mtime": 1785742531.4379191,
+    "ast_hash": "b8eaa4ef8f24e481d63d067378c1bb1b",
+    "semantic_hash": "b8eaa4ef8f24e481d63d067378c1bb1b"
   }
 }

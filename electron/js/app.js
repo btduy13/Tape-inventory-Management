@@ -3,6 +3,8 @@ let activeTab = 'dashboard';
 let editOrderIdGlobal = null;
 let editOrderTypeGlobal = null;
 let editOrderDataGlobal = null;
+let editOrderRequestId = 0;
+let editOrderSubmitting = false;
 let commandPaletteFilteredActions = [];
 let commandPaletteSelectedIndex = 0;
 
@@ -24,9 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Thiết lập ngày mặc định (Ngày mai)
 function setDefaultDates() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = utils.tomorrowDateInputValue();
 
   const ids = [
     'bki-ngay-du-kien', 'bk-ngay-du-kien', 'ti-ngay-du-kien'
@@ -134,6 +134,14 @@ function clearForm(type, mode = 'order') {
     const quoteType = type === 'bang-keo-in' ? 'bang_keo_in' : (type === 'truc-in' ? 'truc_in' : 'bang_keo');
     clearQuoteItems(quoteType);
   }
+  if (mode === 'quote') {
+    // Xóa form = bắt đầu báo giá mới: thoát chế độ sửa để lần lưu sau không ghi đè báo giá cũ.
+    const quoteType = type === 'bang-keo-in' ? 'bang_keo_in' : (type === 'truc-in' ? 'truc_in' : 'bang_keo');
+    if (typeof editingQuoteState !== 'undefined' && editingQuoteState && editingQuoteState.type === quoteType) {
+      editingQuoteState = null;
+    }
+    if (typeof setQuoteEditingUi === 'function') setQuoteEditingUi(quoteType);
+  }
 }
 
 // Nút làm mới trang tiện ích
@@ -168,7 +176,8 @@ function toggleTheme() {
 
   // Vẽ lại biểu đồ theo màu chữ mới của theme
   if (activeTab === 'dashboard') {
-    updateDashboardCharts(document.querySelector('.chart-filters button.active').id.replace('filter-', ''));
+    const activeFilter = document.querySelector('.chart-filters button.active[id^="filter-"]');
+    updateDashboardCharts(activeFilter?.id ? activeFilter.id.replace('filter-', '') : 'daily');
     loadProductDistributionChart();
   }
 }
@@ -179,29 +188,124 @@ function closeModal(modalId) {
     utils.resolveConfirmAction(false);
     return;
   }
+  if (modalId === 'modal-quote-pdf-preview' && typeof closeQuotePdfPreview === 'function') {
+    closeQuotePdfPreview();
+    return;
+  }
   document.getElementById(modalId)?.classList.remove('active');
 }
 
+// Ngăn xếp modal theo THỨ TỰ MỞ (không theo thứ tự DOM) để Escape/Ctrl+Q đóng đúng modal trên cùng.
+// Theo dõi bằng MutationObserver trên class `active`, nên cả modal do các module khác mở cũng được ghi nhận.
+const openModalStack = [];
+const modalFocusOrigins = new Map();
+const MODAL_FOCUSABLE_SELECTOR = 'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+
+function isModalVisible(modal) {
+  return !!modal && modal.classList.contains('active');
+}
+
+function focusIntoModal(modal) {
+  // Modal tự đặt focus (bảng lệnh, hộp xác nhận) thì giữ nguyên.
+  if (!isModalVisible(modal) || modal.contains(document.activeElement)) return;
+  const candidates = [...modal.querySelectorAll(MODAL_FOCUSABLE_SELECTOR)].filter(el => el.offsetParent !== null || el === document.activeElement);
+  const preferred = candidates.find(el => el.hasAttribute('autofocus'))
+    || candidates.find(el => !el.classList.contains('modal-close') && !el.readOnly)
+    || candidates.find(el => !el.classList.contains('modal-close'))
+    || candidates[0];
+  if (preferred && typeof preferred.focus === 'function') preferred.focus();
+}
+
+function syncModalStack(modal) {
+  const index = openModalStack.indexOf(modal);
+  const isOpen = isModalVisible(modal);
+  if (isOpen && index === -1) {
+    openModalStack.push(modal);
+    if (modal.id !== 'modal-confirm-action') {
+      // utils.confirmAction tự quản lý focus của hộp xác nhận.
+      modalFocusOrigins.set(modal, document.activeElement);
+      setTimeout(() => focusIntoModal(modal), 0);
+    }
+  } else if (!isOpen && index !== -1) {
+    openModalStack.splice(index, 1);
+    const origin = modalFocusOrigins.get(modal);
+    modalFocusOrigins.delete(modal);
+    const focusLost = !document.activeElement || document.activeElement === document.body || modal.contains(document.activeElement);
+    if (origin && focusLost && origin.isConnected && typeof origin.focus === 'function') {
+      const owner = origin.closest?.('.modal-overlay');
+      if (!owner || isModalVisible(owner)) origin.focus();
+    }
+  }
+}
+
+function initializeModalTracking() {
+  if (typeof MutationObserver !== 'function') return;
+  const modals = document.querySelectorAll('.modal-overlay');
+  modals.forEach(modal => { if (isModalVisible(modal)) syncModalStack(modal); });
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      if (mutation.target?.classList?.contains('modal-overlay')) syncModalStack(mutation.target);
+    });
+  });
+  modals.forEach(modal => observer.observe(modal, { attributes: true, attributeFilter: ['class'] }));
+}
+
 function getTopActiveModal() {
-  const activeModals = document.querySelectorAll('.modal-overlay.active');
+  for (let i = openModalStack.length - 1; i >= 0; i -= 1) {
+    if (isModalVisible(openModalStack[i])) return openModalStack[i];
+  }
+  // Dự phòng khi chưa khởi tạo theo dõi: lấy theo thứ tự DOM.
+  const activeModals = document.querySelectorAll?.('.modal-overlay.active') || [];
   return activeModals.length > 0 ? activeModals[activeModals.length - 1] : null;
 }
 
+// Đóng modal trên cùng bằng đúng hàm đóng riêng của nó (dọn trạng thái kèm theo).
+function closeTopModal(activeModal) {
+  if (!activeModal) return;
+  if (activeModal.id === 'modal-confirm-action') {
+    utils.resolveConfirmAction(false);
+  } else if (activeModal.id === 'modal-email-dialog' && typeof closeEmailDialogModal === 'function') {
+    closeEmailDialogModal();
+  } else if (activeModal.id === 'modal-quote-pdf-preview' && typeof closeQuotePdfPreview === 'function') {
+    closeQuotePdfPreview();
+  } else {
+    closeModal(activeModal.id);
+  }
+}
+
+function isEditableTarget(element) {
+  if (!element) return false;
+  const tag = String(element.tagName || '').toLowerCase();
+  return ['input', 'textarea', 'select', 'button'].includes(tag) || !!element.isContentEditable;
+}
+
 // --- LOGIC DIALOG CHỈNH SỬA ĐƠN HÀNG ĐỘNG (EDIT DIALOG CONTROL) ---
+// VAT (%) hiển thị trong form sửa: ưu tiên % đã lưu, nếu không thì suy ra từ số tiền (pg trả numeric dạng chuỗi).
+function editVatPercentValue(percent, vat, base) {
+  if (Number(percent) > 0) return Number(percent);
+  const baseAmount = Number(base);
+  if (!(baseAmount > 0)) return 0;
+  return Math.round(Number(vat || 0) / baseAmount * 10000) / 100;
+}
+
 async function openEditOrderDialog(orderId, orderType) {
   orderType = utils.normalizeOrderType(orderType);
-  editOrderIdGlobal = orderId;
-  editOrderTypeGlobal = orderType;
+  // Mỗi lần mở có một mã yêu cầu riêng: phản hồi cũ về sau không được ghi đè form mới hơn.
+  const requestId = ++editOrderRequestId;
 
   const tableName = utils.getOrderTableName(orderType);
 
   const res = await window.electronAPI.dbQuery(`SELECT * FROM ${tableName} WHERE id = $1`, [orderId]);
-  if (!res.ok || res.rows.length === 0) {
+  if (requestId !== editOrderRequestId) return;
+  if (!res?.ok || !res.rows?.length) {
     utils.showToast("Không tìm thấy dữ liệu đơn hàng", "danger");
     return;
   }
 
   const order = res.rows[0];
+  // Chỉ gán id/loại khi chắc chắn form này sẽ được hiển thị, để Lưu luôn khớp form đang mở.
+  editOrderIdGlobal = orderId;
+  editOrderTypeGlobal = orderType;
   editOrderDataGlobal = order;
   const modalBody = document.getElementById('edit-modal-body');
   
@@ -218,9 +322,16 @@ async function openEditOrderDialog(orderId, orderType) {
   utils.setupCurrencyInputs();
   if (orderType === 'bang_keo_in') toggleEditAxisFields();
   const editForm = document.getElementById('edit-order-form');
+  editForm.dataset.orderId = String(orderId);
+  editForm.dataset.orderType = orderType;
   configureStructuredOrderEdit(editForm);
   editForm.addEventListener('input', updateEditOrderCalculations);
   editForm.addEventListener('change', updateEditOrderCalculations);
+  document.getElementById('edit-loai-truc')?.addEventListener('change', toggleEditAxisFields);
+  editForm.addEventListener('submit', event => {
+    event.preventDefault();
+    submitEditOrder();
+  });
   updateEditOrderCalculations();
   
   // Bật modal
@@ -260,7 +371,7 @@ function generateBangKeoInEditForm(o) {
       ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
       ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
       ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
-      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', o.ngay_du_kien ? new Date(o.ngay_du_kien).toISOString().split('T')[0] : '', { type: 'date', required: true })}
+      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', utils.toDateInputValue(o.ngay_du_kien), { type: 'date', required: true })}
       ${buildEditInput('Quy cách (mm)', 'edit-qc-mm', o.quy_cach_mm, { type: 'number' })}
       ${buildEditInput('Quy cách (m)', 'edit-qc-m', o.quy_cach_m, { type: 'number' })}
       ${buildEditInput('Quy cách (mic)', 'edit-qc-mic', o.quy_cach_mic, { type: 'number' })}
@@ -280,7 +391,7 @@ function generateBangKeoInEditForm(o) {
       ${buildEditInput('Đơn giá vốn', 'edit-don-gia-von', utils.formatCurrency(o.don_gia_von), { currency: true })}
       ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
       ${buildEditInput('Tiền cọc', 'edit-tien-coc', utils.formatCurrency(o.tien_coc), { currency: true })}
-      ${buildEditInput('VAT tổng (%)', 'edit-vat', Number(o.vat_percent) > 0 ? o.vat_percent : (o.thanh_tien_ban ? Number(o.vat || 0) / Number(o.thanh_tien_ban) * 100 : 0), { type: 'number', min: 0, max: 100, step: 0.1 })}
+      ${buildEditInput('VAT tổng (%)', 'edit-vat', editVatPercentValue(o.vat_percent, o.vat, o.thanh_tien_ban), { type: 'number', min: 0, max: 100, step: 'any' })}
       ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
       ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
       ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
@@ -288,7 +399,7 @@ function generateBangKeoInEditForm(o) {
       <h4 class="edit-section-title">Trục in</h4>
       <div class="form-group">
         <label class="form-label" for="edit-loai-truc">Loại trục</label>
-        <select id="edit-loai-truc" class="form-control" onchange="toggleEditAxisFields()">
+        <select id="edit-loai-truc" class="form-control">
           <option value="cu" ${o.loai_truc !== 'moi' ? 'selected' : ''}>Trục cũ</option>
           <option value="moi" ${o.loai_truc === 'moi' ? 'selected' : ''}>Trục mới</option>
         </select>
@@ -299,7 +410,7 @@ function generateBangKeoInEditForm(o) {
         ${buildEditInput('Số lượng trục', 'edit-truc-so-luong', o.truc_so_luong, { type: 'number', min: 0 })}
         ${buildEditInput('Giá gốc trục', 'edit-truc-gia-goc', utils.formatCurrency(o.truc_gia_goc), { currency: true })}
         ${buildEditInput('Giá bán trục', 'edit-truc-gia-ban', utils.formatCurrency(o.truc_gia_ban), { currency: true })}
-        ${buildEditInput('VAT trục (%)', 'edit-truc-vat', Number(o.truc_vat_percent) > 0 ? o.truc_vat_percent : (o.truc_thanh_tien_ban ? Number(o.truc_vat || 0) / Number(o.truc_thanh_tien_ban) * 100 : 0), { type: 'number', min: 0, max: 100, step: 0.1 })}
+        ${buildEditInput('VAT trục (%)', 'edit-truc-vat', editVatPercentValue(o.truc_vat_percent, o.truc_vat, o.truc_thanh_tien_ban), { type: 'number', min: 0, max: 100, step: 'any' })}
         ${buildEditInput('CTV trục', 'edit-truc-ctv', o.truc_ctv)}
         ${buildEditInput('Hoa hồng trục (%)', 'edit-truc-hoa-hong-percent', o.truc_hoa_hong, { type: 'number', min: 0, max: 100 })}
         ${buildEditInput('Tiền hoa hồng trục (đ)', 'edit-truc-tien-hoa-hong', 0, { readonly: true })}
@@ -332,7 +443,7 @@ function generateTrucInEditForm(o) {
       ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
       ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
       ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
-      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', o.ngay_du_kien ? new Date(o.ngay_du_kien).toISOString().split('T')[0] : '', { type: 'date', required: true })}
+      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', utils.toDateInputValue(o.ngay_du_kien), { type: 'date', required: true })}
       ${buildEditInput('Quy cách', 'edit-quy-cach', o.quy_cach)}
       ${buildEditInput('Màu sắc', 'edit-mau-sac', o.mau_sac)}
       ${editOrderTypeGlobal === 'truc_in' ? buildEditInput('Màu keo', 'edit-mau-keo', o.mau_keo) : ''}
@@ -340,7 +451,7 @@ function generateTrucInEditForm(o) {
       ${buildEditInput('Số lượng', 'edit-so-luong', o.so_luong, { type: 'number', min: 0, required: true })}
       ${buildEditInput('Đơn giá gốc', 'edit-don-gia-goc', utils.formatCurrency(o.don_gia_goc), { currency: true, required: true })}
       ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
-      ${buildEditInput('VAT tổng (%)', 'edit-vat', Number(o.vat_percent) > 0 ? o.vat_percent : (o.thanh_tien_ban ? Number(o.vat || 0) / Number(o.thanh_tien_ban) * 100 : 0), { type: 'number', min: 0, max: 100, step: 0.1 })}
+      ${buildEditInput('VAT tổng (%)', 'edit-vat', editVatPercentValue(o.vat_percent, o.vat, o.thanh_tien_ban), { type: 'number', min: 0, max: 100, step: 'any' })}
       ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
       ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
       ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
@@ -457,15 +568,23 @@ function updateEditOrderCalculations() {
 
 // Gửi lệnh Lưu chỉnh sửa đơn hàng
 async function submitEditOrder() {
+  // Chặn bấm Lưu / Ctrl+S nhiều lần khi lệnh cập nhật trước chưa xong.
+  if (editOrderSubmitting) return;
+  const form = document.getElementById('edit-order-form');
+  if (!form) return;
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+  // Luôn lưu theo id/loại của form đang hiển thị.
+  const editOrderId = form.dataset?.orderId || editOrderIdGlobal;
+  const editOrderType = utils.normalizeOrderType(form.dataset?.orderType || editOrderTypeGlobal);
+  const submitButton = document.querySelector?.('#modal-edit-order .modal-footer .btn-primary');
+  editOrderSubmitting = true;
+  if (submitButton) submitButton.disabled = true;
   try {
-    const form = document.getElementById('edit-order-form');
-    if (!form) return;
-    if (!form.checkValidity()) {
-      form.reportValidity();
-      return;
-    }
 
-    const tableName = utils.getOrderTableName(editOrderTypeGlobal);
+    const tableName = utils.getOrderTableName(editOrderType);
     const tenHang = document.getElementById('edit-ten-hang').value.trim();
     const tenKhachHang = document.getElementById('edit-ten-khach-hang').value.trim();
     const ngayDuKien = document.getElementById('edit-ngay-du-kien').value;
@@ -476,13 +595,13 @@ async function submitEditOrder() {
       }
       const response = await window.electronAPI.dbRun(
         `UPDATE ${tableName} SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3 WHERE id=$4`,
-        [tenHang, tenKhachHang, ngayDuKien, editOrderIdGlobal]
+        [tenHang, tenKhachHang, ngayDuKien, editOrderId]
       );
       if (!response.ok) {
         utils.showToast('Lỗi cập nhật đơn hàng: ' + response.error, 'danger');
         return;
       }
-      utils.showToast(`Đã lưu thông tin đơn ${editOrderIdGlobal}; giữ nguyên chi tiết và số tiền`, 'success');
+      utils.showToast(`Đã lưu thông tin đơn ${editOrderId}; giữ nguyên chi tiết và số tiền`, 'success');
       closeModal('modal-edit-order');
       editOrderDataGlobal = null;
       await switchTab(activeTab);
@@ -504,7 +623,7 @@ async function submitEditOrder() {
     let sql;
     let params;
 
-    if (editOrderTypeGlobal === 'bang_keo_in') {
+    if (editOrderType === 'bang_keo_in') {
       const donGiaVon = utils.parseCurrency(document.getElementById('edit-don-gia-von').value);
       const quyCachM = parseFloat(document.getElementById('edit-qc-m').value) || 0;
       const cuonCay = parseFloat(document.getElementById('edit-cuon-cay').value) || 0;
@@ -521,6 +640,12 @@ async function submitEditOrder() {
       }
 
       const result = calculateEditOrder();
+      // Giống form tạo đơn: không lưu khi Quy cách (m) / Số cuộn/cây không hợp lệ (giá gốc sẽ sai).
+      if (result && result.valid === false) {
+        const detail = Array.isArray(result.errors) && result.errors.length ? result.errors.join('; ') : 'Quy cách (m) và Số cuộn/cây phải lớn hơn 0 để tính giá gốc';
+        utils.showToast(detail, 'warning');
+        return;
+      }
 
       sql = `
         UPDATE bang_keo_in_orders SET
@@ -554,7 +679,7 @@ async function submitEditOrder() {
         result.axis.costTotal, result.axis.saleTotal,
         isNewAxis ? (document.getElementById('edit-truc-ctv').value.trim() || null) : null,
         isNewAxis ? result.axis.commissionPercent : 0, result.axis.commission, result.axis.profit, result.axis.netProfit, result.axis.vat, axisVatPercent, result.vat, vatPercent,
-        editOrderIdGlobal
+        editOrderId
       ];
     } else {
       const donGiaGoc = utils.parseCurrency(document.getElementById('edit-don-gia-goc').value);
@@ -568,27 +693,27 @@ async function submitEditOrder() {
         soLuong, document.getElementById('edit-mau-sac').value.trim() || null
       ];
 
-      if (editOrderTypeGlobal === 'truc_in') {
+      if (editOrderType === 'truc_in') {
         sql = `UPDATE truc_in_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
           so_luong=$5, mau_sac=$6, mau_keo=$7, don_gia_goc=$8, don_gia_ban=$9, ctv=$10,
           hoa_hong=$11, tien_ship=$12, thanh_tien_goc=$13, thanh_tien_ban=$14, cong_no_khach=$15,
           loi_nhuan=$16, tien_hoa_hong=$17, loi_nhuan_rong=$18, vat=$19, vat_percent=$20 WHERE id=$21`;
         params = [...common, document.getElementById('edit-mau-keo').value.trim() || null, donGiaGoc, donGiaBan,
           ctv, hoaHong, tienShip, result.costTotal, result.saleTotal, result.outstanding,
-          result.profit, result.commission, result.netProfit, result.vat, vatPercent, editOrderIdGlobal];
+          result.profit, result.commission, result.netProfit, result.vat, vatPercent, editOrderId];
       } else {
         sql = `UPDATE bang_keo_orders SET ten_hang=$1, ten_khach_hang=$2, ngay_du_kien=$3, quy_cach=$4,
           so_luong=$5, mau_sac=$6, don_gia_goc=$7, don_gia_ban=$8, ctv=$9, hoa_hong=$10,
           tien_ship=$11, thanh_tien=$12, thanh_tien_ban=$13, cong_no_khach=$14,
           loi_nhuan=$15, tien_hoa_hong=$16, loi_nhuan_rong=$17, vat=$18, vat_percent=$19 WHERE id=$20`;
         params = [...common, donGiaGoc, donGiaBan, ctv, hoaHong, tienShip, result.costTotal,
-          result.saleTotal, result.outstanding, result.profit, result.commission, result.netProfit, result.vat, vatPercent, editOrderIdGlobal];
+          result.saleTotal, result.outstanding, result.profit, result.commission, result.netProfit, result.vat, vatPercent, editOrderId];
       }
     }
 
     const res = await window.electronAPI.dbRun(sql, params);
     if (res.ok) {
-      utils.showToast(`Đã lưu thay đổi cho đơn ${editOrderIdGlobal}`, "success");
+      utils.showToast(`Đã lưu thay đổi cho đơn ${editOrderId}`, "success");
       closeModal('modal-edit-order');
       editOrderDataGlobal = null;
       await switchTab(activeTab);
@@ -600,6 +725,9 @@ async function submitEditOrder() {
   } catch (err) {
     window.electronAPI.writeLog('error', 'Lỗi lưu chỉnh sửa đơn hàng: ' + err.message);
     utils.showToast("Không thể cập nhật đơn hàng", "danger");
+  } finally {
+    editOrderSubmitting = false;
+    if (submitButton) submitButton.disabled = false;
   }
 }
 
@@ -616,7 +744,7 @@ async function writeSingleRowExcel(data, prefix) {
 
     const savePath = await window.electronAPI.showSaveDialog({
       title: "Lưu file đơn hàng xuất Excel",
-      defaultPath: `don_hang_${prefix}_${new Date().toISOString().split('T')[0]}.xlsx`,
+      defaultPath: `don_hang_${prefix}_${utils.toDateInputValue(new Date())}.xlsx`,
       filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
     });
 
@@ -796,7 +924,25 @@ const commandPaletteActions = [
 function initializeUiEnhancements() {
   updateFooterClock();
   setInterval(updateFooterClock, 30000);
+  // Ủy quyền sự kiện cho danh sách lệnh (không dùng onclick inline để tương thích CSP)
+  document.getElementById('command-palette-results')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-command-index]');
+    if (button) executeCommandPaletteAction(Number(button.dataset.commandIndex));
+  });
   renderCommandResults();
+  initializeModalTracking();
+  // Mục menu/breadcrumb dạng role="button" (không phải <button>): Enter/Space kích hoạt như bấm chuột.
+  document.addEventListener('keydown', event => {
+    const target = event.target;
+    if (!target || target.getAttribute?.('role') !== 'button' || String(target.tagName || '').toLowerCase() === 'button') return;
+    const key = String(event.key || '');
+    const isAnchor = String(target.tagName || '').toLowerCase() === 'a' && target.hasAttribute('href');
+    // <a href> đã tự phát sinh click khi nhấn Enter; chỉ cần xử lý thêm phím Space.
+    if (key === ' ' || key === 'Spacebar' || (key === 'Enter' && !isAnchor)) {
+      event.preventDefault();
+      target.click();
+    }
+  });
 }
 
 function updateFooterClock() {
@@ -832,15 +978,21 @@ async function openDatabaseConfigManager() {
   const result = await window.electronAPI.manageDatabaseConfig();
   if (!result) return;
 
+  // Chỉ đổi badge theo kết quả kiểm tra kết nối thật (có khóa `connected`);
+  // lỗi xuất/nhập tệp cấu hình không có nghĩa là mất kết nối cơ sở dữ liệu.
+  const isConnectionCheck = Object.prototype.hasOwnProperty.call(result, 'connected') && !result.canceled;
   if (result.exported) {
     utils.showToast('Đã xuất cấu hình. Chỉ chuyển tệp này sang máy tin cậy.', 'success');
-  } else if (result.connected) {
+  } else if (isConnectionCheck && result.connected) {
     setConnectionStatus(true);
     utils.showToast('Kết nối cơ sở dữ liệu hoạt động bình thường.', 'success');
     await switchTab(activeTab);
-  } else if (result.error) {
+  } else if (isConnectionCheck) {
     setConnectionStatus(false, 'Mây: Mất kết nối');
-    utils.showToast('Không thể kết nối: ' + result.error, 'danger');
+    utils.showToast('Không thể kết nối: ' + (result.error || 'Không rõ lỗi'), 'danger');
+  } else if (result.error && !result.dialogShown) {
+    // Tiến trình chính chưa hiện hộp thoại lỗi (ví dụ xuất cấu hình thất bại) thì mới báo bằng toast.
+    utils.showToast('Không thể xử lý cấu hình: ' + result.error, 'danger');
   }
 }
 
@@ -853,7 +1005,9 @@ function openCommandPalette() {
   input.value = '';
   commandPaletteSelectedIndex = 0;
   renderCommandResults();
-  setTimeout(() => input.focus(), 30);
+  // Modal đã hiển thị (display:flex) nên focus được ngay; setTimeout chỉ là dự phòng.
+  input.focus();
+  setTimeout(() => { if (modal.classList.contains('active')) input.focus(); }, 30);
 }
 
 function renderCommandResults() {
@@ -875,19 +1029,31 @@ function renderCommandResults() {
   }
 
   if (commandPaletteFilteredActions.length === 0) {
-    results.innerHTML = '<div class="command-empty">Không tìm thấy thao tác phù hợp</div>';
+    results.innerHTML = '<div class="command-empty" role="option" aria-disabled="true">Không tìm thấy thao tác phù hợp</div>';
+    input.removeAttribute('aria-activedescendant');
     return;
   }
 
   results.innerHTML = commandPaletteFilteredActions.map((action, index) => `
-    <button class="command-result ${index === commandPaletteSelectedIndex ? 'active' : ''}" onclick="executeCommandPaletteAction(${index})">
+    <button type="button" id="command-result-${index}" role="option" tabindex="-1" aria-selected="${index === commandPaletteSelectedIndex ? 'true' : 'false'}" class="command-result ${index === commandPaletteSelectedIndex ? 'active' : ''}" data-command-index="${index}">
       <span>
-        <strong>${action.title}</strong>
-        <small>${action.description}</small>
+        <strong>${escapeAppHtml(action.title)}</strong>
+        <small>${escapeAppHtml(action.description)}</small>
       </span>
-      <span class="badge badge-gray">${action.group}</span>
+      <span class="badge badge-gray">${escapeAppHtml(action.group)}</span>
     </button>
   `).join('');
+
+  // Đồng bộ mục đang chọn cho trình đọc màn hình và cuộn tới mục đó khi dùng phím mũi tên.
+  input.setAttribute('aria-activedescendant', `command-result-${commandPaletteSelectedIndex}`);
+  const activeItem = document.getElementById(`command-result-${commandPaletteSelectedIndex}`);
+  if (activeItem && typeof activeItem.scrollIntoView === 'function') activeItem.scrollIntoView({ block: 'nearest' });
+}
+
+// Gõ từ khóa mới: luôn chọn lại mục đầu tiên của danh sách đã lọc.
+function onCommandPaletteInput() {
+  commandPaletteSelectedIndex = 0;
+  renderCommandResults();
 }
 
 function handleCommandPaletteKey(e) {
@@ -928,6 +1094,24 @@ async function jumpToStatsFilter(statusFilter) {
   }
 }
 
+// Xác định form Bán hàng / Báo giá đang hiển thị để Ctrl+S gửi đúng form
+function getActiveSaveFormId() {
+  const isVisible = id => {
+    const pane = document.getElementById(id);
+    return !!pane && pane.style.display !== 'none';
+  };
+  if (activeTab === 'sales') {
+    if (isVisible('sales-form-bang-keo-in')) return 'form-bang-keo-in';
+    if (isVisible('sales-form-bang-keo')) return 'form-bang-keo';
+    if (isVisible('sales-form-truc-in')) return 'form-truc-in';
+  } else if (activeTab === 'quotes-creation') {
+    if (isVisible('quotes-form-bang-keo-in')) return 'form-quote-bang-keo-in';
+    if (isVisible('quotes-form-bang-keo')) return 'form-quote-bang-keo';
+    if (isVisible('quotes-form-truc-in')) return 'form-quote-truc-in';
+  }
+  return null;
+}
+
 function openShortcutsModal() {
   const modal = document.getElementById('modal-shortcuts');
   if (modal) modal.classList.add('active');
@@ -935,7 +1119,7 @@ function openShortcutsModal() {
 
 window.addEventListener('keydown', async (e) => {
   const isCtrl = e.ctrlKey || e.metaKey;
-  const key = e.key;
+  const key = String(e.key || '');
   const lowerKey = key.toLowerCase();
 
   // 1. Phím Escape - Đóng Modal
@@ -943,13 +1127,19 @@ window.addEventListener('keydown', async (e) => {
     const activeModal = getTopActiveModal();
     if (activeModal) {
       e.preventDefault();
-      if (activeModal.id === 'modal-confirm-action') {
-        utils.resolveConfirmAction(false);
-      } else if (activeModal.id === 'modal-email-dialog') {
-        closeEmailDialogModal();
-      } else {
-        closeModal(activeModal.id);
-      }
+      closeTopModal(activeModal);
+      return;
+    }
+  }
+
+  // Khi đang mở modal: chặn các phím tắt toàn cục (trừ Ctrl+S / Ctrl+Q xử lý theo modal bên dưới).
+  if (getTopActiveModal()) {
+    if (key === 'F5') {
+      e.preventDefault();
+      return;
+    }
+    if (isCtrl && ['k', '/', 't', 'e', 'f', 'm', 'd'].includes(lowerKey)) {
+      e.preventDefault();
       return;
     }
   }
@@ -986,12 +1176,10 @@ window.addEventListener('keydown', async (e) => {
 
   // 3. Phím Delete - Xóa các dòng lịch sử đã chọn
   if (key === 'Delete') {
-    const activeEl = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-    if (activeEl !== 'input' && activeEl !== 'textarea' && !document.activeElement.isContentEditable) {
-      if (activeTab === 'thong-ke') {
-        e.preventDefault();
-        deleteSelectedStats();
-      }
+    // Không xóa khi đang mở modal hoặc focus nằm trong ô nhập/nút/vùng soạn thảo.
+    if (!getTopActiveModal() && !isEditableTarget(document.activeElement) && activeTab === 'thong-ke') {
+      e.preventDefault();
+      deleteSelectedStats();
     }
     return;
   }
@@ -1002,7 +1190,9 @@ window.addEventListener('keydown', async (e) => {
     // Ctrl + S: Lưu / Gửi / Cập nhật
     if (lowerKey === 's') {
       e.preventDefault();
-      
+      // Giữ phím sẽ sinh nhiều sự kiện lặp: bỏ qua để không lưu trùng.
+      if (e.repeat) return;
+
       const activeModal = getTopActiveModal();
       if (activeModal) {
         if (activeModal.id === 'modal-edit-order') {
@@ -1017,14 +1207,12 @@ window.addEventListener('keydown', async (e) => {
         return;
       }
 
-      if (activeTab === 'sales') {
-        if (document.getElementById('sales-form-bang-keo-in').style.display !== 'none') saveBangKeoIn(null, 'order');
-        else if (document.getElementById('sales-form-bang-keo').style.display !== 'none') saveBangKeo(null, 'order');
-        else if (document.getElementById('sales-form-truc-in').style.display !== 'none') saveTrucIn(null, 'order');
-      } else if (activeTab === 'quotes-creation') {
-        if (document.getElementById('quotes-form-bang-keo-in').style.display !== 'none') saveBangKeoIn(null, 'quote');
-        else if (document.getElementById('quotes-form-bang-keo').style.display !== 'none') saveBangKeo(null, 'quote');
-        else if (document.getElementById('quotes-form-truc-in').style.display !== 'none') saveTrucIn(null, 'quote');
+      // Gửi form đang mở qua requestSubmit() để chạy kiểm tra `required` gốc và đúng handler submit.
+      const activeFormId = getActiveSaveFormId();
+      const activeForm = activeFormId ? document.getElementById(activeFormId) : null;
+      if (activeForm) {
+        if (typeof activeForm.requestSubmit === 'function') activeForm.requestSubmit();
+        else if (activeForm.reportValidity()) activeForm.dispatchEvent(new Event('submit', { cancelable: true }));
       }
       return;
     }
@@ -1093,11 +1281,7 @@ window.addEventListener('keydown', async (e) => {
       e.preventDefault();
       const activeModal = getTopActiveModal();
       if (activeModal) {
-        if (activeModal.id === 'modal-email-dialog') {
-          closeEmailDialogModal();
-        } else {
-          closeModal(activeModal.id);
-        }
+        closeTopModal(activeModal);
       } else {
         if (await utils.confirmAction(
           'Bạn có muốn đóng phần mềm không?',

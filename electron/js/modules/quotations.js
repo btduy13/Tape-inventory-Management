@@ -223,7 +223,8 @@ function restructureQuoteForm(type) {
   editBanner.className = 'quote-edit-banner';
   editBanner.id = `quote-edit-banner-${type}`;
   editBanner.hidden = true;
-  editBanner.innerHTML = `<div><strong>Đang chỉnh sửa báo giá</strong><span></span></div><button type="button" class="btn btn-secondary btn-sm" onclick="cancelQuoteEditing('${type}')">Hủy chỉnh sửa</button>`;
+  editBanner.innerHTML = `<div><strong>Đang chỉnh sửa báo giá</strong><span></span></div><button type="button" class="btn btn-secondary btn-sm" data-quote-action="cancel-edit">Hủy chỉnh sửa</button>`;
+  editBanner.querySelector('[data-quote-action="cancel-edit"]')?.addEventListener('click', () => cancelQuoteEditing(type));
   infoCard.before(editBanner, productCard);
 
   infoCard.classList.add('quote-shared-card');
@@ -321,17 +322,43 @@ function applyQuoteDraftFields(type, fields = {}) {
   config.calculate();
 }
 
+// Form chỉ được gắn listener 'input' một lần, kể cả khi trạng thái nháp bị xóa và khởi tạo lại.
+const quoteDraftFormsWithListeners = new Set();
+
 function initializeQuoteDrafts(type) {
   if (quoteDraftStates[type]) return quoteDraftStates[type];
   const firstDraft = { id: quoteDraftId(), fields: captureQuoteDraftFields(type), savedAxes: [] };
   quoteDraftStates[type] = { activeId: firstDraft.id, drafts: [firstDraft] };
   const form = document.getElementById(quoteDraftConfigs[type]?.formId);
-  form?.addEventListener('input', () => {
-    captureActiveQuoteDraft(type);
-    renderQuoteDraftTabs(type);
-  });
+  if (form && !quoteDraftFormsWithListeners.has(type)) {
+    quoteDraftFormsWithListeners.add(type);
+    form.addEventListener('input', () => {
+      captureActiveQuoteDraft(type);
+      renderQuoteDraftTabs(type);
+    });
+  }
+  bindQuoteDraftTabEvents(type);
   renderQuoteDraftTabs(type);
   return quoteDraftStates[type];
+}
+
+// Sự kiện tab kích thước dùng uỷ quyền (data-*), không dùng onclick nội tuyến.
+const quoteDraftTabContainersBound = new Set();
+
+function bindQuoteDraftTabEvents(type) {
+  const container = document.getElementById(`quote-drafts-${type}`);
+  if (!container || quoteDraftTabContainersBound.has(container) || typeof container.addEventListener !== 'function') return;
+  quoteDraftTabContainersBound.add(container);
+  container.addEventListener('click', event => {
+    const closeButton = event.target?.closest?.('[data-quote-draft-close]');
+    if (closeButton) {
+      event.stopPropagation();
+      removeQuoteDraft(type, closeButton.dataset.quoteDraftClose);
+      return;
+    }
+    const tab = event.target?.closest?.('[data-quote-draft-id]');
+    if (tab) switchQuoteDraft(type, tab.dataset.quoteDraftId);
+  });
 }
 
 function getActiveQuoteDraft(type) {
@@ -357,15 +384,29 @@ function renderQuoteDraftTabs(type) {
   const state = quoteDraftStates[type];
   const container = document.getElementById(`quote-drafts-${type}`);
   if (!state || !container) return;
+  bindQuoteDraftTabEvents(type);
   container.innerHTML = state.drafts.map((draft, index) => `
     <button type="button" class="quote-draft-tab ${draft.id === state.activeId ? 'active' : ''}"
-      role="tab" aria-selected="${draft.id === state.activeId}" onclick="switchQuoteDraft('${type}', '${draft.id}')">
+      role="tab" aria-selected="${draft.id === state.activeId}" data-quote-draft-id="${escapeQuoteHtml(draft.id)}">
       <span>${escapeQuoteHtml(quoteDraftLabel(type, draft, index))}</span>
-      ${state.drafts.length > 1 ? `<span class="quote-draft-close" title="Xóa kích thước" onclick="event.stopPropagation(); removeQuoteDraft('${type}', '${draft.id}')">×</span>` : ''}
+      ${state.drafts.length > 1 ? `<span class="quote-draft-close" title="Xóa kích thước" data-quote-draft-close="${escapeQuoteHtml(draft.id)}">×</span>` : ''}
     </button>
   `).join('');
   const count = document.getElementById(`quote-draft-count-${type}`);
   if (count) count.textContent = `${state.drafts.length} kích thước`;
+}
+
+// Trường của tab kích thước mới: chép thông số sản phẩm từ tab hiện tại nhưng KHÔNG chép trục
+// (đã lưu hay đang nhập) và tiền cọc, vì các giá trị đó tính theo từng tab và sẽ bị cộng trùng.
+function buildNewQuoteDraftFields(currentFields = {}) {
+  const fields = JSON.parse(JSON.stringify(currentFields || {}));
+  const has = key => Object.prototype.hasOwnProperty.call(fields, key);
+  Object.entries(quoteAxisFieldDefaults).forEach(([key, value]) => {
+    if (has(key)) fields[key] = value;
+  });
+  if (has('loai-truc')) fields['loai-truc'] = 'cu';
+  if (has('tien-coc')) fields['tien-coc'] = '0';
+  return fields;
 }
 
 function addQuoteDraft(type) {
@@ -373,8 +414,8 @@ function addQuoteDraft(type) {
   const current = captureActiveQuoteDraft(type);
   const draft = {
     id: quoteDraftId(),
-    fields: JSON.parse(JSON.stringify(current.fields || {})),
-    savedAxes: JSON.parse(JSON.stringify(current.savedAxes || []))
+    fields: buildNewQuoteDraftFields(current.fields),
+    savedAxes: []
   };
   state.drafts.push(draft);
   state.activeId = draft.id;
@@ -431,7 +472,7 @@ function editSavedQuoteAxis(index) {
     'loai-truc': 'moi', 'truc-ten': axis.name, 'truc-chu-vi': axis.circumference || '',
     'truc-so-luong': axis.quantity, 'truc-gia-goc': utils.formatCurrency(axis.costPrice),
     'truc-gia-ban': utils.formatCurrency(axis.unitPrice),
-    'truc-vat': Number(axis.vatPercent) > 0 ? axis.vatPercent : (axis.total > 0 ? axis.vat / axis.total * 100 : 0),
+    'truc-vat': orderMath.vatPercentFromAmount(axis.vat, axis.total, axis.vatPercent),
     'truc-ctv': axis.collaborator || '',
     'truc-hoa-hong-percent': axis.commissionPercent || 0
   };
@@ -464,13 +505,24 @@ function renderQuoteAxisTree() {
       <span class="quote-tree-branch">${index === axes.length - 1 ? '└─' : '├─'}</span>
       <div class="quote-axis-node-main">
         <strong>Trục ${index + 1}: ${escapeQuoteHtml(axis.name)}</strong>
-        <small>Chu vi ${escapeQuoteHtml(axis.circumference || '-')} · SL ${utils.formatCurrency(axis.quantity)} · ${utils.formatCurrency(axis.unitPrice)}đ/trục · VAT ${Number(Number(axis.vatPercent) > 0 ? axis.vatPercent : (axis.total > 0 ? axis.vat / axis.total * 100 : 0)).toFixed(2).replace(/\.00$/, '')}% = ${utils.formatCurrency(axis.vat)}đ</small>
+        <small>Chu vi ${escapeQuoteHtml(axis.circumference || '-')} · SL ${utils.formatCurrency(axis.quantity)} · ${utils.formatCurrency(axis.unitPrice)}đ/trục · VAT ${Number(orderMath.vatPercentFromAmount(axis.vat, axis.total, axis.vatPercent)).toFixed(2).replace(/\.00$/, '')}% = ${utils.formatCurrency(axis.vat)}đ</small>
       </div>
       <strong class="quote-axis-node-total">${utils.formatCurrency(axis.total)}đ</strong>
-      <button type="button" class="quote-tree-action" onclick="editSavedQuoteAxis(${index})">Sửa</button>
-      <button type="button" class="quote-tree-action danger" onclick="removeSavedQuoteAxis(${index})">Xóa</button>
+      <button type="button" class="quote-tree-action" data-quote-axis-action="edit" data-axis-index="${index}">Sửa</button>
+      <button type="button" class="quote-tree-action danger" data-quote-axis-action="remove" data-axis-index="${index}">Xóa</button>
     </div>
   `).join('');
+  if (!tree.dataset.axisActionsBound) {
+    tree.dataset.axisActionsBound = 'true';
+    tree.addEventListener('click', event => {
+      const button = event.target?.closest?.('[data-quote-axis-action]');
+      if (!button) return;
+      const index = Number(button.dataset.axisIndex);
+      if (!Number.isInteger(index)) return;
+      if (button.dataset.quoteAxisAction === 'edit') editSavedQuoteAxis(index);
+      else if (button.dataset.quoteAxisAction === 'remove') removeSavedQuoteAxis(index);
+    });
+  }
 }
 
 function getPrimaryQuoteSpecification(type, data) {
@@ -493,14 +545,19 @@ function normalizeStoredQuoteItems(data, type) {
       specification: String(item.specification || '-'),
       quantity: Math.max(0, orderMath.number(item.quantity)),
       unitPrice: Math.max(0, orderMath.number(item.unitPrice)),
-      total: Math.max(0, orderMath.number(item.total) || orderMath.number(item.quantity) * orderMath.number(item.unitPrice)),
-      costTotal: Math.max(0, orderMath.number(item.costTotal)),
-      vat: Math.max(0, orderMath.number(item.vat)),
+      total: Math.max(0, orderMath.money(orderMath.number(item.total) || orderMath.number(item.quantity) * orderMath.number(item.unitPrice))),
+      costTotal: Math.max(0, orderMath.money(item.costTotal)),
+      vat: Math.max(0, orderMath.money(item.vat)),
       vatPercent: Number(item.vatPercent) > 0
         ? orderMath.percent(item.vatPercent)
-        : (orderMath.number(item.total) > 0 ? orderMath.number(item.vat) / orderMath.number(item.total) * 100 : 0),
-      deposit: Math.max(0, orderMath.number(item.deposit)),
-      axes: Array.isArray(item.axes) ? item.axes : [],
+        : orderMath.vatPercentFromAmount(item.vat, item.total),
+      deposit: Math.max(0, orderMath.money(item.deposit)),
+      axes: Array.isArray(item.axes) ? item.axes.filter(axis => axis && typeof axis === 'object').map(axis => ({
+        ...axis,
+        total: Math.max(0, orderMath.money(axis.total)),
+        costTotal: Math.max(0, orderMath.money(axis.costTotal)),
+        vat: Math.max(0, orderMath.money(axis.vat))
+      })) : [],
       details: item.details || {},
       fields: item.fields || {}
     }));
@@ -509,15 +566,15 @@ function normalizeStoredQuoteItems(data, type) {
     specification: getPrimaryQuoteSpecification(type, data || {}),
     quantity: Math.max(0, orderMath.number(data?.so_luong)),
     unitPrice: Math.max(0, orderMath.number(data?.don_gia_ban)),
-    total: Math.max(0, orderMath.number(data?.thanh_tien_ban)),
-    costTotal: Math.max(0, orderMath.number(data?.thanh_tien_goc ?? data?.thanh_tien)),
-    vat: Math.max(0, orderMath.number(data?.vat)),
+    total: Math.max(0, orderMath.money(data?.thanh_tien_ban)),
+    costTotal: Math.max(0, orderMath.money(data?.thanh_tien_goc ?? data?.thanh_tien)),
+    vat: Math.max(0, orderMath.money(data?.vat)),
     vatPercent: orderMath.percent(data?.vat_percent),
-    deposit: Math.max(0, orderMath.number(data?.tien_coc)),
+    deposit: Math.max(0, orderMath.money(data?.tien_coc)),
     axes: data?.loai_truc === 'moi' ? [{
       name: data.ten_truc || 'Trục mới', circumference: data.truc_chu_vi,
       quantity: orderMath.number(data.truc_so_luong), unitPrice: orderMath.number(data.truc_gia_ban),
-      total: orderMath.number(data.truc_thanh_tien_ban), costTotal: orderMath.number(data.truc_thanh_tien_goc), vat: orderMath.number(data.truc_vat), vatPercent: orderMath.percent(data.truc_vat_percent)
+      total: Math.max(0, orderMath.money(data.truc_thanh_tien_ban)), costTotal: Math.max(0, orderMath.money(data.truc_thanh_tien_goc)), vat: Math.max(0, orderMath.money(data.truc_vat)), vatPercent: orderMath.percent(data.truc_vat_percent)
     }] : [],
     details: {},
     fields: {}
@@ -543,7 +600,7 @@ function axisFromFields(fields = {}) {
   return {
     name, circumference: quoteDraftNumber(fields, 'truc-chu-vi') || null,
     quantity, costPrice, unitPrice: salePrice, costTotal: result.costTotal, total: result.saleTotal,
-    vat: result.saleTotal * orderMath.percent(fields['truc-vat']) / 100,
+    vat: orderMath.vatAmount(result.saleTotal, fields['truc-vat']),
     vatPercent: orderMath.percent(fields['truc-vat']),
     collaborator: String(fields['truc-ctv'] || '').trim(), commissionPercent: result.commissionPercent,
     commission: result.commission, profit: result.profit, netProfit: result.netProfit
@@ -569,7 +626,7 @@ function buildQuoteItem(type, draft) {
       }),
       quantity: result.product.quantity, unitPrice: result.product.salePrice, total: result.product.saleTotal,
       costTotal: result.product.costTotal, vat: result.vat, vatPercent: result.vatPercent, deposit: quoteDraftCurrency(fields, 'tien-coc'),
-      shipping: quoteDraftCurrency(fields, 'tien-ship'), commission: result.product.commission,
+      shipping: result.product.shipping, commission: result.product.commission,
       profit: result.product.profit, netProfit: result.product.netProfit, axes,
       details: { mm: fields['qc-mm'], m: fields['qc-m'], mic: fields['qc-mic'], rollsPerTree: fields['cuon-cay'],
         glueColor: fields['mau-keo'], printColor: fields['mau-sac'], paperCore: fields['loi-giay'], packaging: fields['thung-bao'] },
@@ -584,16 +641,60 @@ function buildQuoteItem(type, draft) {
   return {
     specification: String(fields['quy-cach'] || '-'), quantity: result.quantity, unitPrice: result.salePrice,
     total: result.saleTotal, costTotal: result.costTotal, vat: result.vat, vatPercent: result.vatPercent, deposit: 0,
-    shipping: quoteDraftCurrency(fields, 'tien-ship'), commission: result.commission,
+    shipping: result.shipping, commission: result.commission,
     profit: result.profit, netProfit: result.netProfit, axes: [], details: { color: fields['mau-sac'], glueColor: fields['mau-keo'] },
     fields: { ...fields }
   };
 }
 
+// Đơn giá bình quân = tổng tiền / tổng số lượng (0 khi chưa có số lượng).
+function quoteAggregateUnitPrice(total, quantity) {
+  const qty = orderMath.number(quantity);
+  return qty > 0 ? orderMath.money(orderMath.number(total) / qty) : 0;
+}
+
+// Số lượng/đơn giá hiển thị ở dòng cha của danh sách: báo giá nhiều kích thước không lấy giá của một tab.
+function quoteListPriceSummary(row = {}, items = []) {
+  if (!Array.isArray(items) || items.length <= 1) {
+    const item = items?.[0];
+    return {
+      multiple: false,
+      quantity: item ? item.quantity : orderMath.number(row.so_luong),
+      unitPrice: item ? item.unitPrice : orderMath.number(row.don_gia_ban)
+    };
+  }
+  const quantity = items.reduce((sum, item) => sum + orderMath.number(item.quantity), 0);
+  const total = items.reduce((sum, item) => sum + orderMath.number(item.total), 0);
+  return { multiple: true, quantity, unitPrice: quoteAggregateUnitPrice(total, quantity) };
+}
+
+// Lọc tháng theo năm: cùng quy tắc với thống kê (statsMonthFilterMatches) - "Tháng N" là lần
+// xuất hiện gần nhất của tháng đó (tháng chưa tới trong năm nay thì hiểu là năm trước).
+function quoteMonthFilterMatches(dateValue, monthFilter, now = new Date()) {
+  if (!monthFilter || monthFilter === 'all') return true;
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+  let year;
+  let month;
+  const yearMonth = /^(\d{4})-(\d{1,2})$/.exec(String(monthFilter));
+  if (yearMonth) {
+    year = Number(yearMonth[1]);
+    month = Number(yearMonth[2]);
+  } else {
+    month = Number(monthFilter);
+    if (!Number.isInteger(month) || month < 1 || month > 12) return false;
+    year = month <= now.getMonth() + 1 ? now.getFullYear() : now.getFullYear() - 1;
+  }
+  return date.getFullYear() === year && date.getMonth() + 1 === month;
+}
+
 function quoteDateInputValue(value) {
   if (!value) return '';
+  if (typeof utils !== 'undefined' && typeof utils.toDateInputValue === 'function') return utils.toDateInputValue(value);
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value).slice(0, 10) : date.toISOString().slice(0, 10);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  // Ngày theo giờ địa phương (toISOString là UTC, lệch một ngày ở múi giờ +7).
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function legacyQuoteFields(type, item, data, index) {
@@ -616,7 +717,7 @@ function legacyQuoteFields(type, item, data, index) {
       'phi-mau': utils.formatCurrency(shared.phi_mau || 0),
       'phi-size': utils.formatCurrency(shared.phi_size || 0),
       'phi-cat': utils.formatCurrency(shared.phi_cat || 0),
-      'vat': Number(item.vatPercent) > 0 ? item.vatPercent : (item.total ? item.vat / item.total * 100 : 0),
+      'vat': orderMath.vatPercentFromAmount(item.vat, item.total, item.vatPercent),
       'tien-coc': utils.formatCurrency(item.deposit),
       'tien-ship': utils.formatCurrency(item.shipping ?? shared.tien_ship ?? 0),
       'ctv': shared.ctv || '',
@@ -631,7 +732,7 @@ function legacyQuoteFields(type, item, data, index) {
     'mau-keo': item.details?.glueColor ?? shared.mau_keo ?? '',
     'don-gia-goc': utils.formatCurrency(item.quantity > 0 ? item.costTotal / item.quantity : shared.don_gia_goc || 0),
     'don-gia-ban': utils.formatCurrency(item.unitPrice),
-    'vat': Number(item.vatPercent) > 0 ? item.vatPercent : (item.total ? item.vat / item.total * 100 : 0),
+    'vat': orderMath.vatPercentFromAmount(item.vat, item.total, item.vatPercent),
     'tien-ship': utils.formatCurrency(item.shipping ?? shared.tien_ship ?? 0),
     'ctv': shared.ctv || '',
     'hoa-hong-percent': shared.hoa_hong || 0
@@ -700,10 +801,11 @@ function cancelQuoteEditing(type) {
   clearQuoteItems(type);
 }
 
+// Không ghi đè thoi_gian khi sửa: báo giá giữ ngày tạo gốc.
 const quoteUpdateColumns = {
-  bang_keo_in: ['thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv', 'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'],
-  bang_keo: ['thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items'],
-  truc_in: ['thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items']
+  bang_keo_in: ['ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv', 'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'],
+  bang_keo: ['ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items'],
+  truc_in: ['ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items']
 };
 
 async function saveEditedQuoteIfNeeded(type, data) {
@@ -723,9 +825,12 @@ async function saveEditedQuoteIfNeeded(type, data) {
   }
 
   const quoteId = editingQuoteState.id;
+  // PDF/trạng thái dùng ngày tạo gốc vì thoi_gian không được cập nhật.
+  const original = editingQuoteState.original || {};
+  const savedData = { ...data, thoi_gian: original.thoi_gian ?? data.thoi_gian };
   utils.showToast(`Đã cập nhật báo giá ${quoteId}`, 'success');
-  if (typeof generateAndSaveQuotePDF === 'function') await generateAndSaveQuotePDF(quoteId, type, data);
-  editingQuoteState = { id: quoteId, type, original: data };
+  if (typeof generateAndSaveQuotePDF === 'function') await generateAndSaveQuotePDF(quoteId, type, savedData);
+  editingQuoteState = { id: quoteId, type, original: savedData };
   setQuoteEditingUi(type, quoteId);
   await loadQuotationsData();
   return true;
@@ -734,6 +839,10 @@ async function saveEditedQuoteIfNeeded(type, data) {
 function prepareQuoteItems(type, data) {
   const state = initializeQuoteDrafts(type);
   captureActiveQuoteDraft(type);
+  if (type === 'bang_keo_in' && state.drafts.some(draft => !(orderMath.number(draft.fields?.['qc-m']) > 0) || !(orderMath.number(draft.fields?.['cuon-cay']) > 0))) {
+    utils.showToast('Mỗi tab kích thước cần Quy cách (m) và Số cuộn/cây lớn hơn 0 để tính giá gốc', 'warning');
+    return false;
+  }
   const items = state.drafts.map(draft => buildQuoteItem(type, draft));
   if (items.some(item => item.quantity <= 0 || item.unitPrice <= 0)) {
     utils.showToast('Mỗi tab kích thước cần có số lượng và đơn giá bán lớn hơn 0', 'warning');
@@ -750,13 +859,20 @@ function prepareQuoteItems(type, data) {
   const costTotal = totals.costTotal;
   if (type === 'bang_keo') data.thanh_tien = costTotal;
   else data.thanh_tien_goc = costTotal;
+  // Nhiều kích thước: cột đơn giá đơn lẻ lưu giá bình quân (tổng/số lượng) thay vì giá của tab đang mở,
+  // để danh sách, gợi ý tự điền và đơn chuyển đổi không hiểu nhầm giá một tab là giá cả báo giá.
+  if (items.length > 1) {
+    data.don_gia_ban = quoteAggregateUnitPrice(totals.productSubtotal, totals.quantity);
+    data.don_gia_goc = quoteAggregateUnitPrice(costTotal, totals.quantity);
+  }
   data.vat = totals.vat;
-  data.vat_percent = totals.productSubtotal > 0 ? totals.vat / totals.productSubtotal * 100 : 0;
+  data.vat_percent = orderMath.vatPercentFromAmount(totals.vat, totals.productSubtotal);
   data.tien_coc = totals.deposit;
   data.tien_ship = totals.shipping;
-  data.loi_nhuan = items.reduce((sum, item) => sum + item.profit, 0);
-  data.tien_hoa_hong = items.reduce((sum, item) => sum + item.commission, 0);
-  data.loi_nhuan_rong = items.reduce((sum, item) => sum + item.netProfit, 0);
+  data.loi_nhuan = items.reduce((sum, item) => sum + orderMath.money(item.profit), 0);
+  data.tien_hoa_hong = items.reduce((sum, item) => sum + orderMath.money(item.commission), 0);
+  // Tính từ các phần đã làm tròn để loi_nhuan - tien_hoa_hong - tien_ship == loi_nhuan_rong.
+  data.loi_nhuan_rong = data.loi_nhuan - data.tien_hoa_hong - data.tien_ship;
   const axes = items.flatMap(item => item.axes || []);
   const axisTotal = totals.axisSubtotal;
   if (type === 'bang_keo_in') {
@@ -768,10 +884,10 @@ function prepareQuoteItems(type, data) {
     data.truc_thanh_tien_goc = totals.axisCostTotal;
     data.truc_thanh_tien_ban = axisTotal;
     data.truc_vat = totals.axisVat;
-    data.truc_vat_percent = totals.axisSubtotal > 0 ? totals.axisVat / totals.axisSubtotal * 100 : 0;
-    data.truc_loi_nhuan = axes.reduce((sum, axis) => sum + orderMath.number(axis.profit), 0);
-    data.truc_tien_hoa_hong = axes.reduce((sum, axis) => sum + orderMath.number(axis.commission), 0);
-    data.truc_loi_nhuan_rong = axes.reduce((sum, axis) => sum + orderMath.number(axis.netProfit), 0);
+    data.truc_vat_percent = orderMath.vatPercentFromAmount(totals.axisVat, totals.axisSubtotal);
+    data.truc_loi_nhuan = axes.reduce((sum, axis) => sum + orderMath.money(axis.profit), 0);
+    data.truc_tien_hoa_hong = axes.reduce((sum, axis) => sum + orderMath.money(axis.commission), 0);
+    data.truc_loi_nhuan_rong = data.truc_loi_nhuan - data.truc_tien_hoa_hong;
   }
   data.cong_no_khach = totals.remaining;
   return true;
@@ -826,7 +942,11 @@ function renderQuotationsTable(rows) {
     const axes = items.flatMap(item => item.axes || []);
     const quoteTotal = items.reduce((sum, item) => sum + item.total + item.vat, 0)
       + axes.reduce((sum, axis) => sum + orderMath.number(axis.total) + orderMath.number(axis.vat), 0);
-    
+    const priceSummary = quoteListPriceSummary(row, items);
+    const unitPriceCell = priceSummary.multiple
+      ? `Nhiều kích thước<br><small>TB ${utils.formatCurrency(priceSummary.unitPrice)}đ</small>`
+      : `${utils.formatCurrency(priceSummary.unitPrice)}đ`;
+
     let typeLabel = "Băng Keo In";
     if (row.type === 'bang_keo') typeLabel = "Băng Keo thường";
     if (row.type === 'truc_in') typeLabel = "Trục In";
@@ -836,15 +956,26 @@ function renderQuotationsTable(rows) {
       <td>${escapeQuoteHtml(utils.formatDate(row.thoi_gian))}</td>
       <td>${escapeQuoteHtml(row.ten_hang)} (${typeLabel})<br><small>${items.length} kích thước · ${axes.length} trục</small></td>
       <td>${escapeQuoteHtml(row.ten_khach_hang)}</td>
-      <td style="text-align: right;">${row.so_luong}</td>
-      <td style="text-align: right;">${utils.formatCurrency(row.don_gia_ban)}đ</td>
+      <td style="text-align: right;">${Number(priceSummary.quantity || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })}</td>
+      <td style="text-align: right;">${unitPriceCell}</td>
       <td style="text-align: right; font-weight: 700;">${utils.formatCurrency(quoteTotal)}đ</td>
       <td style="text-align: center;">
-        <button class="btn btn-secondary btn-sm" onclick="openQuoteEditor('${row.id}', '${row.type}')" style="padding:2px 8px; font-size:11px; margin-right:4px;">✏️ Sửa</button>
-        <button class="btn btn-secondary btn-sm" onclick="downloadQuotePDFById('${row.id}', '${row.type}')" style="padding:2px 8px; font-size:11px; margin-right:4px;">👁️ Xem PDF</button>
-        <button class="btn btn-primary btn-sm" onclick="convertQuoteToOrder('${row.id}', '${row.type}')" style="padding:2px 8px; font-size:11px;">🔄 Chuyển Đơn</button>
+        <button class="btn btn-secondary btn-sm" data-quote-list-action="edit" style="padding:2px 8px; font-size:11px; margin-right:4px;">✏️ Sửa</button>
+        <button class="btn btn-secondary btn-sm" data-quote-list-action="pdf" style="padding:2px 8px; font-size:11px; margin-right:4px;">👁️ Xem PDF</button>
+        <button class="btn btn-primary btn-sm" data-quote-list-action="convert" style="padding:2px 8px; font-size:11px; margin-right:4px;">🔄 Chuyển Đơn</button>
+        <button class="btn btn-danger btn-sm" data-quote-list-action="delete" style="padding:2px 8px; font-size:11px;">🗑️ Xóa</button>
       </td>
     `;
+    // Mã báo giá được giữ trong closure, không chèn thô vào HTML/JS nội tuyến.
+    tr.querySelectorAll?.('[data-quote-list-action]').forEach(button => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.quoteListAction;
+        if (action === 'edit') openQuoteEditor(row.id, row.type);
+        else if (action === 'pdf') downloadQuotePDFById(row.id, row.type);
+        else if (action === 'convert') convertQuoteToOrder(row.id, row.type, button);
+        else if (action === 'delete') deleteQuote(row.id, row.type, button);
+      });
+    });
 
     tr.className = 'quote-tree-parent';
     tbody.appendChild(tr);
@@ -873,7 +1004,7 @@ function renderQuotationsTable(rows) {
           <td></td>
           <td style="text-align:right;">${utils.formatCurrency(axis.quantity)}</td>
           <td style="text-align:right;">${utils.formatCurrency(axis.unitPrice)}đ</td>
-          <td style="text-align:right; font-weight:600;">${utils.formatCurrency(axis.total)}đ<br><small>VAT ${Number(Number(axis.vatPercent) > 0 ? axis.vatPercent : (axis.total > 0 ? axis.vat / axis.total * 100 : 0)).toFixed(2).replace(/\.00$/, '')}% = ${utils.formatCurrency(axis.vat)}đ</small></td>
+          <td style="text-align:right; font-weight:600;">${utils.formatCurrency(axis.total)}đ<br><small>VAT ${Number(orderMath.vatPercentFromAmount(axis.vat, axis.total, axis.vatPercent)).toFixed(2).replace(/\.00$/, '')}% = ${utils.formatCurrency(axis.vat)}đ</small></td>
           <td></td>`;
         tbody.appendChild(axisRow);
       });
@@ -889,14 +1020,11 @@ function applyQuotesFilters() {
 
   const filtered = quotationsAllList.filter(row => {
     const matchQuery = !query || 
-      row.id.toLowerCase().includes(query) ||
-      row.ten_hang.toLowerCase().includes(query) ||
-      row.ten_khach_hang.toLowerCase().includes(query);
+      [row.id, row.ten_hang, row.ten_khach_hang].some(value => String(value ?? '').toLowerCase().includes(query));
 
     const matchType = typeFilter === 'all' || row.type === typeFilter;
 
-    const dateObj = new Date(row.thoi_gian);
-    const matchMonth = monthFilter === 'all' || (dateObj.getMonth() + 1).toString() === monthFilter;
+    const matchMonth = quoteMonthFilterMatches(row.thoi_gian, monthFilter);
 
     return matchQuery && matchType && matchMonth;
   });
@@ -940,16 +1068,15 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
     const company = utils.companyInfo || {};
     const quoteItems = normalizeStoredQuoteItems(data, type);
     const allAxes = quoteItems.flatMap((item, itemIndex) => (item.axes || []).map(axis => ({ ...axis, itemIndex })));
-    const axisTotal = allAxes.reduce((sum, axis) => sum + orderMath.number(axis.total), 0);
-    const productSubtotal = quoteItems.reduce((sum, item) => sum + item.total, 0);
-    const quoteSubtotal = productSubtotal + axisTotal;
-    const vatAmount = quoteItems.reduce((sum, item) => sum + orderMath.number(item.vat)
-      + (item.axes || []).reduce((axisSum, axis) => axisSum + orderMath.number(axis.vat), 0), 0);
-    const effectiveVatPercent = quoteSubtotal > 0 ? vatAmount / quoteSubtotal * 100 : 0;
+    // Tổng = cộng các dòng đã làm tròn (orderMath), nên Giá gốc + VAT == Giá gồm VAT chính xác trên PDF.
+    const bundle = orderMath.calculateQuoteBundle(quoteItems);
+    const quoteSubtotal = bundle.productSubtotal + bundle.axisSubtotal;
+    const vatAmount = bundle.vat + bundle.axisVat;
+    const effectiveVatPercent = orderMath.vatPercentFromAmount(vatAmount, quoteSubtotal);
     const quoteTotal = quoteSubtotal + vatAmount;
-    const deposit = parseFloat(data.tien_coc || 0);
+    const deposit = Math.max(0, orderMath.money(data.tien_coc));
     const quoteRemaining = Math.max(0, quoteTotal - deposit);
-    const totalWords = convertNumberToVietnameseWords(quoteRemaining || 0) + " đồng chẵn";
+    const totalWords = orderMath.toVietnameseWords(quoteRemaining) + " đồng chẵn";
     const quoteItemRows = quoteItems.map((item, index) => `
             <tr>
               <td style="text-align: center;">${index + 1}</td>
@@ -976,7 +1103,7 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
             <td>${utils.formatCurrency(quoteSubtotal)}đ</td>
           </tr>
           <tr>
-            <td>VAT (${Number(effectiveVatPercent.toFixed(2))}% tổng):</td>
+            <td>VAT (${effectiveVatPercent}% tổng):</td>
             <td>${utils.formatCurrency(vatAmount)}đ</td>
           </tr>
           <tr>
@@ -1002,6 +1129,9 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
           .accent { height: 8px; background: #2563eb; border-radius: 999px; margin-bottom: 18px; }
           .header { display: grid; grid-template-columns: minmax(0, 1fr) 190px; column-gap: 24px; align-items: start; width: 100%; margin-bottom: 18px; }
           .company, .quote-meta { min-width: 0; }
+          .company-brand { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+          .company-brand > div { min-width: 0; }
+          .company-logo { flex: 0 0 56px; width: 56px; height: 56px; object-fit: contain; display: block; }
           .quote-meta { text-align: right; }
           .company-name { max-width: 100%; margin: 0 0 6px; font-size: 14px; line-height: 1.45; font-weight: 700; color: #0f172a; text-transform: uppercase; overflow-wrap: break-word; }
           .info-text { margin: 2px 0; color: #475569; }
@@ -1035,16 +1165,19 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
       <body>
         <div class="accent"></div>
         <div class="header">
-          <div class="company">
-            <p class="company-name">${escapeQuoteHtml(company.name)}</p>
-            <p class="info-text"><strong>Địa chỉ:</strong> ${escapeQuoteHtml(company.address)}</p>
-            <p class="info-text"><strong>Hotline:</strong> ${escapeQuoteHtml(company.hotline)}</p>
+          <div class="company company-brand">
+            <img class="company-logo" src="${escapeQuoteHtml(quoteLogoRelativeUrl())}" alt="Logo">
+            <div>
+              <p class="company-name">${escapeQuoteHtml(company.name)}</p>
+              <p class="info-text"><strong>Địa chỉ:</strong> ${escapeQuoteHtml(company.address)}</p>
+              <p class="info-text"><strong>Hotline:</strong> ${escapeQuoteHtml(company.hotline)}</p>
+            </div>
           </div>
           <div class="quote-meta">
             <p class="title">BẢNG BÁO GIÁ</p>
             <div class="meta-pill">
               <div class="meta-row"><span>Số</span><strong>${escapeQuoteHtml(quoteId)}</strong></div>
-              <div class="meta-row"><span>Ngày</span><strong>${new Date(data.thoi_gian).toLocaleDateString('vi-VN')}</strong></div>
+              <div class="meta-row"><span>Ngày</span><strong>${data.thoi_gian ? utils.formatDate(data.thoi_gian) : ''}</strong></div>
             </div>
           </div>
         </div>
@@ -1107,7 +1240,7 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
       </html>
     `;
 
-    openQuotePdfPreview(quoteId, htmlContent);
+    openQuotePdfPreview(quoteId, htmlContent, await loadQuoteLogoPreviewSrc());
 
   } catch (err) {
     console.error("Lỗi tiến trình in PDF báo giá:", err);
@@ -1115,7 +1248,52 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
   }
 }
 
-function openQuotePdfPreview(quoteId, htmlContent) {
+// Logo: HTML gửi printToPdf giữ đường dẫn tương đối (main.js thêm <base> trỏ về thư mục ứng dụng).
+// Khung xem trước là iframe sandbox="" + srcdoc nên dùng data: URL (CSP img-src cho phép data:),
+// nạp một lần; nếu không đọc được thì dùng URL tuyệt đối theo document.baseURI.
+let quoteLogoPreviewSrcPromise = null;
+
+function quoteLogoRelativeUrl() {
+  const configured = typeof utils !== 'undefined' ? utils.companyInfo?.logoUrl : '';
+  return configured || 'assets/logo.png';
+}
+
+function quoteLogoAbsoluteUrl() {
+  const relative = quoteLogoRelativeUrl();
+  try {
+    const base = typeof document !== 'undefined' ? document.baseURI : undefined;
+    return base ? new URL(relative, base).href : relative;
+  } catch (_) {
+    return relative;
+  }
+}
+
+function loadQuoteLogoPreviewSrc() {
+  if (!quoteLogoPreviewSrcPromise) {
+    quoteLogoPreviewSrcPromise = (async () => {
+      const absolute = quoteLogoAbsoluteUrl();
+      if (typeof fetch !== 'function' || typeof FileReader !== 'function') return '';
+      try {
+        const response = await fetch(absolute);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || absolute));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        // file:// tuyệt đối bị iframe sandbox chặn, nên ẩn logo thay vì hiện ảnh hỏng
+        console.warn('Không nạp được logo cho bản xem trước báo giá:', err);
+        return '';
+      }
+    })();
+  }
+  return quoteLogoPreviewSrcPromise;
+}
+
+function openQuotePdfPreview(quoteId, htmlContent, previewLogoSrc = '') {
   const modal = document.getElementById('modal-quote-pdf-preview');
   const frame = document.getElementById('quote-pdf-preview-frame');
   const title = document.getElementById('quote-pdf-preview-title');
@@ -1125,10 +1303,13 @@ function openQuotePdfPreview(quoteId, htmlContent) {
   }
   quotePdfPreviewState = { quoteId, htmlContent };
   if (title) title.textContent = `Xem trước báo giá ${quoteId}`;
+  const relativeLogoAttr = `src="${escapeQuoteHtml(quoteLogoRelativeUrl())}"`;
   frame.srcdoc = htmlContent.replace(
     '</head>',
     '<style>body { padding: 24mm 18mm 18mm; }</style></head>'
-  );
+  ).split(relativeLogoAttr).join(previewLogoSrc
+    ? `src="${escapeQuoteHtml(previewLogoSrc)}"`
+    : 'src="data:," style="display:none"');
   modal.classList.add('active');
 }
 
@@ -1169,7 +1350,103 @@ async function exportQuotePreviewPDF() {
   }
 }
 // 6. Chuyển Báo giá thành Đơn đặt hàng
-async function convertQuoteToOrder(quoteId, type) {
+const quoteConversionsInFlight = new Set();
+
+function getQuoteConversionSql(tableName) {
+  // Cập nhật đơn trước; tệp đính kèm chỉ chuyển theo khi đơn mới thực sự tồn tại trong cùng transaction.
+  // thoi_gian ($3) và ngay_du_kien ($4) lấy theo giờ máy như mọi thao tác ghi khác.
+  const updateOrderSql = `
+        UPDATE ${tableName}
+        SET id = $1,
+            is_quote = FALSE,
+            thoi_gian = $3,
+            ngay_du_kien = $4,
+            da_giao = FALSE,
+            da_tat_toan = FALSE,
+            cong_no_khach = ${orderMath.customerDebtSqlExpression(tableName)}
+        WHERE id = $2 AND is_quote = TRUE
+    `;
+  const updateAttachSql = `
+        UPDATE order_attachments
+        SET order_id = $1, order_type = $2
+        WHERE order_id = $3 AND order_type = $4
+          AND EXISTS (SELECT 1 FROM ${tableName} WHERE id = $1)
+    `;
+  return { updateOrderSql, updateAttachSql };
+}
+
+// Ngày mai theo giờ máy dạng 'YYYY-MM-DD' (dùng utils.tomorrowDateInputValue khi có).
+function quoteTomorrowDateValue(now = new Date()) {
+  if (typeof utils !== 'undefined' && typeof utils.tomorrowDateInputValue === 'function') return utils.tomorrowDateInputValue();
+  const date = new Date(now.getTime());
+  date.setDate(date.getDate() + 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getQuoteTableName(type) {
+  if (type === 'bang_keo') return 'bang_keo_orders';
+  if (type === 'truc_in') return 'truc_in_orders';
+  return 'bang_keo_in_orders';
+}
+
+// Xóa báo giá + tệp đính kèm trong MỘT transaction. Cả hai câu đều kiểm tra is_quote = TRUE
+// nên đơn đã chuyển thành đơn hàng thật không thể bị xóa từ danh sách báo giá.
+function getQuoteDeleteStatements(quoteId, type) {
+  const tableName = getQuoteTableName(type);
+  return [
+    {
+      sql: `DELETE FROM order_attachments WHERE order_id = $1 AND order_type = $2 AND EXISTS (SELECT 1 FROM ${tableName} WHERE id = $1 AND is_quote = TRUE)`,
+      params: [quoteId, type]
+    },
+    {
+      sql: `DELETE FROM ${tableName} WHERE id = $1 AND is_quote = TRUE`,
+      params: [quoteId]
+    }
+  ];
+}
+
+const quoteDeletesInFlight = new Set();
+
+async function deleteQuote(quoteId, type, triggerButton = null) {
+  if (quoteDeletesInFlight.has(quoteId)) return;
+  quoteDeletesInFlight.add(quoteId);
+  if (triggerButton) triggerButton.disabled = true;
+  try {
+    if (!await utils.confirmAction(
+      `Bạn có chắc muốn xóa báo giá ${quoteId} không?\nTệp đính kèm của báo giá cũng sẽ bị xóa. Hành động này không thể hoàn tác!`,
+      { title: 'Xóa báo giá', confirmText: 'Xóa', danger: true }
+    )) {
+      return;
+    }
+
+    const res = await window.electronAPI.dbTransaction(getQuoteDeleteStatements(quoteId, type));
+    if (!res?.ok) {
+      utils.showToast(`Không thể xóa báo giá: ${res?.error || 'lỗi cơ sở dữ liệu'}`, 'danger');
+      return;
+    }
+    if (Number(res.results?.[1]?.rowCount || 0) === 0) {
+      utils.showToast(`Không tìm thấy báo giá ${quoteId} để xóa (có thể đã được chuyển thành đơn hàng)`, 'danger');
+      await loadQuotationsData();
+      return;
+    }
+
+    if (editingQuoteState?.id === quoteId) cancelQuoteEditing(editingQuoteState.type);
+    utils.showToast(`Đã xóa báo giá ${quoteId}`, 'success');
+    await loadQuotationsData();
+    if (typeof loadDashboardData === 'function') loadDashboardData();
+  } catch (err) {
+    console.error('Lỗi xóa báo giá:', err);
+    utils.showToast(`Không thể xóa báo giá: ${err?.message || err}`, 'danger');
+  } finally {
+    quoteDeletesInFlight.delete(quoteId);
+    if (triggerButton) triggerButton.disabled = false;
+  }
+}
+
+async function convertQuoteToOrder(quoteId, type, triggerButton = null) {
+  if (quoteConversionsInFlight.has(quoteId)) return;
+  quoteConversionsInFlight.add(quoteId);
+  if (triggerButton) triggerButton.disabled = true;
   try {
     if (!await utils.confirmAction(
       `Bạn có chắc muốn chuyển báo giá ${quoteId} thành đơn đặt hàng thực tế không?\nHành động này sẽ tạo mã đơn hàng mới.`,
@@ -1191,37 +1468,23 @@ async function convertQuoteToOrder(quoteId, type) {
       idPrefix = 'TI';
     }
 
-    // 1. Tạo mã ID đơn hàng mới
-    const newOrderId = await generateOrderId(idPrefix, tableName);
-
-    // 2. Cập nhật đơn và tệp đính kèm trên cùng một kết nối transaction
-    const updateAttachSql = `
-        UPDATE order_attachments
-        SET order_id = $1, order_type = $2
-        WHERE order_id = $3 AND order_type = $4
-    `;
-
-    const debtExpression = tableName === 'bang_keo_in_orders'
-      ? `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`
-      : `GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0)`;
-    const updateOrderSql = `
-        UPDATE ${tableName}
-        SET id = $1,
-            is_quote = FALSE,
-            thoi_gian = NOW(),
-            ngay_du_kien = CURRENT_DATE + INTERVAL '1 day',
-            da_giao = FALSE,
-            da_tat_toan = FALSE,
-            cong_no_khach = ${debtExpression}
-        WHERE id = $2
-    `;
-    const res = await window.electronAPI.dbTransaction([
-      { sql: updateAttachSql, params: [newOrderId, type, quoteId, type] },
-      { sql: updateOrderSql, params: [newOrderId, quoteId] }
-    ]);
+    // 1-2. Tạo mã ID đơn hàng mới và cập nhật đơn + tệp đính kèm trên cùng một transaction;
+    // nếu mã bị trùng (máy khác vừa dùng) thì thử lại với mã kế tiếp.
+    const { updateOrderSql, updateAttachSql } = getQuoteConversionSql(tableName);
+    const { orderId: newOrderId, result: res } = await runWithGeneratedOrderId(idPrefix, tableName, orderId =>
+      window.electronAPI.dbTransaction([
+        { sql: updateOrderSql, params: [orderId, quoteId, new Date(), quoteTomorrowDateValue()] },
+        { sql: updateAttachSql, params: [orderId, type, quoteId, type] }
+      ])
+    );
 
     if (!res.ok) {
-      throw new Error(res.error || 'Lỗi cập nhật đơn hàng');
+      throw Object.assign(new Error(res.error || 'Lỗi cập nhật đơn hàng'), { code: res.code });
+    }
+    if (!res.results || Number(res.results[0]?.rowCount || 0) === 0) {
+      utils.showToast(`Không tìm thấy báo giá ${quoteId} để chuyển (có thể đã được chuyển thành đơn trước đó)`, "danger");
+      await loadQuotationsData();
+      return;
     }
 
     utils.showToast(`Chuyển đơn thành công! Mã đơn mới: ${newOrderId}`, "success");
@@ -1233,12 +1496,16 @@ async function convertQuoteToOrder(quoteId, type) {
   } catch (err) {
     console.error("Lỗi chuyển báo giá thành đơn hàng:", err);
     const errMsg = err.message || '';
-    if (errMsg.includes('lock') || errMsg.includes('timeout')) {
+    const errCode = String(err.code || '');
+    if (errCode === '55P03' || errCode === '57014' || errMsg.includes('lock') || errMsg.includes('timeout')) {
       utils.showToast("Hệ thống đang bận, vui lòng thử lại sau vài giây", "danger");
-    } else if (errMsg.includes('duplicate') || errMsg.includes('unique')) {
+    } else if (errCode === '23505' || /23505|duplicate|unique/i.test(errMsg)) {
       utils.showToast("Mã đơn hàng bị trùng, vui lòng thử lại", "danger");
     } else {
       utils.showToast("Không thể chuyển báo giá thành đơn hàng: " + errMsg, "danger");
     }
+  } finally {
+    quoteConversionsInFlight.delete(quoteId);
+    if (triggerButton) triggerButton.disabled = false;
   }
 }
