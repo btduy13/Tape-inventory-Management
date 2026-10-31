@@ -36,3 +36,16 @@ lead-intake/
 ```
 
 Keep files under ~250 lines. Shared code goes to `src/lib/` only (ask the foundation owner).
+
+## Implementation map
+
+- `landing/` Server Components for `/` (hero, presets showcase, CTA, how it works, contact `#lien-he`).
+  Contact details come from optional env `CONTACT_PHONE`, `CONTACT_EMAIL`, `CONTACT_ADDRESS`, `CONTACT_HOURS`.
+- `components/LeadForm.tsx` form (takes `getDesign`), `components/DesignLeadForm.tsx` = LeadForm wired to
+  `useDesignExport()` from features/designer (render inside `<DesignProvider>`). Pass `turnstileSiteKey`
+  and the CSP `nonce` (`x-nonce` header) from the page.
+- `server/handle-lead-submit.ts` route logic with injected deps (`server/deps.ts` = production wiring):
+  same-origin -> rate limit -> capped body read (10.25MB) -> honeypot -> Turnstile -> zod + design
+  (designer's `designJsonSchema`) -> magic-byte check / SVG sanitize / 5MB -> lead insert ->
+  uploads `logos|previews/<lead_id>/…` -> design insert (rollback on failure) -> emails (best-effort).
+- Response contract: `lib/api-contract.ts` (`{ ok: true, code }` or `{ ok: false, error, fields? }`).
