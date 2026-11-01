@@ -5,7 +5,7 @@
 // nullable RPC args); the drift check at the bottom fails typecheck if a table or
 // column is added/removed in SQL without updating this file.
 
-export type AppRole = "admin" | "manager" | "staff" | "ctv";
+export type AppRole = "admin" | "manager" | "staff" | "ctv" | "workshop";
 
 export type LeadStatus =
   | "new" | "assigned" | "consulting" | "quoted" | "accepted"
@@ -19,7 +19,15 @@ export const LEAD_STATUSES: readonly LeadStatus[] = [
 export type QuoteStatus =
   | "draft" | "sent" | "accepted" | "changes_requested" | "expired" | "cancelled";
 
-export const ROLES: readonly AppRole[] = ["admin", "manager", "staff", "ctv"] as const;
+export const ROLES: readonly AppRole[] = ["admin", "manager", "staff", "ctv", "workshop"] as const;
+
+/** Production (workshop) steps, in order. `huy` (cancelled) is admin only. Mirrors 0021. */
+export type ProductionStep =
+  | "cho_san_xuat" | "dang_in" | "dang_cat_cuon" | "dong_goi" | "san_sang_giao" | "da_giao" | "huy";
+
+export const PRODUCTION_STEPS: readonly ProductionStep[] = [
+  "cho_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy",
+] as const;
 
 /** Postgres numeric comes back from PostgREST as number (or string for huge values). */
 type Numeric = number;
@@ -102,6 +110,30 @@ export type QuoteToken = {
 
 export type RateLimit = { key: string; window_start: Timestamp; hits: number };
 
+/** Workshop job (no customer / price data). order_id null = assigned, not converted yet. */
+export type ProductionJob = {
+  id: Uuid; lead_id: Uuid; order_id: string | null; workshop_user_id: Uuid | null;
+  step: ProductionStep; due_date: string | null; production_note: string | null;
+  assigned_at: Timestamp | null; converted_by: Uuid | null; converted_at: Timestamp | null;
+  created_at: Timestamp; updated_at: Timestamp;
+};
+
+export type ProductionStepLog = {
+  id: number; job_id: Uuid; from_step: ProductionStep | null; to_step: ProductionStep;
+  changed_by: Uuid | null; changed_by_name: string | null; note: string | null; created_at: Timestamp;
+};
+
+/** Row of rpc('workshop_jobs'): production specs only (fixed column list in SQL). */
+export type WorkshopJobRow = {
+  job_id: Uuid; lead_id: Uuid; lead_code: string; order_id: string | null; step: ProductionStep;
+  due_date: string | null; production_note: string | null;
+  workshop_user_id: Uuid | null; workshop_user_name: string | null;
+  quantity: number; width_mm: Numeric | null; length_m: Numeric | null; thickness_mic: Numeric | null;
+  colors: string[] | null; print_text: string | null; design_json: Partial<DesignJson> | null;
+  preview_path: string | null; logo_path: string | null; desktop_delivered: boolean;
+  converted_at: Timestamp | null; updated_at: Timestamp;
+};
+
 // ---------------------------------------------------------------------------
 // supabase-js Database generic
 // ---------------------------------------------------------------------------
@@ -127,6 +159,8 @@ export type Database = {
       quote_lines: Table<QuoteLine, Opt<Omit<QuoteLine, "line_total">, "id" | "sort_order" | "unit">>;
       quote_tokens: Table<QuoteToken, Opt<QuoteToken, "id" | "revoked_at" | "last_used_at" | "created_at">>;
       rate_limits: Table<RateLimit, Opt<RateLimit, "hits">>;
+      production_jobs: Table<ProductionJob, Opt<ProductionJob, "id" | "order_id" | "workshop_user_id" | "step" | "due_date" | "production_note" | "assigned_at" | "converted_by" | "converted_at" | "created_at" | "updated_at">>;
+      production_step_log: Table<ProductionStepLog, Opt<Omit<ProductionStepLog, "id">, "from_step" | "changed_by" | "changed_by_name" | "note" | "created_at">>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -139,9 +173,19 @@ export type Database = {
       change_lead_status: { Args: { p_lead_id: Uuid; p_to: LeadStatus; p_note?: string | null }; Returns: Lead };
       assign_lead: { Args: { p_lead_id: Uuid; p_user_id: Uuid | null }; Returns: Lead };
       check_rate_limit: { Args: { p_key: string; p_window_seconds: number; p_max_hits: number }; Returns: boolean };
-      convert_lead_to_production: { Args: { p_lead_id: Uuid }; Returns: string };
+      convert_lead_to_production: {
+        Args: { p_lead_id: Uuid; p_due_date: string; p_note?: string | null; p_workshop_user_id?: Uuid | null };
+        Returns: string;
+      };
+      is_workshop: { Args: Record<string, never>; Returns: boolean };
+      workshop_jobs: { Args: { p_job_id?: Uuid | null }; Returns: WorkshopJobRow[] };
+      assign_production_job: { Args: { p_lead_id: Uuid; p_user_id: Uuid | null }; Returns: ProductionJob };
+      advance_production_step: {
+        Args: { p_job_id: Uuid; p_to: ProductionStep; p_note?: string | null };
+        Returns: ProductionJob;
+      };
     };
-    Enums: { app_role: AppRole; lead_status: LeadStatus; quote_status: QuoteStatus };
+    Enums: { app_role: AppRole; lead_status: LeadStatus; quote_status: QuoteStatus; production_step: ProductionStep };
     CompositeTypes: { [_ in never]: never };
   };
 };

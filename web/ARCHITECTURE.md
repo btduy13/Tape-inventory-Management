@@ -14,8 +14,8 @@ Deploy: Vercel + own domain. Legacy Electron admin app keeps using the same Post
 ```
 supabase/
   config.toml                 local CLI config (signup disabled)
-  migrations/0001..0012_*.sql schema, RLS, triggers, helpers (one concern per file)
-  seed.sql                    dev users (admin/manager/staff/ctv @local.test) + sample leads
+  migrations/0001..0021_*.sql schema, RLS, triggers, helpers (one concern per file)
+  seed.sql                    dev users (admin/manager/staff/ctv/workshop @local.test) + sample leads
   tests/rls/*.test.sql        pgTAP role-matrix tests (`npm run db:test`, needs Docker)
 web/
   src/proxy.ts                CSP nonce + Supabase session refresh + /portal,/admin login redirect
@@ -54,7 +54,8 @@ Files < ~250 lines. Features may import from `@/lib/*`, `@/i18n`, and another fe
 | `/thiet-ke` (`ROUTES.design`) | designer (2D) + mockup3d (3D) + lead-intake (`DesignLeadForm`, Turnstile key + CSP nonce from page) |
 | `POST /api/leads` | lead-intake |
 | `/login`, `/auth/callback`, `/auth/reset`, `/auth/update-password`, logout | auth |
-| `/portal`, `/portal/leads/[id]` | orders; detail page embeds `AssignPanel` (assignment), `ProductionPanel` (admin) and `QuotePanel` (quotes, via `quotesSlot`) |
+| `/portal`, `/portal/leads/[id]` | orders; detail page embeds `AssignPanel` (assignment), `ProductionHandoffPanel` (workshop, admin only) and `QuotePanel` (quotes, via `quotesSlot`) |
+| `/portal/xuong`, `/portal/xuong/[id]` (`ROUTES.workshop*`) | workshop (admin + workshop roles; convert / assign / step Server Actions) |
 | `/admin`, `/admin/users`, `/admin/presets`, `/admin/leads/[id]` | admin |
 | assign/unassign actions | assignment |
 | `/q/[token]`, `POST /api/q/[token]/respond`, quote editor/PDF/send | quotes |
@@ -62,7 +63,7 @@ Files < ~250 lines. Features may import from `@/lib/*`, `@/i18n`, and another fe
 
 ## Data model (see migrations)
 
-- `profiles` (role: admin | manager | staff | ctv, is_active). Role only changeable by admin (trigger).
+- `profiles` (role: admin | manager | staff | ctv | workshop, is_active). Role only changeable by admin (trigger).
 - `tape_presets` admin CRUD, public read of active rows. Seeded in 0002.
 - `leads` (status enum, assigned_to) + `designs` (preset snapshot, colors[1..3], design_json, logo/preview paths).
 - `lead_status_log` (auto via trigger; note via `change_lead_status(lead, to, note)` RPC),
@@ -70,19 +71,35 @@ Files < ~250 lines. Features may import from `@/lib/*`, `@/i18n`, and another fe
 - `quotes` + `quote_lines` (prices; only admin/manager write; totals recomputed in SQL),
   `quote_tokens` (sha256 hash, expiry; service role only).
 - `rate_limits` + `check_rate_limit()` (service role only).
-- `convert_lead_to_production(lead)` -> inserts into legacy `bang_keo_in_orders` (id `BK-MM-YY-NNN`).
+- `convert_lead_to_production(lead, due_date, note?, workshop_user?)` -> inserts into legacy `bang_keo_in_orders`
+  (id `BK-MM-YY-NNN`, `ngay_du_kien` = due date >= today VN, `vat`/`vat_percent` from the accepted quote,
+  `cong_no_khach` = subtotal + VAT like Electron `orderMath.customerDebtSqlExpression`). Caller: admin, or the
+  workshop user assigned to the lead's production job (0021).
+- `production_jobs` (one per lead: `order_id` -> legacy order, `workshop_user_id`, `step`, `due_date`,
+  `production_note`; no customer/price columns) + `production_step_log` (who/when/note). Written ONLY by the
+  SECURITY DEFINER RPCs `assign_production_job` (admin), `convert_lead_to_production`, `advance_production_step`.
+  Workshop reads specs only through `workshop_jobs()` (fixed columns: size, colors, quantity, print text,
+  design JSON, preview/logo paths, due date (live `ngay_du_kien`), production note, order code).
+- Steps: `cho_san_xuat -> dang_in -> dang_cat_cuon -> dong_goi -> san_sang_giao -> da_giao` (+ `huy`, admin).
+  Sync (forward only): lead `accepted -> production`, `san_sang_giao -> shipping`, `da_giao -> done`,
+  `huy -> cancelled`; Electron `bang_keo_in_orders.da_giao` = true on `da_giao` (false again only if an admin
+  moves the job back). No trigger on legacy tables; desktop edits of `ngay_du_kien` / `da_giao` are read live.
 
 ## Roles / access matrix (enforced by RLS + triggers)
 
-| | admin | manager | staff / ctv | anon |
-|---|---|---|---|---|
-| leads read | all | all | assigned only | none |
-| lead status | any | any | allowed steps (lib/lead-status.ts) | none |
-| assign | yes | no | no | no |
-| quotes write / price | yes | yes | read only (assigned) | none |
-| users / presets | yes | read presets | read presets | read active presets |
+| | admin | manager | staff / ctv | workshop | anon |
+|---|---|---|---|---|---|
+| leads read | all | all | assigned only | none | none |
+| lead status | any | any | allowed steps (lib/lead-status.ts) | via production steps only | none |
+| assign | yes | no | no | no | no |
+| quotes write / price | yes | yes | read only (assigned) | none | none |
+| users / presets | yes | read presets | read presets | read presets | read active presets |
+| production jobs | all + assign + any step + huy | none | none | assigned jobs: specs, convert, next step | none |
 
-Unassign => access disappears immediately (policies check `assigned_to = auth.uid()`).
+Unassign => access disappears immediately (policies check `assigned_to = auth.uid()`; production:
+`production_jobs.workshop_user_id = auth.uid() and is_workshop()`; deactivation also removes it).
+Workshop users land on `/portal/xuong` (`homePathFor()` in `lib/auth/require-role.ts`); `ROLE_GROUPS.internal`
+excludes them, `ROLE_GROUPS.portal` (layout) and `ROLE_GROUPS.production` include them.
 
 ## Data flows
 
@@ -91,13 +108,18 @@ Unassign => access disappears immediately (policies check `assigned_to = auth.ui
    insert `leads` + `designs`, upload `logos/<lead_id>/…`, `previews/<lead_id>/…png` -> emails
    (customer confirmation with mockup, admin new lead).
 2. **Portal**: user-scoped client reads leads (RLS). Realtime `postgres_changes` on `leads`,
-   `lead_status_log`, `lead_notes`, `quotes` (RLS-filtered).
+   `lead_status_log`, `lead_notes`, `quotes`, `production_jobs`, `production_step_log` (RLS-filtered).
 3. **Assignment**: admin Server Action -> `rpc('assign_lead')` -> trigger sets `assigned`, logs -> email staff.
 4. **Quote**: admin/manager edits lines -> PDF (@react-pdf/renderer) -> `quotes/<lead_id>/<quote_id>.pdf`
    -> token (randomToken, store sha256) -> Resend email with `/q/<token>` -> lead `quoted`.
 5. **Customer response** `/q/<token>`: hash lookup (service role), expiry/revoked check, rate limit,
    accept -> quote+lead `accepted`; changes -> `changes_requested` + note -> email staff+admin.
-6. **Production**: admin button -> `rpc('convert_lead_to_production')` -> legacy order row, lead `production`.
+6. **Production**: admin assigns a workshop user to an accepted lead (`assign_production_job`) or picks one in the
+   hand-off form -> admin or that workshop user submits "Chuyển sang sản xuất" with a due date (default today+7)
+   -> `rpc('convert_lead_to_production')` -> legacy order row (VAT + debt), job `cho_san_xuat`, lead `production`.
+7. **Workshop**: `/portal/xuong` lists `workshop_jobs()` grouped by step (overdue red), detail shows the
+   preview (signed URL via Storage RLS) -> one tap `advance_production_step(job, next, note)` -> log + lead /
+   Electron sync -> Realtime refresh.
 
 ## Security rules
 

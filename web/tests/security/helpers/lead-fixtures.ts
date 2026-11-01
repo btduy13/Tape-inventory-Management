@@ -22,7 +22,7 @@ function must<T>(res: { data: T | null; error: { message: string } | null }, wha
   return res.data as T;
 }
 
-export type AppRole = "admin" | "manager" | "staff" | "ctv";
+export type AppRole = "admin" | "manager" | "staff" | "ctv" | "workshop";
 
 /** Fixed password for suite-owned accounts (local Docker Supabase only). */
 export const FIXTURE_PASSWORD = "sec-fixture-Passw0rd-2026";

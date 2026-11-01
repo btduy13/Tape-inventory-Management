@@ -8,7 +8,7 @@ const t = getDictionary();
 export const metadata: Metadata = { title: t.nav.portal, robots: { index: false } };
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const profile = await requireRole(ROLE_GROUPS.internal);
+  const profile = await requireRole(ROLE_GROUPS.portal);
   return (
     <>
       <PortalHeader profile={profile} />

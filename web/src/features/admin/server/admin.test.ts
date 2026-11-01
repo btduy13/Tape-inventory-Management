@@ -3,12 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
 import { DEACTIVATED_BAN, inviteUser, updateUser } from "./users";
 import { savePreset } from "./presets";
-import { convertLeadToProduction } from "./production";
 import { countByStatus } from "./queries";
 
 type Db = SupabaseClient<Database>;
 const USER = "0b0c0d0e-1111-4222-8333-444455556666";
-const LEAD = "6f1c1f0e-8a7b-4c2d-9e3f-1a2b3c4d5e6f";
 const invite = { email: "new@x.vn", fullName: "Người Mới", role: "staff" as const };
 
 function adminMock(opts: { inviteError?: object | null; metaError?: object | null; upsertError?: object | null } = {}) {
@@ -70,20 +68,12 @@ describe("updateUser", () => {
   });
 });
 
-describe("presets / production / overview", () => {
+describe("presets / overview", () => {
   const preset = { id: null, label: "48mm", widthMm: 48, lengthM: 100, thicknessMic: 45, sortOrder: 0, isActive: true };
 
   it("maps unique violation to duplicate", async () => {
     const db = { from: () => ({ insert: vi.fn().mockResolvedValue({ error: { code: "23505" } }) }) } as unknown as Db;
     expect(await savePreset(db, preset)).toEqual({ ok: false, reason: "duplicate" });
-  });
-
-  it("convert calls the RPC only and maps errors", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: "BK-10-26-001", error: null });
-    expect(await convertLeadToProduction({ rpc } as unknown as Db, LEAD)).toEqual({ ok: true, orderId: "BK-10-26-001" });
-    expect(rpc).toHaveBeenCalledWith("convert_lead_to_production", { p_lead_id: LEAD });
-    const notReady = { rpc: vi.fn().mockResolvedValue({ data: null, error: { code: "22023" } }) } as unknown as Db;
-    expect(await convertLeadToProduction(notReady, LEAD)).toEqual({ ok: false, reason: "notReady" });
   });
 
   it("counts statuses", () => {

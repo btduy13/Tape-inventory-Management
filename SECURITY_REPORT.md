@@ -444,3 +444,44 @@ so that local tests match production.
 - `npm run typecheck` and `npm run lint`: pass. `npm run test`: 45 files, 318 tests pass. `npm run build`: pass.
 - `SECURITY_BASE_URL=http://localhost:3000 npm run test:security` after `db:reset`: 45 files, 426 tests pass. No web code changed, so the existing `:3000` build was used.
 - `supabase db lint --level warning`: no findings. `supabase db advisors --local`: only `unused_index` INFO.
+
+## Round 2026-11-01b: workshop ("xưởng") role and production dashboard
+
+Local stack only. No remote or production database was touched. New migrations:
+`0020_workshop_role.sql` (enum value only, separate transaction) and `0021_production_jobs.sql`.
+
+### Design (what is enforced where)
+
+| Control | Enforcement | Test |
+|---------|-------------|------|
+| New role `workshop` (admin invites / activates / deactivates through the existing users page; `app_metadata.role`). `assign_lead` still refuses workshop users as sales assignees. | `app_role` enum, `handle_new_user` (0011, unchanged), `assign_lead` role list (0004, unchanged) | pgTAP 14 |
+| Workshop sees ONLY jobs an admin assigned to it. `production_jobs` RLS: `is_admin() or (workshop_user_id = auth.uid() and is_workshop())`; `is_workshop()` requires an active profile, so unassign and deactivate both remove access, Realtime events and design files at once. | RLS on `production_jobs`, `production_step_log` (visible iff the job is), `storage.objects` policy `lead_files_select` (previews / logos only, never quotes) | pgTAP 14; `tests/security/workshop/visibility`, `revocation` |
+| Workshop sees only production specs. No grant or policy on `leads`, `designs`, `quotes`, `quote_lines`, `lead_notes`, legacy tables. Specs come from SECURITY DEFINER `workshop_jobs()` (`search_path = ''`, fixed column list: size, colors, quantity, print text, design JSON, preview/logo paths, due date, production note, order/lead code, assignee name). `production_jobs` / `production_step_log` have no price or contact columns. | DB (RPC + RLS), not UI | pgTAP 14 (function result columns, table columns, 0 rows on every sales table, 42501 on `bang_keo_in_orders`); security suite checks keys AND values (phone, email, company, note, prices) in RPC output and in the rendered `/portal/xuong` pages |
+| Writes only through SECURITY DEFINER RPCs. `authenticated` has SELECT only on the two tables (INSERT/UPDATE/DELETE/TRUNCATE revoked, anon has nothing). | grants | pgTAP 14, `workshop/steps` (direct PATCH/INSERT/DELETE refused for workshop and admin) |
+| Hand-off `convert_lead_to_production(lead, due_date, note, workshop_user)`: admin / server code, or the workshop user assigned to that lead's job; only admin may pick the workshop user; due date required and `>= today` (Vietnam) for every caller; idempotent. Old one-argument signature dropped. | RPC | pgTAP 13 + 14; `workshop/convert` |
+| Lead guards accept the production link from a non-admin only inside the hand-off: `is_job_handoff(old, new)` requires an empty old link, unchanged privileged columns, and a `production_jobs` row with that `order_id` converted by `auth.uid()` (written by the definer function in the same transaction). A direct `update leads set production_order_id` by staff still fails. | `leads_guard_columns`, `leads_guard_admin_columns` (0021) | pgTAP 07 (unchanged, passes), `workshop/convert` |
+| Steps: workshop = own job, next step only, no `huy`; admin = any step + `huy`; every change logged (who, name snapshot, when, note). Sync forward-only to lead status (`production` / `shipping` / `done` / `cancelled`) with `lead_status_log.changed_by` = the actor, and to Electron `bang_keo_in_orders.da_giao`. | `advance_production_step`, internal `production_sync_lead` (EXECUTE revoked from API roles) | pgTAP 14, `workshop/steps` |
+| VAT: `vat = quotes.vat_amount`, `vat_percent = quotes.vat_percent`, `thanh_tien_ban = quotes.subtotal`, `cong_no_khach = GREATEST(thanh_tien_ban + vat - tien_coc, 0)` = `orderMath.customerDebtSqlExpression('bang_keo_in_orders')` without axis = accepted quote total. | RPC | pgTAP 14, `workshop/convert` |
+| Electron unaffected: no trigger and no column added to legacy tables in production (local stub only gets the missing `vat`, `vat_percent`, `tien_coc`, `cong_no_khach`, `da_giao`, `da_tat_toan` columns, guarded by information_schema). `electron_app` keeps DML on its 5 tables (incl. web-created rows) and has no access to the new tables. Desktop edits of `ngay_du_kien` / `da_giao` are read live by `workshop_jobs()`. | 0021 | pgTAP 14 (electron_app update/insert/delete, postgres write, no trigger on `bang_keo_in_orders`, 42501 on `production_jobs`) |
+
+### Finding during this round (fixed before commit)
+
+| # | Finding | Severity | Fix | Test |
+|---|---------|----------|-----|------|
+| P5 | First draft of `advance_production_step` checked access with `not (v_admin or v_job.workshop_user_id = auth.uid())`. For an unassigned job (`workshop_user_id` NULL) the expression is NULL, plpgsql treats `if NULL` as false, so ANY active workshop user could change the steps (and the lead status) of an unassigned job. Found by the security suite (revocation test). | High (pre-release) | `coalesce(v_job.workshop_user_id = auth.uid(), false)`. Other checks already used `is distinct from` or sit in WHERE/policies, where NULL excludes the row. | pgTAP 14 ("workshop cannot change a job that has no workshop user"), `workshop/revocation` |
+
+### Open points for the owner
+
+- Sync with Electron is one-way (web -> `da_giao`). Marking an order delivered in the desktop app does not move the
+  web job; the dashboard shows "desktop delivered" instead. `huy` has no Electron counterpart: cancel or delete the
+  order in the desktop app by hand. A reverse trigger on `bang_keo_in_orders` was not added on purpose (it would
+  run on every Electron write as `electron_app`).
+- Admin may move a job backwards; the lead status is never moved backwards (a `done` lead stays `done`).
+- Managers have no access to the workshop board (not requested). Add `is_manager_or_admin()` to the policy and RPC if wanted.
+- `verify-production.sql` locally: all PASS except the 3 known `storage_vectors` rows (fixed by `production-post-deploy.sql`).
+
+### Gates (2026-11-01, local, PG 15.14 image)
+
+- `npm run db:reset`: pass (0001 to 0021). `npm run db:test`: PASS, 14 files, 242 tests (new `14_workshop_production`: 91; 13 updated to the new signature). Same known TODOs as before.
+- `npm run typecheck`, `npm run lint`: pass. `npm run test`: 47 files, 333 tests pass. `npm run build`: pass (new routes `/portal/xuong`, `/portal/xuong/[id]`).
+- Server from the new build on `:3001` (`ALLOW_TEST_SECRETS=1`), `db:reset`, then `SECURITY_BASE_URL=http://localhost:3001 npm run test:security`: 50 files, 470 tests pass (new `tests/security/workshop/`: visibility, convert, steps, revocation, pages-actions).

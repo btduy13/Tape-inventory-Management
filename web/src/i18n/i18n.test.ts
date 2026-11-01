@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { format, formatVnd, getDictionary } from "./index";
-import { LEAD_STATUSES, ROLES } from "@/lib/types";
+import { LEAD_STATUSES, PRODUCTION_STEPS, ROLES } from "@/lib/types";
 
 describe("i18n", () => {
   const t = getDictionary();
@@ -8,6 +8,7 @@ describe("i18n", () => {
   it("has a label for every lead status and role", () => {
     for (const s of LEAD_STATUSES) expect(t.leadStatus[s]).toBeTruthy();
     for (const r of ROLES) expect(t.roles[r]).toBeTruthy();
+    for (const s of PRODUCTION_STEPS) expect(t.productionStep[s]).toBeTruthy();
   });
 
   it("interpolates placeholders and keeps unknown ones", () => {

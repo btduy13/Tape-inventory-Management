@@ -8,6 +8,8 @@ export const ROUTES = {
   authCallback: "/auth/callback",
   portal: "/portal",
   portalLead: (id: string) => `/portal/leads/${id}`,
+  workshop: "/portal/xuong",
+  workshopJob: (id: string) => `/portal/xuong/${id}`,
   admin: "/admin",
   adminUsers: "/admin/users",
   adminPresets: "/admin/presets",

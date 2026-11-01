@@ -26,5 +26,7 @@ export const SEED_USERS = {
   staff: "staff@local.test",
   staff2: "staff2@local.test",
   ctv: "ctv@local.test",
+  workshop: "workshop@local.test",
+  workshop2: "workshop2@local.test",
 } as const;
 export type SeedRole = keyof typeof SEED_USERS;

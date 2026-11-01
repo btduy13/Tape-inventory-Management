@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
-import { canAssign } from "@/lib/auth/roles";
+import { canAssign, canUseWorkshop, isWorkshop } from "@/lib/auth/roles";
 import type { Profile } from "@/lib/types";
 import { LogoutButton } from "@/features/auth";
 
@@ -13,8 +13,9 @@ export function PortalHeader({ profile }: { profile: Profile }) {
     <header className="border-b border-neutral-200 bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <nav className="flex flex-wrap items-center gap-4 text-sm">
-          <Link href={ROUTES.portal} className="font-semibold text-amber-800">{t.common.appName}</Link>
-          <Link href={ROUTES.portal} className="hover:underline">{t.nav.portal}</Link>
+          <Link href={isWorkshop(profile) ? ROUTES.workshop : ROUTES.portal} className="font-semibold text-amber-800">{t.common.appName}</Link>
+          {!isWorkshop(profile) && <Link href={ROUTES.portal} className="hover:underline">{t.nav.portal}</Link>}
+          {canUseWorkshop(profile) && <Link href={ROUTES.workshop} className="hover:underline">{t.nav.workshop}</Link>}
           {canAssign(profile) && (
             <>
               <Link href={ROUTES.admin} className="hover:underline">{t.nav.admin}</Link>

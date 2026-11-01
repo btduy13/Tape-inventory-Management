@@ -80,7 +80,9 @@ export const ACTIONS = {
   savePreset: () => actionId("src/features/admin/server/actions-presets.ts", "savePresetAction"),
   inviteUser: () => actionId("src/features/admin/server/actions-users.ts", "inviteUserAction"),
   updateUser: () => actionId("src/features/admin/server/actions-users.ts", "updateUserAction"),
-  convertToProduction: () => actionId("src/features/admin/server/actions-production.ts", "convertToProductionAction"),
+  convertToProduction: () => actionId("src/features/workshop/server/actions.ts", "convertToProductionAction"),
+  advanceStep: () => actionId("src/features/workshop/server/actions.ts", "advanceStepAction"),
+  assignWorkshop: () => actionId("src/features/workshop/server/actions.ts", "assignWorkshopAction"),
   assignLead: () => actionId("src/features/assignment/server/actions.ts", "assignLeadAction"),
 } as const;
 

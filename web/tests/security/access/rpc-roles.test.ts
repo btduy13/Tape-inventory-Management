@@ -48,11 +48,12 @@ describe("assign_lead is admin-only", () => {
   });
 });
 
-describe("convert_lead_to_production is admin-only", () => {
+describe("convert_lead_to_production: admin (or the assigned workshop user, see workshop/) only", () => {
   it("every non-admin is rejected and no production order is created", async () => {
     await looseService().from("leads").update({ status: "accepted" }).eq("id", leadId);
     for (const [name, db] of await nonAdmins()) {
-      const { error } = await db.rpc("convert_lead_to_production", { p_lead_id: leadId });
+      const due = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+      const { error } = await db.rpc("convert_lead_to_production", { p_lead_id: leadId, p_due_date: due });
       expect(error, name).not.toBeNull();
     }
     expect((await lead())?.production_order_id).toBeNull();
@@ -124,7 +125,9 @@ describe("server-only functions are not callable through the API", () => {
 
 describe("exposed RPC surface matches the reviewed allowlist", () => {
   const AUTH_ALLOWED = [
+    "advance_production_step",
     "assign_lead",
+    "assign_production_job",
     "can_access_lead",
     "can_access_lead_path",
     "change_lead_status",
@@ -135,7 +138,9 @@ describe("exposed RPC surface matches the reviewed allowlist", () => {
     "is_manager_or_admin",
     "is_service_call",
     "is_staff_of",
+    "is_workshop",
     "lead_transition_allowed",
+    "workshop_jobs",
   ];
   const ANON_ALLOWED = ["lead_transition_allowed"];
 

@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "bang_keo_in_orders": {
                   Row: {
-                    "don_gia_ban": number | null,"id": string,"is_quote": boolean | null,"mau_sac": string | null,"ngay_du_kien": string,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien_ban": number | null,"thoi_gian": string | null
+                    "cong_no_khach": number | null,"da_giao": boolean | null,"da_tat_toan": boolean | null,"don_gia_ban": number | null,"id": string,"is_quote": boolean | null,"mau_sac": string | null,"ngay_du_kien": string,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien_ban": number | null,"thoi_gian": string | null,"tien_coc": number | null,"vat": number | null,"vat_percent": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "don_gia_ban"?: number | null,"id": string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien": string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null
+                    "cong_no_khach"?: number | null,"da_giao"?: boolean | null,"da_tat_toan"?: boolean | null,"don_gia_ban"?: number | null,"id": string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien": string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null,"tien_coc"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
                   }
                   Update: {
-                    "don_gia_ban"?: number | null,"id"?: string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null
+                    "cong_no_khach"?: number | null,"da_giao"?: boolean | null,"da_tat_toan"?: boolean | null,"don_gia_ban"?: number | null,"id"?: string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null,"tien_coc"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
                   }
                   Relationships: [
                     
@@ -167,6 +167,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"production_jobs": {
+                  Row: {
+                    "assigned_at": string | null,"converted_at": string | null,"converted_by": string | null,"created_at": string,"due_date": string | null,"id": string,"lead_id": string,"order_id": string | null,"production_note": string | null,"step": Database["public"]['Enums']["production_step"],"updated_at": string,"workshop_user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assigned_at"?: string | null,"converted_at"?: string | null,"converted_by"?: string | null,"created_at"?: string,"due_date"?: string | null,"id"?: string,"lead_id": string,"order_id"?: string | null,"production_note"?: string | null,"step"?: Database["public"]['Enums']["production_step"],"updated_at"?: string,"workshop_user_id"?: string | null
+                  }
+                  Update: {
+                    "assigned_at"?: string | null,"converted_at"?: string | null,"converted_by"?: string | null,"created_at"?: string,"due_date"?: string | null,"id"?: string,"lead_id"?: string,"order_id"?: string | null,"production_note"?: string | null,"step"?: Database["public"]['Enums']["production_step"],"updated_at"?: string,"workshop_user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "production_jobs_converted_by_fkey"
+      columns: ["converted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "production_jobs_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: true
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "production_jobs_workshop_user_id_fkey"
+      columns: ["workshop_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"production_step_log": {
+                  Row: {
+                    "changed_by": string | null,"changed_by_name": string | null,"created_at": string,"from_step": Database["public"]['Enums']["production_step"] | null,"id": number,"job_id": string,"note": string | null,"to_step": Database["public"]['Enums']["production_step"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "changed_by"?: string | null,"changed_by_name"?: string | null,"created_at"?: string,"from_step"?: Database["public"]['Enums']["production_step"] | null,"id"?: never,"job_id": string,"note"?: string | null,"to_step": Database["public"]['Enums']["production_step"]
+                  }
+                  Update: {
+                    "changed_by"?: string | null,"changed_by_name"?: string | null,"created_at"?: string,"from_step"?: Database["public"]['Enums']["production_step"] | null,"id"?: never,"job_id"?: string,"note"?: string | null,"to_step"?: Database["public"]['Enums']["production_step"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "production_step_log_changed_by_fkey"
+      columns: ["changed_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "production_step_log_job_id_fkey"
+      columns: ["job_id"]
+isOneToOne: false
+      referencedRelation: "production_jobs"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"profiles": {
                   Row: {
                     "created_at": string,"email": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
@@ -281,7 +339,28 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "assign_lead":
+            "advance_production_step":
+{ Args: { "p_job_id": string,"p_note"?: string,"p_to": Database["public"]['Enums']["production_step"] }; Returns: {
+              "assigned_at": string | null,
+"converted_at": string | null,
+"converted_by": string | null,
+"created_at": string,
+"due_date": string | null,
+"id": string,
+"lead_id": string,
+"order_id": string | null,
+"production_note": string | null,
+"step": Database["public"]['Enums']["production_step"],
+"updated_at": string,
+"workshop_user_id": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "production_jobs"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"assign_lead":
 { Args: { "p_lead_id": string,"p_user_id": string }; Returns: {
               "assigned_at": string | null,
 "assigned_to": string | null,
@@ -303,6 +382,27 @@ isOneToOne: false
                           SetofOptions: {
         from: "*"
         to: "leads"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"assign_production_job":
+{ Args: { "p_lead_id": string,"p_user_id": string }; Returns: {
+              "assigned_at": string | null,
+"converted_at": string | null,
+"converted_by": string | null,
+"created_at": string,
+"due_date": string | null,
+"id": string,
+"lead_id": string,
+"order_id": string | null,
+"production_note": string | null,
+"step": Database["public"]['Enums']["production_step"],
+"updated_at": string,
+"workshop_user_id": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "production_jobs"
         isOneToOne: true
         isSetofReturn: false
       } },
@@ -341,7 +441,7 @@ isOneToOne: false
 { Args: { "p_key": string,"p_max_hits": number,"p_window_seconds": number }; Returns: boolean
                            },
 "convert_lead_to_production":
-{ Args: { "p_lead_id": string }; Returns: string
+{ Args: { "p_due_date": string,"p_lead_id": string,"p_note"?: string,"p_workshop_user_id"?: string }; Returns: string
                            },
 "current_app_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["app_role"]
@@ -355,6 +455,9 @@ isOneToOne: false
 "is_internal":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"is_job_handoff":
+{ Args: { "p_new": Omit<Database["public"]['Tables']["leads"]['Row'], Database["public"]['Tables']["leads"]['ComputedFields']>,"p_old": Omit<Database["public"]['Tables']["leads"]['Row'], Database["public"]['Tables']["leads"]['ComputedFields']> }; Returns: boolean
+                           },
 "is_manager_or_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -364,18 +467,35 @@ isOneToOne: false
 "is_staff_of":
 { Args: { "p_lead_id": string }; Returns: boolean
                            },
+"is_workshop":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "lead_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["lead_status"],"p_to": Database["public"]['Enums']["lead_status"] }; Returns: boolean
                            },
 "next_bang_keo_in_order_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"production_step_label":
+{ Args: { "p_step": Database["public"]['Enums']["production_step"] }; Returns: string
+                           },
+"production_step_next":
+{ Args: { "p_step": Database["public"]['Enums']["production_step"] }; Returns: Database["public"]['Enums']["production_step"]
+                           },
+"production_sync_lead":
+{ Args: { "p_lead_id": string,"p_step": Database["public"]['Enums']["production_step"] }; Returns: undefined
+                           },
 "quotes_recalc_totals":
 { Args: { "p_quote_id": string }; Returns: undefined
+                           },
+"workshop_jobs":
+{ Args: { "p_job_id"?: string }; Returns: {
+              "colors": (string)[],"converted_at": string,"design_json": Json,"desktop_delivered": boolean,"due_date": string,"job_id": string,"lead_code": string,"lead_id": string,"length_m": number,"logo_path": string,"order_id": string,"preview_path": string,"print_text": string,"production_note": string,"quantity": number,"step": Database["public"]['Enums']["production_step"],"thickness_mic": number,"updated_at": string,"width_mm": number,"workshop_user_id": string,"workshop_user_name": string
+            }[]
                            }
           }
           Enums: {
-            "app_role": "admin"|"manager"|"staff"|"ctv","lead_status": "new"|"assigned"|"consulting"|"quoted"|"accepted"|"production"|"shipping"|"done"|"cancelled","quote_status": "draft"|"sent"|"accepted"|"changes_requested"|"expired"|"cancelled"
+            "app_role": "admin"|"manager"|"staff"|"ctv"|"workshop","lead_status": "new"|"assigned"|"consulting"|"quoted"|"accepted"|"production"|"shipping"|"done"|"cancelled","production_step": "cho_san_xuat"|"dang_in"|"dang_cat_cuon"|"dong_goi"|"san_sang_giao"|"da_giao"|"huy","quote_status": "draft"|"sent"|"accepted"|"changes_requested"|"expired"|"cancelled"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -495,7 +615,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "app_role": ["admin", "manager", "staff", "ctv"],"lead_status": ["new", "assigned", "consulting", "quoted", "accepted", "production", "shipping", "done", "cancelled"],"quote_status": ["draft", "sent", "accepted", "changes_requested", "expired", "cancelled"]
+            "app_role": ["admin", "manager", "staff", "ctv", "workshop"],"lead_status": ["new", "assigned", "consulting", "quoted", "accepted", "production", "shipping", "done", "cancelled"],"production_step": ["cho_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy"],"quote_status": ["draft", "sent", "accepted", "changes_requested", "expired", "cancelled"]
           }
         }
 } as const

@@ -34,7 +34,8 @@ update public.quotes set status = 'accepted', responded_at = now() where id = '0
 update public.leads set status = 'accepted' where id = '00000000-0000-0000-0000-0000000c0019';
 
 select lives_ok(
-  $$select public.convert_lead_to_production('00000000-0000-0000-0000-0000000c0019')$$,
+  $$select public.convert_lead_to_production('00000000-0000-0000-0000-0000000c0019',
+      ((now() at time zone 'Asia/Ho_Chi_Minh')::date + 7))$$,
   'convert_lead_to_production succeeds');
 
 select is(
@@ -42,7 +43,7 @@ select is(
      join public.leads l on l.production_order_id = o.id
     where l.id = '00000000-0000-0000-0000-0000000c0019'),
   ((now() at time zone 'Asia/Ho_Chi_Minh')::date + 7),
-  'ngay_du_kien defaults to hand-off day + 7 (Vietnam date)');
+  'ngay_du_kien = due date passed to the hand-off (Vietnam date)');
 select ok(
   (select abs(extract(epoch from (o.thoi_gian - (now() at time zone 'Asia/Ho_Chi_Minh')))) < 60
      from public.bang_keo_in_orders o

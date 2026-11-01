@@ -7,11 +7,16 @@ import { ROUTES } from "@/lib/routes";
 import type { AppRole, Profile } from "@/lib/types";
 import { hasRole } from "@/lib/auth/roles";
 
-/** For pages: redirects to /login (anonymous) or /portal (wrong role). */
+/** Landing page of a role: workshop users live in /portal/xuong, everyone else in /portal. */
+export function homePathFor(profile: Pick<Profile, "role">): string {
+  return profile.role === "workshop" ? ROUTES.workshop : ROUTES.portal;
+}
+
+/** For pages: redirects to /login (anonymous) or the role's home page (wrong role). */
 export async function requireRole(allowed: readonly AppRole[]): Promise<Profile> {
   const profile = await getCurrentProfile();
   if (!profile) redirect(ROUTES.login);
-  if (!hasRole(profile, allowed)) redirect(ROUTES.portal);
+  if (!hasRole(profile, allowed)) redirect(homePathFor(profile));
   return profile;
 }
 
