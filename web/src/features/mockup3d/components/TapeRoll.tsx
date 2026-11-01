@@ -27,7 +27,7 @@ export function TapeRoll({ preset, source, version, stripLengthMm, tapeColor = E
       {[half, -half].map((y) => (
         <mesh key={`edge${y}`} position={[0, y, 0]} rotation={[y > 0 ? -Math.PI / 2 : Math.PI / 2, 0, 0]}>
           <ringGeometry args={[g.coreOuterRadius, g.outerRadius, SEGMENTS]} />
-          <meshStandardMaterial color={tapeColor} transparent opacity={0.92} roughness={0.25} side={DoubleSide} />
+          <meshStandardMaterial color={tapeColor} roughness={0.6} side={DoubleSide} />
         </mesh>
       ))}
       {/* Paper core: inner wall + rims */}
