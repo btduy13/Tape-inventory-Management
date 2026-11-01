@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 afterEach(cleanup);
-import { DEFAULT_PRESETS } from "../lib/presets";
 import { DesignProvider } from "./DesignProvider";
 import { LogoUpload } from "./LogoUpload";
 
@@ -16,7 +15,7 @@ vi.mock("../lib/logo-load", () => ({
 
 function setup() {
   render(
-    <DesignProvider presets={[...DEFAULT_PRESETS]}>
+    <DesignProvider>
       <LogoUpload />
     </DesignProvider>,
   );

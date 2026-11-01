@@ -15,6 +15,8 @@ export interface LeadDesign {
   logoFile?: File | null;
   /** PNG export of the 2D tape strip (designer `<TapeCanvas2D>` export). */
   previewPng?: Blob | null;
+  /** Set when the design cannot be sent (e.g. tape length out of range): shown instead of submitting. */
+  invalidMessage?: string;
 }
 
 /**

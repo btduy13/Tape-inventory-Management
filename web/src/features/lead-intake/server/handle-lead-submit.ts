@@ -12,7 +12,7 @@ import type { LeadNotifier } from "../lib/email-contract";
 import type { LeadStore } from "./lead-store";
 import { parseSubmission } from "./parse-submission";
 import { BodyTooLargeError, declaresTooLarge, discardBody, readFormDataCapped } from "./read-body";
-import { saveLead, UnknownPresetError } from "./save-lead";
+import { InvalidTapeSizeError, saveLead } from "./save-lead";
 import { notifyNewLead, toEmailData } from "./notify";
 
 export interface LeadSubmitDeps {
@@ -73,7 +73,7 @@ export async function handleLeadSubmit(req: Request, deps: LeadSubmitDeps): Prom
     await notifyNewLead(deps.notifier, toEmailData(saved, parsed.value));
     return jsonResponse({ ok: true, code: saved.code }, 201);
   } catch (err) {
-    if (err instanceof UnknownPresetError) return errorResponse("design");
+    if (err instanceof InvalidTapeSizeError) return errorResponse("tape_size");
     console.error("[lead-intake] save failed:", err instanceof Error ? err.message : "unknown");
     return errorResponse("server");
   }

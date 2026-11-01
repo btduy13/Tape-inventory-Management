@@ -1,23 +1,26 @@
 // Writes lead + design + files. On any failure after the lead insert, it rolls back
 // (deletes uploaded files and the lead) so staff never see half-written requests.
 import "server-only";
+import { checkTapeSize, formatTapeSize, type TapeSizeError } from "@/features/designer";
 import { STORAGE_BUCKETS } from "@/lib/types";
 import { randomToken } from "@/lib/security/hash";
 import { designColors } from "../lib/design-schema";
 import type { ParsedSubmission } from "./parse-submission";
-import type { LeadStore, PresetSnapshot } from "./lead-store";
+import type { LeadStore } from "./lead-store";
 
-export class UnknownPresetError extends Error {
-  constructor() {
-    super("Preset not found or inactive");
-    this.name = "UnknownPresetError";
+/** Width not in the active tape_widths list, or length outside tape_spec_settings. */
+export class InvalidTapeSizeError extends Error {
+  constructor(readonly reason: TapeSizeError) {
+    super(`Invalid tape size: ${reason}`);
+    this.name = "InvalidTapeSizeError";
   }
 }
 
 export type SavedLead = {
   id: string;
   code: string;
-  preset: PresetSnapshot;
+  /** "48 mm × 635 m" for emails. */
+  sizeLabel: string;
   logoPath: string | null;
   previewPath: string | null;
 };
@@ -29,10 +32,12 @@ export async function saveLead(
   input: ParsedSubmission,
   meta: SaveMeta,
 ): Promise<SavedLead> {
-  const preset = await store.findActivePreset(input.design.presetId);
-  if (!preset) throw new UnknownPresetError();
-
   const { fields, design } = input;
+  // Checked against the DB at submit time, never only in the browser.
+  const spec = await store.loadTapeSpec();
+  const sizeError = checkTapeSize(spec, design.widthMm, design.lengthM);
+  if (sizeError) throw new InvalidTapeSizeError(sizeError);
+
   const lead = await store.insertLead({
     customer_name: fields.name,
     phone: fields.phone,
@@ -61,10 +66,10 @@ export async function saveLead(
 
     await store.insertDesign({
       lead_id: lead.id,
-      preset_id: preset.id,
-      width_mm: preset.width_mm,
-      length_m: preset.length_m,
-      thickness_mic: preset.thickness_mic,
+      preset_id: null,
+      width_mm: design.widthMm,
+      length_m: design.lengthM,
+      thickness_mic: spec.thicknessMic,
       colors: designColors(design),
       print_text: design.text === "" ? null : design.text,
       design_json: { ...design, logo: design.logo ? { ...design.logo, path: logoPath } : null },
@@ -72,7 +77,8 @@ export async function saveLead(
       preview_path: previewPath,
     });
 
-    return { id: lead.id, code: lead.code, preset, logoPath, previewPath };
+    const sizeLabel = formatTapeSize(design.widthMm, design.lengthM);
+    return { id: lead.id, code: lead.code, sizeLabel, logoPath, previewPath };
   } catch (err) {
     await Promise.allSettled([
       ...uploaded.map((f) => store.removeFiles(f.bucket, [f.path])),

@@ -7,12 +7,31 @@ const raw = (d: unknown) => JSON.stringify(d);
 describe("parseDesignJson", () => {
   it("accepts a valid design and resets logo.path", () => {
     const r = parseDesignJson(raw({ ...DESIGN, logo: { ...DESIGN.logo!, path: "other/lead/x.svg" } }));
-    expect(r?.presetId).toBe(DESIGN.presetId);
     expect(r?.logo?.path).toBeNull();
+    expect(r).toMatchObject({ widthMm: 48, lengthM: 100 });
   });
 
-  it("requires a preset", () => {
-    expect(parseDesignJson(raw({ ...DESIGN, presetId: null }))).toBeNull();
+  it("ignores presetId (sizes come from tape_widths)", () => {
+    expect(parseDesignJson(raw(DESIGN))?.presetId).toBeNull();
+    expect(parseDesignJson(raw({ ...DESIGN, presetId: null }))).not.toBeNull();
+  });
+
+  it("requires a tape width and length", () => {
+    const noWidth: Partial<typeof DESIGN> = { ...DESIGN };
+    const noLength: Partial<typeof DESIGN> = { ...DESIGN };
+    delete noWidth.widthMm;
+    delete noLength.lengthM;
+    expect(parseDesignJson(raw(noWidth))).toBeNull();
+    expect(parseDesignJson(raw(noLength))).toBeNull();
+  });
+
+  it.each([
+    ["fractional width", { widthMm: 48.5 }],
+    ["zero length", { lengthM: 0 }],
+    ["string length", { lengthM: "635" }],
+    ["absurd length", { lengthM: 1e6 }],
+  ])("rejects %s", (_name, patch) => {
+    expect(parseDesignJson(raw({ ...DESIGN, ...patch }))).toBeNull();
   });
 
   it.each([

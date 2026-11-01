@@ -29,6 +29,8 @@ export function JobSpecs({ job }: { job: WorkshopJobRow }) {
       <dl>
         <Row label={t.workshop.orderCode}>{job.order_id ?? t.workshop.pending}</Row>
         <Row label={t.workshop.leadCode}>{job.lead_code}</Row>
+        <Row label={t.tapeSpec.width}>{job.width_mm === null ? "?" : `${Number(job.width_mm)} mm`}</Row>
+        <Row label={t.tapeSpec.length}>{job.length_m === null ? "?" : `${Number(job.length_m)} m`}</Row>
         <Row label={t.workshop.size}>{formatSize(job)}</Row>
         <Row label={t.workshop.quantity}>{job.quantity.toLocaleString("vi-VN")}</Row>
         <Row label={t.workshop.colors}><ColorSwatches colors={job.colors} /></Row>

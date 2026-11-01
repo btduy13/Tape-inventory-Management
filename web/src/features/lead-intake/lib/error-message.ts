@@ -16,6 +16,8 @@ export function leadErrorMessage(code: LeadErrorCode | "network"): string {
       return d.common.errorValidation;
     case "design":
       return e.design;
+    case "tape_size":
+      return d.tapeSpec.sizeRejected;
     case "file":
       return e.file;
     case "too_large":
@@ -28,7 +30,7 @@ export function leadErrorMessage(code: LeadErrorCode | "network"): string {
 }
 
 const CODES: readonly string[] = [
-  "csrf", "rate_limited", "captcha", "validation", "design", "file", "too_large", "server",
+  "csrf", "rate_limited", "captcha", "validation", "design", "tape_size", "file", "too_large", "server",
 ];
 
 export function isLeadErrorCode(v: unknown): v is LeadErrorCode {

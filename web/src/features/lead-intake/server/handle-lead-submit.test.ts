@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { handleLeadSubmit, type LeadSubmitDeps } from "./handle-lead-submit";
 import { MAX_BODY_BYTES } from "../lib/api-contract";
 import type { LeadNotifier } from "../lib/email-contract";
-import { buildForm, fakeStore, LEAD_ID, PNG_BYTES, SVG_TEXT, type FakeStore } from "../testing/fixtures";
+import { buildForm, DESIGN, fakeStore, LEAD_ID, PNG_BYTES, SPEC, SVG_TEXT, type FakeStore } from "../testing/fixtures";
 
 const URL_ = "https://bangkeo.test/api/leads";
 
@@ -112,11 +112,46 @@ describe("handleLeadSubmit", () => {
     expect(deps.verifyCaptcha).not.toHaveBeenCalled();
   });
 
-  it("returns design error for an unknown / inactive preset", async () => {
-    const { deps, store } = makeDeps({}, fakeStore({ preset: null }));
-    const res = await handleLeadSubmit(request(buildForm()), deps);
+  it.each([
+    ["width not in the active list", { widthMm: 100 }],
+    ["length below the minimum", { lengthM: 40 }],
+    ["length above the maximum", { lengthM: 635.1 }],
+    ["length with two decimals", { lengthM: 100.25 }],
+  ])("rejects a %s against the DB spec (tape_size)", async (_name, patch) => {
+    const { deps, store } = makeDeps();
+    const res = await handleLeadSubmit(request(buildForm({ design: JSON.stringify({ ...DESIGN, ...patch }) })), deps);
     expect(res.status).toBe(422);
-    expect((await res.json()).error).toBe("design");
+    expect((await res.json()).error).toBe("tape_size");
+    expect(store.leads).toHaveLength(0);
+  });
+
+  it("uses the live DB list: a width added by the admin is accepted", async () => {
+    const { deps, store } = makeDeps({}, fakeStore({ spec: { ...SPEC, widths: [...SPEC.widths, 100] } }));
+    const res = await handleLeadSubmit(request(buildForm({ design: JSON.stringify({ ...DESIGN, widthMm: 100, lengthM: 635 }) })), deps);
+    expect(res.status).toBe(201);
+    expect(store.designs[0]).toMatchObject({ preset_id: null, width_mm: 100, length_m: 635, thickness_mic: 45 });
+  });
+
+  it("rejects a disabled width (not returned by the DB) even if it was valid before", async () => {
+    const { deps } = makeDeps({}, fakeStore({ spec: { ...SPEC, widths: SPEC.widths.filter((w) => w !== 48) } }));
+    const res = await handleLeadSubmit(request(buildForm()), deps);
+    expect((await res.json()).error).toBe("tape_size");
+  });
+
+  it("accepts the length bounds 50 m and 635 m", async () => {
+    for (const lengthM of [50, 635]) {
+      const { deps, store } = makeDeps();
+      const res = await handleLeadSubmit(request(buildForm({ design: JSON.stringify({ ...DESIGN, lengthM }) })), deps);
+      expect(res.status).toBe(201);
+      expect(store.designs[0]).toMatchObject({ length_m: lengthM });
+    }
+  });
+
+  it("fails closed (500, nothing stored) when the spec cannot be read", async () => {
+    const { deps, store } = makeDeps({}, fakeStore({ failSpec: true }));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await handleLeadSubmit(request(buildForm()), deps);
+    expect(res.status).toBe(500);
     expect(store.leads).toHaveLength(0);
   });
 

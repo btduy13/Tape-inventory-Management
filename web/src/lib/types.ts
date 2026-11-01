@@ -47,6 +47,17 @@ export type TapePreset = {
   sort_order: number; is_active: boolean; created_at: Timestamp; updated_at: Timestamp;
 };
 
+/** Tape widths offered in the designer (0022). Customer types the length within tape_spec_settings. */
+export type TapeWidth = {
+  id: Uuid; width_mm: number; is_active: boolean; sort_order: number;
+  created_at: Timestamp; updated_at: Timestamp;
+};
+
+/** Single-row settings (0022): allowed roll length range + default thickness. */
+export type TapeSpecSettings = {
+  id: boolean; min_length_m: Numeric; max_length_m: Numeric; thickness_mic: Numeric; updated_at: Timestamp;
+};
+
 export type Lead = {
   id: Uuid; code: string; customer_name: string; phone: string; email: string | null;
   company: string | null; quantity: number; customer_note: string | null;
@@ -70,6 +81,8 @@ export type DesignJson = {
     colorMode?: "original" | "tint";  // logo printed in its own colours or one ink
   } | null;
   repeatGapPx?: number;
+  widthMm?: number;               // chosen tape width (mm), from tape_widths (0022)
+  lengthM?: number;               // customer roll length (m), within tape_spec_settings
   textOffsetX?: number;           // text position, fraction of tape width (canvas drag)
   textOffsetY?: number;
 };
@@ -155,6 +168,8 @@ export type Database = {
     Tables: {
       profiles: Table<Profile, Opt<Profile, "email" | "full_name" | "phone" | "role" | "is_active" | "created_at" | "updated_at">>;
       tape_presets: Table<TapePreset, Opt<TapePreset, "id" | "sort_order" | "is_active" | "created_at" | "updated_at">>;
+      tape_widths: Table<TapeWidth, Opt<TapeWidth, "id" | "sort_order" | "is_active" | "created_at" | "updated_at">>;
+      tape_spec_settings: Table<TapeSpecSettings, Opt<TapeSpecSettings, "id" | "thickness_mic" | "updated_at">>;
       leads: Table<Lead, Opt<Lead, "id" | "code" | "email" | "company" | "customer_note" | "status" | "assigned_to" | "assigned_at" | "production_order_id" | "source_ip_hash" | "user_agent" | "created_at" | "updated_at">>;
       designs: Table<Design, Opt<Design, "id" | "preset_id" | "colors" | "print_text" | "design_json" | "logo_path" | "preview_path" | "created_at">>;
       lead_status_log: Table<LeadStatusLog, Opt<Omit<LeadStatusLog, "id">, "from_status" | "changed_by" | "note" | "created_at">>;

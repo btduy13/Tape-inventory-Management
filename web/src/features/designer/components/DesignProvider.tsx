@@ -1,17 +1,23 @@
 "use client";
 // Provides one DesignStore per designer page. Wrap designer, mockup and lead form in it.
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { normalizePresets, type PresetOption } from "../lib/presets";
 import { createDesignStore, type DesignStore } from "../lib/store";
+import { DEFAULT_TAPE_SPEC, initialTapeSize, toTapeSpec, type TapeSpec } from "../lib/tape-spec";
 
-type Ctx = { store: DesignStore; presets: PresetOption[] };
+type Ctx = { store: DesignStore; spec: TapeSpec };
 
 const DesignContext = createContext<Ctx | null>(null);
 
-export function DesignProvider({ presets, children }: { presets: PresetOption[]; children: ReactNode }) {
+/** `spec`: active widths + length range from the DB (getTapeSpec()); defaults when omitted. */
+export function DesignProvider({ spec, children }: { spec?: TapeSpec; children: ReactNode }) {
   const [value] = useState<Ctx>(() => {
-    const list = normalizePresets(presets);
-    return { store: createDesignStore(list[0]), presets: list };
+    const s = spec
+      ? toTapeSpec({
+          widths: spec.widths.map((w) => ({ width_mm: w })),
+          settings: { min_length_m: spec.minLengthM, max_length_m: spec.maxLengthM, thickness_mic: spec.thicknessMic },
+        })
+      : DEFAULT_TAPE_SPEC;
+    return { store: createDesignStore(initialTapeSize(s)), spec: s };
   });
   useEffect(() => () => value.store.destroy(), [value]);
   return <DesignContext.Provider value={value}>{children}</DesignContext.Provider>;

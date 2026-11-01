@@ -15,7 +15,7 @@ export function toEmailData(saved: SavedLead, input: ParsedSubmission): NewLeadE
     company: f.company,
     quantity: f.quantity,
     note: f.note,
-    presetLabel: saved.preset.label,
+    presetLabel: saved.sizeLabel,
     previewPath: saved.previewPath,
   };
 }

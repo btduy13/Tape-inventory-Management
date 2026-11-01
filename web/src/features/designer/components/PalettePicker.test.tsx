@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { DEFAULT_PRESETS } from "../lib/presets";
 import { DesignProvider } from "./DesignProvider";
 import { PalettePicker } from "./PalettePicker";
 
 describe("<PalettePicker>", () => {
   it("counts colours and disables the background colour for text", () => {
     render(
-      <DesignProvider presets={[...DEFAULT_PRESETS]}>
+      <DesignProvider>
         <PalettePicker />
       </DesignProvider>,
     );

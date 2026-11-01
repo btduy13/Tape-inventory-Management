@@ -13,6 +13,8 @@ export const ROUTES = {
   admin: "/admin",
   adminUsers: "/admin/users",
   adminPresets: "/admin/presets",
+  /** Tape widths + length range for the designer (0022). */
+  adminTapeSpecs: "/admin/quy-cach",
   adminLead: (id: string) => `/admin/leads/${id}`,
   api: {
     leads: "/api/leads",

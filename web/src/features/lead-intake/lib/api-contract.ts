@@ -24,6 +24,8 @@ export type LeadErrorCode =
   | "captcha"
   | "validation"
   | "design"
+  /** Tape width not in the active list or length outside the admin range (0022). */
+  | "tape_size"
   | "file"
   | "too_large"
   | "server";
@@ -38,6 +40,7 @@ export const LEAD_ERROR_STATUS: Record<LeadErrorCode, number> = {
   captcha: 400,
   validation: 422,
   design: 422,
+  tape_size: 422,
   file: 415,
   too_large: 413,
   server: 500,

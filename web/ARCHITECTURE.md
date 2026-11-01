@@ -56,7 +56,7 @@ Files < ~250 lines. Features may import from `@/lib/*`, `@/i18n`, and another fe
 | `/login`, `/auth/callback`, `/auth/reset`, `/auth/update-password`, logout | auth |
 | `/portal`, `/portal/leads/[id]` | orders; detail page embeds `AssignPanel` (assignment), `ProductionHandoffPanel` (workshop, admin only) and `QuotePanel` (quotes, via `quotesSlot`) |
 | `/portal/xuong`, `/portal/xuong/[id]` (`ROUTES.workshop*`) | workshop (admin + workshop roles; convert / assign / step Server Actions) |
-| `/admin`, `/admin/users`, `/admin/presets`, `/admin/leads/[id]` | admin |
+| `/admin`, `/admin/users`, `/admin/presets`, `/admin/quy-cach` (tape widths + length range), `/admin/leads/[id]` | admin |
 | assign/unassign actions | assignment |
 | `/q/[token]`, `POST /api/q/[token]/respond`, quote editor/PDF/send | quotes |
 | email templates + sender | email (library, no routes) |
@@ -64,7 +64,11 @@ Files < ~250 lines. Features may import from `@/lib/*`, `@/i18n`, and another fe
 ## Data model (see migrations)
 
 - `profiles` (role: admin | manager | staff | ctv | workshop, is_active). Role only changeable by admin (trigger).
-- `tape_presets` admin CRUD, public read of active rows. Seeded in 0002.
+- `tape_presets` admin CRUD, public read of active rows. Seeded in 0002 (landing showcase only).
+- `tape_widths` (width_mm, is_active, sort_order) + single-row `tape_spec_settings` (min/max length m,
+  thickness) (0022): the designer offers the active widths + a free length in range (`getTapeSpec()`,
+  seed fallback); `POST /api/leads` re-checks width/length against the DB (`tape_size` error). Admin-only
+  writes; `designs` stores `preset_id = null` + the chosen width/length.
 - `leads` (status enum, assigned_to) + `designs` (preset snapshot, colors[1..3], design_json, logo/preview paths).
 - `lead_status_log` (auto via trigger; note via `change_lead_status(lead, to, note)` RPC),
   `lead_assignments` (history), `lead_notes`.

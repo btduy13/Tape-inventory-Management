@@ -48,7 +48,10 @@ export function LeadSummary({
         <h2 className="mb-2 font-semibold">{t.orders.design}</h2>
         {design ? (
           <dl>
-            <Row label={t.orders.size} value={`${design.width_mm}mm × ${design.length_m}m × ${design.thickness_mic}mic`} />
+            {/* Customer-chosen size (0022): width from the admin list, free length within the range. */}
+            <Row label={t.tapeSpec.width} value={`${Number(design.width_mm)} mm`} />
+            <Row label={t.tapeSpec.length} value={`${Number(design.length_m)} m`} />
+            <Row label={t.orders.size} value={`${Number(design.width_mm)}mm × ${Number(design.length_m)}m × ${Number(design.thickness_mic)}mic`} />
             <Row label={t.orders.printText} value={design.print_text} />
             <Row
               label={t.orders.colors}

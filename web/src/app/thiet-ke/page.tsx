@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getDictionary } from "@/i18n";
 import { DesignMockupBridge, DesignProvider, DesignerPanel } from "@/features/designer";
-import { getActivePresets } from "@/features/designer/server";
+import { getTapeSpec } from "@/features/designer/server";
 import { DesignLeadForm } from "@/features/lead-intake";
 
 export const metadata: Metadata = { title: getDictionary().designer.title };
@@ -13,12 +13,13 @@ export const metadata: Metadata = { title: getDictionary().designer.title };
 const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
 
 export default async function DesignPage() {
-  const [presets, h] = await Promise.all([getActivePresets(), headers()]);
+  // Widths + length range from the DB (0022); getTapeSpec() falls back to the seed list on error.
+  const [spec, h] = await Promise.all([getTapeSpec(), headers()]);
   const nonce = h.get("x-nonce") ?? undefined;
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TURNSTILE_TEST_SITE_KEY;
   return (
     <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col gap-10 px-4 pt-10 pb-24 lg:pb-10">
-      <DesignProvider presets={presets}>
+      <DesignProvider spec={spec}>
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
           <DesignerPanel />
           <div id="xem-3d" className="min-w-0 scroll-mt-4">

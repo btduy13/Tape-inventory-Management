@@ -4,6 +4,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { buildDesignSubmission, toDesignJson, type DesignSubmission } from "../lib/design-json";
 import { exportDesignJsonBlob, exportDesignPng } from "../lib/export";
 import type { DesignAction, DesignState } from "../lib/state";
+import { checkTapeSize, type TapeSizeError, type TapeSpec } from "../lib/tape-spec";
 import type { TextureSnapshot } from "../lib/store";
 import type { DesignJson } from "@/lib/types";
 import { useDesignContext } from "./DesignProvider";
@@ -33,11 +34,15 @@ export type DesignExportApi = {
   getDesignJsonBlob(): Blob;
   /** Logo file to upload (SVG already sanitized), or null. */
   getLogoFile(): File | null;
+  /** Tape size check against the page's spec (the server re-checks against the DB). */
+  getSizeError(): TapeSizeError | null;
+  /** Active widths + length range shown in the designer. */
+  spec: TapeSpec;
 };
 
 /** Stable export API for lead-intake (reads the latest state at call time). */
 export function useDesignExport(): DesignExportApi {
-  const { store } = useDesignContext();
+  const { store, spec } = useDesignContext();
   const getLogoFile = useCallback(() => store.getState().logo?.file ?? null, [store]);
   return useMemo(
     () => ({
@@ -46,7 +51,12 @@ export function useDesignExport(): DesignExportApi {
       getPngBlob: (pixelRatio?: number) => exportDesignPng(store, pixelRatio),
       getDesignJsonBlob: () => exportDesignJsonBlob(store),
       getLogoFile,
+      getSizeError: () => {
+        const p = store.getState().preset;
+        return checkTapeSize(spec, p.width_mm, p.length_m);
+      },
+      spec,
     }),
-    [store, getLogoFile],
+    [store, spec, getLogoFile],
   );
 }

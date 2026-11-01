@@ -1,12 +1,13 @@
 // Server-side validation of the submitted design (DesignJson in lib/types.ts).
 // The schema itself is owned by features/designer (single source for limits); this file adds
-// lead-intake rules: a preset is required (designs.width_mm etc. are NOT NULL) and
-// logo.path is always reset (the server sets it after upload).
+// lead-intake rules: a tape width + length are required (designs.width_mm etc. are NOT NULL;
+// save-lead.ts checks them against the active DB list / range) and logo.path is always reset
+// (the server sets it after upload). presetId is ignored: sizes come from tape_widths (0022).
 import { designJsonSchema } from "@/features/designer";
 import type { DesignJson } from "@/lib/types";
 import { MAX_DESIGN_JSON_CHARS } from "./api-contract";
 
-export type ValidDesign = DesignJson & { presetId: string };
+export type ValidDesign = DesignJson & { presetId: null; widthMm: number; lengthM: number };
 
 /** Parses the `design` multipart field. Returns null when missing or invalid. */
 export function parseDesignJson(raw: unknown): ValidDesign | null {
@@ -18,11 +19,14 @@ export function parseDesignJson(raw: unknown): ValidDesign | null {
     return null;
   }
   const parsed = designJsonSchema.safeParse(json);
-  if (!parsed.success || !parsed.data.presetId) return null;
+  if (!parsed.success) return null;
   const d = parsed.data;
+  if (d.widthMm === undefined || d.lengthM === undefined) return null;
   return {
     ...d,
-    presetId: d.presetId as string,
+    presetId: null,
+    widthMm: d.widthMm,
+    lengthM: d.lengthM,
     accentColor: d.accentColor ?? null,
     logo: d.logo ? { ...d.logo, path: null } : null,
   };

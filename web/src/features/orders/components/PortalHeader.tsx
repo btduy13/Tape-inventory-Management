@@ -21,6 +21,7 @@ export function PortalHeader({ profile }: { profile: Profile }) {
               <Link href={ROUTES.admin} className="hover:underline">{t.nav.admin}</Link>
               <Link href={ROUTES.adminUsers} className="hover:underline">{t.nav.users}</Link>
               <Link href={ROUTES.adminPresets} className="hover:underline">{t.nav.presets}</Link>
+              <Link href={ROUTES.adminTapeSpecs} className="hover:underline">{t.tapeSpec.title}</Link>
             </>
           )}
         </nav>

@@ -20,6 +20,7 @@ export default async function AdminPage() {
         <Link href={ROUTES.portal} className="text-amber-800 hover:underline">{t.nav.portal}</Link>
         <Link href={ROUTES.adminUsers} className="text-amber-800 hover:underline">{t.admin.users}</Link>
         <Link href={ROUTES.adminPresets} className="text-amber-800 hover:underline">{t.admin.presets}</Link>
+        <Link href={ROUTES.adminTapeSpecs} className="text-amber-800 hover:underline">{t.tapeSpec.title}</Link>
         <Link href={ROUTES.workshop} className="text-amber-800 hover:underline">{t.nav.workshop}</Link>
       </nav>
     </div>

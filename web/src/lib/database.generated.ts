@@ -333,6 +333,34 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"tape_spec_settings": {
+                  Row: {
+                    "id": boolean,"max_length_m": number,"min_length_m": number,"thickness_mic": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: boolean,"max_length_m": number,"min_length_m": number,"thickness_mic"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "id"?: boolean,"max_length_m"?: number,"min_length_m"?: number,"thickness_mic"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"tape_widths": {
+                  Row: {
+                    "created_at": string,"id": string,"is_active": boolean,"sort_order": number,"updated_at": string,"width_mm": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"sort_order"?: number,"updated_at"?: string,"width_mm": number
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"sort_order"?: number,"updated_at"?: string,"width_mm"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {

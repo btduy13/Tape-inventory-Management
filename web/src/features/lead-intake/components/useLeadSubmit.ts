@@ -43,6 +43,10 @@ export function useLeadSubmit(getDesign: GetLeadDesign, onDone?: () => void) {
       setState({ kind: "error", message: t.designRequired });
       return;
     }
+    if (design.invalidMessage) {
+      setState({ kind: "error", message: design.invalidMessage });
+      return;
+    }
     const res = await submitLead(buildLeadFormData(values, design, token));
     setToken(null); // Turnstile tokens are single use.
     onDone?.();

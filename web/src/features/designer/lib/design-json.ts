@@ -7,6 +7,7 @@ import {
 } from "./constants";
 import { paletteColors } from "./palette";
 import { LOGO_COLOR_MODES, type DesignState, type LogoColorMode } from "./state";
+import { LENGTH_M_MAX, WIDTH_MM_MAX } from "./tape-spec";
 
 const hex = z.string().regex(/^#[0-9a-f]{6}$/);
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -34,6 +35,9 @@ export const designJsonSchema = z
       .nullable()
       .optional(),
     repeatGapPx: z.number().min(0).max(MAX_REPEAT_GAP_PX).optional(),
+    // Tape size (0022). Structural bounds only: lead-intake checks the active DB list / range.
+    widthMm: z.number().int().min(1).max(WIDTH_MM_MAX).optional(),
+    lengthM: z.number().positive().max(LENGTH_M_MAX).optional(),
     textOffsetX: z.number().min(-MAX_OFFSET_X).max(MAX_OFFSET_X).optional(),
     textOffsetY: z.number().min(-MAX_LOGO_OFFSET).max(MAX_LOGO_OFFSET).optional(),
   })
@@ -64,6 +68,9 @@ export function toDesignJson(state: DesignState): DesignJson {
         }
       : null,
     repeatGapPx: state.repeatGapPx,
+    widthMm: state.preset.width_mm,
+    // NaN (unfinished input) becomes 0, which the server rejects.
+    lengthM: Number.isFinite(state.preset.length_m) ? state.preset.length_m : 0,
     textOffsetX: r4(state.textOffsetX),
     textOffsetY: r4(state.textOffsetY),
   };

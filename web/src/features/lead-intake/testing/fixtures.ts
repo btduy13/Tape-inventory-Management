@@ -1,12 +1,22 @@
 // Shared test fixtures (imported only by *.test.ts files).
-import type { DesignJson } from "@/lib/types";
-import type { LeadStore, PresetSnapshot } from "../server/lead-store";
+import type { DesignJson, TapePreset } from "@/lib/types";
+import type { TapeSpec } from "@/features/designer";
+import type { LeadStore } from "../server/lead-store";
 
 export const PRESET_ID = "11111111-2222-4333-8444-555555555555";
 export const LEAD_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 
-export const PRESET: PresetSnapshot = {
+/** A tape_presets row (landing showcase tests). */
+export const PRESET: Pick<TapePreset, "id" | "label" | "width_mm" | "length_m" | "thickness_mic"> = {
   id: PRESET_ID, label: "48mm x 100m", width_mm: 48, length_m: 100, thickness_mic: 45,
+};
+
+/** Active DB spec as the service-role store returns it (0022 seed). */
+export const SPEC: TapeSpec = {
+  widths: [12, 15, 16, 18, 20, 24, 30, 35, 40, 48, 60, 70, 80],
+  minLengthM: 50,
+  maxLengthM: 635,
+  thicknessMic: 45,
 };
 
 export const DESIGN: DesignJson = {
@@ -20,6 +30,8 @@ export const DESIGN: DesignJson = {
   fontSizePx: 40,
   logo: { path: null, scale: 1, offsetX: 0, offsetY: 0 },
   repeatGapPx: 20,
+  widthMm: 48,
+  lengthM: 100,
 };
 
 export const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
@@ -61,12 +73,12 @@ export type FakeStore = LeadStore & {
   removed: string[];
 };
 
-export function fakeStore(opts: { preset?: PresetSnapshot | null; failDesign?: boolean } = {}): FakeStore {
+export function fakeStore(opts: { spec?: TapeSpec; failSpec?: boolean; failDesign?: boolean } = {}): FakeStore {
   const s: FakeStore = {
     leads: [], designs: [], files: [], deletedLeads: [], removed: [],
-    async findActivePreset(id) {
-      const p = opts.preset === undefined ? PRESET : opts.preset;
-      return p && p.id === id ? p : null;
+    async loadTapeSpec() {
+      if (opts.failSpec) throw new Error("tape widths lookup failed: 08006");
+      return opts.spec ?? SPEC;
     },
     async insertLead(row) {
       s.leads.push(row);

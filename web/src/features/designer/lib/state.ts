@@ -54,6 +54,10 @@ export type ColorRole = "backgroundColor" | "textColor" | "accentColor";
 
 export type DesignAction =
   | { type: "setPreset"; preset: PresetOption }
+  /** Pick a tape width (mm); length / thickness are kept. */
+  | { type: "setWidth"; widthMm: number }
+  /** Customer-typed roll length (m). May be NaN / out of range while typing; submit re-checks. */
+  | { type: "setLength"; lengthM: number }
   | { type: "setColor"; role: ColorRole; color: string | null }
   | { type: "setText"; text: string }
   | { type: "setFontFamily"; fontFamily: string }
@@ -108,6 +112,11 @@ export function sanitizeText(input: string): string {
   return input.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, MAX_TEXT_LENGTH);
 }
 
+/** Tape size with a new width / length (custom size: no tape_presets row). */
+function sizeWith(p: PresetOption, widthMm: number, lengthM: number): PresetOption {
+  return { ...p, id: null, label: `${widthMm}mm x ${lengthM}m`, width_mm: widthMm, length_m: lengthM };
+}
+
 function applyColor(state: DesignState, role: ColorRole, raw: string | null): DesignState {
   if (role === "accentColor" && raw === null) return { ...state, accentColor: null };
   const color = normalizeHex(raw);
@@ -149,6 +158,13 @@ export function designReducer(state: DesignState, action: DesignAction): DesignS
       const px = Math.min(clampFont(state.fontSizePx * ratio), maxFontSize(action.preset.width_mm));
       return { ...state, preset: action.preset, fontSizePx: px };
     }
+    case "setWidth": {
+      if (!(Number.isFinite(action.widthMm) && action.widthMm > 0)) return state;
+      const preset = sizeWith(state.preset, action.widthMm, state.preset.length_m);
+      return designReducer(state, { type: "setPreset", preset });
+    }
+    case "setLength":
+      return { ...state, preset: sizeWith(state.preset, state.preset.width_mm, action.lengthM) };
     case "setColor":
       return applyColor(state, action.role, action.color);
     case "setText":

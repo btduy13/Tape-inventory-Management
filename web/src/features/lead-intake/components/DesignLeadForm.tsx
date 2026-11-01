@@ -2,6 +2,7 @@
 // LeadForm wired to the designer: must be rendered inside features/designer <DesignProvider>.
 import { useCallback } from "react";
 import { useDesignExport } from "@/features/designer";
+import { format, getDictionary } from "@/i18n";
 import type { GetLeadDesign } from "../lib/design-contract";
 import { LeadForm, type LeadFormProps } from "./LeadForm";
 
@@ -9,7 +10,10 @@ export function DesignLeadForm(props: Omit<LeadFormProps, "getDesign">) {
   const design = useDesignExport();
   const getDesign = useCallback<GetLeadDesign>(async () => {
     const designJson = design.getDesignJson();
-    if (!designJson.presetId) return null;
+    if (design.getSizeError()) {
+      const { minLengthM: min, maxLengthM: max } = design.spec;
+      return { designJson, invalidMessage: format(getDictionary().tapeSpec.sizeInvalid, { min, max }) };
+    }
     // Preview is optional: a missing canvas must not block the quote request.
     const previewPng = await design.getPngBlob().catch(() => null);
     return { designJson, logoFile: design.getLogoFile(), previewPng };
