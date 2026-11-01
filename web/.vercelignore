@@ -1,0 +1,9 @@
+.env*
+!.env.example
+node_modules
+.next
+tests
+e2e
+test-results
+playwright-report
+tsconfig.tsbuildinfo
