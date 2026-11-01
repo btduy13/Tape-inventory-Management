@@ -18,7 +18,9 @@ set local search_path = public, pg_catalog;
 with
 -- Intended exposure ---------------------------------------------------------------------------
 anon_policy_allow(tbl, policy) as (
-  values ('tape_presets', 'tape_presets_select_active')          -- public designer reads presets
+  values ('tape_presets', 'tape_presets_select_active'),         -- public designer reads presets
+         ('tape_widths', 'tape_widths_select_active'),           -- 0022: designer width list
+         ('tape_spec_settings', 'tape_spec_settings_select')     -- 0022: length range
 ),
 anon_function_allow(sig) as (
   values ('lead_transition_allowed(lead_status,lead_status)')   -- pure, not SECURITY DEFINER
