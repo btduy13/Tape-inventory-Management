@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PerspectiveCamera, Vector3 } from "three";
 import { cameraPosition, fitDistance, orbitLimits, refitDirection } from "./camera";
 import {
-  CUP_CENTER_Y_MM, CUP_MM, CUP_STRIP_MAX_MM, CUP_STRIP_MIN_MM, cupBoundingRadiusMm, cupLidOutline, cupLidProfile, cupRadiusAt, cupStripPath,
+  CUP_CENTER_Y_MM, CUP_MM, CUP_STRIP_MAX_MM, CUP_STRIP_MIN_MM, cupBoundingRadiusMm, cupStripCapped, cupStripCols, cupLidOutline, cupLidProfile, cupRadiusAt, cupStripPath,
   cupStripRibbon, cupStripRows, cupStripSurface, cupStripWidthMm, cupWallProfile,
 } from "./cup";
 import { ribbonOrientation } from "./ribbon";
@@ -71,12 +71,39 @@ describe("cup geometry", () => {
     expect(cupLidOutline()[0][0]).toBeGreaterThan(CUP_MM.rimRadius + 1.5);
   });
 
-  it("strip width is proportional to the tape width, clamped", () => {
-    expect(cupStripWidthMm(48)).toBe(24);
-    expect(cupStripWidthMm(60)).toBe(30);
+  it("strip width is the real tape width, capped where it cannot wrap the cup", () => {
+    expect(cupStripWidthMm(12)).toBe(12);
+    expect(cupStripWidthMm(48)).toBe(48);
+    expect(cupStripWidthMm(60)).toBe(60);
+    expect(cupStripWidthMm(80)).toBe(CUP_STRIP_MAX_MM);
     expect(cupStripWidthMm(4)).toBe(CUP_STRIP_MIN_MM);
-    expect(cupStripWidthMm(500)).toBe(CUP_STRIP_MAX_MM);
     expect(cupStripWidthMm(Number.NaN)).toBe(CUP_STRIP_MIN_MM);
+    expect(cupStripCapped(60)).toBe(false);
+    expect(cupStripCapped(80)).toBe(true);
+    // the cap is narrower than the wall diameter where the strip ends
+    expect(CUP_STRIP_MAX_MM).toBeLessThan(2 * cupRadiusAt(CUP_MM.stripStart));
+  });
+
+  it("real 500 ml cup: top 90, bottom 60, height 150, lid 12 (mm)", () => {
+    expect(2 * CUP_MM.rimRadius).toBe(90);
+    expect(2 * CUP_MM.baseRadius).toBe(60);
+    expect(CUP_MM.height).toBe(150);
+    expect(CUP_MM.lidHeight).toBe(12);
+  });
+
+  it("widest strip (60 mm) still hugs the wall and the lid with odd columns", () => {
+    expect(cupStripCols(60) % 2).toBe(1);
+    const rows = cupStripRows(60);
+    for (const row of rows) {
+      expect(row.points[0][0]).toBeCloseTo(30);
+      expect(row.points.at(-1)![0]).toBeCloseTo(-30);
+      for (const p of row.points) {
+        expect(Number.isFinite(p[0] + p[1] + p[2])).toBe(true);
+        // never pushed through the axis: stays on the strip's own side
+        expect(Math.hypot(p[0], p[2])).toBeLessThan(CUP_MM.rimRadius + CUP_MM.skirtOut + 2);
+      }
+    }
+    expect(ribbonOrientation(cupStripRibbon(80, 300))).toEqual({ outward: true, unmirrored: true });
   });
 
   it("lid outline is convex so the strip can touch it everywhere", () => {
@@ -119,13 +146,13 @@ describe("cup geometry", () => {
     expect(path.filter((p) => p.side === 1).length).toBe(path.filter((p) => p.side === -1).length + 1);
   });
 
-  it("strip rows hug every surface at constant width, no gaps between rows", () => {
-    const rows = cupStripRows(24);
+  it.each([24, 60])("strip rows (%i mm) hug every surface at constant width, no gaps between rows", (w) => {
+    const rows = cupStripRows(w);
     const surf = cupStripSurface(0);
     for (const row of rows) {
-      // constant width across (lateral x from +12 to -12)
-      expect(row.points[0][0]).toBeCloseTo(12);
-      expect(row.points.at(-1)![0]).toBeCloseTo(-12);
+      // constant width across (lateral x from +w/2 to -w/2)
+      expect(row.points[0][0]).toBeCloseTo(w / 2);
+      expect(row.points.at(-1)![0]).toBeCloseTo(-w / 2);
       for (const p of row.points) {
         // every vertex sits within a hair of the cup/lid surface
         const rho = Math.hypot(p[0], p[2]);
@@ -145,7 +172,8 @@ describe("cup geometry", () => {
       for (let j = 0; j < rows[i].points.length; j++) {
         const a = rows[i - 1].points[j];
         const b = rows[i].points[j];
-        expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeLessThan(3);
+        // wide strips: the outer columns cover a shorter path over the lid, so a few quads stretch
+        expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeLessThan(w > 36 ? 12 : 3);
       }
     }
     // visible on both sides
@@ -157,13 +185,17 @@ describe("cup geometry", () => {
     const r = cupStripRibbon(48, 300);
     expect(ribbonOrientation(r)).toEqual({ outward: true, unmirrored: true });
     // one quad strip with no folds: every row pair is joined
-    const rows = cupStripRows(24).length;
-    expect(r.indices.length).toBe((rows - 1) * 8 * 6);
+    const rows = cupStripRows(48).length;
+    expect(r.indices.length).toBe((rows - 1) * (cupStripCols(48) - 1) * 6);
   });
 
   it("print period scales with the strip so the artwork keeps its aspect", () => {
     const r = cupStripRibbon(48, 300);
-    expect(r.uvs[r.uvs.length - 2]).toBeCloseTo(cupStripRows(24).at(-1)!.along / 150);
+    // real width: period = the design length, unscaled
+    expect(r.uvs[r.uvs.length - 2]).toBeCloseTo(cupStripRows(48).at(-1)!.along / 300);
+    // capped (80 -> 60 mm): period shrinks by 60/80 so the artwork is not stretched
+    const c = cupStripRibbon(80, 300);
+    expect(c.uvs[c.uvs.length - 2]).toBeCloseTo(cupStripRows(60).at(-1)!.along / 225);
   });
 });
 

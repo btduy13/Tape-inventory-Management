@@ -1,11 +1,11 @@
 // Full-bleed printed tape strip that scrolls endlessly (CSS transform only). Decorative.
 // The run of items is rendered twice; the track slides by exactly -50% for a seamless loop.
-export type MarqueeTone = "tape" | "white" | "cobalt";
+export type MarqueeTone = "tape" | "white" | "red";
 
 const TONES: Record<MarqueeTone, { strip: string; text: string; mark: string }> = {
-  tape: { strip: "bg-lp-tape", text: "text-lp-ink", mark: "bg-lp-cobalt" },
-  white: { strip: "bg-white", text: "text-lp-cobalt", mark: "bg-lp-tape ring-2 ring-lp-cobalt" },
-  cobalt: { strip: "bg-lp-cobalt", text: "text-white", mark: "bg-lp-tape" },
+  tape: { strip: "bg-vt-yellow", text: "text-vt-navy-deep", mark: "bg-vt-red-deep" },
+  white: { strip: "bg-white", text: "text-vt-red-deep", mark: "bg-vt-yellow ring-2 ring-vt-red-deep" },
+  red: { strip: "bg-vt-red-deep", text: "text-white", mark: "bg-vt-yellow" },
 };
 
 export function TapeMarquee({
@@ -22,7 +22,7 @@ export function TapeMarquee({
   const s = TONES[tone];
   const run = [...items, ...items, ...items];
   return (
-    <div aria-hidden="true" className={`relative z-10 overflow-hidden shadow-[0_10px_30px_-12px_rgb(10_20_102/0.45)] ${s.strip} ${className}`}>
+    <div aria-hidden="true" className={`relative z-10 overflow-hidden shadow-[0_10px_30px_-12px_rgb(26_28_78/0.45)] ${s.strip} ${className}`}>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/50" />
       <div className={`flex w-max ${reverse ? "lp-marquee-rev" : "lp-marquee"}`}>
         {[0, 1].map((copy) => (

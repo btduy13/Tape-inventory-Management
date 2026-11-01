@@ -12,12 +12,19 @@ export const metadata: Metadata = {
   description: t.landing.heroSubtitle,
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   robots: { index: true, follow: true },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand/vinh-thinh-icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: { url: "/brand/apple-touch-icon.png", sizes: "180x180" },
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#b45309",
+  themeColor: "#cf1f27",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

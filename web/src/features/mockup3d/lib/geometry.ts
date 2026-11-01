@@ -1,4 +1,6 @@
 // Real-world tape roll / carton geometry in mm, converted to scene units. Pure + unit-tested.
+// TRUE SCALE: every view uses the same mm unit system (1 scene unit = 100 mm), so the roll,
+// the carton strip and the cup seal strip keep their real size relative to each other.
 import type { RibbonRow, V3 } from "./ribbon";
 
 export type RollPreset = { width_mm: number; length_m: number; thickness_mic: number };
@@ -7,8 +9,13 @@ export type RollPreset = { width_mm: number; length_m: number; thickness_mic: nu
 export const MM_PER_UNIT = 100;
 export const CORE_INNER_DIAMETER_MM = 76; // 3" paper core
 export const CORE_WALL_MM = 6;
-/** Visual clamp so extreme presets still frame nicely. */
-export const MAX_OUTER_RADIUS_MM = 120;
+/** Film thickness used when the design state has none (typical BOPP packing tape). */
+export const DEFAULT_THICKNESS_MIC = 45;
+/**
+ * Safety clamp only (bad input): Ø500 mm. Real presets stay far below it
+ * (635 m x 45 mic ~ Ø210 mm; 635 m x 200 mic ~ Ø412 mm), so they are never distorted.
+ */
+export const MAX_OUTER_RADIUS_MM = 250;
 
 export const toUnits = (mm: number) => mm / MM_PER_UNIT;
 
@@ -17,8 +24,8 @@ export const toUnits = (mm: number) => mm / MM_PER_UNIT;
  * pi (R^2 - r^2) = L * t  =>  R = sqrt(r^2 + L t / pi)
  */
 export function rollOuterRadiusMm(lengthM: number, thicknessMic: number, coreOuterRadiusMm: number): number {
-  const l = Math.max(0, lengthM) * 1000;
-  const t = Math.max(0, thicknessMic) / 1000;
+  const l = Math.max(0, Number.isFinite(lengthM) ? lengthM : 0) * 1000;
+  const t = (Number.isFinite(thicknessMic) && thicknessMic > 0 ? thicknessMic : DEFAULT_THICKNESS_MIC) / 1000;
   const r = Math.sqrt(coreOuterRadiusMm ** 2 + (l * t) / Math.PI);
   return Math.min(MAX_OUTER_RADIUS_MM, r);
 }
@@ -51,8 +58,11 @@ export function textureRepeat(surfaceMm: number, stripLengthMm: number): number 
   return surfaceMm / stripLengthMm;
 }
 
-/** Kraft carton used in the mockup (mm): x = length, y = height, z = depth. */
-export const CARTON_MM = { length: 400, depth: 280, height: 240 } as const;
+/**
+ * Kraft carton used in the mockup (mm): x = length, y = height, z = depth.
+ * Standard Vietnamese 3-ply shipping carton 40 x 30 x 25 cm (common "thùng 40x30x25").
+ */
+export const CARTON_MM = { length: 400, depth: 300, height: 250 } as const;
 /** How far the tape folds down over each short end face (mm). */
 export const CARTON_FLAP_MM = 150;
 /** Gap between carton and tape so the strip never z-fights the board. */

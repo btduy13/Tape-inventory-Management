@@ -8,6 +8,9 @@ import { getDictionary } from "@/i18n";
 import { DesignProvider, DesignerPanel } from "@/features/designer";
 import { getTapeSpec } from "@/features/designer/server";
 import { DesignLeadForm } from "@/features/lead-intake";
+import { contactInfoFromEnv } from "@/features/lead-intake/landing/contact-info";
+// Same container + logo lockup as the landing header (Hero.tsx), so the logo does not shift between pages.
+import { LP_CONTAINER } from "@/features/lead-intake/landing/ui";
 
 export const metadata: Metadata = { title: getDictionary().designer.title };
 
@@ -20,30 +23,41 @@ export default async function DesignPage() {
   const [spec, h] = await Promise.all([getTapeSpec(), headers()]);
   const nonce = h.get("x-nonce") ?? undefined;
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TURNSTILE_TEST_SITE_KEY;
+  // Over-3-ink dialog: call / Zalo the consultant (CONTACT_PHONE); unset -> opens the quote step.
+  const { phone, phoneHref } = contactInfoFromEnv(process.env);
+  const lp = t.landing;
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
+    <div className="flex min-h-full flex-1 flex-col bg-vt-paper text-slate-900">
+      <header className="border-b border-vt-ink/10 bg-white">
+        <div className={`${LP_CONTAINER} flex h-16 items-center justify-between gap-3 md:h-20`}>
           <Link
             href="/"
-            className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+            className="flex min-w-0 items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vt-navy"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- next/image adds an inline style (blocked by CSP) */}
+            <img src="/brand/vinh-thinh-logo.png" alt={lp.logoAlt} width={478} height={632} className="h-12 w-auto md:h-16" />
+            <span className="truncate border-l border-vt-ink/15 pl-3 text-[11px] leading-tight font-bold tracking-wide text-vt-navy uppercase md:text-xs">
+              {lp.brand}
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-vt-ink/80 hover:bg-vt-paper hover:text-vt-red-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vt-navy"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M15 18l-6-6 6-6" />
             </svg>
             {t.designer.backHome}
           </Link>
-          <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
-          <span className="truncate text-sm font-semibold text-slate-900">{t.common.appName}</span>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-7xl min-w-0 flex-1 flex-col gap-5 px-4 pt-5 sm:px-6 sm:pt-8 lg:pb-12">
+      <main className={`${LP_CONTAINER} flex min-w-0 flex-1 flex-col gap-5 pt-5 sm:pt-8 lg:pb-12`}>
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t.designer.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-vt-ink sm:text-3xl">{t.designer.title}</h1>
           <p className="text-sm text-slate-600 sm:text-base">{t.designer.pageSubtitle}</p>
         </div>
         <DesignProvider spec={spec}>
-          <DesignerPanel quote={<DesignLeadForm turnstileSiteKey={siteKey} nonce={nonce} hideHeading />} />
+          <DesignerPanel contact={{ phone, phoneHref }} quote={<DesignLeadForm turnstileSiteKey={siteKey} nonce={nonce} hideHeading />} />
         </DesignProvider>
       </main>
     </div>

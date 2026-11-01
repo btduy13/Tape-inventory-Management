@@ -85,6 +85,9 @@ export type DesignJson = {
   lengthM?: number;               // customer roll length (m), within tape_spec_settings
   textOffsetX?: number;           // text position, fraction of tape width (canvas drag)
   textOffsetY?: number;
+  inkColors?: string[];           // printed inks (hex), tape film colour excluded (designer logo-colors)
+  inkCount?: number;              // distinct print inks; > 3 needs a consultant
+  inkOverLimit?: boolean;         // true: logo or design exceeds the 3-ink limit
 };
 
 export type Design = {

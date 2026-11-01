@@ -4,12 +4,15 @@
 //   mobile:  pinnable 2D stage on top, steps, 3D, bottom action bar
 // `quote` is the quote form (lead-intake's DesignLeadForm), rendered inside step 4 so features stay
 // decoupled. Collapsed steps stay mounted (`hidden`) so typed values and the form state survive.
+// `contact` (optional, from the page's CONTACT_* env) gives the over-3-ink dialog a call / Zalo button;
+// without it "Liên hệ tư vấn" opens the quote step.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { format, getDictionary } from "@/i18n";
 import { QUOTE_ANCHOR, VIEW3D_ANCHOR } from "./anchors";
 import { DesignMockupBridge } from "./DesignMockupBridge";
 import { ColorDots, DesignSummary, useDesignSummary } from "./DesignSummary";
 import { ExportButtons } from "./ExportButtons";
+import { InkLimitDialog, type DesignerContact } from "./InkLimitDialog";
 import { LogoUpload } from "./LogoUpload";
 import { MobileActionBar } from "./MobileActionBar";
 import { PalettePicker } from "./PalettePicker";
@@ -22,7 +25,7 @@ import { barClearancePb, barClearanceScrollMb, btnPrimary, btnSecondary, card, f
 type StepId = "spec" | "content" | "colors" | "quote";
 const ORDER: readonly StepId[] = ["spec", "content", "colors", "quote"];
 
-export function DesignerPanel({ quote }: { quote?: ReactNode }) {
+export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?: DesignerContact | null }) {
   const t = getDictionary().designer;
   const sum = useDesignSummary();
   const [open, setOpen] = useState<StepId | null>("spec");
@@ -47,6 +50,11 @@ export function DesignerPanel({ quote }: { quote?: ReactNode }) {
   };
   const next = (id: StepId) => goTo(ORDER[ORDER.indexOf(id) + 1] ?? "quote");
   // "nearest" + the card's scroll margins: the whole card ends up between the top and the action bar.
+  const changeLogo = useCallback(() => {
+    // Same user gesture: open the file picker, then show the content step behind it.
+    document.querySelector<HTMLInputElement>('input[data-testid="logo-input"]')?.click();
+    goTo("content");
+  }, [goTo]);
   const show3d = useCallback(() => scrollToEl(document.getElementById(VIEW3D_ANCHOR), "nearest"), []);
 
   // Deep link from landing CTAs: /thiet-ke#yeu-cau-bao-gia opens the quote step.
@@ -106,7 +114,7 @@ export function DesignerPanel({ quote }: { quote?: ReactNode }) {
               aria-label={t.pinPreview}
               title={t.pinPreview}
               onClick={() => setPinned((p) => !p)}
-              className={`-my-2 -mr-1 h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg lg:hidden ${open === "quote" ? "hidden" : "inline-flex"} ${pinned ? "text-slate-900" : "text-slate-500"} hover:bg-slate-100 ${focusRing}`}
+              className={`-my-2 -mr-1 h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg lg:hidden ${open === "quote" ? "hidden" : "inline-flex"} ${pinned ? "text-vt-navy" : "text-slate-500"} hover:bg-slate-100 ${focusRing}`}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill={pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 3h6l-1 6 4 4H6l4-4-1-6Z" /><path d="M12 13v8" fill="none" />
@@ -148,6 +156,7 @@ export function DesignerPanel({ quote }: { quote?: ReactNode }) {
             t.stepColors,
             <span className="inline-flex items-center gap-2"><ColorDots colors={sum.colors} />{sum.colorsLabel}</span>,
             <div className="flex flex-col"><PalettePicker />{nextBtn("colors")}</div>,
+            { bad: sum.inksOver },
           )}
           {step(
             "quote",
@@ -170,7 +179,7 @@ export function DesignerPanel({ quote }: { quote?: ReactNode }) {
             <div className="flex min-w-0 flex-col gap-1" aria-label={t.summaryTitle} role="group">
               <p className="flex min-w-0 items-center justify-between gap-3 text-sm">
                 <span className={`truncate font-semibold tabular-nums ${sum.lengthOk ? "text-slate-900" : "text-red-700"}`}>{sum.size}</span>
-                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-600"><ColorDots colors={sum.colors} />{sum.colorsLabel}</span>
+                <span className={`flex shrink-0 items-center gap-2 text-xs ${sum.inksOver ? "font-medium text-red-700" : "text-slate-600"}`}><ColorDots colors={sum.colors} />{sum.colorsLabel}</span>
               </p>
               <p className="truncate text-xs text-slate-600">{sum.content}</p>
             </div>
@@ -182,6 +191,7 @@ export function DesignerPanel({ quote }: { quote?: ReactNode }) {
       </div>
 
       <MobileActionBar onView3d={show3d} onQuote={() => goTo("quote")} />
+      <InkLimitDialog contact={contact} onContactForm={() => goTo("quote")} onChangeLogo={changeLogo} />
     </div>
   );
 }
@@ -220,7 +230,7 @@ function Step({ id, n, title, summary, bad, anchor, open, onToggle, sectionRef, 
         >
           <span
             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums ${
-              open ? "bg-amber-400 text-slate-900" : "bg-slate-100 text-slate-700"
+              open ? "bg-vt-red-deep text-white" : "bg-slate-100 text-slate-700"
             }`}
           >
             <span className="sr-only">{format(t.stepNumber, { n })}</span>

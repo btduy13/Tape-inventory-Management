@@ -2,6 +2,7 @@
 // Sits under ProductShowcase on the same mist background, as a ruled spec list.
 import { format, getDictionary } from "@/i18n";
 import type { ShowcasePreset } from "../server/presets";
+import { LP_CONTAINER } from "./ui";
 
 /** Visual strip height bucket by tape width (Tailwind classes only: CSP has no inline styles). */
 export function stripClass(widthMm: number): string {
@@ -14,29 +15,36 @@ export function stripClass(widthMm: number): string {
 export function PresetsShowcase({ presets }: { presets: ShowcasePreset[] }) {
   const t = getDictionary().landing;
   return (
-    <section aria-labelledby="kich-thuoc-title" className="bg-lp-mist pb-24 md:pb-32">
-      <div className="mx-auto grid max-w-[1600px] gap-8 px-4 sm:px-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+    <section aria-labelledby="kich-thuoc-title" className="border-t border-vt-ink/10 bg-vt-paper pt-12 pb-20 md:pt-14 md:pb-28">
+      <div className={`${LP_CONTAINER} grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]`}>
         <div>
-          <h2 id="kich-thuoc-title" className="lp-display text-3xl text-lp-ink sm:text-4xl">
+          <h2 id="kich-thuoc-title" className="lp-display text-3xl text-vt-ink sm:text-4xl">
             {t.presetsTitle}
           </h2>
-          <p className="mt-3 max-w-sm leading-relaxed text-lp-ink/80">{t.presetsSubtitle}</p>
+          <p className="mt-3 max-w-sm leading-relaxed text-vt-ink/80">{t.presetsSubtitle}</p>
         </div>
         {presets.length === 0 ? (
-          <p className="self-center text-lp-ink/70">{t.presetsEmpty}</p>
+          <p className="self-center text-vt-ink/70">{t.presetsEmpty}</p>
         ) : (
-          <ul className="border-t-2 border-lp-ink">
+          <ul className="lp-stagger border-t-2 border-vt-ink">
             {presets.map((p) => (
               <li
                 key={p.id}
                 data-lp-reveal="up"
-                className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-1 border-b border-lp-ink/20 py-4 sm:grid-cols-[7rem_minmax(0,1fr)_auto]"
+                className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-1 border-b border-vt-ink/20 py-4 sm:grid-cols-[7rem_minmax(0,1fr)]"
               >
                 <div aria-hidden="true" className="flex h-10 items-center">
-                  <div className={`w-full rounded-[2px] bg-lp-tape ring-1 ring-lp-ink/15 ${stripClass(Number(p.width_mm))}`} />
+                  {/* printed tape: the brand mark repeated along the strip */}
+                  <div
+                    className={`flex w-full items-center justify-around overflow-hidden rounded-[2px] bg-vt-yellow py-px ring-1 ring-vt-ink/15 ${stripClass(Number(p.width_mm))}`}
+                  >
+                    {[0, 1, 2].map((k) => (
+                      // eslint-disable-next-line @next/next/no-img-element -- next/image adds an inline style (blocked by CSP)
+                      <img key={k} src="/brand/vinh-thinh-icon.png" alt="" width={512} height={512} loading="lazy" className="h-full w-auto" />
+                    ))}
+                  </div>
                 </div>
-                <p className="font-bold text-lp-ink">{p.label}</p>
-                <p className="col-start-2 text-sm text-lp-ink/75 sm:col-start-3">
+                <p className="font-bold text-vt-ink">
                   {format(t.presetSpec, {
                     width: Number(p.width_mm),
                     length: Number(p.length_m),

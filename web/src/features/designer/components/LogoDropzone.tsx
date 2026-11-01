@@ -3,6 +3,7 @@
 // Checks here are UX only; lead-intake's server re-validates and re-sanitizes.
 import { useId, useRef, useState, type DragEvent } from "react";
 import { getDictionary } from "@/i18n";
+import { analyzeLogoUrl } from "../lib/logo-colors-dom";
 import { loadLogoFile } from "../lib/logo-load";
 import { useDesignState } from "./hooks";
 import { focusRing } from "./ui";
@@ -27,8 +28,14 @@ export function LogoDropzone() {
     setError(null);
     try {
       const res = await loadLogoFile(file);
-      if (res.ok) dispatch({ type: "setLogo", logo: res.logo });
-      else setError(errorText[res.error]);
+      if (res.ok) {
+        dispatch({ type: "setLogo", logo: res.logo });
+        // Count the logo's inks in the background (max-3-ink rule); the reducer ignores a stale result.
+        const { url, width, height } = res.logo;
+        void analyzeLogoUrl(url, width, height).then((a) =>
+          dispatch({ type: "setLogoInks", url, inks: a ? a.inks : null }),
+        );
+      } else setError(errorText[res.error]);
     } catch {
       setError(t.logoDecodeError);
     } finally {
@@ -66,7 +73,7 @@ export function LogoDropzone() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           onDragLeave={() => setOver(false)}
-          className={`flex min-w-0 flex-wrap items-center gap-3 rounded-xl border p-3 transition-colors duration-150 motion-reduce:transition-none ${over ? "border-slate-900 bg-slate-50" : "border-slate-200 bg-white"}`}
+          className={`flex min-w-0 flex-wrap items-center gap-3 rounded-xl border p-3 transition-colors duration-150 motion-reduce:transition-none ${over ? "border-vt-navy bg-vt-navy/5" : "border-slate-200 bg-white"}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- blob: preview of a local file */}
           <img src={s.logo.url} alt={t.logoThumbAlt} className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-contain" />
@@ -95,7 +102,7 @@ export function LogoDropzone() {
           onDragLeave={() => setOver(false)}
           aria-busy={busy}
           className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center text-sm transition-colors duration-150 motion-reduce:transition-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-slate-900 ${
-            over ? "border-slate-900 bg-slate-50" : "border-slate-300 bg-slate-50/50 hover:border-slate-500 hover:bg-slate-50"
+            over ? "border-vt-navy bg-vt-navy/5" : "border-slate-300 bg-slate-50/50 hover:border-slate-500 hover:bg-slate-50"
           }`}
         >
           {busy ? (

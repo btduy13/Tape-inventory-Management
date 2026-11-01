@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { contactInfoFromEnv, hasContactInfo } from "./contact-info";
 import { PresetsShowcase, stripClass } from "./PresetsShowcase";
@@ -9,6 +9,7 @@ import { CartonTapeArt } from "./CartonTapeArt";
 import { Hero } from "./Hero";
 import { DesignCta } from "./DesignCta";
 import { TapeMarquee } from "./TapeMarquee";
+import { Contact } from "./Contact";
 import { PRESET } from "../testing/fixtures";
 
 describe("contactInfoFromEnv", () => {
@@ -17,6 +18,8 @@ describe("contactInfoFromEnv", () => {
     expect(c.phoneHref).toBe("tel:0901234567");
     expect(c.email).toBe("sales@bangkeo.vn");
     expect(c.address).toBeNull();
+    expect(c.zaloHref).toBe("https://zalo.me/0901234567");
+    expect(contactInfoFromEnv({ CONTACT_PHONE: "+84 901 234 567" }).zaloHref).toBe("https://zalo.me/0901234567");
     expect(hasContactInfo(contactInfoFromEnv({}))).toBe(false);
   });
 
@@ -30,8 +33,8 @@ describe("contactInfoFromEnv", () => {
 describe("PresetsShowcase", () => {
   it("renders presets and an empty state", () => {
     const { unmount } = render(<PresetsShowcase presets={[PRESET]} />);
-    expect(screen.getByText("48mm x 100m")).toBeInTheDocument();
-    expect(screen.getByText("48mm × 100m · 45 mic")).toBeInTheDocument();
+    expect(screen.getByText("48 mm × 100 m · 45 mic")).toBeInTheDocument();
+    expect(screen.queryByText("48mm x 100m")).not.toBeInTheDocument();
     unmount();
     render(<PresetsShowcase presets={[]} />);
     expect(screen.getByText(/đang được cập nhật/)).toBeInTheDocument();
@@ -83,6 +86,13 @@ describe("Hero", () => {
     expect(screen.getByRole("link", { name: "Nhận báo giá" })).toHaveAttribute("href", "/thiet-ke#yeu-cau-bao-gia");
   });
 
+  it("shows the Vĩnh Thịnh logo in the header, linked home", () => {
+    const { container } = render(<Hero />);
+    const logo = within(container).getByRole("img", { name: "Logo Vĩnh Thịnh" });
+    expect(logo).toHaveAttribute("src", "/brand/vinh-thinh-logo.png");
+    expect(logo.closest("a")).toHaveAttribute("href", "/");
+  });
+
   it("uses no inline style attributes (CSP: style-src is nonce-only)", () => {
     const { container } = render(<><Hero /><ProductShowcase /><UseCases /><HowItWorks /><DesignCta /></>);
     expect(container.querySelectorAll("[style]")).toHaveLength(0);
@@ -101,5 +111,34 @@ describe("CartonTapeArt", () => {
   it("exposes an accessible label", () => {
     render(<CartonTapeArt caption="Mô phỏng" tapeText="LOGO" />);
     expect(screen.getByRole("img", { name: "Mô phỏng" })).toBeInTheDocument();
+  });
+});
+
+describe("Contact", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("without contact env: honest copy, quote form as the channel, no CTA buttons", () => {
+    vi.stubEnv("CONTACT_PHONE", "");
+    vi.stubEnv("CONTACT_EMAIL", "");
+    vi.stubEnv("CONTACT_ADDRESS", "");
+    vi.stubEnv("CONTACT_HOURS", "");
+    const { container } = render(<Contact />);
+    const c = within(container);
+    expect(c.queryByText(/gửi email/)).not.toBeInTheDocument();
+    expect(c.getByRole("link", { name: "Gửi yêu cầu trực tuyến" })).toHaveAttribute("href", "/thiet-ke#yeu-cau-bao-gia");
+    expect(c.queryByRole("link", { name: "Thiết kế ngay" })).not.toBeInTheDocument();
+    expect(c.queryByText("Tối đa 3 màu")).not.toBeInTheDocument();
+  });
+
+  it("with phone and email: shows them as links", () => {
+    vi.stubEnv("CONTACT_PHONE", "0901 234 567");
+    vi.stubEnv("CONTACT_EMAIL", "sales@bangkeo.vn");
+    const { container } = render(<Contact />);
+    const c = within(container);
+    expect(c.getByRole("link", { name: "0901 234 567" })).toHaveAttribute("href", "tel:0901234567");
+    expect(c.getByRole("link", { name: "sales@bangkeo.vn" })).toHaveAttribute("href", "mailto:sales@bangkeo.vn");
+    expect(c.getByRole("link", { name: "Nhắn tin tư vấn" })).toHaveAttribute("href", "https://zalo.me/0901234567");
+    expect(c.getByText(/Gọi, nhắn Zalo hoặc gửi email/)).toBeInTheDocument();
+    expect(c.queryByRole("link", { name: "Gửi yêu cầu trực tuyến" })).not.toBeInTheDocument();
   });
 });

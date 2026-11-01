@@ -11,6 +11,12 @@ describe("parseDesignJson", () => {
     expect(r).toMatchObject({ widthMm: 48, lengthM: 100 });
   });
 
+  it("keeps the client ink count flag (> 3 inks needs a consultant)", () => {
+    const r = parseDesignJson(raw({ ...DESIGN, inkColors: ["#c8102e", "#0a1466", "#8a8a8a", "#007a33"], inkCount: 4, inkOverLimit: true }));
+    expect(r).toMatchObject({ inkCount: 4, inkOverLimit: true });
+    expect(parseDesignJson(raw({ ...DESIGN, inkCount: -1 }))).toBeNull();
+  });
+
   it("ignores presetId (sizes come from tape_widths)", () => {
     expect(parseDesignJson(raw(DESIGN))?.presetId).toBeNull();
     expect(parseDesignJson(raw({ ...DESIGN, presetId: null }))).not.toBeNull();

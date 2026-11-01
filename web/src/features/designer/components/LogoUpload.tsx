@@ -5,6 +5,7 @@ import { getDictionary } from "@/i18n";
 import { MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_OFFSET_X, MIN_LOGO_SCALE } from "../lib/constants";
 import { LOGO_COLOR_MODES } from "../lib/state";
 import { useDesignState } from "./hooks";
+import { InkCounter } from "./InkCounter";
 import { LogoDropzone } from "./LogoDropzone";
 import { RangeField } from "./RangeField";
 import { btnGhost, chip, chipOff, chipOn, focusRing, groupLabel, hint } from "./ui";
@@ -37,6 +38,7 @@ export function LogoUpload() {
             ))}
           </div>
           <p className={hint}>{s.logoColorMode === "tint" ? t.logoTintNote : t.logoOriginalNote}</p>
+          <InkCounter />
           <details className="group rounded-xl border border-slate-200">
             <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden ${focusRing}`}>
               {t.logoAdjust}

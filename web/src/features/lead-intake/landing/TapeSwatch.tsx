@@ -6,25 +6,25 @@ export type TapeKind = "clear" | "opaque" | "multi";
 const STRIP: Record<TapeKind, { tape: string; text: string; mark: string; dot: string; size: string; type: string }> = {
   clear: {
     tape: "border-y-2 border-white bg-white/45",
-    text: "text-lp-cobalt",
-    mark: "border-lp-cobalt",
-    dot: "bg-lp-cobalt",
+    text: "text-vt-red-deep",
+    mark: "border-vt-red-deep",
+    dot: "bg-vt-red-deep",
     size: "h-16 md:h-24",
     type: "text-lg md:text-2xl",
   },
   opaque: {
-    tape: "bg-lp-tape",
-    text: "text-lp-ink",
-    mark: "border-lp-ink",
-    dot: "bg-lp-ink",
+    tape: "bg-vt-yellow",
+    text: "text-vt-navy-deep",
+    mark: "border-vt-navy-deep",
+    dot: "bg-vt-red-deep",
     size: "h-20 md:h-30",
     type: "text-xl md:text-3xl",
   },
   multi: {
-    tape: "bg-lp-cobalt",
-    text: "text-white",
-    mark: "border-lp-tape",
-    dot: "bg-[#ff4d3d]",
+    tape: "bg-vt-red-deep",
+    text: "text-vt-yellow",
+    mark: "border-vt-yellow",
+    dot: "bg-white",
     size: "h-24 md:h-36",
     type: "text-2xl md:text-4xl",
   },
@@ -35,7 +35,7 @@ export function TapeSwatch({ kind, label, from = "left" }: { kind: TapeKind; lab
   return (
     <div aria-hidden="true" data-lp-reveal={from} className="overflow-hidden">
       <div
-        className={`lp-slide relative flex items-center overflow-hidden shadow-[0_18px_40px_-24px_rgb(10_20_102/0.55)] ${s.size} ${s.tape}`}
+        className={`lp-slide relative -mx-8 flex items-center overflow-hidden shadow-[0_18px_40px_-24px_rgb(26_28_78/0.5)] ${s.size} ${s.tape}`}
       >
         <div className={`flex w-max ${from === "left" ? "lp-marquee lp-marquee-slow" : "lp-marquee-rev lp-marquee-slow"}`}>
           {[0, 1].map((copy) => (

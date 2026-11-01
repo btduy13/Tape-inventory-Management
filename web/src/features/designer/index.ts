@@ -11,6 +11,7 @@
 // Components (client)
 export { DesignProvider } from "./components/DesignProvider";
 export { DesignerPanel } from "./components/DesignerPanel";
+export type { DesignerContact } from "./components/InkLimitDialog";
 export { DesignMockupBridge } from "./components/DesignMockupBridge";
 export { TapeCanvas2D } from "./components/TapeCanvas2D";
 
@@ -22,6 +23,7 @@ export { toDesignJson, buildDesignSubmission, designJsonSchema, type DesignSubmi
 export { sanitizeSvg } from "./lib/svg-sanitize";
 export { checkLogoBytes, sniffImageKind, logoMime } from "./lib/logo-validate";
 export { paletteColors, normalizeHex } from "./lib/palette";
+export { printInks, type InkSummary } from "./lib/logo-colors";
 export { DEFAULT_PRESETS, toPresetOption, type PresetOption } from "./lib/presets";
 export {
   DEFAULT_TAPE_SPEC, checkTapeSize, formatTapeSize, toTapeSpec, LENGTH_M_MAX, WIDTH_MM_MAX,

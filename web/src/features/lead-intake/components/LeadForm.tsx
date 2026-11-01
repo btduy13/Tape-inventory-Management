@@ -79,7 +79,7 @@ export function LeadForm({ getDesign, turnstileSiteKey, nonce, hideHeading = fal
       <button
         type="submit"
         disabled={busy}
-        className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 font-semibold text-white transition-colors duration-150 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+        className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg bg-vt-red-deep px-6 font-semibold text-white transition-colors duration-150 hover:bg-vt-red-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
       >
         {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent motion-reduce:animate-none" aria-hidden="true" />}
         {busy ? t.submitting : t.submit}

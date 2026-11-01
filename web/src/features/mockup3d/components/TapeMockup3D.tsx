@@ -3,9 +3,11 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { getDictionary } from "@/i18n";
-import type { RollPreset } from "../lib/geometry";
+import { CUP_MM, CUP_STRIP_MAX_MM, cupStripCapped } from "../lib/cup";
+import { CARTON_MM, MM_PER_UNIT, rollGeometry, type RollPreset } from "../lib/geometry";
 import { hasWebGL } from "../lib/webgl";
 import type { MockupView } from "../lib/views";
+import { Watermark } from "./Watermark";
 
 const MockupScene = dynamic(() => import("./MockupScene"), {
   ssr: false,
@@ -27,14 +29,48 @@ export type TapeMockup3DProps = {
    * Canvas box aspect ratio (CSS `aspect-ratio`) from the `sm` breakpoint up, e.g. "4 / 3".
    * "fill" drops the ratio so the canvas fills a parent with a definite height.
    */
-  aspect?: string;
+  aspect?: MockupAspect | "fill";
   /** Aspect ratio below the `sm` breakpoint (taller on phones). Defaults to "4 / 5". */
-  mobileAspect?: string;
+  mobileAspect?: MockupAspect;
   /** Show the heading row title (tabs are always shown). */
   showTitle?: boolean;
 };
 
+/** Supported canvas ratios. Fixed Tailwind classes (no inline style: CSP style-src is nonce-only). */
+export type MockupAspect = "16 / 9" | "4 / 3" | "1 / 1" | "4 / 5" | "3 / 4";
+const ASPECT_SM: Record<MockupAspect, string> = {
+  "16 / 9": "sm:aspect-video",
+  "4 / 3": "sm:aspect-[4/3]",
+  "1 / 1": "sm:aspect-square",
+  "4 / 5": "sm:aspect-[4/5]",
+  "3 / 4": "sm:aspect-[3/4]",
+};
+const ASPECT_BASE: Record<MockupAspect, string> = {
+  "16 / 9": "aspect-video",
+  "4 / 3": "aspect-[4/3]",
+  "1 / 1": "aspect-square",
+  "4 / 5": "aspect-[4/5]",
+  "3 / 4": "aspect-[3/4]",
+};
+
 const TOUCH_HINT = "Vuốt ngang để xoay, vuốt dọc để cuộn trang";
+export const MOCKUP_DISCLAIMER = "Hình ảnh chỉ là minh họa và tham khảo, không thể hiện đúng màu sắc thực tế";
+
+const cm = (mm: number) => `${+(mm / 10).toFixed(1)}`.replace(".", ",");
+
+/** True-scale caption: real sizes of what is shown (same mm system in every view). */
+function scaleNote(view: MockupView, preset: RollPreset): string {
+  const g = rollGeometry(preset);
+  const roll = `cuộn Ø${Math.round(g.outerRadius * 2 * MM_PER_UNIT)} mm × ${preset.width_mm} mm`;
+  if (view === "carton") return `Tỉ lệ thật: thùng ${cm(CARTON_MM.length)} × ${cm(CARTON_MM.depth)} × ${cm(CARTON_MM.height)} cm, ${roll}`;
+  if (view === "cup") {
+    const note = `Tỉ lệ thật: ly 500 ml (Ø${2 * CUP_MM.rimRadius} × ${CUP_MM.height} mm)`;
+    return cupStripCapped(preset.width_mm)
+      ? `${note}; ly chỉ dán vừa băng tối đa ${CUP_STRIP_MAX_MM} mm nên băng ${preset.width_mm} mm được hiển thị rộng ${CUP_STRIP_MAX_MM} mm`
+      : `${note}, băng ${preset.width_mm} mm`;
+  }
+  return `Tỉ lệ thật: ${roll}, lõi Ø76 mm`;
+}
 
 let webglSupport: boolean | undefined;
 const cachedHasWebGL = () => (webglSupport ??= hasWebGL());
@@ -83,8 +119,8 @@ export function TapeMockup3D({
       role="tab"
       aria-selected={view === v}
       onClick={() => setView(v)}
-      className={`min-h-11 min-w-11 flex-1 rounded-md px-2 py-2 text-sm leading-tight font-medium sm:px-3 transition-colors sm:flex-none ${
-        view === v ? "bg-amber-700 text-white" : "border border-neutral-300 bg-white hover:bg-neutral-50"
+      className={`min-h-11 min-w-11 flex-auto whitespace-nowrap rounded-md px-2 py-2 text-sm leading-tight font-medium sm:px-3 transition-colors sm:flex-none ${
+        view === v ? "bg-vt-navy text-white" : "border border-neutral-300 bg-white hover:bg-neutral-50"
       }`}
     >
       {label}
@@ -95,16 +131,17 @@ export function TapeMockup3D({
     <section aria-label={t.title} className={`flex min-w-0 flex-col gap-3 ${fill ? "h-full" : ""} ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {showTitle && <h2 className="text-xl font-bold">{t.title}</h2>}
-        <div role="tablist" aria-label={t.title} className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <div role="tablist" aria-label={t.title} className="flex w-full gap-2 overflow-x-auto sm:w-auto">
           {tab("roll", t.roll)}
           {tab("carton", t.carton)}
           {tab("cup", t.cup)}
         </div>
       </div>
       <div
-        style={fill ? undefined : ({ "--m3d-aspect": aspect, "--m3d-aspect-sm": mobileAspect } as React.CSSProperties)}
+        // Discourage "save image" on the bare canvas: the watermark lives in the overlay.
+        onContextMenu={(e) => e.preventDefault()}
         className={`relative w-full min-w-0 overflow-hidden rounded-lg border border-neutral-300 bg-stone-100 ${
-          fill ? "min-h-64 flex-1" : "aspect-(--m3d-aspect-sm) max-h-[85svh] sm:aspect-(--m3d-aspect)"
+          aspect === "fill" ? "min-h-64 flex-1" : `${ASPECT_BASE[mobileAspect]} max-h-[85svh] ${ASPECT_SM[aspect]}`
         }`}
       >
         {webgl === null ? null : webgl ? (
@@ -116,13 +153,23 @@ export function TapeMockup3D({
         ) : (
           fallback
         )}
-      </div>
-      {webgl && (
-        <p className="text-xs text-neutral-500">
-          <span className="hidden pointer-fine:inline">{t.rotateHint}</span>
-          <span className="pointer-fine:hidden">{TOUCH_HINT}</span>
+        <Watermark />
+        {/* sm+: drawn inside the viewer; phones: below the canvas so it never covers the scene. */}
+        <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden bg-white/85 px-3 py-1.5 text-center text-xs leading-snug text-neutral-700 sm:block">
+          {MOCKUP_DISCLAIMER}
         </p>
-      )}
+      </div>
+      <p className="-mt-1 text-center text-[11px] leading-snug text-neutral-700 sm:hidden">{MOCKUP_DISCLAIMER}</p>
+      <p className="text-xs text-neutral-600" aria-live="polite">
+        {scaleNote(view, preset)}
+        {webgl && (
+          <>
+            {" · "}
+            <span className="hidden pointer-fine:inline">{t.rotateHint}</span>
+            <span className="pointer-fine:hidden">{TOUCH_HINT}</span>
+          </>
+        )}
+      </p>
     </section>
   );
 }

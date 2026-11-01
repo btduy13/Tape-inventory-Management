@@ -4,12 +4,16 @@
 // cup + lid, so it always hugs the geometry. Pure + unit-tested.
 import { buildRibbon, subdivide, type RibbonData, type RibbonRow, type V3 } from "./ribbon";
 
+/**
+ * Real 500 ml (16 oz) milk-tea paper cup: top Ø90 mm, bottom Ø60 mm, height 150 mm,
+ * domed lid ~12 mm above the rim. Same mm system as the roll and the carton (true scale).
+ */
 export const CUP_MM = {
   height: 150,
-  baseRadius: 33,
-  rimRadius: 46,
+  baseRadius: 30,
+  rimRadius: 45,
   /** Lid top above the cup rim. */
-  lidHeight: 13,
+  lidHeight: 12,
   /** Lid skirt reaches this far below the cup rim. */
   skirtDepth: 6,
   /** Lid skirt outer radius beyond the cup rim. */
@@ -18,10 +22,14 @@ export const CUP_MM = {
   stripStart: 42,
 } as const;
 
-/** Seal strip width as a share of the tape width (labels are narrower than carton tape). */
-export const CUP_STRIP_SCALE = 0.5;
-export const CUP_STRIP_MIN_MM = 10;
-export const CUP_STRIP_MAX_MM = 36;
+/**
+ * Seal strip width = the REAL tape width (true scale), capped at 60 mm. Where the strip ends on
+ * the wall the cup is only Ø68 mm (radius 34 mm at `stripStart`): a strip wider than the wall
+ * diameter cannot wrap it at all, and at 60 mm it already wraps ~100 degrees of the wall.
+ * Wider tape (72 / 75 / 80 mm) is shown at 60 mm and the viewer says so.
+ */
+export const CUP_STRIP_MAX_MM = 60;
+export const CUP_STRIP_MIN_MM = 5;
 /** Gap between cup/lid and strip so the strip never z-fights the surface. */
 export const STRIP_GAP_MM = 0.4;
 
@@ -61,7 +69,7 @@ export function cupLidOutline(): Pt[] {
     [R - 0.5, h + 6.8],
     [R - 4, h + 8.5],
     [R - 7, h + 9.8],
-    [R - 14, h + 11.6],
+    [R - 14, h + lidHeight - 1.1],
     [R - 30, h + lidHeight - 0.3],
     [0, h + lidHeight],
   ];
@@ -74,10 +82,20 @@ export function cupLidProfile(): Pt[] {
   return [[R + 0.8, h - skirtDepth], ...outline];
 }
 
-/** Strip width (mm) for a tape width preset: proportional, clamped to the cup. */
+/** Strip width (mm) on the cup: the real tape width, capped to what can wrap the cup. */
 export function cupStripWidthMm(tapeWidthMm: number): number {
-  const w = (Number.isFinite(tapeWidthMm) ? tapeWidthMm : 0) * CUP_STRIP_SCALE;
+  const w = Number.isFinite(tapeWidthMm) ? tapeWidthMm : 0;
   return Math.min(CUP_STRIP_MAX_MM, Math.max(CUP_STRIP_MIN_MM, w));
+}
+
+/** True when the tape is wider than the cup can take (shown narrower than real). */
+export function cupStripCapped(tapeWidthMm: number): boolean {
+  return Number.isFinite(tapeWidthMm) && tapeWidthMm > CUP_STRIP_MAX_MM;
+}
+
+/** Odd column count (centre column on the centre line), ~4 mm apart so wide strips stay round. */
+export function cupStripCols(stripWidthMm: number): number {
+  return Math.max(9, 2 * Math.ceil(Math.max(0, stripWidthMm) / 8) + 1);
 }
 
 /**
@@ -135,57 +153,83 @@ export function cupStripPath(gap = STRIP_GAP_MM, step = 2): StripCentre[] {
   });
 }
 
-/** Ray-casting point-in-polygon test in the (radius, y) plane. */
-function inside(poly: Pt[], r: number, y: number): boolean {
-  let hit = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [ri, yi] = poly[i];
-    const [rj, yj] = poly[j];
-    if (yi > y !== yj > y && r < ((rj - ri) * (y - yi)) / (yj - yi) + ri) hit = !hit;
+/**
+ * Section of the (offset) strip surface by the plane X = x: a polyline in the (z, y) plane from
+ * the front wall, over the lid, down the back wall. Monotonic, so columns built on it never fold.
+ */
+function columnSection(x: number, gap: number): Pt[] {
+  const half = offsetProfile(subdivide(cupStripSurface(), 1), gap);
+  const ax = Math.abs(x);
+  const front: Pt[] = [];
+  for (let i = 0; i < half.length; i++) {
+    const { r, y } = half[i];
+    if (r > ax) {
+      front.push([Math.sqrt(r * r - ax * ax), y]);
+      continue;
+    }
+    // the plane leaves the lid here: close the section on the plane's own apex (z = 0)
+    const prev = half[i - 1];
+    const t = prev ? (prev.r - ax) / (prev.r - r || 1) : 0;
+    front.push([0, prev ? prev.y + (y - prev.y) * t : y]);
+    break;
   }
-  return hit;
+  const back = front.slice(0, -1).reverse().map(([z, y]): Pt => [-z, y]);
+  return [...front, ...back];
 }
 
-/** Closed (radius, y) polygon of the offset solid the strip wraps (wall from the base, lid, axis). */
-function stripSolid(gap: number): Pt[] {
-  const surface = offsetProfile(subdivide(cupStripSurface(0), 2), gap).map((p): Pt => [p.r, p.y]);
-  return [[0, -1], [surface[0][0], -1], ...surface];
+/** Nearest point on a polyline to `q`, searching forward from segment `from` (keeps order). */
+function nearestOnPolyline(poly: Pt[], q: Pt, from: number): { seg: number; t: number; p: Pt } {
+  let best = { seg: from, t: 0, p: poly[from], d: Infinity };
+  for (let i = from; i + 1 < poly.length; i++) {
+    const [z0, y0] = poly[i];
+    const [z1, y1] = poly[i + 1];
+    const dz = z1 - z0, dy = y1 - y0;
+    const t = Math.max(0, Math.min(1, ((q[0] - z0) * dz + (q[1] - y0) * dy) / (dz * dz + dy * dy || 1)));
+    const p: Pt = [z0 + t * dz, y0 + t * dy];
+    const d = Math.hypot(p[0] - q[0], p[1] - q[1]);
+    if (d < best.d) best = { seg: i, t, p, d };
+  }
+  return best;
 }
 
 /**
- * Rows of the strip. Each row starts at its centre-line point; a point `x` mm to the side is
- * pushed inwards along the centre-line normal until it lands on the (offset) surface, so the
- * strip wraps the round wall, the skirt and the domed top alike. Side vector s = n x t = -x on
- * every face (front going up, top going back, back going down), so v=0 sits at +x and the print
- * reads unmirrored from outside on both sides.
+ * Rows of the strip. A column `x` mm to the side of the centre line runs on the section of the
+ * cup + lid surface by the plane X = x; each row takes the point of that section nearest to the
+ * row's centre-line point (forward only, so rows never cross even on the concave wall-to-skirt
+ * bridge). The strip thus wraps the round wall, the skirt and the domed top at its real width.
+ * Side vector s = n x t = -x on every face (front going up, top going back, back going down),
+ * so v=0 sits at +x and the print reads unmirrored from outside on both sides.
  */
-export function cupStripRows(stripWidthMm: number, cols = 9, gap = STRIP_GAP_MM): RibbonRow[] {
+export function cupStripRows(stripWidthMm: number, cols = cupStripCols(stripWidthMm), gap = STRIP_GAP_MM): RibbonRow[] {
   const half = stripWidthMm / 2;
-  const solid = stripSolid(gap);
-  return cupStripPath(gap).map(({ r, y, nr, ny, side, along }) => {
+  const path = cupStripPath(gap);
+  const xs = Array.from({ length: cols }, (_, j) => (cols > 1 ? half - (stripWidthMm * j) / (cols - 1) : 0));
+  const sections = xs.map((x) => (x === 0 ? null : columnSection(x, gap)));
+  const cursor = xs.map(() => 0);
+  const lastKey = xs.map(() => -Infinity);
+  return path.map(({ r, y, nr, ny, side, along }) => {
     const points: V3[] = [];
     const normals: V3[] = [];
-    for (let j = 0; j < cols; j++) {
-      const x = half - (stripWidthMm * j) / (cols - 1);
-      const at = (d: number): V3 => [x, y - d * ny, side * (r - d * nr)];
-      const isIn = (d: number) => {
-        const [px, py, pz] = at(d);
-        return inside(solid, Math.hypot(px, pz), py);
-      };
-      let lo = 0;
-      let hi = Math.abs(x) + 1;
-      if (x !== 0 && !isIn(lo)) {
-        for (let k = 0; k < 40; k++) {
-          const mid = (lo + hi) / 2;
-          if (isIn(mid)) hi = mid;
-          else lo = mid;
-        }
+    xs.forEach((x, j) => {
+      const sec = sections[j];
+      let p: V3 = [x, y, side * r];
+      if (sec) {
+        const hit = nearestOnPolyline(sec, [side * r, y], cursor[j]);
+        // strictly forward along the column (tiny step if the nearest point did not move)
+        const key = hit.seg + hit.t;
+        const k = key > lastKey[j] ? key : lastKey[j] + 1e-3;
+        const seg = Math.min(sec.length - 2, Math.floor(k));
+        const t = Math.min(1, k - seg);
+        cursor[j] = seg;
+        lastKey[j] = k;
+        const [z0, y0] = sec[seg];
+        const [z1, y1] = sec[seg + 1];
+        p = [x, y0 + (y1 - y0) * t, z0 + (z1 - z0) * t];
       }
-      const p = at(x === 0 ? 0 : lo);
       const rho = Math.hypot(p[0], p[2]);
       points.push(p);
       normals.push(rho > 1e-6 ? [(nr * p[0]) / rho, ny, (nr * p[2]) / rho] : [0, ny, side * nr]);
-    }
+    });
     return { along, points, normals };
   });
 }

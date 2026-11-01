@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import { format, getDictionary } from "@/i18n";
 import { MAX_COLORS } from "../lib/constants";
-import { paletteColors } from "../lib/palette";
 import { lengthIssue } from "../lib/tape-spec";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
+import { inkCountText, useInks } from "./InkCounter";
 import { focusRing } from "./ui";
 
 export type SummaryStep = "spec" | "content" | "colors";
@@ -23,14 +23,23 @@ export function useDesignSummary() {
   const text = s.text.trim();
   const parts = [text ? `“${text}”` : null, s.logo ? t.designer.contentLogo : null].filter(Boolean);
   const content = parts.length ? parts.join(" + ") : t.designer.contentNone;
-  const colors = paletteColors(s);
-  return { size, lengthOk, content, hasContent: parts.length > 0, colors, colorsLabel: format(t.designer.colorsCount, { count: colors.length }) };
+  // Print inks (tape film colour excluded); over the 3-ink limit is flagged, never blocked.
+  const inks = useInks();
+  const colors = inks.colors;
+  const colorsLabel = inks.overLimit
+    ? format(t.designer.inkOverSummary, { count: inkCountText(inks.count) })
+    : colors.length === 0
+      ? t.designer.colorsNone
+      : format(t.designer.colorsCount, { count: colors.length });
+  return { size, lengthOk, content, hasContent: parts.length > 0, colors, colorsLabel, inksOver: inks.overLimit, inkCount: inkCountText(inks.count) };
 }
 
 export function ColorDots({ colors }: { colors: readonly string[] }) {
+  // Nothing to show: render nothing, so a parent's flex gap does not indent the label.
+  if (colors.length === 0) return null;
   return (
     <span className="inline-flex shrink-0 -space-x-1" aria-hidden="true">
-      {colors.slice(0, MAX_COLORS).map((c) => (
+      {colors.slice(0, MAX_COLORS + 1).map((c) => (
         <svg key={c} width="16" height="16" viewBox="0 0 16 16">
           <circle cx="8" cy="8" r="7" fill={c} stroke="#ffffff" strokeWidth="2" />
           <circle cx="8" cy="8" r="7.5" fill="none" stroke="#cbd5e1" strokeWidth="1" />
@@ -55,6 +64,7 @@ export function DesignSummary({ onEdit, className = "" }: { onEdit?: (step: Summ
           {sum.colorsLabel}
         </span>
       ),
+      bad: sum.inksOver,
     },
   ];
   return (
@@ -78,6 +88,11 @@ export function DesignSummary({ onEdit, className = "" }: { onEdit?: (step: Summ
           </div>
         ))}
       </dl>
+      {sum.inksOver && (
+        <p role="note" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs leading-5 font-medium text-red-800 ring-1 ring-red-200">
+          {format(t.inkQuoteNote, { count: sum.inkCount })}
+        </p>
+      )}
     </div>
   );
 }

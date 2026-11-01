@@ -4,7 +4,19 @@
 
 3D mockup (react-three-fiber/drei): three lazy views (tape roll, kraft carton sealed with one strip along the top seam folding over the short ends, paper cup with a tamper-seal strip: one continuous strip up the front wall, over the lid centre and down the back, built from the cup + lid lathe profile). Strips are ribbon meshes (lib/ribbon.ts) with UVs along the strip. Geometry is procedural (no model files); the camera is fitted to each object's bounding sphere (lib/camera.ts, lib/views.ts). Texture fed live from the designer canvas.
 
-Props for layout: `className`, `aspect` (CSS aspect-ratio from `sm` up, or "fill" to fill a sized parent), `mobileAspect` (below `sm`), `showTitle`. Camera re-fits on every resize; DPR capped at 2; no wheel/pinch zoom and `touch-action: pan-y`, so vertical swipes / wheel scroll the page and horizontal drags rotate.
+## True scale (one mm system, 1 scene unit = 100 mm)
+
+- Roll: core 76 mm inner Ø (6 mm wall); outer Ø from the annulus area, pi (R^2 - r^2) = length x thickness (thickness from the design state, 45 mic default). 50 m x 45 mic ~ Ø103 mm, 635 m x 45 mic ~ Ø210 mm. Clamp Ø500 mm only guards bad input.
+- Carton: standard 40 x 30 x 25 cm shipping box (`CARTON_MM`); strip = the selected tape width (12-80 mm).
+- Cup: 500 ml milk-tea paper cup, top Ø90, bottom Ø60, height 150, domed lid 12 mm (`CUP_MM`). Seal strip = the real tape width up to 60 mm: where the strip ends on the wall the cup is only Ø68 mm, so wider tape cannot wrap it; 72/75/80 mm tape is shown 60 mm wide (print scaled, not stretched) and the caption says so.
+- The caption under the viewer states the real sizes shown.
+
+## Watermark + disclaimer
+
+- `components/Watermark.tsx`: Vĩnh Thịnh logo (`/brand/vinh-thinh-logo.png`, text-only if missing) + "Vĩnh Thịnh", tiled diagonally over the whole viewer at ~18% opacity, `pointer-events: none`, so crops still carry it. Context menu on the viewer is blocked; the canvas has no `preserveDrawingBuffer`, so there is no clean export path. The component offers no export.
+- Disclaimer `MOCKUP_DISCLAIMER` is drawn inside the bottom of the viewer from `sm` up (also over the WebGL fallback); below `sm` it sits under the canvas at 12px so it never covers the scene.
+
+Props for layout: `className`, `aspect` (one of `MockupAspect` "16 / 9" | "4 / 3" | "1 / 1" | "4 / 5" | "3 / 4" from `sm` up, mapped to fixed Tailwind classes so no inline style hits the CSP; or "fill" to fill a sized parent), `mobileAspect` (below `sm`, same values), `showTitle`. Camera re-fits on every resize; DPR capped at 2; no wheel/pinch zoom and `touch-action: pan-y`, so vertical swipes / wheel scroll the page and horizontal drags rotate.
 
 ## Routes
 

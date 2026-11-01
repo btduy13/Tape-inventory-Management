@@ -35,6 +35,33 @@ body {
   --font-lp-display: "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
 }
 
+/* Vĩnh Thịnh brand colour way (sampled from electron/assets/logo.png).        */
+/* red/yellow/navy/grey are the logo's own inks; *-deep and paper/ink are     */
+/* derived tones for large fields and body text (AA: white on red-deep 5.4:1, */
+/* yellow on red-deep 4.6:1, navy on white 9.4:1, ink on yellow 16:1).        */
+:root {
+  --vt-red: #ed3136;
+  --vt-red-deep: #cf1f27;
+  --vt-red-dark: #9e1219;
+  --vt-yellow: #fef211;
+  --vt-navy: #3a3c92;
+  --vt-navy-deep: #1a1c4e;
+  --vt-grey: #9c9b9b;
+  --vt-paper: #f5f3ef;
+  --vt-ink: #16173a;
+}
+@theme inline {
+  --color-vt-red: var(--vt-red);
+  --color-vt-red-deep: var(--vt-red-deep);
+  --color-vt-red-dark: var(--vt-red-dark);
+  --color-vt-yellow: var(--vt-yellow);
+  --color-vt-navy: var(--vt-navy);
+  --color-vt-navy-deep: var(--vt-navy-deep);
+  --color-vt-grey: var(--vt-grey);
+  --color-vt-paper: var(--vt-paper);
+  --color-vt-ink: var(--vt-ink);
+}
+
 .lp-display {
   font-family: var(--font-lp-display);
   font-weight: 900;
@@ -139,7 +166,24 @@ body {
 .lp-js [data-lp-reveal="step"]:not([data-in]) .lp-step-body { opacity: 0.35; }
 .lp-step-body { transition: opacity 0.6s ease-out; }
 
+/* CTA press feedback (all pointers) + hover lift (fine pointers only). */
+.lp-press {
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lp-press:hover { transform: translateY(-2px); }
+}
+.lp-press:active { transform: scale(0.97); }
+
+/* group entrance: rows revealed in the same frame get a short 50ms stagger */
+.lp-js .lp-stagger > [data-lp-reveal]:nth-child(2) { transition-delay: 50ms; }
+.lp-js .lp-stagger > [data-lp-reveal]:nth-child(3) { transition-delay: 100ms; }
+.lp-js .lp-stagger > [data-lp-reveal]:nth-child(4) { transition-delay: 150ms; }
+.lp-js .lp-stagger > [data-lp-reveal]:nth-child(n + 5) { transition-delay: 200ms; }
+
 @media (prefers-reduced-motion: reduce) {
+  .lp-press:hover { transform: none; }
+  .lp-press:active { transform: scale(0.99); }
   .lp-letter,
   .lp-reveal-path,
   .lp-roll,

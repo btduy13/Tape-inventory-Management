@@ -35,7 +35,7 @@ describe("<DesignerPanel>", () => {
     }
     // Collapsed headers show a live summary.
     expect(head("content")).toHaveTextContent("Chưa có chữ hoặc logo");
-    expect(head("colors")).toHaveTextContent("2 màu in");
+    expect(head("colors")).toHaveTextContent("Chưa có màu in");
   });
 
   it("opens one step at a time and 'Tiếp tục' moves to the next", () => {
@@ -49,6 +49,7 @@ describe("<DesignerPanel>", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Tiếp tục/ }).find((b) => panel("content").contains(b))!);
     expect(head("colors")).toHaveAttribute("aria-expanded", "true");
     expect(head("content")).toHaveTextContent("“ACME”");
+    expect(screen.getAllByText("Số màu in: 1/3")[0]).toBeInTheDocument();
   });
 
   it("shows an invalid length in the spec summary", () => {

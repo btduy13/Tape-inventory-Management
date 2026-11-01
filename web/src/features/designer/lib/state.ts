@@ -4,6 +4,7 @@ import {
   MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE, MIN_REPEAT_GAP_PX, type FontFamily,
 } from "./constants";
 import { normalizeHex } from "./palette";
+import type { LogoInk } from "./logo-colors";
 import { DEFAULT_PRESETS, type PresetOption } from "./presets";
 
 export type LogoKind = "png" | "jpg" | "svg";
@@ -29,6 +30,8 @@ export type LogoAsset = {
   url: string;
   width: number;
   height: number;
+  /** Ink colours found in the logo (logo-colors.ts). undefined: analysing; null: unknown. */
+  inks?: LogoInk[] | null;
 };
 
 export type DesignState = {
@@ -65,6 +68,8 @@ export type DesignAction =
   | { type: "setLogo"; logo: LogoAsset | null }
   | { type: "setLogoTransform"; scale?: number; offsetX?: number; offsetY?: number }
   | { type: "setLogoColorMode"; mode: LogoColorMode }
+  /** Result of the async logo colour analysis; ignored when the logo changed meanwhile. */
+  | { type: "setLogoInks"; url: string; inks: LogoInk[] | null }
   | { type: "setTextOffset"; offsetX?: number; offsetY?: number }
   | { type: "applyTemplate"; template: DesignTemplate }
   | { type: "setRepeatGap"; px: number }
@@ -74,7 +79,7 @@ export function createInitialState(preset: PresetOption = DEFAULT_PRESETS[0]): D
   return {
     preset,
     backgroundColor: "#d9c3a0",
-    textColor: "#c8102e",
+    textColor: "#cf1f27",
     accentColor: null,
     text: "",
     fontFamily: "Arial",
@@ -188,6 +193,10 @@ export function designReducer(state: DesignState, action: DesignAction): DesignS
       };
     case "setLogoColorMode":
       return LOGO_COLOR_MODES.includes(action.mode) ? { ...state, logoColorMode: action.mode } : state;
+    case "setLogoInks":
+      return state.logo && state.logo.url === action.url
+        ? { ...state, logo: { ...state.logo, inks: action.inks } }
+        : state;
     case "setTextOffset":
       return {
         ...state,

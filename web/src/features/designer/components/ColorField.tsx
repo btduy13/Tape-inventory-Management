@@ -4,7 +4,7 @@
 import { getDictionary } from "@/i18n";
 import { SWATCHES } from "../lib/constants";
 import { swatchName } from "../lib/swatch-names";
-import { focusRing } from "./ui";
+import { focusRing, selectedRing } from "./ui";
 
 type Props = {
   label: string;
@@ -58,7 +58,7 @@ export function ColorField({ label, value, onChange, fallbackValue, fallbackNote
               disabled={disabled}
               onClick={() => onChange(hex)}
               className={`relative h-11 min-w-0 cursor-pointer overflow-hidden rounded-lg border transition-shadow duration-150 motion-reduce:transition-none disabled:cursor-not-allowed ${focusRing} ${
-                selected ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2" : "border-slate-300 hover:border-slate-500"
+                selected ? selectedRing : "border-slate-300 hover:border-slate-500"
               }`}
             >
               <svg className="absolute inset-0 h-full w-full" viewBox="0 0 10 10" preserveAspectRatio="none" aria-hidden="true">

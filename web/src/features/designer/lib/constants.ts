@@ -8,6 +8,8 @@ export const STRIP_LENGTH_MM = 300;
 
 /** Maximum distinct print colours (background + text + accent). */
 export const MAX_COLORS = 3;
+/** Above this many inks the exact count means nothing to a customer: show "hơn 6" instead. */
+export const INK_DISPLAY_CAP = 6;
 
 export const MAX_TEXT_LENGTH = 60;
 export const MIN_FONT_SIZE_PX = 12;
@@ -35,7 +37,7 @@ export type FontFamily = (typeof FONT_FAMILIES)[number];
 
 /** Quick-pick swatches commonly printed on tape. */
 export const SWATCHES = [
-  "#ffffff", "#000000", "#c8102e", "#0033a0", "#007a33",
+  "#ffffff", "#000000", "#cf1f27", "#0033a0", "#007a33",
   "#ffcd00", "#ff6a13", "#6d2077", "#8b5a2b", "#d9c3a0",
 ] as const;
 

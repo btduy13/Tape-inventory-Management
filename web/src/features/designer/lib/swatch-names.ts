@@ -2,7 +2,7 @@
 const NAMES: Record<string, string> = {
   "#ffffff": "Trắng",
   "#000000": "Đen",
-  "#c8102e": "Đỏ",
+  "#cf1f27": "Đỏ",
   "#0033a0": "Xanh dương",
   "#007a33": "Xanh lá",
   "#ffcd00": "Vàng",
