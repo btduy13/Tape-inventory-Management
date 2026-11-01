@@ -39,6 +39,10 @@ body {
 /* red/yellow/navy/grey are the logo's own inks; *-deep and paper/ink are     */
 /* derived tones for large fields and body text (AA: white on red-deep 5.4:1, */
 /* yellow on red-deep 4.6:1, navy on white 9.4:1, ink on yellow 16:1).        */
+/* blue: ONE royal indigo derived from the logo navy, used for every coloured  */
+/* landing band (use cases, contact, footer). white on blue 11.2:1, white/75   */
+/* on blue 6.9:1, yellow on blue 9.6:1. blue-soft = illustration cards (white  */
+/* 9.2:1), blue-ink = shadows and hairlines inside the blue bands.            */
 :root {
   --vt-red: #ed3136;
   --vt-red-deep: #cf1f27;
@@ -49,6 +53,9 @@ body {
   --vt-grey: #9c9b9b;
   --vt-paper: #f5f3ef;
   --vt-ink: #16173a;
+  --vt-blue: #252a9a;
+  --vt-blue-soft: #3237ab;
+  --vt-blue-ink: #141766;
 }
 @theme inline {
   --color-vt-red: var(--vt-red);
@@ -60,7 +67,14 @@ body {
   --color-vt-grey: var(--vt-grey);
   --color-vt-paper: var(--vt-paper);
   --color-vt-ink: var(--vt-ink);
+  --color-vt-blue: var(--vt-blue);
+  --color-vt-blue-soft: var(--vt-blue-soft);
+  --color-vt-blue-ink: var(--vt-blue-ink);
 }
+
+/* line breaks: balanced headings, no orphans in copy (Vietnamese compounds use NBSP in vi.ts) */
+.lp-root :is(h1, h2, h3) { text-wrap: balance; }
+.lp-root :is(p, li, dd) { text-wrap: pretty; }
 
 .lp-display {
   font-family: var(--font-lp-display);
@@ -147,6 +161,7 @@ body {
 .lp-js [data-lp-reveal="left"]:not([data-in]) > .lp-slide { transform: translate3d(-104%, 0, 0); }
 .lp-js [data-lp-reveal="right"]:not([data-in]) > .lp-slide { transform: translate3d(104%, 0, 0); }
 .lp-js [data-lp-reveal="up"]:not([data-in]) { transform: translate3d(0, 40px, 0); opacity: 0; }
+.lp-js [data-lp-reveal="fade"]:not([data-in]) { opacity: 0; }
 .lp-js [data-lp-reveal="scale-x"] { transform-origin: left center; }
 .lp-js [data-lp-reveal="scale-x"]:not([data-in]) { transform: scaleX(0); }
 .lp-js [data-lp-reveal="scale-y"] { transform-origin: center top; }

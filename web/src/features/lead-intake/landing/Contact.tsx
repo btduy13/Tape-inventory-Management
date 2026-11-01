@@ -23,15 +23,15 @@ export function Contact() {
   }
 
   return (
-    <footer id="lien-he" className="scroll-mt-20 bg-vt-navy-deep text-white">
-      <div className={`${LP_CONTAINER} grid gap-10 py-16 md:grid-cols-2 md:py-20`}>
+    <footer id="lien-he" className="bg-vt-blue text-white">
+      <div className={`${LP_CONTAINER} grid gap-10 py-20 md:grid-cols-2 md:items-end md:py-28`}>
         <div>
           <h2 className="lp-display text-4xl sm:text-5xl">{t.contactTitle}</h2>
-          <p className="mt-3 max-w-sm text-white/80">{hasDirect ? t.contactSubtitle : t.contactSubtitleNoInfo}</p>
+          <p className="mt-4 max-w-md text-lg leading-relaxed text-white/80">{hasDirect ? t.contactSubtitle : t.contactSubtitleNoInfo}</p>
         </div>
         <dl className={`grid content-start gap-5 ${rows.length > 1 ? "sm:grid-cols-2" : "max-w-md"}`}>
           {rows.map((r) => (
-            <div key={r.label} className="border-t border-white/25 pt-3">
+            <div key={r.label} className="border-t border-white/30 pt-4">
               <dt className="text-sm text-white/70">{r.label}</dt>
               <dd className="mt-1 text-lg font-semibold break-words">
                 {r.href ? (
@@ -51,12 +51,15 @@ export function Contact() {
         </dl>
       </div>
       <div className="border-t border-white/15">
-        <div className={`${LP_CONTAINER} flex items-center gap-4 py-6`}>
-          <span className="flex shrink-0 items-center justify-center rounded-lg bg-white p-3">
+        <div className={`${LP_CONTAINER} flex flex-col gap-5 py-8 sm:flex-row sm:items-center sm:gap-6`}>
+          <span className="flex shrink-0 self-start rounded-2xl bg-white p-4 sm:self-auto">
             {/* eslint-disable-next-line @next/next/no-img-element -- next/image adds an inline style (blocked by CSP) */}
-            <img src="/brand/vinh-thinh-logo.png" alt="" width={478} height={632} loading="lazy" className="h-14 w-auto" />
+            <img src="/brand/vinh-thinh-logo.png" alt={t.logoAlt} width={478} height={632} loading="lazy" className="h-20 w-auto" />
           </span>
-          <p className="text-sm text-white/70">{t.footerCopy}</p>
+          <div className="flex flex-col gap-1">
+            <p className="lp-display text-xl">{t.brandName}</p>
+            <p className="text-sm text-white/75">{t.footerNote}</p>
+          </div>
         </div>
       </div>
     </footer>

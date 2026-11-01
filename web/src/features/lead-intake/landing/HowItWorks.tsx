@@ -9,12 +9,12 @@ export function HowItWorks() {
   const t = getDictionary().landing;
   return (
     <section id="quy-trinh" aria-labelledby="quy-trinh-title" className={`scroll-mt-20 bg-white ${LP_SECTION_Y}`}>
-      <div className={`${LP_CONTAINER} grid gap-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] md:gap-20`}>
-        <div className="md:sticky md:top-12 md:self-start">
+      <div className={`${LP_CONTAINER} grid gap-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] xl:gap-20`}>
+        <div className="xl:sticky xl:top-12 xl:self-start">
           <h2 id="quy-trinh-title" className={`${LP_H2} text-vt-ink`}>
             {t.howTitle}
           </h2>
-          <p className="mt-5 max-w-sm text-lg leading-relaxed text-vt-ink/80">{t.howSubtitle}</p>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-vt-ink/80">{t.howSubtitle}</p>
           <Link href={ROUTES.design} className={`${BTN} mt-8 bg-vt-red-deep text-white ${RING_ON_LIGHT}`}>
             {t.ctaDesign}
           </Link>
@@ -33,7 +33,7 @@ export function HowItWorks() {
               <li key={step.title} data-lp-reveal="step" className="relative py-2">
                 <span
                   aria-hidden="true"
-                  className="lp-step-dot lp-display absolute top-2 -left-20 flex size-12 items-center justify-center rounded-full bg-vt-navy text-lg text-white ring-4 ring-white md:-left-24"
+                  className="lp-step-dot lp-display absolute top-2 -left-20 flex size-12 items-center justify-center rounded-full bg-vt-blue text-lg text-white ring-4 ring-white md:-left-24"
                 >
                   {i + 1}
                 </span>

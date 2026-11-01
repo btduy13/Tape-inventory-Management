@@ -16,7 +16,7 @@ export async function LandingPage() {
   const presets = await listActivePresets();
   return (
     <>
-      <main id={ROOT_ID} className="flex flex-1 flex-col overflow-x-clip">
+      <main id={ROOT_ID} className="lp-root flex flex-1 flex-col overflow-x-clip">
         <Hero />
         <ProductShowcase />
         <PresetsShowcase presets={presets} />

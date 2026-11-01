@@ -1,6 +1,7 @@
 // Landing hero: white site header with the full Vĩnh Thịnh logo (bolt + banner + characters, background removed), then a full-bleed brand-red band
 // with the giant word "BĂNG KEO" and a yellow printed tape strip weaving through the letters
-// (the logo's own yellow-on-red banner), spec tags and two CTAs. Server Component.
+// (the logo's own yellow-on-red banner), a lead line and two CTAs. Server Component.
+// The printed marquee overlays the red/paper boundary (zero-height wrapper), so no seam shows.
 import Link from "next/link";
 import { getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
@@ -8,21 +9,12 @@ import { HeroWord } from "./HeroWord";
 import { TapeMarquee } from "./TapeMarquee";
 import { BTN, LP_CONTAINER, RING_ON_DARK as ringOnRed, RING_ON_LIGHT as ringOnLight } from "./ui";
 
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/45 px-3 py-1 text-xs font-semibold text-white sm:text-[13px]">
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-vt-yellow" />
-      {children}
-    </span>
-  );
-}
-
 export function SiteHeader() {
   const t = getDictionary().landing;
   return (
     <header className="relative z-20 border-b border-vt-ink/10 bg-white">
-      <div className={`${LP_CONTAINER} flex h-16 items-center justify-between gap-4 md:h-20`}>
-        <Link href={ROUTES.home} className={`flex items-center gap-3 rounded-sm ${ringOnLight}`}>
+      <div className={`${LP_CONTAINER} flex h-[4.5rem] items-center justify-between gap-4 md:h-24 lg:h-28`}>
+        <Link href={ROUTES.home} className={`flex items-center gap-3 rounded-sm md:gap-4 ${ringOnLight}`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- next/image adds an inline style (blocked by CSP) */}
           <img
             src="/brand/vinh-thinh-logo.png"
@@ -30,10 +22,11 @@ export function SiteHeader() {
             width={478}
             height={632}
             fetchPriority="high"
-            className="h-12 w-auto md:h-16"
+            className="h-12 w-auto md:h-16 lg:h-20"
           />
-          <span className="border-l border-vt-ink/15 pl-3 text-[11px] leading-tight font-bold tracking-wide text-vt-navy uppercase md:text-xs">
-            {t.brand}
+          <span className="flex flex-col leading-tight">
+            <span className="lp-display text-lg text-vt-red-deep uppercase md:text-xl">{t.brandName}</span>
+            <span className="text-xs font-semibold text-vt-ink/70 md:text-sm">{t.brand}</span>
           </span>
         </Link>
         <nav aria-label={t.navLabel} className="hidden lg:block">
@@ -67,11 +60,6 @@ export function Hero() {
         {/* soft brand-red light from the top-right, like the logo's lightning bolt */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(70%_60%_at_85%_0%,var(--vt-red)_0%,transparent_70%)]" />
         <div className={`${LP_CONTAINER} flex min-h-[min(calc(100svh-4rem),46rem)] flex-col justify-center gap-6 pt-8 pb-16 md:min-h-0 md:gap-4 md:pt-8 md:pb-14 lg:min-h-[min(calc(100svh-5rem),46rem)] lg:pt-10 lg:pb-20`}>
-          <div className="lp-fade flex flex-wrap items-start justify-between gap-2">
-            <Tag>{t.heroPoints[0]}</Tag>
-            <Tag>{t.heroPoints[1]}</Tag>
-          </div>
-
           <h1 className="flex items-center py-2">
             <span className="sr-only">{t.heroTitle}</span>
             <span className="lp-bob -mx-2 block w-[calc(100%+1rem)] sm:-mx-4 sm:w-[calc(100%+2rem)]">
@@ -80,13 +68,7 @@ export function Hero() {
           </h1>
 
           <div className="lp-fade grid items-end gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
-            <div className="flex flex-col gap-4">
-              <p className="max-w-md text-lg leading-snug font-medium text-white sm:text-xl">{t.heroLead}</p>
-              <div className="flex flex-wrap gap-2">
-                <Tag>{t.heroPoints[2]}</Tag>
-                <Tag>{t.heroBadge}</Tag>
-              </div>
-            </div>
+            <p className="max-w-xl text-lg leading-snug font-medium text-white sm:text-xl">{t.heroLead}</p>
             <div className="flex flex-wrap gap-3">
               <Link
                 href={ROUTES.design}
@@ -104,8 +86,8 @@ export function Hero() {
           </div>
         </div>
       </section>
-      <div className="pointer-events-none relative z-10 -my-14 overflow-hidden py-14">
-        <TapeMarquee items={t.marquee} className="-mx-[5%] w-[110%] -rotate-2" />
+      <div aria-hidden="true" className="pointer-events-none relative z-10 h-0">
+        <TapeMarquee items={t.marquee} className="absolute top-0 -left-[5%] w-[110%] -translate-y-1/2 -rotate-2" />
       </div>
     </>
   );

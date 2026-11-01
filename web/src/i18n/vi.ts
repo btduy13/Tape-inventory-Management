@@ -77,14 +77,14 @@ export const vi = {
     cancelled: "Đã hủy",
   },
   landing: {
+    // Headings/lead copy use non-breaking spaces (U+00A0) inside compounds such as
+    // "băng keo", "thương hiệu", "trình duyệt" so they never split across lines.
     heroTitle: "Băng keo in logo theo yêu cầu",
     heroSubtitle:
       "Băng keo in logo theo yêu cầu, sản xuất trực tiếp tại xưởng. Tự thiết kế trên trình duyệt, xem mô phỏng 3D và nhận báo giá trong ngày.",
-    heroLead: "In logo của bạn lên từng mét băng keo. Tự thiết kế trên trình duyệt, nhận báo giá trong ngày.",
+    heroLead: "In logo của bạn lên từng mét băng keo. Tự thiết kế trên trình duyệt, nhận báo giá trong ngày.",
     ctaDesign: "Thiết kế ngay",
     ctaQuote: "Nhận báo giá",
-    heroBadge: "Báo giá trong ngày làm việc",
-    heroPoints: ["Khổ 12 – 80 mm", "In tối đa 3 màu", "Cuộn 50 – 635 m"],
     heroArtCaption: "Mô phỏng nắp thùng carton dán băng keo in logo",
     heroTapeText: "LOGO CỦA BẠN",
     brand: "Băng keo in logo",
@@ -99,8 +99,8 @@ export const vi = {
     ],
     ctaContact: "Liên hệ tư vấn",
     marquee: ["LOGO CỦA BẠN", "IN THEO YÊU CẦU", "KHỔ 12 – 80 MM", "CUỘN 50 – 635 M", "TỐI ĐA 3 MÀU"],
-    productsTitle: "Chọn loại băng keo",
-    productsSubtitle: "Ba loại nền băng keo. Logo và nội dung in theo thiết kế của bạn.",
+    productsTitle: "Chọn loại băng keo",
+    productsSubtitle: "Ba loại nền băng keo. Logo và nội dung in theo thiết kế của bạn.",
     productTypes: [
       {
         key: "clear",
@@ -124,14 +124,14 @@ export const vi = {
     productWidthUnit: "mm",
     productWidthExample: "Khổ thường dùng",
     productSpecs: "Khổ 12 – 80 mm. Cuộn 50 – 635 m, độ dày theo nhu cầu đóng gói.",
-    useTitle: "Dán ở đâu, thương hiệu theo đến đó",
-    useSubtitle: "Logo in trên băng keo đi cùng từng thùng hàng, từ kho đến tay khách.",
+    useTitle: "Dán ở đâu, thương hiệu theo đến đó",
+    useSubtitle: "Logo in trên băng keo đi cùng từng thùng hàng, từ kho đến tay khách.",
     useScenes: [
       { key: "carton", title: "Dán thùng carton", body: "Niêm phong mép thùng, logo chạy dọc cả hai nắp." },
       { key: "cup", title: "Dán ly trà sữa", body: "Dải băng dọc qua nắp ly, vừa giữ kín vừa in tên quán." },
       { key: "ecom", title: "Thương mại điện tử", body: "Gói hàng giao đi mỗi ngày, khách mở hộp là thấy thương hiệu." },
     ],
-    whyTitle: "Vì sao nên in logo lên băng keo?",
+    whyTitle: "Vì sao nên in logo lên băng keo?",
     whySubtitle: "Thùng hàng đi qua tay shipper, kho bãi và khách hàng. Băng keo in logo biến mỗi thùng thành một lần nhắc tên bạn.",
     whyReasons: [
       { title: "Thương hiệu đi cùng từng đơn hàng", body: "Tên, logo và hotline xuất hiện ngay khi khách nhìn thấy thùng." },
@@ -140,13 +140,13 @@ export const vi = {
     ],
     useCasesTitle: "Phù hợp với",
     useCases: ["Shop online, bán hàng TMĐT", "Quán trà sữa, cà phê", "Kho vận, logistics", "Nhà máy, nhà phân phối", "Xuất khẩu, hàng dự án"],
-    presetsTitle: "Kích thước phổ biến",
+    presetsTitle: "Kích thước phổ biến",
     presetsSubtitle: "Chọn một kích thước có sẵn, hoặc ghi chú kích thước riêng khi gửi yêu cầu.",
     presetsEmpty: "Danh sách kích thước đang được cập nhật.",
     presetSpec: "{width} mm × {length} m · {thickness} mic",
-    ctaTitle: "Thiết kế băng keo của riêng bạn",
-    ctaSubtitle: "Chọn khổ, màu, thêm logo và xem trước ngay trên trình duyệt.",
-    howTitle: "Từ bản vẽ đến thùng hàng",
+    ctaTitle: "Thiết kế băng keo của riêng bạn",
+    ctaSubtitle: "Chọn khổ, màu, thêm logo và xem trước ngay trên trình duyệt.",
+    howTitle: "Từ bản vẽ đến thùng hàng",
     howSubtitle: "Quy trình 4 bước. Bạn thiết kế, xưởng lo phần còn lại.",
     howSteps: [
       { title: "Thiết kế", body: "Chọn khổ băng keo, tối đa 3 màu, nhập nội dung và tải logo lên." },

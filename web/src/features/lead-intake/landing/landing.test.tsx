@@ -58,7 +58,7 @@ describe("HowItWorks", () => {
 describe("ProductShowcase", () => {
   it("renders the three tape types under one heading", () => {
     const { container } = render(<ProductShowcase />);
-    expect(screen.getByRole("heading", { level: 2, name: "Chọn loại băng keo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: /^Chọn loại băng\skeo$/ })).toBeInTheDocument();
     expect(within(container).getAllByRole("heading", { level: 3 })).toHaveLength(3);
   });
 });
@@ -66,7 +66,7 @@ describe("ProductShowcase", () => {
 describe("UseCases", () => {
   it("renders the three scenes, reasons and audiences", () => {
     render(<UseCases />);
-    expect(screen.getByRole("heading", { level: 2, name: /thương hiệu theo đến đó/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: /thương\shiệu theo đến\sđó/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /Vì sao/ })).toBeInTheDocument();
     for (const name of ["Dán thùng carton", "Dán ly trà sữa", "Thương mại điện tử"]) {
       expect(screen.getByRole("heading", { level: 3, name })).toBeInTheDocument();
@@ -84,6 +84,12 @@ describe("Hero", () => {
     const design = screen.getAllByRole("link", { name: "Thiết kế ngay" });
     expect(design.every((a) => a.getAttribute("href") === "/thiet-ke")).toBe(true);
     expect(screen.getByRole("link", { name: "Nhận báo giá" })).toHaveAttribute("href", "/thiet-ke#yeu-cau-bao-gia");
+  });
+
+  it("has no spec pill tags (specs live in the product section)", () => {
+    const { container } = render(<Hero />);
+    expect(within(container).queryByText("Khổ 12 – 80 mm")).not.toBeInTheDocument();
+    expect(within(container).queryByText("Báo giá trong ngày làm việc")).not.toBeInTheDocument();
   });
 
   it("shows the Vĩnh Thịnh logo in the header, linked home", () => {

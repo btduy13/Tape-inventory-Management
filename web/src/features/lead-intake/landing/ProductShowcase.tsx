@@ -13,7 +13,7 @@ export function ProductShowcase() {
         <h2 id="san-pham-title" className={`${LP_H2} text-vt-ink`}>
           {t.productsTitle}
         </h2>
-        <p className="max-w-md text-lg leading-relaxed text-vt-ink/80 md:justify-self-end">{t.productsSubtitle}</p>
+        <p className="max-w-xl text-lg leading-relaxed text-vt-ink/80 md:justify-self-end">{t.productsSubtitle}</p>
       </div>
 
       <ul className="mt-12 flex flex-col gap-10 md:mt-16 md:gap-14">
@@ -22,7 +22,7 @@ export function ProductShowcase() {
             <TapeSwatch kind={p.key as TapeKind} label={t.heroTapeText} from={i % 2 ? "right" : "left"} />
             <div className={`${LP_CONTAINER} grid gap-x-10 gap-y-1 md:grid-cols-[9rem_minmax(0,1fr)] md:items-start lg:grid-cols-[10rem_minmax(0,1fr)]`}>
               <p className="flex flex-col lp-display text-5xl text-vt-red-deep md:text-6xl">
-                <span className="mb-1 font-sans text-xs font-bold tracking-wide text-vt-navy uppercase">{t.productWidthExample}</span>
+                <span className="mb-1 font-sans text-xs font-bold tracking-wide text-vt-blue uppercase">{t.productWidthExample}</span>
                 <span>
                   {p.width}
                   <span className="ml-1 text-2xl">{t.productWidthUnit}</span>
@@ -37,7 +37,7 @@ export function ProductShowcase() {
         ))}
       </ul>
 
-      <p className={`${LP_CONTAINER} mt-12 text-sm font-semibold text-vt-navy`}>{t.productSpecs}</p>
+      <p className={`${LP_CONTAINER} mt-12 text-sm font-semibold text-vt-blue`}>{t.productSpecs}</p>
     </section>
   );
 }

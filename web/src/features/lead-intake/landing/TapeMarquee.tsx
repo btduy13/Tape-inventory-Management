@@ -22,7 +22,7 @@ export function TapeMarquee({
   const s = TONES[tone];
   const run = [...items, ...items, ...items];
   return (
-    <div aria-hidden="true" className={`relative z-10 overflow-hidden shadow-[0_10px_30px_-12px_rgb(26_28_78/0.45)] ${s.strip} ${className}`}>
+    <div aria-hidden="true" className={`z-10 overflow-hidden shadow-[0_10px_30px_-12px_rgb(26_28_78/0.45)] ${s.strip} ${className}`}>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/50" />
       <div className={`flex w-max ${reverse ? "lp-marquee-rev" : "lp-marquee"}`}>
         {[0, 1].map((copy) => (
