@@ -8,6 +8,7 @@ import { CARTON_MM, MM_PER_UNIT, rollGeometry, type RollPreset } from "../lib/ge
 import { hasWebGL } from "../lib/webgl";
 import type { MockupView } from "../lib/views";
 import { Watermark } from "./Watermark";
+import { VIEWER_ATTR, ZOOM_EVENT } from "../lib/zoom";
 
 const MockupScene = dynamic(() => import("./MockupScene"), {
   ssr: false,
@@ -53,7 +54,14 @@ const ASPECT_BASE: Record<MockupAspect, string> = {
   "3 / 4": "aspect-[3/4]",
 };
 
-const TOUCH_HINT = "Vuốt ngang để xoay, vuốt dọc để cuộn trang";
+const TOUCH_HINT = "Vuốt ngang để xoay, chụm 2 ngón để phóng to, vuốt dọc để cuộn trang";
+const ZOOM_HINT = "Ctrl + cuộn chuột hoặc nút +/− để phóng to";
+const ZOOM_STEP = 0.8;
+
+/** Dispatches a zoom request to the ZoomPolicy inside the canvas (factor < 1 = closer). */
+function zoom(button: HTMLElement, factor: number) {
+  button.closest(`[${VIEWER_ATTR}]`)?.dispatchEvent(new CustomEvent(ZOOM_EVENT, { detail: factor }));
+}
 export const MOCKUP_DISCLAIMER = "Hình ảnh chỉ là minh họa và tham khảo, không thể hiện đúng màu sắc thực tế";
 
 const cm = (mm: number) => `${+(mm / 10).toFixed(1)}`.replace(".", ",");
@@ -140,6 +148,7 @@ export function TapeMockup3D({
       <div
         // Discourage "save image" on the bare canvas: the watermark lives in the overlay.
         onContextMenu={(e) => e.preventDefault()}
+        {...{ [VIEWER_ATTR]: "" }}
         className={`relative w-full min-w-0 overflow-hidden rounded-lg border border-neutral-300 bg-stone-100 ${
           aspect === "fill" ? "min-h-64 flex-1" : `${ASPECT_BASE[mobileAspect]} max-h-[85svh] ${ASPECT_SM[aspect]}`
         }`}
@@ -154,6 +163,25 @@ export function TapeMockup3D({
           fallback
         )}
         <Watermark />
+        {webgl && source && (
+          <div className="absolute right-2 top-2 z-30 flex flex-col overflow-hidden rounded-md border border-neutral-300 bg-white/90 shadow-sm">
+            {[
+              { label: "Phóng to", text: "+", factor: ZOOM_STEP },
+              { label: "Thu nhỏ", text: "−", factor: 1 / ZOOM_STEP },
+            ].map((b) => (
+              <button
+                key={b.text}
+                type="button"
+                aria-label={b.label}
+                title={b.label}
+                onClick={(e) => zoom(e.currentTarget, b.factor)}
+                className="grid size-11 place-items-center text-xl font-semibold text-vt-navy hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-vt-navy"
+              >
+                {b.text}
+              </button>
+            ))}
+          </div>
+        )}
         {/* sm+: drawn inside the viewer; phones: below the canvas so it never covers the scene. */}
         <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden bg-white/85 px-3 py-1.5 text-center text-xs leading-snug text-neutral-700 sm:block">
           {MOCKUP_DISCLAIMER}
@@ -165,7 +193,7 @@ export function TapeMockup3D({
         {webgl && (
           <>
             {" · "}
-            <span className="hidden pointer-fine:inline">{t.rotateHint}</span>
+            <span className="hidden pointer-fine:inline">{t.rotateHint} · {ZOOM_HINT}</span>
             <span className="pointer-fine:hidden">{TOUCH_HINT}</span>
           </>
         )}

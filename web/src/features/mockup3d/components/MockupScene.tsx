@@ -10,6 +10,7 @@ import { installThreeConsoleFilter } from "../lib/three-console";
 import { viewFrame, type MockupView } from "../lib/views";
 import { FitCamera } from "./FitCamera";
 import { TouchScrollPolicy } from "./TouchScrollPolicy";
+import { ZoomPolicy } from "./ZoomPolicy";
 
 export type { MockupView } from "../lib/views";
 
@@ -66,9 +67,10 @@ export default function MockupScene({ ariaLabel, fallback, ...rest }: MockupScen
         <ContactShadows position={[0, frame.floorY - 0.001, 0]} scale={frame.radius * 3} opacity={0.35} blur={2.4} far={frame.radius * 2} />
       </Suspense>
       <FitCamera radius={frame.radius} direction={frame.direction} />
-      {/* No wheel/pinch zoom: the wheel keeps scrolling the page; framing is auto-fitted. */}
-      <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping rotateSpeed={0.9} />
+      {/* Zoom: pinch, Ctrl/⌘ + wheel or the +/− buttons; a plain wheel scrolls the page (ZoomPolicy). */}
+      <OrbitControls makeDefault enablePan={false} enableZoom enableDamping rotateSpeed={0.9} zoomSpeed={0.8} />
       <TouchScrollPolicy />
+      <ZoomPolicy />
     </Canvas>
   );
 }
