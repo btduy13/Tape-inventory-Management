@@ -73,8 +73,8 @@ if ($tsSite) {
 $resend = Read-Secret "Resend API key (Enter = bo qua, email chi ghi log)"
 if ($resend) {
   Set-VercelEnv "RESEND_API_KEY" $resend $both
-  $from = Read-Host "EMAIL_FROM (vd: Bang Keo <no-reply@bangkeo.vn>)"
-  if ($from) { Set-VercelEnv "EMAIL_FROM" $from $both }
+  $sender = Read-Host "EMAIL_FROM (vd: Bang Keo <no-reply@bangkeo.vn>)"
+  if ($sender) { Set-VercelEnv "EMAIL_FROM" $sender $both }
 }
 Remove-Variable resend -ErrorAction SilentlyContinue
 
