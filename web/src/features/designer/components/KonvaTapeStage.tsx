@@ -89,14 +89,14 @@ export default function KonvaTapeStage() {
   const live = text ? format(t.previewWithText, { text }) : s.logo ? t.previewLogoOnly : t.previewEmpty;
 
   return (
-    <figure className="flex min-w-0 flex-col gap-1">
+    <figure className="flex min-w-0 flex-col gap-2">
       <div
         ref={wrapRef}
         tabIndex={0}
         role="application"
         aria-label={`${t.previewLabel}. ${live}. ${t.canvasHelp}`}
         onKeyDown={ui.onKeyDown}
-        className="relative w-full min-w-0 overflow-hidden rounded border border-neutral-300 bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+        className="relative w-full min-w-0 overflow-hidden rounded-md shadow-[0_1px_2px_rgba(15,23,42,0.12),0_4px_12px_-4px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-900"
       >
         {scale > 0 && (
           <Stage ref={stageRef} width={stageW} height={stageH} scaleX={scale} scaleY={scale} onMouseDown={onStageDown} onTouchStart={onStageDown}>
@@ -149,26 +149,28 @@ export default function KonvaTapeStage() {
                 enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
                 anchorSize={14}
                 anchorCornerRadius={7}
-                borderStroke="#b45309"
-                anchorStroke="#b45309"
+                borderStroke="#2563eb"
+                anchorStroke="#2563eb"
+                anchorFill="#ffffff"
                 boundBoxFunc={(oldBox, box) => (box.height < 8 || box.height > maxBox + 1 ? oldBox : box)}
               />
             </Layer>
           </Stage>
         )}
         {empty && scale > 0 && (
-          <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-sm text-neutral-600">
+          <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-xs font-medium text-slate-800 sm:text-sm">
             {t.emptyCanvas}
           </p>
         )}
       </div>
       {layout.fit < 0.999 && (
-        <p role="status" className="text-xs text-amber-800">
+        <p role="status" className="text-xs font-medium text-amber-900">
           {format(t.autoFit, { px: Math.round(layout.fontSize) })}
         </p>
       )}
-      <figcaption className="text-xs text-neutral-500">
-        {format(t.stripCaption, { length: STRIP_LENGTH_MM, width: s.preset.width_mm })} · {t.canvasHelp}
+      <figcaption className="text-xs leading-5 text-slate-600">
+        {format(t.stripCaption, { length: STRIP_LENGTH_MM, width: s.preset.width_mm })}
+        <span className="hidden pointer-fine:inline"> · {t.canvasHelp}</span>
       </figcaption>
     </figure>
   );

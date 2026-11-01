@@ -3,31 +3,33 @@
 import { getDictionary } from "@/i18n";
 import { DESIGN_TEMPLATES } from "../lib/templates";
 import { useDesignState } from "./hooks";
+import { focusRing, groupLabel, hint } from "./ui";
 
 export function TemplatePicker() {
   const t = getDictionary().designer;
   const [, dispatch] = useDesignState();
   return (
     <fieldset className="flex min-w-0 flex-col gap-2">
-      <legend className="mb-1 text-sm font-semibold">{t.templates}</legend>
+      <legend className={`${groupLabel} mb-0.5`}>{t.templates}</legend>
+      <p className={hint}>{t.templatesHint}</p>
       <div className="grid grid-cols-2 gap-2">
         {DESIGN_TEMPLATES.map((tpl) => (
           <button
             key={tpl.id}
             type="button"
             onClick={() => dispatch({ type: "applyTemplate", template: tpl })}
-            className="flex min-h-11 min-w-0 flex-col gap-1 rounded-md border border-neutral-300 p-2 text-left text-xs hover:border-amber-500 focus-visible:outline-2 focus-visible:outline-amber-600"
+            className={`group flex min-h-11 min-w-0 cursor-pointer flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left transition-colors duration-150 motion-reduce:transition-none hover:border-slate-400 ${focusRing}`}
           >
-            <svg viewBox="0 0 120 20" className="h-5 w-full" aria-hidden="true">
-              <rect width="120" height="20" fill={tpl.backgroundColor} />
+            <svg viewBox="0 0 120 22" className="block h-auto w-full" aria-hidden="true">
+              <rect width="120" height="22" rx="2" fill={tpl.backgroundColor} stroke="#e2e8f0" />
               <text
-                x="60" y="14" textAnchor="middle" fontSize="9" fontWeight="bold" fontFamily={tpl.fontFamily} fill={tpl.textColor}
-                textLength={Math.min(112, tpl.text.length * 6)} lengthAdjust="spacingAndGlyphs"
+                x="60" y="15" textAnchor="middle" fontSize="9" fontWeight="bold" fontFamily={tpl.fontFamily} fill={tpl.textColor}
+                textLength={Math.min(110, tpl.text.length * 6)} lengthAdjust="spacingAndGlyphs"
               >
                 {tpl.text}
               </text>
             </svg>
-            <span className="truncate">{tpl.label}</span>
+            <span className="truncate px-0.5 text-xs font-medium text-slate-700 group-hover:text-slate-900">{tpl.label}</span>
           </button>
         ))}
       </div>

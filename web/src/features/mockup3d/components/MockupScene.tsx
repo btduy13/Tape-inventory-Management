@@ -9,6 +9,7 @@ import type { RollPreset } from "../lib/geometry";
 import { installThreeConsoleFilter } from "../lib/three-console";
 import { viewFrame, type MockupView } from "../lib/views";
 import { FitCamera } from "./FitCamera";
+import { TouchScrollPolicy } from "./TouchScrollPolicy";
 
 export type { MockupView } from "../lib/views";
 
@@ -19,6 +20,8 @@ const CartonBox = lazy(() => import("./CartonBox").then((m) => ({ default: m.Car
 const DrinkCup = lazy(() => import("./DrinkCup").then((m) => ({ default: m.DrinkCup })));
 
 const FOV = 40;
+/** devicePixelRatio cap: sharp on retina, affordable on 3x phones. */
+const MAX_DPR = 2;
 
 export type MockupSceneProps = {
   view: MockupView;
@@ -45,9 +48,11 @@ export default function MockupScene({ ariaLabel, fallback, ...rest }: MockupScen
       key={rest.view}
       aria-label={ariaLabel}
       role="img"
-      dpr={[1, 2]}
+      dpr={[1, MAX_DPR]}
       frameloop="demand"
       camera={{ position: [0, 0, d], fov: FOV, near: 0.05, far: 100 }}
+      resize={{ scroll: false, debounce: { scroll: 0, resize: 60 } }}
+      style={{ position: "absolute", inset: 0 }}
       gl={{ antialias: true, preserveDrawingBuffer: false }}
       fallback={fallback}
     >
@@ -61,7 +66,9 @@ export default function MockupScene({ ariaLabel, fallback, ...rest }: MockupScen
         <ContactShadows position={[0, frame.floorY - 0.001, 0]} scale={frame.radius * 3} opacity={0.35} blur={2.4} far={frame.radius * 2} />
       </Suspense>
       <FitCamera radius={frame.radius} direction={frame.direction} />
-      <OrbitControls makeDefault enablePan={false} enableDamping minDistance={d * 0.45} maxDistance={d * 2.2} />
+      {/* No wheel/pinch zoom: the wheel keeps scrolling the page; framing is auto-fitted. */}
+      <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping rotateSpeed={0.9} />
+      <TouchScrollPolicy />
     </Canvas>
   );
 }

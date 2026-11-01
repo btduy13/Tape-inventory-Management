@@ -5,6 +5,7 @@ import { format, getDictionary } from "@/i18n";
 import { lengthIssue, parseLengthInput } from "../lib/tape-spec";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
+import { chip, chipOff, chipOn, groupLabel, hint, input } from "./ui";
 
 export function PresetPicker() {
   const t = getDictionary().tapeSpec;
@@ -25,15 +26,15 @@ export function PresetPicker() {
           : null;
 
   return (
-    <fieldset className="flex min-w-0 flex-col gap-3">
-      <legend className="mb-1 text-sm font-semibold">{t.title}</legend>
-      <div className="flex min-w-0 flex-col gap-1">
-        <span id={`${lengthId}-w`} className="text-sm">{t.widthLegend}</span>
-        <div role="radiogroup" aria-labelledby={`${lengthId}-w`} className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+    <fieldset className="flex min-w-0 flex-col gap-5">
+      <legend className="sr-only">{t.title}</legend>
+      <div className="flex min-w-0 flex-col gap-2">
+        <span id={`${lengthId}-w`} className={groupLabel}>{t.widthLegend}</span>
+        <div role="radiogroup" aria-labelledby={`${lengthId}-w`} className="grid grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
           {spec.widths.map((w) => {
             const selected = w === state.preset.width_mm;
-            // Mini strip: height proportional to tape width (max 16px).
-            const h = Math.max(2, Math.round((w / widest) * 16));
+            // Mini strip: height proportional to tape width (max 14px).
+            const h = Math.max(2, Math.round((w / widest) * 14));
             return (
               <button
                 key={w}
@@ -42,21 +43,19 @@ export function PresetPicker() {
                 aria-checked={selected}
                 data-width={w}
                 onClick={() => dispatch({ type: "setWidth", widthMm: w })}
-                className={`flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-md border px-1 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 ${
-                  selected ? "border-amber-700 bg-amber-50" : "border-neutral-300 hover:border-amber-500"
-                }`}
+                className={`${chip} h-14 flex-col gap-1.5 px-1 ${selected ? chipOn : chipOff}`}
               >
-                <svg width="28" height="16" viewBox="0 0 28 16" aria-hidden="true">
-                  <rect x="0" y={(16 - h) / 2} width="28" height={h} rx="1" fill={selected ? "#b45309" : "#c4a77d"} />
+                <svg width="28" height="14" viewBox="0 0 28 14" aria-hidden="true">
+                  <rect x="0" y={(14 - h) / 2} width="28" height={h} rx="1" fill={selected ? "#fbbf24" : "#c4a77d"} />
                 </svg>
-                <span className="text-sm font-bold tabular-nums">{format(t.widthOption, { width: w })}</span>
+                <span className="text-sm font-semibold tabular-nums">{format(t.widthOption, { width: w })}</span>
               </button>
             );
           })}
         </div>
       </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={lengthId} className="text-sm">{t.lengthLabel}</label>
+      <div className="flex min-w-0 flex-col gap-2">
+        <label htmlFor={lengthId} className={groupLabel}>{t.lengthLabel}</label>
         <input
           id={lengthId}
           name="tapeLengthM"
@@ -70,11 +69,9 @@ export function PresetPicker() {
             setLengthText(e.target.value);
             dispatch({ type: "setLength", lengthM: parseLengthInput(e.target.value) });
           }}
-          className={`h-11 w-40 rounded-md border px-3 text-base tabular-nums focus:outline-none ${
-            issue ? "border-red-600 focus:border-red-700" : "border-neutral-300 focus:border-amber-600"
-          }`}
+          className={`${input} max-w-40 tabular-nums ${issue ? "border-red-600 focus:border-red-700 focus:ring-red-600/15" : ""}`}
         />
-        <p id={`${lengthId}-help`} className={`text-xs ${issue ? "text-red-700" : "text-neutral-600"}`} role={issue ? "alert" : undefined}>
+        <p id={`${lengthId}-help`} className={issue ? "text-xs leading-5 font-medium text-red-700" : hint} role={issue ? "alert" : undefined}>
           {message ?? format(t.lengthHelp, { min: spec.minLengthM, max: spec.maxLengthM })}
         </p>
       </div>

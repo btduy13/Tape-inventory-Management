@@ -22,7 +22,7 @@ export function viewFrame(view: MockupView, preset: RollPreset): ViewFrame {
     return { radius, direction: [1.15, 0.8, 0.7], floorY };
   }
   if (view === "cup") {
-    return { radius: toUnits(cupBoundingRadiusMm()), direction: [-0.35, 0.3, 1], floorY: -toUnits(CUP_CENTER_Y_MM) };
+    return { radius: toUnits(cupBoundingRadiusMm()), direction: [-0.3, 0.62, 1], floorY: -toUnits(CUP_CENTER_Y_MM) };
   }
   const g = rollGeometry(preset);
   const halfWidth = (g.width * 1.02) / 2;

@@ -1,6 +1,7 @@
 "use client";
-// Slider + number input with visible value and limits (keyboard and touch friendly).
+// Slider + number input with visible value (keyboard and touch friendly).
 import { useId } from "react";
+import { focusRing } from "./ui";
 
 type Props = {
   label: string;
@@ -8,7 +9,7 @@ type Props = {
   min: number;
   max: number;
   step?: number;
-  /** Display formatter for value / limits (e.g. "86px", "120%"). */
+  /** Display formatter for the value (e.g. "86px", "120%"). */
   display?: (v: number) => string;
   onChange: (v: number) => void;
 };
@@ -21,13 +22,14 @@ export function RangeField({ label, value, min, max, step = 1, display = String,
     if (raw !== "" && Number.isFinite(n)) onChange(n);
   };
   return (
-    <div className="flex min-w-0 flex-col gap-1 text-sm">
-      <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id}>{label}</label>
-        <output htmlFor={id} className="font-semibold tabular-nums text-neutral-800">{display(v)}</output>
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <label htmlFor={id} className="font-medium text-slate-800">{label}</label>
+        <output htmlFor={id} className="text-xs tabular-nums text-slate-600">
+          {display(min)} – {display(max)}
+        </output>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-neutral-500" aria-hidden="true">{display(min)}</span>
+      <div className="flex items-center gap-3">
         <input
           id={id}
           type="range"
@@ -35,10 +37,10 @@ export function RangeField({ label, value, min, max, step = 1, display = String,
           max={max}
           step={step}
           value={v}
+          aria-valuetext={display(v)}
           onChange={(e) => emit(e.target.value)}
-          className="h-11 min-w-0 flex-1 accent-amber-700"
+          className={`h-11 min-w-0 flex-1 cursor-pointer accent-slate-900 ${focusRing}`}
         />
-        <span className="w-10 shrink-0 text-xs tabular-nums text-neutral-500" aria-hidden="true">{display(max)}</span>
         <input
           type="number"
           min={min}
@@ -47,7 +49,7 @@ export function RangeField({ label, value, min, max, step = 1, display = String,
           value={Number(v.toFixed(2))}
           aria-label={label}
           onChange={(e) => emit(e.target.value)}
-          className="h-11 w-20 shrink-0 rounded-md border border-neutral-300 px-2 tabular-nums"
+          className="h-11 w-20 shrink-0 rounded-lg border border-slate-300 bg-white px-2 text-right text-base tabular-nums text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15"
         />
       </div>
     </div>

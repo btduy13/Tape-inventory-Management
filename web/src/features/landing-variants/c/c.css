@@ -1,0 +1,62 @@
+/* Variant C: dark bento. Plain global CSS (the turbopack *.css rule disables CSS modules);
+   every class is prefixed vc-. Motion is transform/opacity only; reduced motion = static. */
+
+.vc-page {
+  background-color: #15171c;
+  color: #ece9e3;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.045) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+.vc-display {
+  font-family: "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.032em;
+}
+
+/* Hero strip unroll: the window slides in while its content counter-slides, so the
+   print stays put and appears to be laid down left to right. */
+.vc-reveal {
+  animation: vc-reveal 900ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+.vc-reveal-inner {
+  animation: vc-reveal-inner 900ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+.vc-roll {
+  animation: vc-roll 900ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+.vc-roll-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vc-spin 900ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+@keyframes vc-reveal {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+@keyframes vc-reveal-inner {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes vc-roll {
+  0% { transform: translateX(-100%); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: none; opacity: 0; }
+}
+@keyframes vc-spin {
+  from { transform: rotate(-540deg); }
+  to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-reveal,
+  .vc-reveal-inner,
+  .vc-roll,
+  .vc-roll-spin {
+    animation: none;
+  }
+  .vc-roll {
+    opacity: 0;
+  }
+}

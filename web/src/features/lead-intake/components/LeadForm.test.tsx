@@ -45,6 +45,12 @@ describe("LeadForm", () => {
     expect(body.get("quantity")).toBe("500");
   });
 
+  it("hideHeading keeps the title for screen readers only", () => {
+    render(<LeadForm getDesign={async () => ({ designJson: DESIGN })} turnstileSiteKey="k" hideHeading />);
+    expect(screen.getByRole("heading", { name: "Yêu cầu báo giá" })).toHaveClass("sr-only");
+    expect(screen.queryByText(/Để lại thông tin/)).not.toBeInTheDocument();
+  });
+
   it("shows the server error message", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ ok: false, error: "rate_limited" }, { status: 429 })));
     render(<LeadForm getDesign={async () => ({ designJson: DESIGN })} turnstileSiteKey="k" />);

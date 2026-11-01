@@ -18,3 +18,18 @@ export function cameraPosition(direction: Vec3, distance: number, target: Vec3 =
   const len = Math.hypot(...direction) || 1;
   return [0, 1, 2].map((i) => target[i] + (direction[i] / len) * distance) as Vec3;
 }
+
+/** Orbit zoom limits around the fitted distance (kept relative so every aspect behaves the same). */
+export function orbitLimits(distance: number): { min: number; max: number } {
+  return { min: distance * 0.55, max: distance * 1.8 };
+}
+
+/**
+ * Direction to re-fit along: the view's default when the view (framing) changed, otherwise the
+ * direction the user orbited to, so a resize / orientation change keeps the angle but re-fits.
+ */
+export function refitDirection(current: Vec3 | null, fallback: Vec3): Vec3 {
+  if (!current) return fallback;
+  const len = Math.hypot(...current);
+  return len > 1e-6 && current.every(Number.isFinite) ? current : fallback;
+}

@@ -32,14 +32,14 @@ export function FormField(p: Props) {
     "aria-invalid": p.error ? true : undefined,
     "aria-describedby": describedBy,
     className:
-      "w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-200 aria-[invalid=true]:border-red-500",
+      "min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 transition-colors duration-150 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/15 aria-[invalid=true]:border-red-600 motion-reduce:transition-none",
     onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => p.onChange(e.target.value),
   };
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={p.id} className="text-sm font-medium text-stone-800">
+      <label htmlFor={p.id} className="text-sm font-medium text-slate-800">
         {p.label}
-        {p.required && <span aria-hidden className="text-red-600"> *</span>}
+        {p.required && <span aria-hidden className="text-red-700"> *</span>}
       </label>
       {p.multiline ? (
         <textarea {...common} rows={3} />
@@ -47,10 +47,10 @@ export function FormField(p: Props) {
         <input {...common} type={p.type ?? "text"} inputMode={p.inputMode} autoComplete={p.autoComplete} />
       )}
       {p.hint && !p.error && (
-        <p id={`${p.id}-hint`} className="text-xs text-stone-500">{p.hint}</p>
+        <p id={`${p.id}-hint`} className="text-xs text-slate-600">{p.hint}</p>
       )}
       {p.error && (
-        <p id={`${p.id}-error`} className="text-sm text-red-600">{p.error}</p>
+        <p id={`${p.id}-error`} className="text-xs font-medium text-red-700">{p.error}</p>
       )}
     </div>
   );

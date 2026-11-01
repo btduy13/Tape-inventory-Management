@@ -4,6 +4,7 @@
 import { getDictionary } from "@/i18n";
 import { SWATCHES } from "../lib/constants";
 import { swatchName } from "../lib/swatch-names";
+import { focusRing } from "./ui";
 
 type Props = {
   label: string;
@@ -23,21 +24,25 @@ export function ColorField({ label, value, onChange, fallbackValue, fallbackNote
   const t = getDictionary().designer;
   const shown = value ?? fallbackValue ?? "#000000";
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <label className="flex min-w-0 cursor-pointer items-center gap-3">
           <input
             type="color"
             value={shown}
+            title={t.customColor}
             onChange={(e) => onChange(e.target.value)}
-            className="h-11 w-11 cursor-pointer rounded border border-neutral-300"
+            className={`h-11 w-11 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 ${focusRing}`}
           />
-          <span>{label}</span>
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="text-sm font-medium text-slate-900">{label}</span>
+            <span className="text-xs uppercase tabular-nums text-slate-600">{shown}</span>
+          </span>
         </label>
-        {value === null && fallbackNote && <span className="text-xs text-neutral-500">{fallbackNote}</span>}
-        {badge && <span role="status" className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{badge}</span>}
+        {value === null && fallbackNote && <span className="text-xs text-slate-600">{fallbackNote}</span>}
+        {badge && <span role="status" className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{badge}</span>}
       </div>
-      <div className="flex flex-wrap gap-1" role="group" aria-label={`${label} - ${t.swatches}`}>
+      <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-5" role="group" aria-label={`${label} - ${t.swatches}`}>
         {SWATCHES.map((hex) => {
           const disabled = disabledColors.includes(hex);
           const selected = value === hex;
@@ -52,15 +57,20 @@ export function ColorField({ label, value, onChange, fallbackValue, fallbackNote
               aria-pressed={selected}
               disabled={disabled}
               onClick={() => onChange(hex)}
-              className={`relative flex h-11 w-11 items-center justify-center rounded border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed ${
-                selected ? "border-amber-700 ring-2 ring-amber-500" : "border-neutral-300"
+              className={`relative h-11 min-w-0 cursor-pointer overflow-hidden rounded-lg border transition-shadow duration-150 motion-reduce:transition-none disabled:cursor-not-allowed ${focusRing} ${
+                selected ? "border-slate-900 ring-2 ring-slate-900 ring-offset-2" : "border-slate-300 hover:border-slate-500"
               }`}
             >
-              <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-                <rect width="28" height="28" rx="3" fill={hex} stroke="#a3a3a3" strokeWidth="1" />
-                {selected && <path d="M7 14.5l4.5 4.5L21 9" fill="none" stroke={checkStroke(hex)} strokeWidth="3" />}
-                {disabled && <path d="M3 25L25 3" stroke="#b91c1c" strokeWidth="2.5" />}
+              <svg className="absolute inset-0 h-full w-full" viewBox="0 0 10 10" preserveAspectRatio="none" aria-hidden="true">
+                <rect width="10" height="10" fill={hex} />
+                {disabled && <rect width="10" height="10" fill="#ffffff" fillOpacity="0.45" />}
+                {disabled && <path d="M0 10L10 0" stroke="#b91c1c" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
               </svg>
+              {selected && (
+                <svg className="relative mx-auto" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke={checkStroke(hex)} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
             </button>
           );
         })}

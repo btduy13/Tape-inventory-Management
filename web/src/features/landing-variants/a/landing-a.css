@@ -1,0 +1,70 @@
+/* Landing variant A (classes prefixed mau-a-; imported by styles.ts users). Motion uses transform/opacity only; static under reduced motion. */
+
+@keyframes mau-a-k-rise {
+  from { transform: translateY(16%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes mau-a-k-wipe {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes mau-a-k-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes mau-a-k-fadeUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.mau-a-letter {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: mau-a-k-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.mau-a-d1 { animation-delay: 40ms; }
+.mau-a-d2 { animation-delay: 90ms; }
+.mau-a-d3 { animation-delay: 140ms; }
+.mau-a-d4 { animation-delay: 190ms; }
+.mau-a-d5 { animation-delay: 240ms; }
+.mau-a-d6 { animation-delay: 290ms; }
+.mau-a-d7 { animation-delay: 340ms; }
+
+.mau-a-wipe {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: mau-a-k-wipe 1.3s cubic-bezier(0.65, 0, 0.35, 1) 0.45s backwards;
+}
+
+.mau-a-roll {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mau-a-k-spin 1.3s cubic-bezier(0.65, 0, 0.35, 1) 0.45s backwards;
+}
+
+.mau-a-fadeUp {
+  animation: mau-a-k-fadeUp 0.6s ease-out 0.9s backwards;
+}
+
+/* Printed tape swatch: yellow film, repeating logo marks, torn top edge. */
+.mau-a-strip {
+  background-color: #ffd21f;
+  background-image: linear-gradient(to right, rgb(255 255 255 / 0.4) 0 2px, transparent 2px calc(100% - 2px), rgb(10 20 102 / 0.14) calc(100% - 2px));
+  clip-path: polygon(0 7px, 20% 0, 40% 6px, 60% 1px, 80% 7px, 100% 2px, 100% 100%, 0 100%);
+}
+.mau-a-dots {
+  background-image:
+    radial-gradient(circle 3.5px at 50% 50%, #0a1466 0 3px, transparent 3.5px),
+    linear-gradient(to right, rgb(255 255 255 / 0.4) 0 2px, transparent 2px calc(100% - 2px), rgb(10 20 102 / 0.14) calc(100% - 2px));
+  background-size: 100% 22px, 100% 100%;
+  background-repeat: repeat-y, no-repeat;
+  background-position: center 12px, 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mau-a-letter,
+  .mau-a-wipe,
+  .mau-a-roll,
+  .mau-a-fadeUp {
+    animation: none;
+  }
+}

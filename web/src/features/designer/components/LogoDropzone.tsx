@@ -5,6 +5,7 @@ import { useId, useRef, useState, type DragEvent } from "react";
 import { getDictionary } from "@/i18n";
 import { loadLogoFile } from "../lib/logo-load";
 import { useDesignState } from "./hooks";
+import { focusRing } from "./ui";
 
 export const LOGO_ACCEPT =
   "image/png,image/jpeg,image/svg+xml,image/webp,image/gif,.png,.jpg,.jpeg,.svg,.webp,.gif";
@@ -65,24 +66,26 @@ export function LogoDropzone() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           onDragLeave={() => setOver(false)}
-          className={`flex items-center gap-3 rounded-md border p-2 ${over ? "border-amber-600 bg-amber-50" : "border-neutral-300"}`}
+          className={`flex min-w-0 flex-wrap items-center gap-3 rounded-xl border p-3 transition-colors duration-150 motion-reduce:transition-none ${over ? "border-slate-900 bg-slate-50" : "border-slate-200 bg-white"}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- blob: preview of a local file */}
-          <img src={s.logo.url} alt={t.logoThumbAlt} className="h-12 w-12 shrink-0 rounded border border-neutral-200 bg-neutral-100 object-contain" />
-          <div className="min-w-0 flex-1 text-sm">
-            <p className="truncate font-medium" title={s.logo.file.name}>{s.logo.file.name}</p>
-            <p className="text-xs text-neutral-500">{s.logo.width} x {s.logo.height}px · {Math.max(1, Math.round(s.logo.file.size / 1024))}KB</p>
+          <img src={s.logo.url} alt={t.logoThumbAlt} className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 bg-slate-100 object-contain" />
+          <div className="min-w-0 flex-1 basis-32 text-sm">
+            <p className="truncate font-medium text-slate-900" title={s.logo.file.name}>{s.logo.file.name}</p>
+            <p className="text-xs text-slate-600 tabular-nums">{s.logo.width} × {s.logo.height}px · {Math.max(1, Math.round(s.logo.file.size / 1024))}KB</p>
           </div>
-          <label htmlFor={inputId} className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-amber-700 px-3 text-sm font-semibold text-amber-800 hover:bg-amber-50 focus-within:ring-2">
-            {busy ? t.logoLoading : t.logoChange}
-          </label>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "setLogo", logo: null })}
-            className="min-h-11 rounded-md px-2 text-sm text-red-700 underline"
-          >
-            {t.logoRemove}
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <label htmlFor={inputId} className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 transition-colors duration-150 hover:border-slate-500 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-slate-900 motion-reduce:transition-none">
+              {busy ? t.logoLoading : t.logoChange}
+            </label>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "setLogo", logo: null })}
+              className={`inline-flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-red-700 transition-colors duration-150 hover:bg-red-50 motion-reduce:transition-none ${focusRing}`}
+            >
+              {t.logoRemove}
+            </button>
+          </div>
         </div>
       ) : (
         <label
@@ -91,24 +94,27 @@ export function LogoDropzone() {
           onDragOver={onDragOver}
           onDragLeave={() => setOver(false)}
           aria-busy={busy}
-          className={`flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center text-sm ${
-            over ? "border-amber-600 bg-amber-50" : "border-neutral-300 hover:border-amber-500"
+          className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center text-sm transition-colors duration-150 motion-reduce:transition-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-slate-900 ${
+            over ? "border-slate-900 bg-slate-50" : "border-slate-300 bg-slate-50/50 hover:border-slate-500 hover:bg-slate-50"
           }`}
         >
           {busy ? (
-            <span className="flex items-center gap-2" role="status">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" aria-hidden="true" />
+            <span className="flex items-center gap-2 text-slate-700" role="status">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-700 border-t-transparent motion-reduce:animate-none" aria-hidden="true" />
               {t.logoLoading}
             </span>
           ) : (
             <>
-              <span className="font-semibold text-amber-800">{t.logoDrop}</span>
-              <span className="text-xs text-neutral-600">{t.logoHint}</span>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+              </svg>
+              <span className="font-semibold text-slate-900">{t.logoDrop}</span>
+              <span className="text-xs text-slate-600">{t.logoHint}</span>
             </>
           )}
         </label>
       )}
-      {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
+      {error && <p role="alert" className="text-xs leading-5 font-medium text-red-700">{error}</p>}
     </div>
   );
 }

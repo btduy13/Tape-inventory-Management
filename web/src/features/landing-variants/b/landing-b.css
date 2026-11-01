@@ -1,0 +1,187 @@
+/* Landing variant B (global, every class prefixed lb-; CSS modules are compiled
+   as global CSS by the turbopack rule in next.config.ts): clean editorial / premium minimal.
+   Motion: transform/opacity only. No inline styles (CSP). */
+
+.lb-page {
+  --b-paper: #f4f0e8;
+  --b-paper-deep: #ebe4d6;
+  --b-kraft: #c49a64;
+  --b-kraft-ink: #7a5530;
+  --b-ink: #1c1a17;
+  --b-muted: #575148;
+  --b-rule: #d8cfbf;
+  --b-accent: #2b3fcf;
+  --b-accent-deep: #2232a8;
+  --b-display: "Segoe UI Variable Display", "SF Pro Display", -apple-system, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+  --b-text: "Segoe UI Variable Text", "SF Pro Text", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  background: var(--b-paper);
+  color: var(--b-ink);
+  font-family: var(--b-text);
+  overflow-x: clip;
+}
+
+.lb-display {
+  font-family: var(--b-display);
+  font-weight: 600;
+  letter-spacing: -0.032em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.lb-num {
+  font-family: var(--b-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.04em;
+}
+
+.lb-focus:focus-visible {
+  outline: 2px solid var(--b-accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.lb-focus-light:focus-visible {
+  outline: 2px solid var(--b-paper);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Primary button: ink fill; a printed-tape strip slides in underneath on hover. */
+.lb-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: transform 180ms ease-out;
+}
+.lb-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--b-accent);
+  transform: translateX(-101%);
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.lb-btn:hover::before,
+.lb-btn:focus-visible::before {
+  transform: none;
+}
+.lb-btn:active {
+  transform: translateY(1px);
+}
+
+.lb-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+/* ---------- Seal divider: a printed tape strip that unrolls across the grid ---------- */
+.lb-seal {
+  position: relative;
+  overflow: hidden;
+  height: 2.75rem;
+  /* torn ends of a cut tape strip */
+  clip-path: polygon(0 0, 100% 0, 99.4% 18%, 100% 36%, 99.4% 54%, 100% 72%, 99.4% 88%, 100% 100%, 0 100%, 0.6% 82%, 0 64%, 0.6% 46%, 0 28%, 0.6% 12%);
+}
+.lb-seal-print {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 2.5rem;
+  white-space: nowrap;
+  background: var(--b-accent);
+  color: var(--b-paper);
+  font-family: var(--b-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  padding-inline: 1.25rem;
+}
+.lb-seal-gloss {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 38%;
+  background: linear-gradient(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0));
+  pointer-events: none;
+}
+.lb-seal-cover {
+  position: absolute;
+  inset: 0;
+  background: var(--b-paper);
+  transform: translateX(101%);
+}
+
+/* ---------- Scroll reveal (only once JS marks the root; reduced motion = static) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .lb-page[data-motion] [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 700ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .lb-page[data-motion] [data-reveal][data-in] {
+    opacity: 1;
+    transform: none;
+  }
+  .lb-page[data-motion] [data-reveal="2"] { transition-delay: 90ms; }
+  .lb-page[data-motion] [data-reveal="3"] { transition-delay: 180ms; }
+  .lb-page[data-motion] [data-reveal="4"] { transition-delay: 270ms; }
+
+  .lb-page[data-motion] .lb-seal .lb-seal-cover {
+    transform: none;
+    transition: transform 1100ms cubic-bezier(0.65, 0, 0.25, 1);
+  }
+  .lb-page[data-motion] .lb-seal[data-in] .lb-seal-cover {
+    transform: translateX(101%);
+  }
+
+  /* hero: one orchestrated load */
+  .lb-hero-in {
+    animation: lb-rise 820ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .lb-hero-in-2 {
+    animation: lb-rise 820ms 120ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .lb-hero-in-3 {
+    animation: lb-rise 820ms 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .lb-hero-stage {
+    animation: lb-fade 1000ms 200ms ease-out both;
+  }
+}
+
+@keyframes lb-rise {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lb-fade {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Width scale strips: kraft tape with a faint gloss band */
+.lb-strip {
+  fill: var(--b-kraft);
+}
+.lb-strip-gloss {
+  fill: #fff;
+  opacity: 0.18;
+}
+
+/* Shared 3D mockup chrome, tuned to this palette (scoped to the hero stage). */
+.lb-hero-stage [role="tab"] {
+  border-radius: 999px;
+  transition: background-color 180ms ease-out, color 180ms ease-out;
+}
+.lb-hero-stage [role="tab"][aria-selected="true"] {
+  background: var(--b-ink);
+  color: var(--b-paper);
+}
+.lb-hero-stage [role="tab"]:focus-visible {
+  outline: 2px solid var(--b-accent);
+  outline-offset: 3px;
+}

@@ -1,5 +1,7 @@
-// Paper drink cup + black lid profiles (mm, y up from the cup base) and the vertical seal
-// strip that runs over the lid and down the tapered wall. Pure + unit-tested.
+// Paper drink cup + black lid profiles (mm, y up from the cup base) and the tamper-seal strip:
+// ONE continuous strip from the front wall, up over the lid skirt, across the lid top through
+// the centre and down the back wall. The strip is built from the same lathe profile as the
+// cup + lid, so it always hugs the geometry. Pure + unit-tested.
 import { buildRibbon, subdivide, type RibbonData, type RibbonRow, type V3 } from "./ribbon";
 
 export const CUP_MM = {
@@ -7,8 +9,12 @@ export const CUP_MM = {
   baseRadius: 33,
   rimRadius: 46,
   /** Lid top above the cup rim. */
-  lidHeight: 17,
-  /** Where the seal strip ends on the wall (from the base). */
+  lidHeight: 13,
+  /** Lid skirt reaches this far below the cup rim. */
+  skirtDepth: 6,
+  /** Lid skirt outer radius beyond the cup rim. */
+  skirtOut: 2.5,
+  /** Where the seal strip ends on the wall (from the base), on both sides. */
   stripStart: 42,
 } as const;
 
@@ -17,7 +23,7 @@ export const CUP_STRIP_SCALE = 0.5;
 export const CUP_STRIP_MIN_MM = 10;
 export const CUP_STRIP_MAX_MM = 36;
 /** Gap between cup/lid and strip so the strip never z-fights the surface. */
-const STRIP_GAP_MM = 0.5;
+export const STRIP_GAP_MM = 0.4;
 
 export type Pt = [number, number];
 
@@ -33,32 +39,39 @@ export function cupWallProfile(): Pt[] {
   return [
     [0.01, 0],
     [baseRadius - 1.5, 0],
-    [baseRadius, 1.5],
-    [rimRadius, height - 1],
+    [cupRadiusAt(1.5), 1.5],
+    [cupRadiusAt(height - 1), height - 1],
     [rimRadius + 1.5, height],
     [rimRadius + 1, height + 1.5],
   ];
 }
 
-/** Outer surface of the lid: skirt over the rim, shoulder, raised ring, flat dome to the centre. */
+/**
+ * Outer surface of the lid from the skirt bottom to the centre of the top: skirt, rolled bead,
+ * shoulder and a low dome. Convex (the direction only ever turns towards the axis), so a
+ * tensioned strip touches it everywhere.
+ */
 export function cupLidOutline(): Pt[] {
-  const { height: h, rimRadius: R, lidHeight } = CUP_MM;
+  const { height: h, rimRadius: R, lidHeight, skirtDepth, skirtOut } = CUP_MM;
+  const S = R + skirtOut;
   return [
-    [R + 3, h - 6],
-    [R + 3.5, h + 5],
-    [R + 1, h + 8],
-    [R - 4, h + 9],
-    [R - 6, h + 14],
-    [R - 9, h + lidHeight - 2],
-    [R - 20, h + lidHeight - 0.5],
-    [0.01, h + lidHeight],
+    [S, h - skirtDepth],
+    [S + 0.5, h + 2],
+    [S - 0.5, h + 5],
+    [R - 0.5, h + 6.8],
+    [R - 4, h + 8.5],
+    [R - 7, h + 9.8],
+    [R - 14, h + 11.6],
+    [R - 30, h + lidHeight - 0.3],
+    [0, h + lidHeight],
   ];
 }
 
-/** Lathe profile of the lid (outline plus a thin lip under the skirt). */
+/** Lathe profile of the lid (thin lip under the skirt plus the outline, nudged off the axis). */
 export function cupLidProfile(): Pt[] {
-  const { height: h, rimRadius: R } = CUP_MM;
-  return [[R + 0.8, h - 6], ...cupLidOutline()];
+  const { height: h, rimRadius: R, skirtDepth } = CUP_MM;
+  const outline = cupLidOutline().map(([r, y]): Pt => [Math.max(0.01, r), y]);
+  return [[R + 0.8, h - skirtDepth], ...outline];
 }
 
 /** Strip width (mm) for a tape width preset: proportional, clamped to the cup. */
@@ -67,53 +80,111 @@ export function cupStripWidthMm(tapeWidthMm: number): number {
   return Math.min(CUP_STRIP_MAX_MM, Math.max(CUP_STRIP_MIN_MM, w));
 }
 
-export type ProfilePoint = { r: number; y: number; nr: number; ny: number; along: number };
-
 /**
- * Centre line of the strip in the (radius, y) profile plane, from `stripStart` on the wall
- * up the taper, over the lid skirt and onto the lid top, stopping before the strip edges
- * would cross the axis. Offset outwards by the gap; `along` is the arc length in mm.
+ * Surface the strip lies on, in the (radius, y) half plane from `fromY` on the wall to the
+ * lid centre: wall taper, a short 45 degree bridge from the wall out to the skirt bottom edge
+ * (tape cannot follow the undercut), then the lid outline.
  */
-export function cupStripPath(stripWidthMm: number, gap = STRIP_GAP_MM, step = 3): ProfilePoint[] {
-  const { height: h, stripStart } = CUP_MM;
-  const wallTop = h - 6;
-  const raw = subdivide(
-    [[cupRadiusAt(stripStart), stripStart], [cupRadiusAt(wallTop), wallTop], ...cupLidOutline()],
-    step,
-  ).filter(([r]) => r >= stripWidthMm / 2 + 3);
-  // Outward normal of a path going "up and over": (dy, -dr), averaged at the vertices.
-  const segN = raw.slice(1).map(([r1, y1], i) => {
+export function cupStripSurface(fromY: number = CUP_MM.stripStart): Pt[] {
+  const outline = cupLidOutline();
+  const [skirtR, skirtY] = outline[0];
+  const rampY = skirtY - (skirtR - cupRadiusAt(skirtY));
+  return [[cupRadiusAt(fromY), fromY], [cupRadiusAt(rampY), rampY], ...outline];
+}
+
+export type ProfilePoint = { r: number; y: number; nr: number; ny: number };
+
+/** Offset a profile polyline outwards by `gap` (averaged vertex normals; axis point stays on the axis). */
+function offsetProfile(raw: Pt[], gap: number): ProfilePoint[] {
+  // Outward normal of a path going "up and over": (dy, -dr).
+  const segN = raw.slice(1).map(([r1, y1], i): Pt => {
     const [r0, y0] = raw[i];
     const len = Math.hypot(r1 - r0, y1 - y0) || 1;
-    return [(y1 - y0) / len, -(r1 - r0) / len] as Pt;
+    return [(y1 - y0) / len, -(r1 - r0) / len];
   });
-  let along = 0;
   return raw.map(([r, y], i) => {
     const a = segN[Math.max(0, i - 1)];
     const b = segN[Math.min(segN.length - 1, i)];
     const l = Math.hypot(a[0] + b[0], a[1] + b[1]) || 1;
     const nr = (a[0] + b[0]) / l;
     const ny = (a[1] + b[1]) / l;
-    if (i > 0) along += Math.hypot(r - raw[i - 1][0], y - raw[i - 1][1]);
-    return { r: r + nr * gap, y: y + ny * gap, nr, ny, along };
+    return { r: r <= 1e-9 ? 0 : r + nr * gap, y: y + ny * gap, nr, ny };
   });
 }
 
+export type StripCentre = ProfilePoint & { side: 1 | -1; along: number };
+
 /**
- * Rows of the strip facing +z. Across the width each point keeps the profile radius
- * (x = lateral offset, z = sqrt(r^2 - x^2)), so the strip hugs the round wall instead
- * of floating as a flat plane. Side vector s = n x t = -x, so v=0 sits at +x.
+ * Centre line of the seal strip: front wall (+z) up to the lid centre, then mirrored down the
+ * back (-z). `along` is the arc length in mm (strictly increasing, continuous over the top).
  */
-export function cupStripRows(stripWidthMm: number, cols = 9): RibbonRow[] {
+export function cupStripPath(gap = STRIP_GAP_MM, step = 2): StripCentre[] {
+  const half = offsetProfile(subdivide(cupStripSurface(), step), gap);
+  const front = half.map((p) => ({ ...p, side: 1 as const }));
+  const back = half
+    .slice(0, -1)
+    .reverse()
+    .map((p) => ({ ...p, side: -1 as const }));
+  let along = 0;
+  return [...front, ...back].map((p, i, all) => {
+    if (i > 0) {
+      const q = all[i - 1];
+      along += Math.hypot(p.r * p.side - q.r * q.side, p.y - q.y);
+    }
+    return { ...p, along };
+  });
+}
+
+/** Ray-casting point-in-polygon test in the (radius, y) plane. */
+function inside(poly: Pt[], r: number, y: number): boolean {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ri, yi] = poly[i];
+    const [rj, yj] = poly[j];
+    if (yi > y !== yj > y && r < ((rj - ri) * (y - yi)) / (yj - yi) + ri) hit = !hit;
+  }
+  return hit;
+}
+
+/** Closed (radius, y) polygon of the offset solid the strip wraps (wall from the base, lid, axis). */
+function stripSolid(gap: number): Pt[] {
+  const surface = offsetProfile(subdivide(cupStripSurface(0), 2), gap).map((p): Pt => [p.r, p.y]);
+  return [[0, -1], [surface[0][0], -1], ...surface];
+}
+
+/**
+ * Rows of the strip. Each row starts at its centre-line point; a point `x` mm to the side is
+ * pushed inwards along the centre-line normal until it lands on the (offset) surface, so the
+ * strip wraps the round wall, the skirt and the domed top alike. Side vector s = n x t = -x on
+ * every face (front going up, top going back, back going down), so v=0 sits at +x and the print
+ * reads unmirrored from outside on both sides.
+ */
+export function cupStripRows(stripWidthMm: number, cols = 9, gap = STRIP_GAP_MM): RibbonRow[] {
   const half = stripWidthMm / 2;
-  return cupStripPath(stripWidthMm).map(({ r, y, nr, ny, along }) => {
+  const solid = stripSolid(gap);
+  return cupStripPath(gap).map(({ r, y, nr, ny, side, along }) => {
     const points: V3[] = [];
     const normals: V3[] = [];
     for (let j = 0; j < cols; j++) {
       const x = half - (stripWidthMm * j) / (cols - 1);
-      const z = Math.sqrt(Math.max(0, r * r - x * x));
-      points.push([x, y, z]);
-      normals.push([(nr * x) / r, ny, (nr * z) / r]);
+      const at = (d: number): V3 => [x, y - d * ny, side * (r - d * nr)];
+      const isIn = (d: number) => {
+        const [px, py, pz] = at(d);
+        return inside(solid, Math.hypot(px, pz), py);
+      };
+      let lo = 0;
+      let hi = Math.abs(x) + 1;
+      if (x !== 0 && !isIn(lo)) {
+        for (let k = 0; k < 40; k++) {
+          const mid = (lo + hi) / 2;
+          if (isIn(mid)) hi = mid;
+          else lo = mid;
+        }
+      }
+      const p = at(x === 0 ? 0 : lo);
+      const rho = Math.hypot(p[0], p[2]);
+      points.push(p);
+      normals.push(rho > 1e-6 ? [(nr * p[0]) / rho, ny, (nr * p[2]) / rho] : [0, ny, side * nr]);
     }
     return { along, points, normals };
   });
@@ -131,5 +202,5 @@ export const CUP_CENTER_Y_MM = (CUP_MM.height + CUP_MM.lidHeight) / 2;
 
 /** Bounding-sphere radius (mm) of the centred cup. */
 export function cupBoundingRadiusMm(): number {
-  return Math.hypot(CUP_MM.rimRadius + 4, CUP_CENTER_Y_MM);
+  return Math.hypot(CUP_MM.rimRadius + CUP_MM.skirtOut + 1.5, CUP_CENTER_Y_MM);
 }
