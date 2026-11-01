@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Euler, Quaternion, Vector3 } from "three";
 import {
-  CARTON_MM, MAX_OUTER_RADIUS_MM, cartonTapeSegments, rollGeometry, rollOuterRadiusMm, textureOffset, textureRepeat, toUnits,
+  CARTON_FLAP_MM, CARTON_MM, MAX_OUTER_RADIUS_MM, cartonLayout, cartonStripRows, rollGeometry, rollOuterRadiusMm, textureRepeat, toUnits,
 } from "./geometry";
+import { buildRibbon, ribbonOrientation, subdivide } from "./ribbon";
 import { hasWebGL } from "./webgl";
 
 describe("roll geometry", () => {
@@ -30,42 +30,85 @@ describe("roll geometry", () => {
   });
 });
 
-describe("carton tape segments", () => {
-  it("is one continuous strip: back flap, top seam, front flap", () => {
-    const segs = cartonTapeSegments(0);
-    expect(segs.map((s) => s.name)).toEqual(["back", "top", "front"]);
-    const top = segs[1];
-    expect(top.lengthMm).toBe(CARTON_MM.depth);
-    expect(top.position[1]).toBeCloseTo(toUnits(CARTON_MM.height) / 2);
-    expect(segs[2].position[2]).toBeCloseTo(toUnits(CARTON_MM.depth) / 2);
-    expect(segs[0].position[2]).toBeCloseTo(-toUnits(CARTON_MM.depth) / 2);
-    // texture phase continues from one segment to the next
-    for (let i = 1; i < segs.length; i++) expect(segs[i].startMm).toBe(segs[i - 1].startMm + segs[i - 1].lengthMm);
+describe("carton tape strip", () => {
+  const rows = cartonStripRows(48, 0);
+  const ribbon = buildRibbon(rows, 300);
+  const { length, depth, height } = CARTON_MM;
+
+  it("runs along the full length of the top and folds down both short ends", () => {
+    const xs = rows.map((r) => r.points[0][0]);
+    expect(Math.min(...xs)).toBeCloseTo(-length / 2);
+    expect(Math.max(...xs)).toBeCloseTo(length / 2);
+    const top = rows.filter((r) => r.normals[0][1] === 1);
+    expect(top).toHaveLength(2);
+    for (const r of top) expect(r.points[0][1]).toBeCloseTo(height / 2);
+    expect(rows[0].points[0][1]).toBeCloseTo(height / 2 - CARTON_FLAP_MM);
+    expect(rows.at(-1)!.points[0][1]).toBeCloseTo(height / 2 - CARTON_FLAP_MM);
+    expect(rows.at(-1)!.along).toBe(2 * CARTON_FLAP_MM + length);
+    // centred on the seam, width = tape width, never wider than the box
+    expect(rows[2].points[0][2] + rows[2].points[1][2]).toBeCloseTo(0);
+    expect(rows[2].points[0][2] - rows[2].points[1][2]).toBeCloseTo(48);
+    const wide = cartonStripRows(9999, 0);
+    expect(wide[2].points[0][2] - wide[2].points[1][2]).toBeCloseTo(depth);
   });
 
-  it("orients each plane so u follows the strip and the print is not mirrored", () => {
-    const want: Record<string, { u: number[]; n: number[] }> = {
-      back: { u: [0, 1, 0], n: [0, 0, -1] },
-      top: { u: [0, 0, 1], n: [0, 1, 0] },
-      front: { u: [0, -1, 0], n: [0, 0, 1] },
-    };
-    for (const seg of cartonTapeSegments()) {
-      const q = new Quaternion().setFromEuler(new Euler(...seg.rotation));
-      const u = new Vector3(1, 0, 0).applyQuaternion(q);
-      const v = new Vector3(0, 1, 0).applyQuaternion(q);
-      const n = new Vector3(0, 0, 1).applyQuaternion(q);
-      expect(u.toArray().map((x) => Math.round(x) + 0)).toEqual(want[seg.name].u);
-      expect(n.toArray().map((x) => Math.round(x) + 0)).toEqual(want[seg.name].n);
-      // right-handed (u x v = outward normal) => text reads unmirrored from outside
-      expect(new Vector3().crossVectors(u, v).dot(n)).toBeCloseTo(1);
-    }
+  it("sits just outside the box (gap avoids z-fighting)", () => {
+    const r = cartonStripRows(48, 0.6);
+    expect(r[2].points[0][1]).toBeCloseTo(height / 2 + 0.6);
+    expect(r.at(-1)!.points[0][0]).toBeCloseTo(length / 2 + 0.6);
   });
 
-  it("texture offset wraps and guards bad input", () => {
-    expect(textureOffset(80, 300)).toBeCloseTo(80 / 300);
-    expect(textureOffset(450, 300)).toBeCloseTo(0.5);
-    expect(textureOffset(80, 0)).toBe(0);
-    expect(textureOffset(Number.NaN, 300)).toBe(0);
+  it("emits no quads across the folds (3 faces x 2 triangles)", () => {
+    expect(ribbon.indices).toHaveLength(3 * 6);
+  });
+
+  it("u grows along the strip; faces point outwards and the print is not mirrored", () => {
+    expect(ribbonOrientation(ribbon)).toEqual({ outward: true, unmirrored: true });
+    expect(ribbon.uvs[ribbon.uvs.length - 2]).toBeCloseTo((2 * CARTON_FLAP_MM + length) / 300);
+  });
+
+  it("layout keeps box + roll inside the bounding sphere", () => {
+    const preset = { width_mm: 48, length_m: 100, thickness_mic: 45 };
+    const l = cartonLayout(preset);
+    const R = rollGeometry(preset).outerRadius;
+    expect(l.rollPosition[1] + R + l.offsetY).toBeLessThanOrEqual(l.radius);
+    expect(l.floorY).toBeCloseTo(-toUnits(height) / 2 + l.offsetY);
+    expect(l.rollPosition[0] - R).toBeGreaterThan(-toUnits(length) / 2);
+    // roll rests on top of the box
+    expect(l.rollPosition[1] - R).toBeGreaterThan(toUnits(height) / 2);
+  });
+});
+
+describe("ribbon builder", () => {
+  it("subdivides long segments", () => {
+    const pts = subdivide([[0, 0], [0, 10]], 3);
+    expect(pts).toHaveLength(5);
+    expect(pts.at(-1)).toEqual([0, 10]);
+  });
+
+  it("maps u to distance / period and v across the columns", () => {
+    const n: [number, number, number] = [0, 0, 1];
+    const r = buildRibbon(
+      [
+        { along: 0, points: [[0, 0, 0], [0, 1, 0]], normals: [n, n] },
+        { along: 20, points: [[20, 0, 0], [20, 1, 0]], normals: [n, n] },
+      ],
+      10,
+    );
+    expect(Array.from(r.uvs)).toEqual([0, 0, 0, 1, 2, 0, 2, 1]);
+    expect(ribbonOrientation(r)).toEqual({ outward: true, unmirrored: true });
+  });
+
+  it("detects a mirrored layout", () => {
+    const n: [number, number, number] = [0, 0, -1];
+    const r = buildRibbon(
+      [
+        { along: 0, points: [[0, 0, 0], [0, 1, 0]], normals: [n, n] },
+        { along: 1, points: [[1, 0, 0], [1, 1, 0]], normals: [n, n] },
+      ],
+      1,
+    );
+    expect(ribbonOrientation(r).outward).toBe(false);
   });
 });
 

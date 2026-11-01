@@ -6,6 +6,9 @@ import { HowItWorks } from "./HowItWorks";
 import { ProductShowcase } from "./ProductShowcase";
 import { UseCases } from "./UseCases";
 import { CartonTapeArt } from "./CartonTapeArt";
+import { Hero } from "./Hero";
+import { DesignCta } from "./DesignCta";
+import { TapeMarquee } from "./TapeMarquee";
 import { PRESET } from "../testing/fixtures";
 
 describe("contactInfoFromEnv", () => {
@@ -58,11 +61,39 @@ describe("ProductShowcase", () => {
 });
 
 describe("UseCases", () => {
-  it("renders reasons and audiences", () => {
+  it("renders the three scenes, reasons and audiences", () => {
     render(<UseCases />);
+    expect(screen.getByRole("heading", { level: 2, name: /thương hiệu theo đến đó/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /Vì sao/ })).toBeInTheDocument();
+    for (const name of ["Dán thùng carton", "Dán ly trà sữa", "Thương mại điện tử"]) {
+      expect(screen.getByRole("heading", { level: 3, name })).toBeInTheDocument();
+    }
     expect(screen.getByText("Dễ phát hiện thùng bị mở")).toBeInTheDocument();
     expect(screen.getByText("Kho vận, logistics")).toBeInTheDocument();
+  });
+});
+
+describe("Hero", () => {
+  it("has one real h1, hides the giant word art and links both CTAs", () => {
+    const { container } = render(<Hero />);
+    expect(screen.getByRole("heading", { level: 1, name: "Băng keo in logo theo yêu cầu" })).toBeInTheDocument();
+    for (const svg of container.querySelectorAll("h1 svg")) expect(svg).toHaveAttribute("aria-hidden", "true");
+    const design = screen.getAllByRole("link", { name: "Thiết kế ngay" });
+    expect(design.every((a) => a.getAttribute("href") === "/thiet-ke")).toBe(true);
+    expect(screen.getByRole("link", { name: "Nhận báo giá" })).toHaveAttribute("href", "/thiet-ke#yeu-cau-bao-gia");
+  });
+
+  it("uses no inline style attributes (CSP: style-src is nonce-only)", () => {
+    const { container } = render(<><Hero /><ProductShowcase /><UseCases /><HowItWorks /><DesignCta /></>);
+    expect(container.querySelectorAll("[style]")).toHaveLength(0);
+  });
+});
+
+describe("TapeMarquee", () => {
+  it("is decorative and renders its run twice for a seamless loop", () => {
+    const { container } = render(<TapeMarquee items={["A", "B"]} />);
+    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getAllByText("A").length % 2).toBe(0);
   });
 });
 

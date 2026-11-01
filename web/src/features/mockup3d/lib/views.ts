@@ -1,6 +1,6 @@
 // Per-view framing (bounding sphere, camera direction, floor) for the 3D mockup. Pure + unit-tested.
 import { cupBoundingRadiusMm, CUP_CENTER_Y_MM } from "./cup";
-import { CARTON_MM, rollGeometry, toUnits, type RollPreset } from "./geometry";
+import { cartonLayout, rollGeometry, toUnits, type RollPreset } from "./geometry";
 import type { Vec3 } from "./camera";
 
 export const MOCKUP_VIEWS = ["roll", "carton", "cup"] as const;
@@ -17,15 +17,12 @@ export type ViewFrame = {
 
 export function viewFrame(view: MockupView, preset: RollPreset): ViewFrame {
   if (view === "carton") {
-    const { length, depth, height } = CARTON_MM;
-    return {
-      radius: toUnits(Math.hypot(length, depth, height)) / 2,
-      direction: [0.85, 0.8, 1.15],
-      floorY: -toUnits(height) / 2,
-    };
+    // Looking at the +x short end (tape folds down it), long side on the left, like the photo.
+    const { radius, floorY } = cartonLayout(preset);
+    return { radius, direction: [1.15, 0.8, 0.7], floorY };
   }
   if (view === "cup") {
-    return { radius: toUnits(cupBoundingRadiusMm()), direction: [0.35, 0.3, 1], floorY: -toUnits(CUP_CENTER_Y_MM) };
+    return { radius: toUnits(cupBoundingRadiusMm()), direction: [-0.35, 0.3, 1], floorY: -toUnits(CUP_CENTER_Y_MM) };
   }
   const g = rollGeometry(preset);
   const halfWidth = (g.width * 1.02) / 2;

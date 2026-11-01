@@ -2,7 +2,7 @@
 
 **Owner:** `mockup3d` feature builder. Only this feature edits files in this folder.
 
-3D mockup (react-three-fiber/drei): three lazy views (tape roll, carton sealed with the tape, bubble-tea cup with a tape sticker band). Geometry is procedural (no model files); the camera is fitted to each object's bounding sphere (lib/camera.ts, lib/views.ts). Texture fed live from the designer canvas.
+3D mockup (react-three-fiber/drei): three lazy views (tape roll, kraft carton sealed with one strip along the top seam folding over the short ends, paper cup with a vertical seal strip over the lid and down the wall). Strips are ribbon meshes (lib/ribbon.ts) with UVs along the strip. Geometry is procedural (no model files); the camera is fitted to each object's bounding sphere (lib/camera.ts, lib/views.ts). Texture fed live from the designer canvas.
 
 ## Routes
 

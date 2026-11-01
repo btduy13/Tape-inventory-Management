@@ -1,45 +1,59 @@
-// "Why custom tape" band on a kraft background, plus who it suits. Server Component.
+// Where the tape goes (carton, milk-tea cup seal, e-commerce parcels), why it pays off,
+// and who it suits. Navy band. Server Component.
 import { getDictionary } from "@/i18n";
+import { CartonTapeArt, CupSealArt, ParcelArt } from "./CartonTapeArt";
 
 export function UseCases() {
   const t = getDictionary().landing;
+  const art = {
+    carton: <CartonTapeArt caption={t.heroArtCaption} tapeText={t.heroTapeText} />,
+    cup: <CupSealArt tapeText={t.heroTapeText} />,
+    ecom: <ParcelArt tapeText={t.heroTapeText} />,
+  } as const;
+
   return (
-    <section aria-labelledby="vi-sao-title" className="relative overflow-hidden bg-[#c99c66]">
-      {/* full-bleed tape strip across the carton band: the page's one loud moment */}
-      <div
-        aria-hidden
-        className="flex h-11 -rotate-1 items-center gap-8 overflow-hidden bg-amber-400 whitespace-nowrap shadow-sm"
-      >
-        {Array.from({ length: 10 }, (_, i) => (
-          <span key={i} className="flex items-center gap-2 text-sm font-extrabold tracking-wide text-stone-900">
-            <span className="h-4 w-4 shrink-0 rounded-full bg-stone-900" />
-            {t.heroTapeText}
-          </span>
-        ))}
-      </div>
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-12 pb-16 sm:px-6 md:grid-cols-[1fr_1.4fr] md:pt-16 md:pb-20">
-        <div>
-          <h2 id="vi-sao-title" className="text-3xl font-extrabold tracking-tight text-stone-950 sm:text-4xl">
-            {t.whyTitle}
+    <section id="ung-dung" aria-labelledby="ung-dung-title" className="scroll-mt-4 bg-lp-navy pt-24 pb-24 text-white md:pt-32 md:pb-32">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-8">
+        <div className="grid gap-6 md:grid-cols-2 md:items-end">
+          <h2 id="ung-dung-title" className="lp-display text-5xl leading-[0.95] text-balance sm:text-6xl lg:text-8xl">
+            {t.useTitle}
           </h2>
-          <p className="mt-3 leading-relaxed text-stone-900">{t.whySubtitle}</p>
-          <h3 className="mt-8 font-bold text-stone-950">{t.useCasesTitle}</h3>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {t.useCases.map((u) => (
-              <li key={u} className="rounded-full bg-stone-50/90 px-3 py-1.5 text-sm font-medium text-stone-900">
-                {u}
+          <p className="max-w-lg text-lg leading-relaxed text-white/80 md:justify-self-end">{t.useSubtitle}</p>
+        </div>
+
+        <ul className="mt-14 grid gap-10 md:mt-20 md:grid-cols-3 md:gap-6">
+          {t.useScenes.map((s, i) => (
+            <li key={s.key} data-lp-reveal="up" className={`flex flex-col gap-5 ${i ? `lp-delay-${i}` : ""}`}>
+              <div className="overflow-hidden rounded-[2rem] bg-lp-cobalt p-6 sm:p-8">{art[s.key as keyof typeof art]}</div>
+              <div className="px-1">
+                <h3 className="lp-display text-2xl">{s.title}</h3>
+                <p className="mt-1 max-w-sm leading-relaxed text-white/75">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-24 grid gap-10 md:mt-32 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          <div>
+            <h2 className="lp-display text-3xl sm:text-4xl">{t.whyTitle}</h2>
+            <h3 className="mt-8 text-sm font-semibold text-white/70">{t.useCasesTitle}</h3>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {t.useCases.map((u) => (
+                <li key={u} className="rounded-full border border-white/35 px-3 py-1.5 text-sm font-medium">
+                  {u}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <ul className="grid gap-8 sm:grid-cols-3 sm:gap-6">
+            {t.whyReasons.map((r) => (
+              <li key={r.title} className="border-t-2 border-lp-tape pt-5">
+                <h3 className="text-lg font-bold">{r.title}</h3>
+                <p className="mt-2 leading-relaxed text-white/75">{r.body}</p>
               </li>
             ))}
           </ul>
         </div>
-        <ul className="grid gap-px overflow-hidden rounded-lg bg-[#8a6239]/40">
-          {t.whyReasons.map((r) => (
-            <li key={r.title} className="bg-[#d2a873] p-5 sm:p-6">
-              <h3 className="text-lg font-bold text-stone-950">{r.title}</h3>
-              <p className="mt-1 leading-relaxed text-stone-900">{r.body}</p>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 // Real-world tape roll / carton geometry in mm, converted to scene units. Pure + unit-tested.
+import type { RibbonRow, V3 } from "./ribbon";
 
 export type RollPreset = { width_mm: number; length_m: number; thickness_mic: number };
 
@@ -50,44 +51,61 @@ export function textureRepeat(surfaceMm: number, stripLengthMm: number): number 
   return surfaceMm / stripLengthMm;
 }
 
-/** Standard carton used in the mockup (mm). */
-export const CARTON_MM = { length: 400, depth: 300, height: 250 } as const;
-/** Tape that wraps down the front and back faces (mm). */
-export const CARTON_FLAP_MM = 80;
-
-export type CartonTapeSegment = {
-  name: "back" | "top" | "front";
-  lengthMm: number;
-  /** Distance (mm) along the continuous strip where this segment starts (texture phase). */
-  startMm: number;
-  position: [number, number, number];
-  rotation: [number, number, number];
-};
+/** Kraft carton used in the mockup (mm): x = length, y = height, z = depth. */
+export const CARTON_MM = { length: 400, depth: 280, height: 240 } as const;
+/** How far the tape folds down over each short end face (mm). */
+export const CARTON_FLAP_MM = 150;
+/** Gap between carton and tape so the strip never z-fights the board. */
+const CARTON_TAPE_GAP_MM = 0.6;
 
 /**
- * One continuous strip sealing the carton along its depth (z axis), centred on x:
- * up the back flap, across the top seam, down the front flap. Each plane's local +x
- * (texture u) follows the strip direction and its normal faces outwards, so the print
- * reads unmirrored and continues seamlessly across the box edges.
+ * One straight strip centred on the top seam, running along the carton LENGTH (x) and
+ * folding down over both short end faces: down the -x end, across the top, down the +x end.
+ * Rows are in mm. Side vector s = n x t = -z on all three faces, so the print stays upright
+ * and continues seamlessly across both folds.
  */
-export function cartonTapeSegments(eps = 0.002): CartonTapeSegment[] {
-  const { depth, height } = CARTON_MM;
+export function cartonStripRows(widthMm: number, gap = CARTON_TAPE_GAP_MM): RibbonRow[] {
+  const { length, depth, height } = CARTON_MM;
+  const w = Math.min(depth, Math.max(5, widthMm || 0));
   const flap = Math.min(CARTON_FLAP_MM, height);
-  const h2 = toUnits(height) / 2;
-  const d2 = toUnits(depth) / 2;
-  const flapY = h2 - toUnits(flap) / 2;
+  const x = length / 2 + gap;
+  const top = height / 2 + gap;
+  const low = height / 2 - flap;
+  const row = (along: number, p: V3, n: V3): RibbonRow => ({
+    along,
+    // v=0 at +z, v=1 at -z (= +s)
+    points: [[p[0], p[1], w / 2], [p[0], p[1], -w / 2]],
+    normals: [n, n],
+  });
+  const left: V3 = [-1, 0, 0];
+  const up: V3 = [0, 1, 0];
+  const right: V3 = [1, 0, 0];
   return [
-    // u runs up (+y), normal -z
-    { name: "back", lengthMm: flap, startMm: 0, position: [0, flapY, -d2 - eps], rotation: [0, Math.PI, Math.PI / 2] },
-    // u runs towards the front (+z), normal +y
-    { name: "top", lengthMm: depth, startMm: flap, position: [0, h2 + eps, 0], rotation: [-Math.PI / 2, 0, -Math.PI / 2] },
-    // u runs down (-y), normal +z
-    { name: "front", lengthMm: flap, startMm: flap + depth, position: [0, flapY, d2 + eps], rotation: [0, 0, -Math.PI / 2] },
+    row(0, [-x, low, 0], left),
+    row(flap, [-x, top, 0], left),
+    row(flap, [-x, top, 0], up),
+    row(flap + length, [x, top, 0], up),
+    row(flap + length, [x, top, 0], right),
+    row(2 * flap + length, [x, low, 0], right),
   ];
 }
 
-/** Texture offset (in strip periods) for a segment starting `startMm` along the strip. */
-export function textureOffset(startMm: number, stripLengthMm: number): number {
-  if (!(stripLengthMm > 0) || !Number.isFinite(startMm)) return 0;
-  return (startMm / stripLengthMm) % 1;
+export type CartonLayout = {
+  /** Group y offset (scene units) that centres box + roll on the origin. */
+  offsetY: number;
+  /** Roll centre (scene units, before offset); its axis lies along z. */
+  rollPosition: V3;
+  radius: number;
+  floorY: number;
+};
+
+/** Box with a tape roll standing on the strip near the far (-x) end, centred for framing. */
+export function cartonLayout(preset: RollPreset): CartonLayout {
+  const { length, depth, height } = CARTON_MM;
+  const R = rollGeometry(preset).outerRadius;
+  const h2 = toUnits(height) / 2;
+  const rollPosition: V3 = [-toUnits(length) / 2 + R + 0.3, h2 + R + toUnits(1), 0];
+  const offsetY = -R;
+  const corner = Math.hypot(toUnits(length) / 2, h2 + R, toUnits(depth) / 2);
+  return { offsetY, rollPosition, radius: corner, floorY: -h2 + offsetY };
 }

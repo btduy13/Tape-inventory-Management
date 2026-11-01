@@ -1,25 +1,56 @@
-// Small CSS-only sample of a tape type laid on kraft carton. Decorative (aria-hidden).
-// Tailwind classes only (CSP has no inline styles).
+// Full-bleed strip of one tape type, height proportional to its width (48 : 60 : 72 mm).
+// Decorative (aria-hidden). Tailwind classes only (CSP has no inline styles).
+// The strip slides in on scroll (data-lp-reveal) and its print runs slowly (CSS marquee).
 export type TapeKind = "clear" | "opaque" | "multi";
 
-const STRIP: Record<TapeKind, { tape: string; text: string; mark: string }> = {
-  clear: { tape: "border-y border-white/60 bg-white/25", text: "text-stone-900", mark: "bg-stone-900" },
-  opaque: { tape: "bg-stone-100", text: "text-amber-900", mark: "bg-amber-900" },
-  multi: { tape: "bg-amber-400", text: "text-stone-900", mark: "bg-red-700" },
+const STRIP: Record<TapeKind, { tape: string; text: string; mark: string; dot: string; size: string; type: string }> = {
+  clear: {
+    tape: "border-y-2 border-white bg-white/45",
+    text: "text-lp-cobalt",
+    mark: "border-lp-cobalt",
+    dot: "bg-lp-cobalt",
+    size: "h-16 md:h-24",
+    type: "text-lg md:text-2xl",
+  },
+  opaque: {
+    tape: "bg-lp-tape",
+    text: "text-lp-ink",
+    mark: "border-lp-ink",
+    dot: "bg-lp-ink",
+    size: "h-20 md:h-30",
+    type: "text-xl md:text-3xl",
+  },
+  multi: {
+    tape: "bg-lp-cobalt",
+    text: "text-white",
+    mark: "border-lp-tape",
+    dot: "bg-[#ff4d3d]",
+    size: "h-24 md:h-36",
+    type: "text-2xl md:text-4xl",
+  },
 };
 
-export function TapeSwatch({ kind, label }: { kind: TapeKind; label: string }) {
+export function TapeSwatch({ kind, label, from = "left" }: { kind: TapeKind; label: string; from?: "left" | "right" }) {
   const s = STRIP[kind];
   return (
-    <div aria-hidden className="relative flex h-28 items-center overflow-hidden rounded-md bg-[#c99c66]">
-      <div className="absolute inset-x-0 top-1/2 h-px bg-[#8a6239]" />
-      <div className={`relative flex h-12 w-max min-w-[130%] shrink-0 -translate-x-4 items-center gap-6 whitespace-nowrap ${s.tape}`}>
-        {[0, 1, 2].map((i) => (
-          <span key={i} className={`flex items-center gap-2 text-xs font-extrabold tracking-wide ${s.text}`}>
-            <span className={`h-4 w-4 shrink-0 rounded-full ${s.mark}`} />
-            {label}
-          </span>
-        ))}
+    <div aria-hidden="true" data-lp-reveal={from} className="overflow-hidden">
+      <div
+        className={`lp-slide relative flex items-center overflow-hidden shadow-[0_18px_40px_-24px_rgb(10_20_102/0.55)] ${s.size} ${s.tape}`}
+      >
+        <div className={`flex w-max ${from === "left" ? "lp-marquee lp-marquee-slow" : "lp-marquee-rev lp-marquee-slow"}`}>
+          {[0, 1].map((copy) => (
+            <div key={copy} className="flex shrink-0 items-center">
+              {Array.from({ length: 6 }, (_, i) => (
+                <span key={i} className={`lp-display flex items-center gap-3 px-6 whitespace-nowrap md:gap-4 md:px-10 ${s.type} ${s.text}`}>
+                  <span className={`flex size-[1.1em] shrink-0 items-center justify-center rounded-full border-[0.14em] ${s.mark}`}>
+                    <span className={`size-[0.38em] rounded-full ${s.dot}`} />
+                  </span>
+                  {label}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

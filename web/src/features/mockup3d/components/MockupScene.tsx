@@ -32,8 +32,8 @@ export type MockupSceneProps = {
 
 function SceneObject({ view, preset, source, version, stripLengthMm }: Omit<MockupSceneProps, "ariaLabel" | "fallback">) {
   if (view === "roll") return <TapeRoll preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />;
-  const props = { widthMm: preset.width_mm, source, version, stripLengthMm };
-  return view === "carton" ? <CartonBox {...props} /> : <DrinkCup {...props} />;
+  if (view === "carton") return <CartonBox preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />;
+  return <DrinkCup widthMm={preset.width_mm} source={source} version={version} stripLengthMm={stripLengthMm} />;
 }
 
 export default function MockupScene({ ariaLabel, fallback, ...rest }: MockupSceneProps) {

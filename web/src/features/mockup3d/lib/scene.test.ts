@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { cameraPosition, fitDistance } from "./camera";
-import { CUP_BAND_MAX_MM, CUP_MM, cupBand, cupBoundingRadiusMm, cupLidProfile, cupLiquidProfile, cupRadiusAt, cupWallProfile } from "./cup";
+import {
+  CUP_MM, CUP_STRIP_MAX_MM, CUP_STRIP_MIN_MM, cupBoundingRadiusMm, cupLidOutline, cupLidProfile, cupRadiusAt, cupStripPath,
+  cupStripRibbon, cupStripRows, cupStripWidthMm, cupWallProfile,
+} from "./cup";
+import { ribbonOrientation } from "./ribbon";
 import { CARTON_MM, toUnits } from "./geometry";
 import { isSilencedThreeMessage } from "./three-console";
 import { MOCKUP_VIEWS, viewFrame } from "./views";
@@ -32,29 +36,57 @@ describe("cup geometry", () => {
     expect(cupRadiusAt(75)).toBeGreaterThan(CUP_MM.baseRadius);
   });
 
-  it("builds lathe profiles with positive radii and rising height", () => {
-    for (const prof of [cupWallProfile(), cupLiquidProfile(), cupLidProfile()]) {
+  it("builds lathe profiles with positive radii", () => {
+    for (const prof of [cupWallProfile(), cupLidProfile()]) {
       expect(prof.length).toBeGreaterThanOrEqual(4);
       for (const [x] of prof) expect(x).toBeGreaterThan(0);
     }
-    const lid = cupLidProfile();
-    expect(lid.at(-1)![1]).toBeCloseTo(CUP_MM.height + 1 + CUP_MM.lidHeight);
-    expect(lid.at(-1)![0]).toBeGreaterThan(CUP_MM.strawRadius);
-    // liquid stays inside the wall
-    for (const [x, y] of cupLiquidProfile()) expect(x).toBeLessThan(cupRadiusAt(y));
+    expect(cupLidProfile().at(-1)![1]).toBeCloseTo(CUP_MM.height + CUP_MM.lidHeight);
+    // lid skirt covers the rolled rim
+    expect(cupLidOutline()[0][0]).toBeGreaterThan(CUP_MM.rimRadius + 1.5);
   });
 
-  it("wraps the band just outside the wall, clamped to the cup", () => {
-    const b = cupBand(48);
-    expect(b.heightMm).toBe(48);
-    expect(b.radiusBottom).toBeGreaterThan(cupRadiusAt(b.centerYMm - 24));
-    expect(b.radiusTop).toBeGreaterThan(b.radiusBottom);
-    expect(b.circumferenceMm).toBeCloseTo(Math.PI * (b.radiusTop + b.radiusBottom));
-    expect(cupBand(500).heightMm).toBe(CUP_BAND_MAX_MM);
-    expect(cupBand(Number.NaN).heightMm).toBe(10);
-    const big = cupBand(500);
-    expect(big.centerYMm + big.heightMm / 2).toBeLessThan(CUP_MM.height);
-    expect(big.centerYMm - big.heightMm / 2).toBeGreaterThan(0);
+  it("strip width is proportional to the tape width, clamped", () => {
+    expect(cupStripWidthMm(48)).toBe(24);
+    expect(cupStripWidthMm(60)).toBe(30);
+    expect(cupStripWidthMm(4)).toBe(CUP_STRIP_MIN_MM);
+    expect(cupStripWidthMm(500)).toBe(CUP_STRIP_MAX_MM);
+    expect(cupStripWidthMm(Number.NaN)).toBe(CUP_STRIP_MIN_MM);
+  });
+
+  it("strip path climbs the tapered wall, crosses the rim and ends on the lid top", () => {
+    const path = cupStripPath(24);
+    expect(path[0].y).toBeCloseTo(CUP_MM.stripStart, 0);
+    for (const p of path.filter((q) => q.y < CUP_MM.height - 8)) {
+      // just outside the taper, normal pointing outwards
+      expect(p.r).toBeGreaterThan(cupRadiusAt(p.y));
+      expect(p.r - cupRadiusAt(p.y)).toBeLessThan(1);
+      expect(p.nr).toBeGreaterThan(0.9);
+    }
+    const last = path.at(-1)!;
+    expect(last.y).toBeGreaterThan(CUP_MM.height + CUP_MM.lidHeight - 3);
+    expect(last.ny).toBeGreaterThan(0.9);
+    expect(last.r).toBeGreaterThanOrEqual(12 + 3);
+    for (let i = 1; i < path.length; i++) expect(path[i].along).toBeGreaterThan(path[i - 1].along);
+  });
+
+  it("strip is a narrow vertical label hugging the round wall, print unmirrored", () => {
+    for (const row of cupStripRows(24)) {
+      // facing +z: v=0 at +x, v=1 at -x (letter tops face left, text reads bottom to top)
+      expect(row.points[0][0]).toBeCloseTo(12);
+      expect(row.points.at(-1)![0]).toBeCloseTo(-12);
+      const r = Math.hypot(row.points[4][0], row.points[4][2]);
+      for (const p of row.points) {
+        expect(Math.hypot(p[0], p[2])).toBeCloseTo(r);
+        expect(p[2]).toBeGreaterThan(0);
+      }
+    }
+    expect(ribbonOrientation(cupStripRibbon(48, 300))).toEqual({ outward: true, unmirrored: true });
+  });
+
+  it("print period scales with the strip so the artwork keeps its aspect", () => {
+    const r = cupStripRibbon(48, 300);
+    expect(r.uvs[r.uvs.length - 2]).toBeCloseTo(cupStripRows(24).at(-1)!.along / 150);
   });
 });
 
@@ -71,12 +103,12 @@ describe("view framing", () => {
     const f = viewFrame("carton", preset);
     const corner = Math.hypot(toUnits(CARTON_MM.length) / 2, toUnits(CARTON_MM.height) / 2, toUnits(CARTON_MM.depth) / 2);
     expect(f.radius).toBeGreaterThanOrEqual(corner - 1e-9);
-    expect(f.floorY).toBeCloseTo(-toUnits(CARTON_MM.height) / 2);
+    expect(f.floorY).toBeLessThanOrEqual(-toUnits(CARTON_MM.height) / 2);
   });
 
-  it("cup sphere contains rim and straw", () => {
+  it("cup sphere contains cup and lid", () => {
     expect(toUnits(cupBoundingRadiusMm())).toBeCloseTo(viewFrame("cup", preset).radius);
-    expect(cupBoundingRadiusMm()).toBeGreaterThanOrEqual(CUP_MM.strawTop / 2);
+    expect(cupBoundingRadiusMm()).toBeGreaterThanOrEqual((CUP_MM.height + CUP_MM.lidHeight) / 2);
   });
 
   it("roll sphere grows with the roll", () => {

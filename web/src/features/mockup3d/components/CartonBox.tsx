@@ -1,61 +1,46 @@
 "use client";
-// Carton box sealed with one continuous strip of the designed tape: up the back flap,
-// across the top seam and down the front flap (like real sealing tape).
-import { CARTON_MM, cartonTapeSegments, textureOffset, textureRepeat, toUnits, type CartonTapeSegment } from "../lib/geometry";
-import { useStripTexture } from "./use-strip-texture";
+// Kraft carton sealed with one straight strip of the designed tape along the top seam
+// (full length), folding down over both short end faces; a tape roll stands on the strip.
+import { useMemo } from "react";
+import { CARTON_MM, cartonLayout, cartonStripRows, toUnits, type RollPreset } from "../lib/geometry";
+import { buildRibbon } from "../lib/ribbon";
+import { TapeRibbon } from "./TapeRibbon";
+import { TapeRoll } from "./TapeRoll";
 
-const CARTON_COLOR = "#b8875a";
-const SEAM_COLOR = "#6f4a2b";
+const CARTON_COLOR = "#c39a68";
+const SEAM_COLOR = "#7a5530";
 
-type Props = { widthMm: number; source: HTMLCanvasElement | null; version: number; stripLengthMm: number };
+type Props = { preset: RollPreset; source: HTMLCanvasElement | null; version: number; stripLengthMm: number };
 
-function TapeSegment({ seg, widthMm, source, version, stripLengthMm }: Props & { seg: CartonTapeSegment }) {
-  const texture = useStripTexture(
-    source,
-    version,
-    textureRepeat(seg.lengthMm, stripLengthMm),
-    textureOffset(seg.startMm, stripLengthMm),
-  );
-  return (
-    <mesh position={seg.position} rotation={seg.rotation}>
-      <planeGeometry args={[toUnits(seg.lengthMm), toUnits(widthMm)]} />
-      <meshStandardMaterial
-        map={texture ?? undefined}
-        color={texture ? "#ffffff" : "#d9c3a0"}
-        roughness={0.3}
-        metalness={0.02}
-        transparent
-        opacity={0.97}
-        polygonOffset
-        polygonOffsetFactor={-1}
-      />
-    </mesh>
-  );
-}
-
-export function CartonBox(props: Props) {
+export function CartonBox({ preset, source, version, stripLengthMm }: Props) {
   const { length, depth, height } = CARTON_MM;
   const h2 = toUnits(height) / 2;
+  const layout = cartonLayout(preset);
+  const strip = useMemo(
+    () => buildRibbon(cartonStripRows(preset.width_mm), stripLengthMm > 0 ? stripLengthMm : 300),
+    [preset.width_mm, stripLengthMm],
+  );
   return (
-    <group>
+    <group position={[0, layout.offsetY, 0]}>
       <mesh>
         <boxGeometry args={[toUnits(length), toUnits(height), toUnits(depth)]} />
-        <meshStandardMaterial color={CARTON_COLOR} roughness={0.95} />
+        <meshStandardMaterial color={CARTON_COLOR} roughness={0.92} />
       </mesh>
-      {/* Flap seam along the top (under the tape) and flap fold lines on the front/back */}
-      <mesh position={[0, h2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.012, toUnits(depth)]} />
+      {/* Flap seam along the top (under the tape) and flap fold lines on the long faces */}
+      <mesh position={[0, h2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[toUnits(length), 0.01]} />
         <meshBasicMaterial color={SEAM_COLOR} />
       </mesh>
       {[1, -1].map((side) => (
-        <mesh key={side} position={[0, h2 - 0.004, side * (toUnits(depth) / 2 + 0.001)]} rotation={[0, side > 0 ? 0 : Math.PI, 0]}>
+        <mesh key={side} position={[0, h2 - 0.004, side * (toUnits(depth) / 2 + 0.002)]} rotation={[0, side > 0 ? 0 : Math.PI, 0]}>
           <planeGeometry args={[toUnits(length), 0.008]} />
-          <meshBasicMaterial color={SEAM_COLOR} transparent opacity={0.5} />
+          <meshBasicMaterial color={SEAM_COLOR} transparent opacity={0.45} />
         </mesh>
       ))}
-      {cartonTapeSegments().map((seg) => (
-        <TapeSegment key={seg.name} seg={seg} {...props} />
-      ))}
+      <TapeRibbon data={strip} source={source} version={version} />
+      <group position={layout.rollPosition} rotation={[Math.PI / 2, 0, 0]}>
+        <TapeRoll preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />
+      </group>
     </group>
   );
 }
