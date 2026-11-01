@@ -8,13 +8,12 @@ import type Konva from "konva";
 import { Group, Image as KImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import { format, getDictionary } from "@/i18n";
 import { STRIP_LENGTH_MM } from "../lib/constants";
-import { logoInkColor } from "../lib/palette";
 import { stripSize } from "../lib/pattern";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
 import { layoutForState } from "./stage-layout";
 import { useStageInteraction } from "./use-stage-interaction";
-import { useTintedLogo } from "./use-tinted-logo";
+import { useLogoCanvas } from "./use-logo-canvas";
 
 export default function KonvaTapeStage() {
   const t = getDictionary().designer;
@@ -27,8 +26,7 @@ export default function KonvaTapeStage() {
   const [displayWidth, setDisplayWidth] = useState(0);
 
   const strip = stripSize(s.preset.width_mm);
-  const ink = logoInkColor(s);
-  const logoCanvas = useTintedLogo(s.logo, ink, s.logoColorMode);
+  const logoCanvas = useLogoCanvas(s.logo);
   const text = s.text.trim();
   const layout = useMemo(() => layoutForState(s, logoCanvas !== null), [s, logoCanvas]);
   const ui = useStageInteraction(store, layout, logoCanvas !== null);
@@ -68,7 +66,7 @@ export default function KonvaTapeStage() {
       if (layer) store.publishTexture(layer.toCanvas({ x: 0, y: 0, width: stageW, height: stageH, pixelRatio: 1 / scale }));
     });
     return () => cancelAnimationFrame(id);
-  }, [store, scale, stageW, stageH, layout, s.backgroundColor, s.textColor, ink, logoCanvas]);
+  }, [store, scale, stageW, stageH, layout, s.backgroundColor, s.textColor, logoCanvas]);
 
   // Attach the Transformer to the selected node.
   const sel = ui.selected;

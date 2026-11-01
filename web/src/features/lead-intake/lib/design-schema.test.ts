@@ -17,6 +17,16 @@ describe("parseDesignJson", () => {
     expect(parseDesignJson(raw({ ...DESIGN, inkCount: -1 }))).toBeNull();
   });
 
+  it("accepts legacy logo colour fields (accentColor, logo.colorMode) and omits them on new designs", () => {
+    const old = parseDesignJson(raw({ ...DESIGN, accentColor: "#c8102e", logo: { ...DESIGN.logo!, colorMode: "tint" } }));
+    expect(old).toMatchObject({ accentColor: "#c8102e", logo: { colorMode: "tint" } });
+    const fresh: Partial<typeof DESIGN> = { ...DESIGN };
+    delete fresh.accentColor;
+    const r = parseDesignJson(raw(fresh));
+    expect(r).not.toBeNull();
+    expect(r && "accentColor" in r).toBe(false);
+  });
+
   it("ignores presetId (sizes come from tape_widths)", () => {
     expect(parseDesignJson(raw(DESIGN))?.presetId).toBeNull();
     expect(parseDesignJson(raw({ ...DESIGN, presetId: null }))).not.toBeNull();

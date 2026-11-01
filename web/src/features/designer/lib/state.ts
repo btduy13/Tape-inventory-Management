@@ -9,10 +9,6 @@ import { DEFAULT_PRESETS, type PresetOption } from "./presets";
 
 export type LogoKind = "png" | "jpg" | "svg";
 
-/** "original": logo keeps its own colours; "tint": printed in one ink (accent, else text colour). */
-export type LogoColorMode = "original" | "tint";
-export const LOGO_COLOR_MODES: readonly LogoColorMode[] = ["original", "tint"];
-
 /** Sample design applied in one step (colours, text, font). Font size is per 48mm and rescaled. */
 export type DesignTemplate = {
   id: string;
@@ -38,7 +34,6 @@ export type DesignState = {
   preset: PresetOption;
   backgroundColor: string;
   textColor: string;
-  accentColor: string | null;
   text: string;
   fontFamily: FontFamily;
   fontSizePx: number;
@@ -46,14 +41,14 @@ export type DesignState = {
   logoScale: number;
   logoOffsetX: number;
   logoOffsetY: number;
-  logoColorMode: LogoColorMode;
   /** Text position offsets, fraction of strip height (same unit as logo offsets). */
   textOffsetX: number;
   textOffsetY: number;
   repeatGapPx: number;
 };
 
-export type ColorRole = "backgroundColor" | "textColor" | "accentColor";
+/** Logo always prints in its own colours: there is no accent / single-ink tint role. */
+export type ColorRole = "backgroundColor" | "textColor";
 
 export type DesignAction =
   | { type: "setPreset"; preset: PresetOption }
@@ -61,13 +56,12 @@ export type DesignAction =
   | { type: "setWidth"; widthMm: number }
   /** Customer-typed roll length (m). May be NaN / out of range while typing; submit re-checks. */
   | { type: "setLength"; lengthM: number }
-  | { type: "setColor"; role: ColorRole; color: string | null }
+  | { type: "setColor"; role: ColorRole; color: string }
   | { type: "setText"; text: string }
   | { type: "setFontFamily"; fontFamily: string }
   | { type: "setFontSize"; px: number }
   | { type: "setLogo"; logo: LogoAsset | null }
   | { type: "setLogoTransform"; scale?: number; offsetX?: number; offsetY?: number }
-  | { type: "setLogoColorMode"; mode: LogoColorMode }
   /** Result of the async logo colour analysis; ignored when the logo changed meanwhile. */
   | { type: "setLogoInks"; url: string; inks: LogoInk[] | null }
   | { type: "setTextOffset"; offsetX?: number; offsetY?: number }
@@ -80,7 +74,6 @@ export function createInitialState(preset: PresetOption = DEFAULT_PRESETS[0]): D
     preset,
     backgroundColor: "#d9c3a0",
     textColor: "#cf1f27",
-    accentColor: null,
     text: "",
     fontFamily: "Arial",
     fontSizePx: defaultFontSize(preset.width_mm),
@@ -88,7 +81,6 @@ export function createInitialState(preset: PresetOption = DEFAULT_PRESETS[0]): D
     logoScale: 1,
     logoOffsetX: 0,
     logoOffsetY: 0,
-    logoColorMode: "original",
     textOffsetX: 0,
     textOffsetY: 0,
     repeatGapPx: 80,
@@ -123,19 +115,12 @@ function sizeWith(p: PresetOption, widthMm: number, lengthM: number): PresetOpti
 }
 
 function applyColor(state: DesignState, role: ColorRole, raw: string | null): DesignState {
-  if (role === "accentColor" && raw === null) return { ...state, accentColor: null };
+  if (role !== "backgroundColor" && role !== "textColor") return state;
   const color = normalizeHex(raw);
   if (!color) return state;
-  if (role === "accentColor") {
-    // Accent equal to an existing colour adds nothing: keep palette minimal.
-    const dup = color === state.backgroundColor || color === state.textColor;
-    return { ...state, accentColor: dup ? null : color };
-  }
   const other = role === "backgroundColor" ? state.textColor : state.backgroundColor;
   if (color === other) return state; // text must stay visible on background
-  const next = { ...state, [role]: color };
-  if (next.accentColor === color) next.accentColor = null;
-  return next;
+  return { ...state, [role]: color };
 }
 
 function applyTemplate(state: DesignState, tpl: DesignTemplate): DesignState {
@@ -146,7 +131,6 @@ function applyTemplate(state: DesignState, tpl: DesignTemplate): DesignState {
     ...state,
     backgroundColor: bg,
     textColor: fg,
-    accentColor: null,
     text: sanitizeText(tpl.text),
     fontFamily: tpl.fontFamily,
     fontSizePx: defaultFontSize(state.preset.width_mm),
@@ -191,8 +175,6 @@ export function designReducer(state: DesignState, action: DesignAction): DesignS
         logoOffsetX: action.offsetX === undefined ? state.logoOffsetX : clampOffX(action.offsetX),
         logoOffsetY: action.offsetY === undefined ? state.logoOffsetY : clampOffY(action.offsetY),
       };
-    case "setLogoColorMode":
-      return LOGO_COLOR_MODES.includes(action.mode) ? { ...state, logoColorMode: action.mode } : state;
     case "setLogoInks":
       return state.logo && state.logo.url === action.url
         ? { ...state, logo: { ...state.logo, inks: action.inks } }

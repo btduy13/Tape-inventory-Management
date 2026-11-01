@@ -64,13 +64,29 @@ describe("ink limit (max 3 print inks)", () => {
     expect(head("colors")).toHaveTextContent("5 màu in, cần tư vấn");
   });
 
-  it("'In một màu' switches the logo to one ink and closes", async () => {
+  it("offers 'Liên hệ tư vấn' and 'Đổi logo', never a single-ink option", async () => {
     setup();
     upload("many.png");
-    fireEvent.click(await screen.findByRole("button", { name: "In một màu" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(screen.queryByRole("button", { name: "In một màu" })).not.toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent("In một màu");
+    expect(screen.getByRole("button", { name: "Liên hệ tư vấn" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Đổi logo" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(head("content")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("text colour different from every logo ink adds an ink: 3-colour logo + text = 4, dialog opens", async () => {
+    setup();
     fireEvent.click(head("content"));
-    expect(screen.getByRole("radio", { name: "In một màu" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.change(screen.getByLabelText("Nội dung in"), { target: { value: "ACME" } });
+    upload("two.png");
+    await waitFor(() => expect(screen.getAllByText("Số màu in: 2/3").length).toBeGreaterThan(0));
+    // Text green (not near red / navy): 3 inks, still within the limit.
+    fireEvent.click(head("colors"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Xanh lá" })[1]);
+    await waitFor(() => expect(screen.getAllByText("Số màu in: 3/3").length).toBeGreaterThan(0));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("'Liên hệ tư vấn' without a phone opens the quote step with the flag", async () => {

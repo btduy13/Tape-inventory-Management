@@ -1,21 +1,20 @@
 "use client";
-// Logo section: drop zone + colour mode; size / position sliders sit in a disclosure
+// Logo section: drop zone + ink count; the logo always prints in its own colours.
+// Size / position sliders sit in a disclosure
 // (dragging on the canvas is the main way).
 import { getDictionary } from "@/i18n";
 import { MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_OFFSET_X, MIN_LOGO_SCALE } from "../lib/constants";
-import { LOGO_COLOR_MODES } from "../lib/state";
 import { useDesignState } from "./hooks";
 import { InkCounter } from "./InkCounter";
 import { LogoDropzone } from "./LogoDropzone";
 import { RangeField } from "./RangeField";
-import { btnGhost, chip, chipOff, chipOn, focusRing, groupLabel, hint } from "./ui";
+import { btnGhost, focusRing, groupLabel, hint } from "./ui";
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 export function LogoUpload() {
   const t = getDictionary().designer;
   const [s, dispatch] = useDesignState();
-  const modeLabel = { original: t.logoModeOriginal, tint: t.logoModeTint } as const;
 
   return (
     <fieldset className="flex min-w-0 flex-col gap-3">
@@ -23,21 +22,7 @@ export function LogoUpload() {
       <LogoDropzone />
       {s.logo && (
         <div className="flex flex-col gap-3">
-          <div role="radiogroup" aria-label={t.logoMode} className="grid grid-cols-2 gap-2">
-            {LOGO_COLOR_MODES.map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={s.logoColorMode === m}
-                onClick={() => dispatch({ type: "setLogoColorMode", mode: m })}
-                className={`${chip} px-3 font-medium ${s.logoColorMode === m ? chipOn : chipOff}`}
-              >
-                {modeLabel[m]}
-              </button>
-            ))}
-          </div>
-          <p className={hint}>{s.logoColorMode === "tint" ? t.logoTintNote : t.logoOriginalNote}</p>
+          <p className={hint}>{t.logoOriginalNote}</p>
           <InkCounter />
           <details className="group rounded-xl border border-slate-200">
             <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden ${focusRing}`}>

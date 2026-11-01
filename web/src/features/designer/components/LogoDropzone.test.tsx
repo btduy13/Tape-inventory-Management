@@ -29,9 +29,9 @@ describe("<LogoUpload>", () => {
     fireEvent.drop(zone, { dataTransfer: { files: [file] } });
     await waitFor(() => expect(screen.getByText("my-logo.png")).toBeInTheDocument());
     expect(screen.getByAltText("Ảnh logo đã chọn")).toHaveAttribute("src", "blob:logo");
-    expect(screen.getByRole("radio", { name: "Giữ màu gốc" })).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByRole("radio", { name: "In một màu" }));
-    expect(screen.getByRole("radio", { name: "In một màu" })).toHaveAttribute("aria-checked", "true");
+    // Logo always prints in its own colours: no colour-mode choice.
+    expect(screen.queryByRole("radio", { name: "In một màu" })).not.toBeInTheDocument();
+    expect(screen.getByText("Logo được in đúng màu gốc. Logo nhiều màu sẽ được tư vấn phương án in khi báo giá.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Xóa logo" }));
     expect(screen.queryByText("my-logo.png")).not.toBeInTheDocument();
   });

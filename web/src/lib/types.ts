@@ -72,13 +72,13 @@ export type DesignJson = {
   presetId: Uuid | null;
   backgroundColor: string;        // hex #rrggbb
   textColor: string;              // hex
-  accentColor?: string | null;    // hex, optional 3rd color (logo tint / border)
+  accentColor?: string | null;    // legacy (old designs): logo single-ink colour; no longer written
   text: string;
   fontFamily?: string;
   fontSizePx?: number;
   logo?: {
     path: string | null; scale: number; offsetX: number; offsetY: number;
-    colorMode?: "original" | "tint";  // logo printed in its own colours or one ink
+    colorMode?: "original" | "tint";  // legacy (old designs); logos now always print in original colours
   } | null;
   repeatGapPx?: number;
   widthMm?: number;               // chosen tape width (mm), from tape_widths (0022)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, hexToRgb, isLowContrast, logoInkColor, normalizeHex, paletteColors } from "./palette";
+import { contrastRatio, hexToRgb, isLowContrast, normalizeHex, paletteColors } from "./palette";
 
 describe("normalizeHex", () => {
   it("normalises valid forms", () => {
@@ -13,17 +13,9 @@ describe("normalizeHex", () => {
 });
 
 describe("paletteColors", () => {
-  it("dedupes and never exceeds 3", () => {
-    expect(paletteColors({ backgroundColor: "#fff", textColor: "#000", accentColor: "#ffffff" })).toEqual(["#ffffff", "#000000"]);
-    expect(paletteColors({ backgroundColor: "#111111", textColor: "#222222", accentColor: "#333333" })).toHaveLength(3);
-    expect(paletteColors({ backgroundColor: "#111111", textColor: "#222222", accentColor: null })).toHaveLength(2);
-  });
-});
-
-describe("logoInkColor", () => {
-  it("uses accent, else text colour", () => {
-    expect(logoInkColor({ backgroundColor: "#ffffff", textColor: "#000000", accentColor: "#ff0000" })).toBe("#ff0000");
-    expect(logoInkColor({ backgroundColor: "#ffffff", textColor: "#000000", accentColor: null })).toBe("#000000");
+  it("background then text, deduped", () => {
+    expect(paletteColors({ backgroundColor: "#fff", textColor: "#000" })).toEqual(["#ffffff", "#000000"]);
+    expect(paletteColors({ backgroundColor: "#111111", textColor: "#111" })).toEqual(["#111111"]);
   });
 });
 

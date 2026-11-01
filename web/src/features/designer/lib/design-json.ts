@@ -7,10 +7,12 @@ import {
 } from "./constants";
 import { MAX_INK_REPORT, printInks } from "./logo-colors";
 import { paletteColors } from "./palette";
-import { LOGO_COLOR_MODES, type DesignState, type LogoColorMode } from "./state";
+import type { DesignState } from "./state";
 import { LENGTH_M_MAX, WIDTH_MM_MAX } from "./tape-spec";
 
 const hex = z.string().regex(/^#[0-9a-f]{6}$/);
+/** Legacy logo colour modes (designs saved before the logo-colour option was removed). */
+const LEGACY_LOGO_COLOR_MODES = ["original", "tint"] as const;
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
 /** Server-side validation of a submitted design_json (lead-intake uses this). */
@@ -20,6 +22,7 @@ export const designJsonSchema = z
     presetId: uuid.nullable(),
     backgroundColor: hex,
     textColor: hex,
+    // Legacy: old designs carried an accent (single logo ink). Still accepted, never written.
     accentColor: hex.nullable().optional(),
     text: z.string().max(MAX_TEXT_LENGTH).refine((s) => !/[\u0000-\u001f\u007f]/.test(s)),
     fontFamily: z.enum(FONT_FAMILIES).optional(),
@@ -30,7 +33,8 @@ export const designJsonSchema = z
         scale: z.number().min(MIN_LOGO_SCALE).max(MAX_LOGO_SCALE),
         offsetX: z.number().min(-MAX_OFFSET_X).max(MAX_OFFSET_X),
         offsetY: z.number().min(-MAX_LOGO_OFFSET).max(MAX_LOGO_OFFSET),
-        colorMode: z.enum(LOGO_COLOR_MODES as [LogoColorMode, ...LogoColorMode[]]).optional(),
+        // Legacy: the logo always prints in its own colours now. Still accepted, never written.
+        colorMode: z.enum(LEGACY_LOGO_COLOR_MODES).optional(),
       })
       .strict()
       .nullable()
@@ -61,7 +65,6 @@ export function toDesignJson(state: DesignState): DesignJson {
     presetId: state.preset.id,
     backgroundColor: state.backgroundColor,
     textColor: state.textColor,
-    accentColor: state.accentColor,
     text: state.text.trim(),
     fontFamily: state.fontFamily,
     fontSizePx: state.fontSizePx,
@@ -71,7 +74,6 @@ export function toDesignJson(state: DesignState): DesignJson {
           scale: r4(state.logoScale),
           offsetX: r4(state.logoOffsetX),
           offsetY: r4(state.logoOffsetY),
-          colorMode: state.logoColorMode,
         }
       : null,
     repeatGapPx: state.repeatGapPx,

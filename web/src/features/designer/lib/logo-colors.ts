@@ -1,14 +1,14 @@
 // Logo ink analysis + print ink count (max-3-ink rule). Pure: works on RGBA pixel data, no DOM.
 //
 // Rule (owner): a print uses at most MAX_COLORS inks in total. Inks = distinct colours actually
-// printed: logo colours + text colour (+ the single logo ink in "tint" mode). Same colour = one ink,
+// printed: logo colours (always its own original colours) + text colour. Same colour = one ink,
 // so a logo colour equal to the text colour counts once (merged in Lab, ΔE < INK_MERGE_DE).
 // Text vs logo uses a wider tolerance (ΔE < TEXT_LOGO_MATCH_DE): text close to a logo ink is printed
 // with that logo ink ("logo colour and text colour are one").
 // The tape background is the film (substrate: clear, white, kraft...), not an ink: it is not counted,
 // and logo areas in the film colour need no ink either.
 import { MAX_COLORS } from "./constants";
-import { hexToRgb, logoInkColor, normalizeHex, type PaletteInput } from "./palette";
+import { hexToRgb, normalizeHex, type PaletteInput } from "./palette";
 
 export type Rgb = { r: number; g: number; b: number };
 export type Lab = { L: number; a: number; b: number };
@@ -267,7 +267,6 @@ export function labToHex({ L, a, b }: Lab): string {
 
 export type InkInput = PaletteInput & {
   text: string;
-  logoColorMode: "original" | "tint";
   /** null: no logo. `inks` null: logo not analysed (unknown). */
   logo: { inks?: LogoInk[] | null } | null;
 };
@@ -307,15 +306,14 @@ export function printInks(s: InkInput): InkSummary {
   let logoUnknown = false;
   let logoPending = false;
   if (s.logo) {
-    if (s.logoColorMode === "tint") logoInks = [logoInkColor(s)];
-    else if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex)).filter(notFilm);
+    if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex)).filter(notFilm);
     else {
       logoUnknown = true;
       logoPending = s.logo.inks === undefined;
     }
   }
   // Text close to a logo ink is printed with that ink: it adds no ink of its own.
-  if (list.length && logoInks.length && s.logoColorMode !== "tint") {
+  if (list.length && logoInks.length) {
     const tl = rgbToLab(hexToRgb(list[0]));
     if (logoInks.some((l) => deltaE(rgbToLab(hexToRgb(l)), tl) < TEXT_LOGO_MATCH_DE)) list.length = 0;
   }

@@ -16,6 +16,12 @@
 - `components/Watermark.tsx`: Vĩnh Thịnh logo (`/brand/vinh-thinh-logo.png`, text-only if missing) + "Vĩnh Thịnh", tiled diagonally over the whole viewer at ~18% opacity, `pointer-events: none`, so crops still carry it. Context menu on the viewer is blocked; the canvas has no `preserveDrawingBuffer`, so there is no clean export path. The component offers no export.
 - Disclaimer `MOCKUP_DISCLAIMER` is drawn inside the bottom of the viewer from `sm` up (also over the WebGL fallback); below `sm` it sits under the canvas at 12px so it never covers the scene.
 
+## Eyedropper ("Chọn màu")
+
+- Opt-in via the `colorPicker` prop (the designer passes a `ColorPickerBridge`: colour facts + "Dùng cho chữ" / "Dùng cho nền băng keo"). Toggle sits under the zoom +/− buttons (`aria-pressed`); Esc or the toggle exits. While picking, OrbitControls is disabled, so the picking click / drag never rotates or zooms.
+- Hits on printed meshes (`userData.tapePrint`: roll surface, carton / cup strips) sample the 2D source canvas at the hit UV with the same repeat / offset / wrap / flipY as the GPU (`lib/pick.ts uvToPixel`): the true design colour. Other hits (box, cup, background) read the lit render (`gl.render` + `gl.readPixels` in the same task), labelled "màu hiển thị (có ánh sáng)". Optional native `window.EyeDropper` ("Chọn màu trên màn hình").
+- Loupe follows the pointer (CSSOM transform, SVG fill: CSP-safe); the panel below the viewer is an `aria-live` region.
+
 Props for layout: `className`, `aspect` (one of `MockupAspect` "16 / 9" | "4 / 3" | "1 / 1" | "4 / 5" | "3 / 4" from `sm` up, mapped to fixed Tailwind classes so no inline style hits the CSP; or "fill" to fill a sized parent), `mobileAspect` (below `sm`, same values), `showTitle`. Camera re-fits on every resize; DPR capped at 2; no wheel/pinch zoom and `touch-action: pan-y`, so vertical swipes / wheel scroll the page and horizontal drags rotate.
 
 ## Routes

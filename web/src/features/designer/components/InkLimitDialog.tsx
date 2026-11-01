@@ -31,7 +31,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1
 
 export function InkLimitDialog({ contact, onContactForm, onChangeLogo }: Props) {
   const t = getDictionary().designer;
-  const [s, dispatch] = useDesignState();
+  const [s] = useDesignState();
   const inks = useInks();
   const titleId = useId();
   const bodyId = useId();
@@ -77,7 +77,6 @@ export function InkLimitDialog({ contact, onContactForm, onChangeLogo }: Props) 
 
   const logoOver = inks.logoCount > MAX_COLORS;
   const zalo = zaloHref(contact?.phoneHref ?? null);
-  const canTint = s.logo !== null && s.logoColorMode !== "tint";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
@@ -131,32 +130,18 @@ export function InkLimitDialog({ contact, onContactForm, onChangeLogo }: Props) 
               {t.inkContactZalo}
             </a>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            {canTint && (
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  dispatch({ type: "setLogoColorMode", mode: "tint" });
-                }}
-                className={btnSecondary}
-              >
-                {t.inkUseTint}
-              </button>
-            )}
-            {s.logo && (
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  onChangeLogo();
-                }}
-                className={`${btnSecondary} ${canTint ? "" : "col-span-2"}`}
-              >
-                {t.inkChangeLogo}
-              </button>
-            )}
-          </div>
+          {s.logo && (
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                onChangeLogo();
+              }}
+              className={btnSecondary}
+            >
+              {t.inkChangeLogo}
+            </button>
+          )}
           <button type="button" onClick={close} className={btnGhost}>
             {t.inkLater}
           </button>

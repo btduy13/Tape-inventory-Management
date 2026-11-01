@@ -150,9 +150,7 @@ describe("analyzeLogoPixels on encoded files", () => {
 const base = (o: Partial<InkInput> = {}): InkInput => ({
   backgroundColor: "#d9c3a0",
   textColor: "#c8102e",
-  accentColor: null,
   text: "ACME",
-  logoColorMode: "original",
   logo: null,
   ...o,
 });
@@ -195,10 +193,11 @@ describe("printInks", () => {
     expect(r.colors).toEqual(["#c8102e"]);
   });
 
-  it("tint mode prints the logo in one ink (accent, else text)", () => {
+  it("logo always counts its own original colours (no single-ink mode)", () => {
     const many = { inks: inks("#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff") };
-    expect(printInks(base({ logoColorMode: "tint", logo: many })).count).toBe(1);
-    expect(printInks(base({ logoColorMode: "tint", accentColor: "#0033a0", logo: many })).count).toBe(2);
+    const r = printInks(base({ text: "", logo: many }));
+    expect(r.count).toBe(5);
+    expect(r.overLimit).toBe(true);
   });
 
   it("unknown / pending logo colours are flagged, not counted", () => {

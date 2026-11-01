@@ -25,22 +25,16 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 export type PaletteInput = {
   backgroundColor: string;
   textColor: string;
-  accentColor: string | null;
 };
 
-/** Distinct print colours in role order (background, text, accent). Never more than MAX_COLORS. */
+/** Distinct design colours in role order (background, text). Never more than MAX_COLORS. */
 export function paletteColors(p: PaletteInput): string[] {
   const out: string[] = [];
-  for (const c of [p.backgroundColor, p.textColor, p.accentColor]) {
+  for (const c of [p.backgroundColor, p.textColor]) {
     const n = normalizeHex(c);
     if (n && !out.includes(n)) out.push(n);
   }
   return out.slice(0, MAX_COLORS);
-}
-
-/** Colour used to tint the logo: accent if set, else the text colour (keeps total <= 3). */
-export function logoInkColor(p: PaletteInput): string {
-  return normalizeHex(p.accentColor) ?? normalizeHex(p.textColor) ?? "#000000";
 }
 
 /** Relative luminance (WCAG) for contrast warnings. */

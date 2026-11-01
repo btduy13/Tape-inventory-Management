@@ -2,6 +2,7 @@
 // Tape roll standing on its side: printed outer surface, translucent layer edges, paper core.
 import { DoubleSide, BackSide } from "three";
 import { rollGeometry, textureRepeat, type RollPreset } from "../lib/geometry";
+import { TAPE_PRINT } from "../lib/pick";
 import { useStripTexture } from "./use-strip-texture";
 
 const SEGMENTS = 96;
@@ -17,8 +18,8 @@ export function TapeRoll({ preset, source, version, stripLengthMm }: Props) {
 
   return (
     <group>
-      {/* Printed outer surface */}
-      <mesh>
+      {/* Printed outer surface (eyedropper samples the design canvas here) */}
+      <mesh userData={TAPE_PRINT}>
         <cylinderGeometry args={[g.outerRadius, g.outerRadius, g.width, SEGMENTS, 1, true]} />
         <meshStandardMaterial map={texture ?? undefined} color={texture ? "#ffffff" : EDGE_COLOR} roughness={0.35} metalness={0.05} />
       </mesh>

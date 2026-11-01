@@ -8,21 +8,17 @@ import { focusRing, selectedRing } from "./ui";
 
 type Props = {
   label: string;
-  value: string | null;
+  value: string;
   onChange: (hex: string) => void;
-  /** Colour shown when `value` is null (e.g. accent falls back to the text colour). */
-  fallbackValue?: string;
-  /** Note shown when `value` is null. */
-  fallbackNote?: string;
   /** Colours already used by other roles (shown disabled). */
   disabledColors?: readonly string[];
   /** Inline badge next to the label (e.g. low contrast). */
   badge?: string | null;
 };
 
-export function ColorField({ label, value, onChange, fallbackValue, fallbackNote, disabledColors = [], badge }: Props) {
+export function ColorField({ label, value, onChange, disabledColors = [], badge }: Props) {
   const t = getDictionary().designer;
-  const shown = value ?? fallbackValue ?? "#000000";
+  const shown = value;
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
@@ -39,7 +35,6 @@ export function ColorField({ label, value, onChange, fallbackValue, fallbackNote
             <span className="text-xs uppercase tabular-nums text-slate-600">{shown}</span>
           </span>
         </label>
-        {value === null && fallbackNote && <span className="text-xs text-slate-600">{fallbackNote}</span>}
         {badge && <span role="status" className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{badge}</span>}
       </div>
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-5" role="group" aria-label={`${label} - ${t.swatches}`}>

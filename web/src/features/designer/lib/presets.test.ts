@@ -1,25 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PRESETS, normalizePresets, presetKey, toPresetOption } from "./presets";
-import { hasTransparency, tintPixels } from "./tint";
-
-describe("tintPixels", () => {
-  const ink = { r: 200, g: 16, b: 46 };
-
-  it("keeps alpha mask for transparent images", () => {
-    const d = new Uint8ClampedArray([10, 20, 30, 0, 250, 250, 250, 255]);
-    expect(hasTransparency(d)).toBe(true);
-    tintPixels(d, ink);
-    expect([...d]).toEqual([200, 16, 46, 0, 200, 16, 46, 255]);
-  });
-
-  it("uses darkness for opaque images (white -> transparent, black -> ink)", () => {
-    const d = new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 255]);
-    tintPixels(d, ink);
-    expect(d[3]).toBe(0);
-    expect(d[7]).toBe(255);
-    expect([d[4], d[5], d[6]]).toEqual([200, 16, 46]);
-  });
-});
 
 describe("presets", () => {
   it("matches seed sizes", () => {

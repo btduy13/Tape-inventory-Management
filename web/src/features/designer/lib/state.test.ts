@@ -17,26 +17,17 @@ describe("designReducer colours (max 3, distinct roles)", () => {
     expect(designReducer(s, { type: "setColor", role: "textColor", color: "#FFFFFF" })).toBe(s);
     expect(designReducer(s, { type: "setColor", role: "backgroundColor", color: "#000" })).toBe(s);
   });
-  it("drops accent that duplicates another colour", () => {
-    const s = designReducer(base(), { type: "setColor", role: "accentColor", color: "#000000" });
-    expect(s.accentColor).toBeNull();
-  });
-  it("clears accent when a main colour takes its value", () => {
-    let s = designReducer(base(), { type: "setColor", role: "accentColor", color: "#ff0000" });
-    expect(s.accentColor).toBe("#ff0000");
-    s = designReducer(s, { type: "setColor", role: "textColor", color: "#ff0000" });
-    expect(s.textColor).toBe("#ff0000");
-    expect(s.accentColor).toBeNull();
-    expect(paletteColors(s).length).toBeLessThanOrEqual(3);
-  });
-  it("allows removing accent", () => {
-    let s = designReducer(base(), { type: "setColor", role: "accentColor", color: "#ff0000" });
-    s = designReducer(s, { type: "setColor", role: "accentColor", color: null });
-    expect(s.accentColor).toBeNull();
-  });
-  it("ignores null for non-accent roles", () => {
+  it("has no accent / logo colour mode (logo always prints in its own colours)", () => {
     const s = base();
-    expect(designReducer(s, { type: "setColor", role: "textColor", color: null })).toBe(s);
+    expect(s).not.toHaveProperty("accentColor");
+    expect(s).not.toHaveProperty("logoColorMode");
+    expect(designReducer(s, { type: "setColor", role: "accentColor" as never, color: "#ff0000" })).toBe(s);
+    expect(designReducer(s, { type: "setLogoColorMode", mode: "tint" } as never)).toBe(s);
+    expect(paletteColors(s)).toEqual(["#ffffff", "#000000"]);
+  });
+  it("ignores null colours", () => {
+    const s = base();
+    expect(designReducer(s, { type: "setColor", role: "textColor", color: null as never })).toBe(s);
   });
 });
 
@@ -88,15 +79,9 @@ describe("designReducer text + limits", () => {
     s = designReducer(s, { type: "setTextOffset", offsetX: Number.NaN });
     expect(s.textOffsetX).toBe(-3);
   });
-  it("switches logo colour mode only to known modes", () => {
-    const s = base();
-    expect(s.logoColorMode).toBe("original");
-    expect(designReducer(s, { type: "setLogoColorMode", mode: "tint" }).logoColorMode).toBe("tint");
-    expect(designReducer(s, { type: "setLogoColorMode", mode: "x" as never })).toBe(s);
-  });
   it("applies a template and rejects invalid ones", () => {
     const s = designReducer(base(), { type: "applyTemplate", template: DESIGN_TEMPLATES[1] });
-    expect(s).toMatchObject({ backgroundColor: "#ffcd00", textColor: "#000000", text: "HÀNG DỄ VỠ - XIN NHẸ TAY", accentColor: null });
+    expect(s).toMatchObject({ backgroundColor: "#ffcd00", textColor: "#000000", text: "HÀNG DỄ VỠ - XIN NHẸ TAY" });
     const bad = { ...DESIGN_TEMPLATES[0], textColor: DESIGN_TEMPLATES[0].backgroundColor };
     expect(designReducer(s, { type: "applyTemplate", template: bad })).toBe(s);
   });

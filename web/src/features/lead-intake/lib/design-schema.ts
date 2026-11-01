@@ -27,12 +27,13 @@ export function parseDesignJson(raw: unknown): ValidDesign | null {
     presetId: null,
     widthMm: d.widthMm,
     lengthM: d.lengthM,
-    accentColor: d.accentColor ?? null,
+    // Legacy field: kept only when an old design sent it (new designs omit it).
+    ...(d.accentColor !== undefined ? { accentColor: d.accentColor } : {}),
     logo: d.logo ? { ...d.logo, path: null } : null,
   };
 }
 
-/** designs.colors (1..3 distinct, order: background, text, accent). */
+/** designs.colors (1..3 distinct, order: background, text, legacy accent). */
 export function designColors(d: Pick<DesignJson, "backgroundColor" | "textColor" | "accentColor">): string[] {
   const list = [d.backgroundColor, d.textColor, d.accentColor].filter(
     (c): c is string => typeof c === "string" && c.length > 0,

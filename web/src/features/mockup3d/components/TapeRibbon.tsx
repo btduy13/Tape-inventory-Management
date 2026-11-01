@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { BufferAttribute, BufferGeometry } from "three";
 import type { RibbonData } from "../lib/ribbon";
+import { TAPE_PRINT } from "../lib/pick";
 import { useStripTexture } from "./use-strip-texture";
 
 type Props = { data: RibbonData; source: HTMLCanvasElement | null; version: number };
@@ -22,7 +23,7 @@ export function TapeRibbon({ data, source, version }: Props) {
   useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
-    <mesh geometry={geometry} scale={0.01} renderOrder={2}>
+    <mesh geometry={geometry} scale={0.01} renderOrder={2} userData={TAPE_PRINT}>
       <meshPhysicalMaterial
         map={texture ?? undefined}
         color={texture ? "#ffffff" : "#d9c3a0"}

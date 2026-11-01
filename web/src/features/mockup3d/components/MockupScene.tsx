@@ -8,6 +8,7 @@ import { fitDistance } from "../lib/camera";
 import type { RollPreset } from "../lib/geometry";
 import { installThreeConsoleFilter } from "../lib/three-console";
 import { viewFrame, type MockupView } from "../lib/views";
+import { EyedropperPolicy, type PickHandlers } from "./EyedropperPolicy";
 import { FitCamera } from "./FitCamera";
 import { TouchScrollPolicy } from "./TouchScrollPolicy";
 import { ZoomPolicy } from "./ZoomPolicy";
@@ -32,15 +33,18 @@ export type MockupSceneProps = {
   stripLengthMm: number;
   ariaLabel: string;
   fallback: React.ReactNode;
+  /** Eyedropper mode: orbit / zoom gestures are off so the picking click never moves the model. */
+  picking?: boolean;
+  pickHandlers?: PickHandlers;
 };
 
-function SceneObject({ view, preset, source, version, stripLengthMm }: Omit<MockupSceneProps, "ariaLabel" | "fallback">) {
+function SceneObject({ view, preset, source, version, stripLengthMm }: Pick<MockupSceneProps, "view" | "preset" | "source" | "version" | "stripLengthMm">) {
   if (view === "roll") return <TapeRoll preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />;
   if (view === "carton") return <CartonBox preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />;
   return <DrinkCup widthMm={preset.width_mm} source={source} version={version} stripLengthMm={stripLengthMm} />;
 }
 
-export default function MockupScene({ ariaLabel, fallback, ...rest }: MockupSceneProps) {
+export default function MockupScene({ ariaLabel, fallback, picking = false, pickHandlers, ...rest }: MockupSceneProps) {
   const frame = viewFrame(rest.view, rest.preset);
   // Initial guess (4:3); FitCamera refines it for the real canvas aspect.
   const d = fitDistance(frame.radius, FOV, 4 / 3);
@@ -68,9 +72,10 @@ export default function MockupScene({ ariaLabel, fallback, ...rest }: MockupScen
       </Suspense>
       <FitCamera radius={frame.radius} direction={frame.direction} />
       {/* Zoom: pinch, Ctrl/⌘ + wheel or the +/− buttons; a plain wheel scrolls the page (ZoomPolicy). */}
-      <OrbitControls makeDefault enablePan={false} enableZoom enableDamping rotateSpeed={0.9} zoomSpeed={0.8} />
+      <OrbitControls makeDefault enabled={!picking} enablePan={false} enableZoom enableDamping rotateSpeed={0.9} zoomSpeed={0.8} />
       <TouchScrollPolicy />
       <ZoomPolicy />
+      {pickHandlers && <EyedropperPolicy active={picking} handlers={pickHandlers} />}
     </Canvas>
   );
 }

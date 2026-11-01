@@ -7,6 +7,7 @@ import { CUP_MM, CUP_STRIP_MAX_MM, cupStripCapped } from "../lib/cup";
 import { CARTON_MM, MM_PER_UNIT, rollGeometry, type RollPreset } from "../lib/geometry";
 import { hasWebGL } from "../lib/webgl";
 import type { MockupView } from "../lib/views";
+import { EyedropperToggle, PickHint, PickLoupe, PickPanel, useEyedropper, type ColorPickerBridge } from "./Eyedropper";
 import { Watermark } from "./Watermark";
 import { VIEWER_ATTR, ZOOM_EVENT } from "../lib/zoom";
 
@@ -35,6 +36,11 @@ export type TapeMockup3DProps = {
   mobileAspect?: MockupAspect;
   /** Show the heading row title (tabs are always shown). */
   showTitle?: boolean;
+  /**
+   * Enables the eyedropper ("Chọn màu" next to zoom). With a bridge the picked-colour panel also
+   * shows the nearest swatch / ink status and "use for text / background" actions.
+   */
+  colorPicker?: ColorPickerBridge | null;
 };
 
 /** Supported canvas ratios. Fixed Tailwind classes (no inline style: CSP style-src is nonce-only). */
@@ -113,9 +119,12 @@ export function TapeMockup3D({
   aspect = "4 / 3",
   mobileAspect = "4 / 5",
   showTitle = true,
+  colorPicker,
 }: TapeMockup3DProps) {
   const t = getDictionary().mockup3d;
   const [view, setView] = useState<MockupView>(initialView);
+  const { picking, setPicking, pick, setPick, loupe, handlers: pickHandlers, pickScreen } = useEyedropper();
+  const pickerOn = colorPicker !== undefined && picking;
   // null on the server / first hydration pass, then the (cached) client capability.
   const webgl = useSyncExternalStore<boolean | null>(noopSubscribe, cachedHasWebGL, () => null);
 
@@ -149,13 +158,23 @@ export function TapeMockup3D({
         // Discourage "save image" on the bare canvas: the watermark lives in the overlay.
         onContextMenu={(e) => e.preventDefault()}
         {...{ [VIEWER_ATTR]: "" }}
-        className={`relative w-full min-w-0 overflow-hidden rounded-lg border border-neutral-300 bg-stone-100 ${
+        className={`relative isolate w-full min-w-0 overflow-hidden rounded-lg border border-neutral-300 bg-stone-100 ${
           aspect === "fill" ? "min-h-64 flex-1" : `${ASPECT_BASE[mobileAspect]} max-h-[85svh] ${ASPECT_SM[aspect]}`
         }`}
       >
         {webgl === null ? null : webgl ? (
           source ? (
-            <MockupScene view={view} preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} ariaLabel={t.sceneLabel} fallback={fallback} />
+            <MockupScene
+              view={view}
+              preset={preset}
+              source={source}
+              version={version}
+              stripLengthMm={stripLengthMm}
+              ariaLabel={t.sceneLabel}
+              fallback={fallback}
+              picking={pickerOn}
+              pickHandlers={colorPicker !== undefined ? pickHandlers : undefined}
+            />
           ) : (
             <p className="py-16 text-center text-sm text-neutral-500">{t.waitingTexture}</p>
           )
@@ -180,14 +199,18 @@ export function TapeMockup3D({
                 {b.text}
               </button>
             ))}
+            {colorPicker !== undefined && <EyedropperToggle active={pickerOn} onToggle={() => setPicking((p) => !p)} />}
           </div>
         )}
+        {colorPicker !== undefined && <PickLoupe ref={loupe} />}
         {/* sm+: drawn inside the viewer; phones: below the canvas so it never covers the scene. */}
         <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden bg-white/85 px-3 py-1.5 text-center text-xs leading-snug text-neutral-700 sm:block">
           {MOCKUP_DISCLAIMER}
         </p>
       </div>
       <p className="-mt-1 text-center text-[11px] leading-snug text-neutral-700 sm:hidden">{MOCKUP_DISCLAIMER}</p>
+      {pickerOn && <PickHint onScreen={pickScreen} />}
+      {colorPicker !== undefined && pick && <PickPanel pick={pick} bridge={colorPicker} onClose={() => setPick(null)} />}
       <p className="text-xs text-neutral-600" aria-live="polite">
         {scaleNote(view, preset)}
         {webgl && (
