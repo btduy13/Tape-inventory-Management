@@ -41,6 +41,8 @@ export type TapeMockup3DProps = {
    * shows the nearest swatch / ink status and "use for text / background" actions.
    */
   colorPicker?: ColorPickerBridge | null;
+  /** Tape film (background) colour: tints the roll's wound-layer faces. Defaults to clear kraft. */
+  tapeColor?: string;
 };
 
 /** Supported canvas ratios. Fixed Tailwind classes (no inline style: CSP style-src is nonce-only). */
@@ -120,6 +122,7 @@ export function TapeMockup3D({
   mobileAspect = "4 / 5",
   showTitle = true,
   colorPicker,
+  tapeColor,
 }: TapeMockup3DProps) {
   const t = getDictionary().mockup3d;
   const [view, setView] = useState<MockupView>(initialView);
@@ -170,6 +173,7 @@ export function TapeMockup3D({
               source={source}
               version={version}
               stripLengthMm={stripLengthMm}
+              tapeColor={tapeColor}
               ariaLabel={t.sceneLabel}
               fallback={fallback}
               picking={pickerOn}

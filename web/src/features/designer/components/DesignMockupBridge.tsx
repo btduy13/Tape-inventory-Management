@@ -38,6 +38,7 @@ export function DesignMockupBridge(props: DesignMockupBridgeProps) {
       version={texture.version}
       stripLengthMm={STRIP_LENGTH_MM}
       colorPicker={colorPicker}
+      tapeColor={backgroundColor}
       preset={{ width_mm: s.preset.width_mm, length_m: lengthM, thickness_mic: s.preset.thickness_mic }}
     />
   );

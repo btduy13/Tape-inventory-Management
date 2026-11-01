@@ -31,6 +31,7 @@ export type MockupSceneProps = {
   source: HTMLCanvasElement | null;
   version: number;
   stripLengthMm: number;
+  tapeColor?: string;
   ariaLabel: string;
   fallback: React.ReactNode;
   /** Eyedropper mode: orbit / zoom gestures are off so the picking click never moves the model. */
@@ -38,8 +39,8 @@ export type MockupSceneProps = {
   pickHandlers?: PickHandlers;
 };
 
-function SceneObject({ view, preset, source, version, stripLengthMm }: Pick<MockupSceneProps, "view" | "preset" | "source" | "version" | "stripLengthMm">) {
-  if (view === "roll") return <TapeRoll preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />;
+function SceneObject({ view, preset, source, version, stripLengthMm, tapeColor }: Pick<MockupSceneProps, "view" | "preset" | "source" | "version" | "stripLengthMm" | "tapeColor">) {
+  if (view === "roll") return <TapeRoll preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} tapeColor={tapeColor} />;
   if (view === "carton") return <CartonBox preset={preset} source={source} version={version} stripLengthMm={stripLengthMm} />;
   return <DrinkCup widthMm={preset.width_mm} source={source} version={version} stripLengthMm={stripLengthMm} />;
 }
