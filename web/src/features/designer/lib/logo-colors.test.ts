@@ -157,28 +157,45 @@ const base = (o: Partial<InkInput> = {}): InkInput => ({
 const inks = (...hex: string[]) => hex.map((h) => ({ hex: h, coverage: 1 / hex.length }));
 
 describe("printInks", () => {
-  it("background (tape film) is not an ink; text colour is", () => {
-    expect(printInks(base()).colors).toEqual(["#c8102e"]);
-    expect(printInks(base({ text: "  " })).count).toBe(0);
+  it("background (tape) colour always counts; text colour counts only when there is text", () => {
+    expect(printInks(base()).colors).toEqual(["#d9c3a0", "#c8102e"]);
+    expect(printInks(base()).count).toBe(2);
+    expect(printInks(base({ text: "  " })).colors).toEqual(["#d9c3a0"]);
+    expect(printInks(base({ text: "  " })).count).toBe(1);
+  });
+
+  it("text in the background colour (or near it) counts once", () => {
+    const r = printInks(base({ textColor: "#dac4a1" }));
+    expect(r.colors).toEqual(["#d9c3a0"]);
+    expect(r.count).toBe(1);
   });
 
   it("logo colour equal (or near) to the text colour counts once", () => {
     const r = printInks(base({ logo: { inks: inks("#ca122f", "#0a1466") } }));
-    expect(r.count).toBe(2);
+    expect(r.colors).toEqual(["#d9c3a0", "#ca122f", "#0a1466"]);
+    expect(r.count).toBe(3);
     expect(r.overLimit).toBe(false);
   });
 
-  it("text near a logo ink (ΔE < 20) prints with that ink: brand red text + red logo = one ink", () => {
+  it("text near a logo ink (ΔE < 20) prints with that ink: brand red text + red logo = one colour", () => {
     const r = printInks(base({ textColor: "#ed3136", logo: { inks: inks("#ed1110", "#030101") } }));
-    expect(r.colors).toEqual(["#ed1110", "#030101"]);
-    expect(r.count).toBe(2);
-    // Far apart (ΔE > 20) stays two inks.
-    expect(printInks(base({ textColor: "#c8102e", logo: { inks: inks("#ed1110") } })).count).toBe(2);
+    expect(r.colors).toEqual(["#d9c3a0", "#ed1110", "#030101"]);
+    expect(r.count).toBe(3);
+    expect(r.overLimit).toBe(false);
+    // Far apart (ΔE > 20) stays two colours, plus the background.
+    expect(printInks(base({ textColor: "#c8102e", logo: { inks: inks("#ed1110") } })).count).toBe(3);
   });
 
-  it("3-colour logo + a 4th text colour is over the limit", () => {
-    const r = printInks(base({ textColor: "#007a33", logo: { inks: inks("#c8102e", "#0a1466", "#8a8a8a") } }));
+  it("background + text + 2-colour logo = 4 colours: over the limit", () => {
+    const r = printInks(base({ textColor: "#007a33", logo: { inks: inks("#c8102e", "#0a1466") } }));
     expect(r.count).toBe(4);
+    expect(r.logoCount).toBe(2);
+    expect(r.overLimit).toBe(true);
+  });
+
+  it("3-colour logo + a text colour + background is over the limit", () => {
+    const r = printInks(base({ textColor: "#007a33", logo: { inks: inks("#c8102e", "#0a1466", "#8a8a8a") } }));
+    expect(r.count).toBe(5);
     expect(r.overLimit).toBe(true);
   });
 
@@ -188,21 +205,28 @@ describe("printInks", () => {
     expect(r.overLimit).toBe(true);
   });
 
-  it("logo areas in the film colour need no ink", () => {
+  it("logo area in the background colour merges with the background (counts once)", () => {
     const r = printInks(base({ backgroundColor: "#ffffff", text: "", logo: { inks: inks("#ffffff", "#c8102e") } }));
-    expect(r.colors).toEqual(["#c8102e"]);
+    expect(r.colors).toEqual(["#ffffff", "#c8102e"]);
+    expect(r.count).toBe(2);
+    // Near (ΔE < 12) the background also merges.
+    const near = printInks(base({ text: "", logo: { inks: inks("#dac2a2", "#c8102e", "#0a1466") } }));
+    expect(near.colors).toEqual(["#d9c3a0", "#c8102e", "#0a1466"]);
+    expect(near.count).toBe(3);
+    expect(near.overLimit).toBe(false);
   });
 
   it("logo always counts its own original colours (no single-ink mode)", () => {
     const many = { inks: inks("#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff") };
     const r = printInks(base({ text: "", logo: many }));
-    expect(r.count).toBe(5);
+    expect(r.logoCount).toBe(5);
+    expect(r.count).toBe(6);
     expect(r.overLimit).toBe(true);
   });
 
   it("unknown / pending logo colours are flagged, not counted", () => {
-    expect(printInks(base({ logo: {} }))).toMatchObject({ logoPending: true, logoUnknown: true, count: 1, overLimit: false });
-    expect(printInks(base({ logo: { inks: null } }))).toMatchObject({ logoPending: false, logoUnknown: true });
+    expect(printInks(base({ logo: {} }))).toMatchObject({ logoPending: true, logoUnknown: true, count: 2, overLimit: false });
+    expect(printInks(base({ logo: { inks: null } }))).toMatchObject({ logoPending: false, logoUnknown: true, count: 2 });
   });
 
   it("uniqueInks merges by ΔE, keeps distinct", () => {

@@ -46,7 +46,7 @@ export const designJsonSchema = z
     textOffsetX: z.number().min(-MAX_OFFSET_X).max(MAX_OFFSET_X).optional(),
     textOffsetY: z.number().min(-MAX_LOGO_OFFSET).max(MAX_LOGO_OFFSET).optional(),
     // Print inks (logo-colors.ts, client-computed: the server cannot re-analyse a logo cheaply).
-    // Informational for staff; tape film (background) is not an ink.
+    // Informational for staff; counts the tape colour, text colour and logo colours.
     inkColors: z.array(hex).max(MAX_INK_REPORT).optional(),
     inkCount: z.number().int().min(0).max(64).optional(),
     inkOverLimit: z.boolean().optional(),

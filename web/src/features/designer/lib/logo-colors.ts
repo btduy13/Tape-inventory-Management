@@ -5,8 +5,8 @@
 // so a logo colour equal to the text colour counts once (merged in Lab, ΔE < INK_MERGE_DE).
 // Text vs logo uses a wider tolerance (ΔE < TEXT_LOGO_MATCH_DE): text close to a logo ink is printed
 // with that logo ink ("logo colour and text colour are one").
-// The tape background is the film (substrate: clear, white, kraft...), not an ink: it is not counted,
-// and logo areas in the film colour need no ink either.
+// Owner rule: the tape (background) colour counts as one of the 3 colours, together with the text
+// colour and the logo colours; logo areas in the tape colour merge with it (count once).
 import { MAX_COLORS } from "./constants";
 import { hexToRgb, normalizeHex, type PaletteInput } from "./palette";
 
@@ -272,10 +272,10 @@ export type InkInput = PaletteInput & {
 };
 
 export type InkSummary = {
-  /** Distinct printed inks (hex), text first, then logo inks. */
+  /** Distinct colours (hex): tape background first, then text, then logo colours. */
   colors: string[];
   count: number;
-  /** Inks found in the logo alone (original colours, film colour excluded). */
+  /** Colours found in the logo alone (original colours). */
   logoCount: number;
   /** Logo colours not known yet (analysing) or at all (analysis failed). */
   logoUnknown: boolean;
@@ -296,17 +296,16 @@ export function uniqueInks(colors: readonly string[]): string[] {
   return out.map((o) => o.hex);
 }
 
-/** Inks the design prints. Background (tape film) is never an ink. */
+/** Colours of the design: tape (background) + text (when there is text) + logo, merged by ΔE. */
 export function printInks(s: InkInput): InkSummary {
-  const bg = rgbToLab(hexToRgb(s.backgroundColor));
-  const notFilm = (hex: string) => deltaE(rgbToLab(hexToRgb(hex)), bg) >= INK_MERGE_DE;
+  // Owner rule: tape colour + text colour + logo colours, at most 3; identical colours count once.
   const list: string[] = [];
   if (s.text.trim()) list.push(s.textColor);
   let logoInks: string[] = [];
   let logoUnknown = false;
   let logoPending = false;
   if (s.logo) {
-    if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex)).filter(notFilm);
+    if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex));
     else {
       logoUnknown = true;
       logoPending = s.logo.inks === undefined;
@@ -317,7 +316,7 @@ export function printInks(s: InkInput): InkSummary {
     const tl = rgbToLab(hexToRgb(list[0]));
     if (logoInks.some((l) => deltaE(rgbToLab(hexToRgb(l)), tl) < TEXT_LOGO_MATCH_DE)) list.length = 0;
   }
-  const colors = uniqueInks([...list, ...logoInks]);
+  const colors = uniqueInks([s.backgroundColor, ...list, ...logoInks]);
   return {
     colors,
     count: colors.length,

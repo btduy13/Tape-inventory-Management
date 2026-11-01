@@ -4,14 +4,15 @@ import { DesignProvider } from "./DesignProvider";
 import { PalettePicker } from "./PalettePicker";
 
 describe("<PalettePicker>", () => {
-  it("counts print inks and disables the background colour for text", () => {
+  it("counts the background colour and disables it for text", () => {
     render(
       <DesignProvider>
         <PalettePicker />
       </DesignProvider>,
     );
-    // Print inks: no text / logo yet, and the background (tape film) is not an ink.
-    expect(screen.getByText("Số màu in: 0/3")).toBeInTheDocument();
+    // No text / logo yet: the background (tape) colour alone is 1 of the 3 colours.
+    expect(screen.getByText("Số màu in: 1/3")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Màu in 1: #d9c3a0" })).toBeInTheDocument();
     // initial background #d9c3a0 (Kraft) is disabled in the text swatch row only
     expect(screen.getByRole("button", { name: "Kraft (nâu nhạt)" })).not.toBeDisabled();
     const taken = screen.getAllByRole("button", { name: "Kraft (nâu nhạt) - đã dùng cho màu khác" });

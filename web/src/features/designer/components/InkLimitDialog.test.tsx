@@ -38,12 +38,13 @@ const upload = (name: string) =>
 const head = (id: string) => document.getElementById(`step-${id}-head`)!;
 
 describe("ink limit (max 3 print inks)", () => {
-  it("2-colour logo + text in the logo red: 2 inks, no dialog", async () => {
+  it("background + 2-colour logo + text in the logo red: 3 colours, no dialog", async () => {
     setup();
     fireEvent.click(head("content"));
     fireEvent.change(screen.getByLabelText("Nội dung in"), { target: { value: "ACME" } });
     upload("two.png");
-    await waitFor(() => expect(screen.getAllByText("Số màu in: 2/3").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("Số màu in: 3/3").length).toBeGreaterThan(0));
+    expect(screen.getAllByRole("img", { name: "Màu in 1: #d9c3a0" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -61,7 +62,8 @@ describe("ink limit (max 3 print inks)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.activeElement).toBe(input);
     // Flag stays visible (not blocked): counter + colours step header.
-    expect(head("colors")).toHaveTextContent("5 màu in, cần tư vấn");
+    // Background + 5 logo colours = 6.
+    expect(head("colors")).toHaveTextContent("6 màu in, cần tư vấn");
   });
 
   it("offers 'Liên hệ tư vấn' and 'Đổi logo', never a single-ink option", async () => {
@@ -76,17 +78,19 @@ describe("ink limit (max 3 print inks)", () => {
     expect(head("content")).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("text colour different from every logo ink adds an ink: 3-colour logo + text = 4, dialog opens", async () => {
+  it("text colour different from every logo ink adds a colour: background + 2-colour logo + text = 4, dialog opens", async () => {
     setup();
     fireEvent.click(head("content"));
     fireEvent.change(screen.getByLabelText("Nội dung in"), { target: { value: "ACME" } });
     upload("two.png");
-    await waitFor(() => expect(screen.getAllByText("Số màu in: 2/3").length).toBeGreaterThan(0));
-    // Text green (not near red / navy): 3 inks, still within the limit.
-    fireEvent.click(head("colors"));
-    fireEvent.click(screen.getAllByRole("button", { name: "Xanh lá" })[1]);
     await waitFor(() => expect(screen.getAllByText("Số màu in: 3/3").length).toBeGreaterThan(0));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // Text green (not near red / navy / tape): 4 colours, over the limit.
+    fireEvent.click(head("colors"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Xanh lá" })[1]);
+    await waitFor(() => expect(screen.getAllByText("Số màu in: 4/3").length).toBeGreaterThan(0));
+    const dialog = await screen.findByRole("dialog", { name: "Thiết kế vượt quá 3 màu in" });
+    expect(dialog).toHaveTextContent("Màu nền, chữ và logo đang dùng 4 màu");
   });
 
   it("'Liên hệ tư vấn' without a phone opens the quote step with the flag", async () => {
@@ -94,7 +98,7 @@ describe("ink limit (max 3 print inks)", () => {
     upload("many.png");
     fireEvent.click(await screen.findByRole("button", { name: "Liên hệ tư vấn" }));
     expect(head("quote")).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("note")).toHaveTextContent("5 màu in (tối đa 3)");
+    expect(screen.getByRole("note")).toHaveTextContent("6 màu in (tối đa 3)");
   });
 
   it("with a phone: call + Zalo links; Tab is trapped", async () => {

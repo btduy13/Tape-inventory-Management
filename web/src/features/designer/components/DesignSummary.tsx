@@ -23,7 +23,7 @@ export function useDesignSummary() {
   const text = s.text.trim();
   const parts = [text ? `“${text}”` : null, s.logo ? t.designer.contentLogo : null].filter(Boolean);
   const content = parts.length ? parts.join(" + ") : t.designer.contentNone;
-  // Print inks (tape film colour excluded); over the 3-ink limit is flagged, never blocked.
+  // Colours (tape + text + logo, max 3); over the 3-ink limit is flagged, never blocked.
   const inks = useInks();
   const colors = inks.colors;
   const colorsLabel = inks.overLimit

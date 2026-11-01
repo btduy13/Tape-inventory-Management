@@ -46,15 +46,17 @@ describe("print ink flag", () => {
     return s;
   };
 
-  it("counts text + logo inks (film excluded, same colour once)", () => {
+  it("counts background + text + logo colours (same colour once)", () => {
+    // Default tape #d9c3a0, text #cf1f27 (near the logo red, so printed with it).
     const json = toDesignJson(withLogo(["#c8102e", "#0a1466"]));
-    expect(json).toMatchObject({ inkCount: 2, inkOverLimit: false, inkColors: ["#c8102e", "#0a1466"] });
+    expect(json).toMatchObject({ inkCount: 3, inkOverLimit: false, inkColors: ["#d9c3a0", "#c8102e", "#0a1466"] });
     expect(designJsonSchema.safeParse(json).success).toBe(true);
   });
 
   it("flags more than 3 inks and still validates", () => {
     const json = toDesignJson(withLogo(["#ff0000", "#00ff00", "#0000ff", "#ffff00"]));
-    expect(json).toMatchObject({ inkCount: 5, inkOverLimit: true });
+    // Background + text + 4 logo colours.
+    expect(json).toMatchObject({ inkCount: 6, inkOverLimit: true });
     expect(designJsonSchema.safeParse(json).success).toBe(true);
   });
 

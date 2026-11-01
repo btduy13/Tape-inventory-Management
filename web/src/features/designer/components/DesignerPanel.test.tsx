@@ -35,7 +35,8 @@ describe("<DesignerPanel>", () => {
     }
     // Collapsed headers show a live summary.
     expect(head("content")).toHaveTextContent("Chưa có chữ hoặc logo");
-    expect(head("colors")).toHaveTextContent("Chưa có màu in");
+    // The background colour always counts: 1 colour before any text or logo.
+    expect(head("colors")).toHaveTextContent("1 màu in");
   });
 
   it("opens one step at a time and 'Tiếp tục' moves to the next", () => {
@@ -49,7 +50,11 @@ describe("<DesignerPanel>", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Tiếp tục/ }).find((b) => panel("content").contains(b))!);
     expect(head("colors")).toHaveAttribute("aria-expanded", "true");
     expect(head("content")).toHaveTextContent("“ACME”");
-    expect(screen.getAllByText("Số màu in: 1/3")[0]).toBeInTheDocument();
+    // Background + text colour.
+    expect(screen.getAllByText("Số màu in: 2/3")[0]).toBeInTheDocument();
+    // Collapsed again, the colours header summarises the same count.
+    fireEvent.click(head("content"));
+    expect(head("colors")).toHaveTextContent("2 màu in");
   });
 
   it("shows an invalid length in the spec summary", () => {

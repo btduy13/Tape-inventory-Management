@@ -11,7 +11,7 @@ export type PickedColorFacts = {
   swatch: { hex: string; name: string; exact: boolean };
   /** 1-based position in the counted inks, or null when it is not a counted ink. */
   inkIndex: number | null;
-  /** Same colour as the tape background (film): never an ink. */
+  /** Same colour as the tape background (counted as one of the colours). */
   isBackground: boolean;
   /** Same colour as the text. */
   isText: boolean;
@@ -20,7 +20,7 @@ export type PickedColorFacts = {
 export type PickedColorContext = {
   backgroundColor: string;
   textColor: string;
-  /** Counted print inks (printInks().colors): logo colours ∪ text colour, film excluded. */
+  /** Counted print inks (printInks().colors): tape colour ∪ text colour ∪ logo colours. */
   inks: readonly string[];
 };
 

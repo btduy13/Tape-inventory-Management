@@ -1,6 +1,6 @@
 "use client";
 // Palette: background (tape film) and text colour. The logo always prints in its own colours.
-// Palette rules live in the reducer; the print ink count (max 3, film excluded) in logo-colors.ts.
+// Palette rules live in the reducer; the colour count (tape + text + logo, max 3) in logo-colors.ts.
 import { getDictionary } from "@/i18n";
 import { isLowContrast } from "../lib/palette";
 import { ColorField } from "./ColorField";
