@@ -23,7 +23,15 @@ describe("toDesignJson", () => {
       type: "setLogo",
       logo: { file: new File(["x"], "a.png"), kind: "png", url: "blob:x", width: 1, height: 1 },
     });
-    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0 });
+    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0, colorMode: "original" });
+  });
+
+  it("persists canvas positions and sizes", () => {
+    let s = designReducer(sample(), { type: "setTextOffset", offsetX: 1.25, offsetY: -0.2 });
+    s = designReducer(s, { type: "setFontSize", px: 60 });
+    const json = toDesignJson(s);
+    expect(json).toMatchObject({ textOffsetX: 1.25, textOffsetY: -0.2, fontSizePx: 60 });
+    expect(designJsonSchema.safeParse(json).success).toBe(true);
   });
 });
 
@@ -37,6 +45,11 @@ describe("designJsonSchema", () => {
     expect(designJsonSchema.safeParse({ ...ok(), extra: 1 }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), presetId: "not-a-uuid" }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), version: 2 }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), textOffsetX: 99 }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), textOffsetY: "0" }).success).toBe(false);
+    const logo = { path: null, scale: 1, offsetX: 0, offsetY: 0 };
+    expect(designJsonSchema.safeParse({ ...ok(), logo: { ...logo, colorMode: "rainbow" } }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), logo }).success).toBe(true);
   });
 });
 

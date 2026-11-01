@@ -47,6 +47,35 @@ describe("computePatternLayout", () => {
     expect(l.period).toBe(1200);
   });
 
+  it("shrinks long content so the logo stays on the strip (QC-01)", () => {
+    const l = computePatternLayout(input({ textWidth: 1400, fontSize: 86, logoAspect: 1 }));
+    expect(l.count).toBe(1);
+    expect(l.fit).toBeLessThan(1);
+    expect(l.fontSize).toBeCloseTo(86 * l.fit);
+    const t = l.tiles[0];
+    expect(t.logo!.x).toBeGreaterThanOrEqual(0);
+    expect(t.text!.x + t.text!.width).toBeLessThanOrEqual(1200);
+  });
+
+  it("keeps elements inside the tile and the printable band", () => {
+    const l = computePatternLayout(input({ logoAspect: 1, logoScale: 1.5, logoOffsetX: 3, logoOffsetY: 0.5, textOffsetY: -0.5 }));
+    for (const [i, t] of l.tiles.entries()) {
+      expect(t.logo!.x + t.logo!.width).toBeLessThanOrEqual((i + 1) * l.period + 1e-6);
+      expect(t.logo!.y).toBeGreaterThanOrEqual(l.band.top);
+      expect(t.logo!.y + t.logo!.height).toBeLessThanOrEqual(l.band.bottom + 1e-6);
+      expect(t.text!.y).toBeCloseTo(l.band.top);
+    }
+    expect(l.logoSize!.height).toBeLessThanOrEqual(l.band.bottom - l.band.top);
+    expect(l.effective.logo!.y).toBeLessThan(0.5);
+  });
+
+  it("moves text with offsets and reports effective offsets", () => {
+    const base = computePatternLayout(input());
+    const moved = computePatternLayout(input({ textOffsetX: 0.1 }));
+    expect(moved.tiles[0].text!.x - base.tiles[0].text!.x).toBeCloseTo(19.2);
+    expect(moved.effective.text!.x).toBeCloseTo(0.1);
+  });
+
   it("supports logo-only designs", () => {
     const l = computePatternLayout(input({ textWidth: 0, logoAspect: 1 }));
     expect(l.count).toBeGreaterThan(0);

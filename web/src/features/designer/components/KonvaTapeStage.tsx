@@ -1,25 +1,20 @@
 "use client";
 // Konva strip renderer. Client-only (loaded through TapeCanvas2D with ssr:false).
-// Registers a StageRenderer for exports and publishes a full-resolution canvas for the 3D texture.
+// Logo and text are draggable / resizable (Transformer) and keyboard-movable; the pattern repeats
+// every change. Registers a StageRenderer for exports and publishes the 3D texture from the
+// content layer only, so selection handles never end up in the print.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type Konva from "konva";
-import { Group, Image as KImage, Layer, Rect, Stage, Text } from "react-konva";
+import { Group, Image as KImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import { format, getDictionary } from "@/i18n";
 import { STRIP_LENGTH_MM } from "../lib/constants";
 import { logoInkColor } from "../lib/palette";
-import { computePatternLayout, stripSize } from "../lib/pattern";
+import { stripSize } from "../lib/pattern";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
+import { layoutForState } from "./stage-layout";
+import { useStageInteraction } from "./use-stage-interaction";
 import { useTintedLogo } from "./use-tinted-logo";
-
-let measureCtx: CanvasRenderingContext2D | null = null;
-function measureTextWidth(text: string, fontFamily: string, sizePx: number): number {
-  if (!text) return 0;
-  measureCtx ??= document.createElement("canvas").getContext("2d");
-  if (!measureCtx) return text.length * sizePx * 0.6;
-  measureCtx.font = `bold ${sizePx}px "${fontFamily}"`;
-  return measureCtx.measureText(text).width;
-}
 
 export default function KonvaTapeStage() {
   const t = getDictionary().designer;
@@ -27,29 +22,16 @@ export default function KonvaTapeStage() {
   const [s] = useDesignState();
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
+  const contentRef = useRef<Konva.Layer>(null);
+  const trRef = useRef<Konva.Transformer>(null);
   const [displayWidth, setDisplayWidth] = useState(0);
 
   const strip = stripSize(s.preset.width_mm);
-  const fontSize = Math.min(s.fontSizePx, strip.height * 0.9);
   const ink = logoInkColor(s);
-  const logoCanvas = useTintedLogo(s.logo, ink);
+  const logoCanvas = useTintedLogo(s.logo, ink, s.logoColorMode);
   const text = s.text.trim();
-
-  const layout = useMemo(
-    () =>
-      computePatternLayout({
-        strip,
-        textWidth: measureTextWidth(text, s.fontFamily, fontSize),
-        logoAspect: s.logo && logoCanvas ? s.logo.width / s.logo.height : null,
-        logoScale: s.logoScale,
-        logoOffsetX: s.logoOffsetX,
-        logoOffsetY: s.logoOffsetY,
-        repeatGapPx: s.repeatGapPx,
-      }),
-    // strip is derived from preset width; list primitives to avoid object identity churn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [strip.width, strip.height, text, s.fontFamily, fontSize, s.logo, logoCanvas, s.logoScale, s.logoOffsetX, s.logoOffsetY, s.repeatGapPx],
-  );
+  const layout = useMemo(() => layoutForState(s, logoCanvas !== null), [s, logoCanvas]);
+  const ui = useStageInteraction(store, layout, logoCanvas !== null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -62,64 +44,131 @@ export default function KonvaTapeStage() {
   }, []);
 
   const scale = displayWidth > 0 ? displayWidth / strip.width : 0;
+  const stageW = Math.round(strip.width * scale);
+  const stageH = Math.round(strip.height * scale);
 
   // Export hook: pixel ratio is relative to the logical (unscaled) strip size.
   useEffect(() => {
     if (!scale) return;
     store.registerRenderer({
       toCanvas: (pixelRatio) => {
-        const stage = stageRef.current;
-        if (!stage) throw new Error("designer_not_ready");
-        return stage.toCanvas({ pixelRatio: pixelRatio / scale });
+        const layer = contentRef.current;
+        if (!layer) throw new Error("designer_not_ready");
+        return layer.toCanvas({ x: 0, y: 0, width: stageW, height: stageH, pixelRatio: pixelRatio / scale });
       },
     });
     return () => store.registerRenderer(null);
-  }, [store, scale]);
+  }, [store, scale, stageW, stageH]);
 
   // Publish live texture after each redraw (one per animation frame).
   useEffect(() => {
     if (!scale) return;
     const id = requestAnimationFrame(() => {
-      const stage = stageRef.current;
-      if (stage) store.publishTexture(stage.toCanvas({ pixelRatio: 1 / scale }));
+      const layer = contentRef.current;
+      if (layer) store.publishTexture(layer.toCanvas({ x: 0, y: 0, width: stageW, height: stageH, pixelRatio: 1 / scale }));
     });
     return () => cancelAnimationFrame(id);
-  }, [store, scale, layout, s.backgroundColor, s.textColor, ink]);
+  }, [store, scale, stageW, stageH, layout, s.backgroundColor, s.textColor, ink, logoCanvas]);
+
+  // Attach the Transformer to the selected node.
+  const sel = ui.selected;
+  useEffect(() => {
+    const tr = trRef.current;
+    if (!tr) return;
+    const node = sel ? stageRef.current?.findOne(`#${sel.kind}-${sel.tile}`) : undefined;
+    tr.nodes(node ? [node] : []);
+    tr.getLayer()?.batchDraw();
+  }, [sel, layout, scale]);
+
+  const band = layout.band;
+  const maxBox = (band.bottom - band.top) * scale;
+  const onStageDown = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    if (e.target === e.target.getStage() || e.target.name() === "bg") ui.clear();
+  };
+  const empty = layout.tiles.length === 0;
+  const live = text ? format(t.previewWithText, { text }) : s.logo ? t.previewLogoOnly : t.previewEmpty;
 
   return (
-    <figure className="flex flex-col gap-1">
-      <div ref={wrapRef} className="w-full overflow-hidden rounded border border-neutral-300" role="img" aria-label={t.previewLabel}>
+    <figure className="flex min-w-0 flex-col gap-1">
+      <div
+        ref={wrapRef}
+        tabIndex={0}
+        role="application"
+        aria-label={`${t.previewLabel}. ${live}. ${t.canvasHelp}`}
+        onKeyDown={ui.onKeyDown}
+        className="relative w-full min-w-0 overflow-hidden rounded border border-neutral-300 bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+      >
         {scale > 0 && (
-          <Stage ref={stageRef} width={displayWidth} height={Math.round(strip.height * scale)} scaleX={scale} scaleY={scale} listening={false}>
-            <Layer>
-              <Rect x={0} y={0} width={strip.width} height={strip.height} fill={s.backgroundColor} />
+          <Stage ref={stageRef} width={stageW} height={stageH} scaleX={scale} scaleY={scale} onMouseDown={onStageDown} onTouchStart={onStageDown}>
+            <Layer ref={contentRef}>
+              <Rect name="bg" x={0} y={0} width={strip.width} height={strip.height} fill={s.backgroundColor} />
               {layout.tiles.map((tile, i) => (
                 <Group key={i}>
                   {tile.logo && logoCanvas && (
-                    <KImage image={logoCanvas} x={tile.logo.x} y={tile.logo.y} width={tile.logo.width} height={tile.logo.height} />
+                    <KImage
+                      id={`logo-${i}`}
+                      image={logoCanvas}
+                      x={tile.logo.x}
+                      y={tile.logo.y}
+                      width={tile.logo.width}
+                      height={tile.logo.height}
+                      draggable
+                      onMouseDown={ui.select("logo", i)}
+                      onTouchStart={ui.select("logo", i)}
+                      onDragMove={ui.onDragMove("logo", i)}
+                      onTransformEnd={ui.onTransformEnd("logo", i)}
+                    />
                   )}
-                  {tile.textX !== null && (
+                  {tile.text && (
                     <Text
+                      id={`text-${i}`}
                       text={text}
-                      x={tile.textX}
-                      y={0}
-                      height={strip.height}
-                      verticalAlign="middle"
+                      x={tile.text.x}
+                      y={tile.text.y}
                       fontFamily={s.fontFamily}
                       fontStyle="bold"
-                      fontSize={fontSize}
+                      fontSize={layout.fontSize}
+                      lineHeight={1}
                       fill={s.textColor}
                       wrap="none"
+                      draggable
+                      onMouseDown={ui.select("text", i)}
+                      onTouchStart={ui.select("text", i)}
+                      onDragMove={ui.onDragMove("text", i)}
+                      onTransformEnd={ui.onTransformEnd("text", i)}
                     />
                   )}
                 </Group>
               ))}
             </Layer>
+            <Layer>
+              <Transformer
+                ref={trRef}
+                rotateEnabled={false}
+                keepRatio
+                enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
+                anchorSize={14}
+                anchorCornerRadius={7}
+                borderStroke="#b45309"
+                anchorStroke="#b45309"
+                boundBoxFunc={(oldBox, box) => (box.height < 8 || box.height > maxBox + 1 ? oldBox : box)}
+              />
+            </Layer>
           </Stage>
         )}
+        {empty && scale > 0 && (
+          <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-sm text-neutral-600">
+            {t.emptyCanvas}
+          </p>
+        )}
       </div>
+      {layout.fit < 0.999 && (
+        <p role="status" className="text-xs text-amber-800">
+          {format(t.autoFit, { px: Math.round(layout.fontSize) })}
+        </p>
+      )}
       <figcaption className="text-xs text-neutral-500">
-        {format(t.stripCaption, { length: STRIP_LENGTH_MM, width: s.preset.width_mm })}
+        {format(t.stripCaption, { length: STRIP_LENGTH_MM, width: s.preset.width_mm })} · {t.canvasHelp}
       </figcaption>
     </figure>
   );

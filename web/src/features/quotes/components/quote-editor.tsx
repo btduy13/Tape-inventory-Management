@@ -1,6 +1,8 @@
 "use client";
 // Price editor for one quote version (admin/manager). Totals shown are the DB values;
 // while there are unsaved edits a browser-side estimate is shown and labelled as such.
+// Mounted with key = quote id: a server refresh (revalidatePath after save/send) syncs the
+// new props in place instead of remounting, so the success message stays visible.
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format, formatVnd } from "@/i18n";
@@ -22,7 +24,16 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
   const [form, setForm] = useState<EditorState>(() => toEditorState(initial));
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [seenVersion, setSeenVersion] = useState(`${initial.updated_at}:${initial.status}`);
+  const incoming = `${initial.updated_at}:${initial.status}`;
+  if (incoming !== seenVersion && !dirty) {
+    // Newer server data (another tab, send, realtime refresh): adopt it without remounting.
+    setSeenVersion(incoming);
+    setQuote(initial);
+    setForm(toEditorState(initial));
+  }
   const editable = isEditable(quote.status);
 
   const estimate = useMemo(
@@ -44,6 +55,7 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
       const res = await saveQuoteDraftAction(toSaveInput(quote.id, form));
       if (!res.ok) return setMessage({ kind: "error", text: res.error });
       setQuote(res.data);
+      setSeenVersion(`${res.data.updated_at}:${res.data.status}`);
       setForm(toEditorState(res.data));
       setDirty(false);
       setMessage({ kind: "ok", text: vi.common.savedSuccess });
@@ -52,7 +64,7 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
   }
 
   function send() {
-    if (!window.confirm(t.sendConfirm)) return;
+    setConfirming(false);
     startTransition(async () => {
       const res = await sendQuoteAction(quote.id);
       setMessage(res.ok ? { kind: "ok", text: t.sentSuccess } : { kind: "error", text: res.error });
@@ -105,7 +117,7 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
       {editable ? (
         <button
           type="button"
-          className="text-sm text-blue-700 underline"
+          className="text-sm text-amber-800 underline hover:text-amber-900"
           disabled={pending || form.lines.length >= 50}
           onClick={() => update({ lines: [...form.lines, emptyLine()] })}
         >
@@ -159,19 +171,45 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
 
       <div className="flex flex-wrap items-center gap-2">
         {editable ? (
-          <button type="button" className="rounded border px-3 py-1.5" disabled={pending || !dirty} onClick={() => save()}>
+          <button
+            type="button"
+            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-50"
+            disabled={pending || !dirty}
+            onClick={() => save()}
+          >
             {t.saveDraft}
           </button>
         ) : null}
-        {isSendable(quote.status) ? (
+        {isSendable(quote.status) && !confirming ? (
           <button
             type="button"
-            className="rounded bg-blue-700 px-3 py-1.5 text-white disabled:opacity-50"
+            className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
             disabled={pending}
-            onClick={() => (dirty ? save(send) : send())}
+            onClick={() => setConfirming(true)}
           >
             {t.send}
           </button>
+        ) : null}
+        {isSendable(quote.status) && confirming ? (
+          <span role="group" aria-label={t.sendConfirm} className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-neutral-800">{t.sendConfirm}</span>
+            <button
+              type="button"
+              className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+              disabled={pending}
+              onClick={() => (dirty ? save(send) : send())}
+            >
+              {vi.common.confirm}
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+              disabled={pending}
+              onClick={() => setConfirming(false)}
+            >
+              {vi.common.cancel}
+            </button>
+          </span>
         ) : null}
         {pending ? <span className="text-sm text-zinc-500">{vi.common.loading}</span> : null}
       </div>

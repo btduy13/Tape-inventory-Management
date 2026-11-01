@@ -2,9 +2,9 @@ import { z } from "zod";
 
 /** Empty `userId` (from a "— unassigned —" option) means unassign. */
 export const assignSchema = z.object({
-  leadId: z.string().uuid(),
+  leadId: z.guid(),
   userId: z
-    .union([z.string().uuid(), z.literal("")])
+    .union([z.guid(), z.literal("")])
     .optional()
     .transform((v) => (v ? v : null)),
 });

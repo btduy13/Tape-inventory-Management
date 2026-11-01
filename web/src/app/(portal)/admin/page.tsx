@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { ROLE_GROUPS } from "@/lib/auth/roles";
 import { ROUTES } from "@/lib/routes";
 import { AdminOverview } from "@/features/admin";
+import { LeadsLiveRefresher } from "@/features/orders";
 
 const t = getDictionary();
 
@@ -11,6 +12,8 @@ export default async function AdminPage() {
   await requireRole(ROLE_GROUPS.admin);
   return (
     <div className="flex flex-col gap-6">
+      {/* Status counts follow new / changed leads without a reload. */}
+      <LeadsLiveRefresher />
       <h1 className="text-xl font-semibold">{t.admin.title}</h1>
       <AdminOverview />
       <nav className="flex flex-wrap gap-3 text-sm">

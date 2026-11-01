@@ -12,14 +12,21 @@ export interface TurnstileOptions {
   action?: string;
   /**
    * Hostnames the widget may be solved on (our own site). A token solved on another site
-   * that embeds our sitekey is rejected. Skipped for Cloudflare test keys (action "test").
+   * that embeds our sitekey is rejected. Skipped for Cloudflare test keys (action "test" or
+   * metadata.result_with_testing_key).
    */
   hostnames?: readonly string[];
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
 
-type SiteverifyResponse = { success?: boolean; action?: string; hostname?: string; "error-codes"?: string[] };
+type SiteverifyResponse = {
+  success?: boolean;
+  action?: string;
+  hostname?: string;
+  "error-codes"?: string[];
+  metadata?: { result_with_testing_key?: boolean };
+};
 
 /** Returns true only on an explicit success from Cloudflare. Fails closed on any error. */
 export async function verifyTurnstile(token: unknown, opts: TurnstileOptions): Promise<boolean> {
@@ -39,7 +46,9 @@ export async function verifyTurnstile(token: unknown, opts: TurnstileOptions): P
     if (opts.action && data.action && data.action !== "test" && data.action !== opts.action) {
       return false;
     }
-    if (opts.hostnames && opts.hostnames.length > 0 && data.action !== "test") {
+    // Test secrets return hostname "example.com" and flag metadata.result_with_testing_key.
+    const isTestKey = data.action === "test" || data.metadata?.result_with_testing_key === true;
+    if (opts.hostnames && opts.hostnames.length > 0 && !isTestKey) {
       const host = (data.hostname ?? "").toLowerCase();
       if (!opts.hostnames.some((h) => h.toLowerCase() === host)) return false;
     }

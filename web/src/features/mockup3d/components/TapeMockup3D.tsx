@@ -5,7 +5,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { getDictionary } from "@/i18n";
 import type { RollPreset } from "../lib/geometry";
 import { hasWebGL } from "../lib/webgl";
-import type { MockupView } from "./MockupScene";
+import type { MockupView } from "../lib/views";
 
 const MockupScene = dynamic(() => import("./MockupScene"), {
   ssr: false,
@@ -59,7 +59,7 @@ export function TapeMockup3D({ source, version, preset, stripLengthMm = 300, ini
       role="tab"
       aria-selected={view === v}
       onClick={() => setView(v)}
-      className={`rounded-md px-3 py-1 text-sm ${view === v ? "bg-amber-700 text-white" : "border border-neutral-300"}`}
+      className={`min-h-9 rounded-md px-3 py-1 text-sm ${view === v ? "bg-amber-700 text-white" : "border border-neutral-300"}`}
     >
       {label}
     </button>
@@ -69,9 +69,10 @@ export function TapeMockup3D({ source, version, preset, stripLengthMm = 300, ini
     <section aria-labelledby="mockup3d-title" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="mockup3d-title" className="text-xl font-bold">{t.title}</h2>
-        <div role="tablist" className="flex gap-2">
+        <div role="tablist" aria-label={t.title} className="flex flex-wrap gap-2">
           {tab("roll", t.roll)}
           {tab("carton", t.carton)}
+          {tab("cup", t.cup)}
         </div>
       </div>
       <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-neutral-300 bg-stone-100">

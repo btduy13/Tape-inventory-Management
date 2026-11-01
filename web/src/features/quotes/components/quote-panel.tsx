@@ -59,7 +59,7 @@ export async function QuotePanel({ leadId, profile }: { leadId: string; profile:
       {!latest ? <p className="text-sm text-zinc-500">{vi.quotes.noQuotes}</p> : null}
       {latest && pricing && (latest.status === "draft" || latest.status === "sent") ? (
         <>
-          <QuoteEditor key={`${latest.id}:${latest.updated_at}`} initial={latest} />
+          <QuoteEditor key={latest.id} initial={latest} />
           {latest.pdf_path ? <QuoteToolbarButton kind="pdf" quoteId={latest.id} /> : null}
         </>
       ) : latest ? (

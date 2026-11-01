@@ -11,14 +11,14 @@ const optionalNote = z
   .transform((v) => (v ? v : null));
 
 export const changeStatusSchema = z.object({
-  leadId: z.string().uuid(),
+  leadId: z.guid(),
   to: leadStatus,
   note: optionalNote,
 });
 export type ChangeStatusInput = z.infer<typeof changeStatusSchema>;
 
 export const addNoteSchema = z.object({
-  leadId: z.string().uuid(),
+  leadId: z.guid(),
   body: z.string().trim().min(1).max(2000),
 });
 export type AddNoteInput = z.infer<typeof addNoteSchema>;

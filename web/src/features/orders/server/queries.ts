@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Design, Lead, LeadStatus, Quote } from "@/lib/types";
 import { STORAGE_BUCKETS } from "@/lib/types";
 import { actorIds, buildTimeline, type TimelineEntry } from "../lib/timeline";
+import type { NameResolver } from "./actor-names";
 
 type Db = SupabaseClient<Database>;
 
@@ -51,7 +52,15 @@ export async function listLeads(db: Db, status: LeadStatus | null = null): Promi
 
 const PREVIEW_URL_TTL_SECONDS = 600;
 
-export async function getLeadDetail(db: Db, leadId: string): Promise<LeadDetail | null> {
+/**
+ * `resolveHiddenNames` fills in actors whose profile RLS hides from the caller; it is only
+ * given ids from timeline rows the caller could already read.
+ */
+export async function getLeadDetail(
+  db: Db,
+  leadId: string,
+  resolveHiddenNames?: NameResolver,
+): Promise<LeadDetail | null> {
   const { data: lead } = await db.from("leads").select("*").eq("id", leadId).maybeSingle();
   if (!lead) return null; // not found OR not visible through RLS (e.g. unassigned)
 
@@ -70,7 +79,10 @@ export async function getLeadDetail(db: Db, leadId: string): Promise<LeadDetail 
   const timeline = buildTimeline(log.data ?? [], notes.data ?? []);
   const ids = actorIds(timeline);
   if (lead.assigned_to) ids.push(lead.assigned_to);
-  const names = await profileNames(db, [...new Set(ids)]);
+  const unique = [...new Set(ids)];
+  const names = await profileNames(db, unique);
+  const hidden = unique.filter((id) => !names[id]);
+  if (hidden.length > 0 && resolveHiddenNames) Object.assign(names, await resolveHiddenNames(hidden));
 
   let previewUrl: string | null = null;
   if (design?.preview_path) {

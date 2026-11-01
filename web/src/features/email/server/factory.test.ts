@@ -36,4 +36,15 @@ describe("getEmailSender", () => {
     expect(result).toEqual({ ok: false, error: "email not configured" });
     expect(errors).toHaveBeenCalled();
   });
+
+  it("dev without a key logs the customer quote link (raw token is never stored)", async () => {
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service");
+    vi.stubEnv("RESEND_API_KEY", undefined);
+    vi.stubEnv("VERCEL_ENV", "development");
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { getEmailSender } = await freshFactory();
+    const link = `http://localhost:3000/q/${"a".repeat(43)}`;
+    await getEmailSender().send({ ...MSG, text: `Xem và phản hồi: ${link}` });
+    expect(info.mock.calls.flat().some((l) => String(l).includes(link))).toBe(true);
+  });
 });

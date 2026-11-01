@@ -65,8 +65,13 @@ export type DesignJson = {
   text: string;
   fontFamily?: string;
   fontSizePx?: number;
-  logo?: { path: string | null; scale: number; offsetX: number; offsetY: number } | null;
+  logo?: {
+    path: string | null; scale: number; offsetX: number; offsetY: number;
+    colorMode?: "original" | "tint";  // logo printed in its own colours or one ink
+  } | null;
   repeatGapPx?: number;
+  textOffsetX?: number;           // text position, fraction of tape width (canvas drag)
+  textOffsetY?: number;
 };
 
 export type Design = {

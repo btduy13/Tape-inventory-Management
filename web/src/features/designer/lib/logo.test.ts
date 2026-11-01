@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { MAX_LOGO_BYTES } from "./constants";
 import { loadLogoFile } from "./logo-load";
-import { checkLogoBytes, sniffImageKind } from "./logo-validate";
+import { checkLogoBytes, sniffConvertibleKind, sniffImageKind } from "./logo-validate";
 import { sanitizeSvg } from "./svg-sanitize";
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
 const JPG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0]);
+const WEBP = enc("RIFF____WEBPVP8 ");
 
 describe("sniffImageKind / checkLogoBytes", () => {
   it("detects by magic bytes", () => {
@@ -15,6 +16,9 @@ describe("sniffImageKind / checkLogoBytes", () => {
     expect(sniffImageKind(enc('<?xml version="1.0"?>\n<!-- c --><svg xmlns="http://www.w3.org/2000/svg"/>'))).toBe("svg");
     expect(sniffImageKind(enc("<html><svg/></html>"))).toBeNull();
     expect(sniffImageKind(enc("GIF89a"))).toBeNull();
+    expect(sniffConvertibleKind(enc("GIF89a"))).toBe("gif");
+    expect(sniffConvertibleKind(WEBP)).toBe("webp");
+    expect(sniffConvertibleKind(PNG)).toBeNull();
   });
   it("enforces size and MIME agreement", () => {
     expect(checkLogoBytes(PNG, "image/png", 10)).toEqual({ ok: true, kind: "png" });
@@ -70,9 +74,35 @@ describe("loadLogoFile", () => {
     expect(revoke).toHaveBeenCalledWith("blob:png");
   });
 
+  it("re-encodes WEBP and GIF to PNG", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:x");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const convert = vi.fn(async () => new Blob([PNG], { type: "image/png" }));
+    const sizer = async () => ({ width: 10, height: 5 });
+    for (const [bytes, name, type] of [[WEBP, "a.webp", "image/webp"], [enc("GIF89a....."), "b.gif", "image/gif"]] as const) {
+      const res = await loadLogoFile(new File([bytes], name, { type }), sizer, convert);
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.logo.kind).toBe("png");
+      expect(res.logo.file.type).toBe("image/png");
+      expect(res.logo.file.name).toMatch(/\.png$/);
+    }
+    expect(convert).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports WEBP decode failures and MIME mismatches", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:x");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const fail = async () => {
+      throw new Error("x");
+    };
+    expect(await loadLogoFile(new File([WEBP], "a.webp", { type: "image/webp" }), undefined, fail)).toEqual({ ok: false, error: "decode" });
+    expect(await loadLogoFile(new File([WEBP], "a.webp", { type: "image/png" }))).toEqual({ ok: false, error: "invalidType" });
+  });
+
   it("rejects wrong types without creating URLs", async () => {
     const create = vi.spyOn(URL, "createObjectURL");
-    const res = await loadLogoFile(new File(["GIF89a"], "a.gif", { type: "image/gif" }));
+    const res = await loadLogoFile(new File(["hello"], "a.txt", { type: "text/plain" }));
     expect(res).toEqual({ ok: false, error: "invalidType" });
     expect(create).not.toHaveBeenCalled();
   });

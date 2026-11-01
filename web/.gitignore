@@ -42,3 +42,9 @@ next-env.d.ts
 
 # allow the example env file
 !.env.example
+
+.vercel
+.env*
+
+# QC / dev browser scripts and screenshots (local only)
+test-results/

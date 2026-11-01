@@ -56,21 +56,38 @@ export const CARTON_MM = { length: 400, depth: 300, height: 250 } as const;
 export const CARTON_FLAP_MM = 80;
 
 export type CartonTapeSegment = {
-  name: "top" | "front" | "back";
+  name: "back" | "top" | "front";
   lengthMm: number;
+  /** Distance (mm) along the continuous strip where this segment starts (texture phase). */
+  startMm: number;
   position: [number, number, number];
   rotation: [number, number, number];
 };
 
-/** Tape segments for a carton sealed along its depth (z axis), centred on x. */
+/**
+ * One continuous strip sealing the carton along its depth (z axis), centred on x:
+ * up the back flap, across the top seam, down the front flap. Each plane's local +x
+ * (texture u) follows the strip direction and its normal faces outwards, so the print
+ * reads unmirrored and continues seamlessly across the box edges.
+ */
 export function cartonTapeSegments(eps = 0.002): CartonTapeSegment[] {
   const { depth, height } = CARTON_MM;
   const flap = Math.min(CARTON_FLAP_MM, height);
   const h2 = toUnits(height) / 2;
   const d2 = toUnits(depth) / 2;
+  const flapY = h2 - toUnits(flap) / 2;
   return [
-    { name: "top", lengthMm: depth, position: [0, h2 + eps, 0], rotation: [-Math.PI / 2, 0, -Math.PI / 2] },
-    { name: "front", lengthMm: flap, position: [0, h2 - toUnits(flap) / 2, d2 + eps], rotation: [0, 0, -Math.PI / 2] },
-    { name: "back", lengthMm: flap, position: [0, h2 - toUnits(flap) / 2, -d2 - eps], rotation: [0, Math.PI, -Math.PI / 2] },
+    // u runs up (+y), normal -z
+    { name: "back", lengthMm: flap, startMm: 0, position: [0, flapY, -d2 - eps], rotation: [0, Math.PI, Math.PI / 2] },
+    // u runs towards the front (+z), normal +y
+    { name: "top", lengthMm: depth, startMm: flap, position: [0, h2 + eps, 0], rotation: [-Math.PI / 2, 0, -Math.PI / 2] },
+    // u runs down (-y), normal +z
+    { name: "front", lengthMm: flap, startMm: flap + depth, position: [0, flapY, d2 + eps], rotation: [0, 0, -Math.PI / 2] },
   ];
+}
+
+/** Texture offset (in strip periods) for a segment starting `startMm` along the strip. */
+export function textureOffset(startMm: number, stripLengthMm: number): number {
+  if (!(stripLengthMm > 0) || !Number.isFinite(startMm)) return 0;
+  return (startMm / stripLengthMm) % 1;
 }

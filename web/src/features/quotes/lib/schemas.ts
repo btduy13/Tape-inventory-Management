@@ -1,7 +1,7 @@
 // zod schemas for every quote input (server actions + public respond endpoint).
 import { z } from "zod";
 
-export const uuidSchema = z.uuid();
+export const uuidSchema = z.guid();
 
 /** Raw token from randomToken(32): base64url, 43 chars. Accept a small range, nothing else. */
 export const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32,128}$/);

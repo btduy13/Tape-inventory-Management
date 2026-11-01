@@ -19,7 +19,8 @@ export function getEmailSender(): EmailSender {
     console.error("[email] RESEND_API_KEY missing in production: emails are NOT delivered");
     current = new FakeSender({ failWith: "email not configured" });
   } else {
-    current = new FakeSender({ log: true });
+    // Local dev: also log /q/<token> links so the customer page can be opened without email.
+    current = new FakeSender({ log: true, logLinks: true });
   }
   return current;
 }

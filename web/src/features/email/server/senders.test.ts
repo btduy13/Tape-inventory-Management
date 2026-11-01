@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { FakeSender } from "../lib/fake-sender";
+import { FakeSender, quoteLinks } from "../lib/fake-sender";
 import { ResendSender, type ResendLike } from "./resend-sender";
 
 const msg = { to: ["a@b.vn"], subject: "S\nX", html: "<p>h</p>", text: "h" };
@@ -50,5 +50,19 @@ describe("ResendSender", () => {
     const { client, send } = mockClient({ data: { id: "x" }, error: null });
     expect((await new ResendSender("k", "f", client).send({ ...msg, to: [] })).ok).toBe(false);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("quoteLinks", () => {
+  it("extracts /q/<token> links only, deduplicated", () => {
+    const t = "x".repeat(40);
+    const text = `a https://shop.vn/q/${t} b https://shop.vn/q/${t} c https://shop.vn/portal d /q/short`;
+    expect(quoteLinks(text)).toEqual([`https://shop.vn/q/${t}`]);
+  });
+
+  it("FakeSender does not log links unless logLinks is set", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await new FakeSender({ log: true }).send({ to: ["a@b.vn"], subject: "s", html: "", text: `https://x.vn/q/${"b".repeat(40)}` });
+    expect(info.mock.calls.flat().some((l) => String(l).includes("/q/"))).toBe(false);
   });
 });

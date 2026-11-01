@@ -1,1 +1,20 @@
-{"0": "Security and Policy", "1": "Statistics Module", "2": "Quotation Workflow", "3": "Application UI", "4": "Electron Dependencies", "5": "Build Configuration", "6": "Export and PDF", "7": "Email Dialog", "8": "Configuration and Tests", "9": "Excel Import", "10": "Packaging Files", "11": "Order Math", "12": "Printed Tape Orders", "13": "Interaction Helpers", "14": "DOM Contract Tests", "15": "Quotation UI Tests", "16": "Standard Tape Orders", "17": "Dashboard", "18": "Print Axis Orders", "19": "Quotation PDF Tests", "20": "Sales Quote UI Concepts", "21": "Quotation VAT Concepts", "22": "Brand Assets", "23": "Auto Update", "24": "Release Workflow", "25": "Shared Utilities", "26": "Preload Bridge", "27": "Release Script", "28": "Spreadsheet Library", "29": "GitHub Setup", "30": "Legacy Release Notes"}
+{
+  "1": "Statistics Module",
+  "2": "Quotation Workflow",
+  "3": "Application UI",
+  "5": "Build Configuration",
+  "6": "Export and PDF",
+  "7": "Email Dialog",
+  "9": "Excel Import",
+  "11": "Order Math",
+  "12": "Printed Tape Orders",
+  "13": "Interaction Helpers",
+  "16": "Standard Tape Orders",
+  "17": "Dashboard",
+  "18": "Print Axis Orders",
+  "20": "Sales Quote UI Concepts",
+  "21": "Quotation VAT Concepts",
+  "22": "Brand Assets",
+  "24": "Release Workflow",
+  "30": "Legacy Release Notes"
+}

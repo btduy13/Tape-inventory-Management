@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { contactInfoFromEnv, hasContactInfo } from "./contact-info";
 import { PresetsShowcase, stripClass } from "./PresetsShowcase";
 import { HowItWorks } from "./HowItWorks";
+import { ProductShowcase } from "./ProductShowcase";
+import { UseCases } from "./UseCases";
+import { CartonTapeArt } from "./CartonTapeArt";
 import { PRESET } from "../testing/fixtures";
 
 describe("contactInfoFromEnv", () => {
@@ -43,5 +46,29 @@ describe("HowItWorks", () => {
   it("renders four steps", () => {
     render(<HowItWorks />);
     expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
+});
+
+describe("ProductShowcase", () => {
+  it("renders the three tape types under one heading", () => {
+    const { container } = render(<ProductShowcase />);
+    expect(screen.getByRole("heading", { level: 2, name: "Chọn loại băng keo" })).toBeInTheDocument();
+    expect(within(container).getAllByRole("heading", { level: 3 })).toHaveLength(3);
+  });
+});
+
+describe("UseCases", () => {
+  it("renders reasons and audiences", () => {
+    render(<UseCases />);
+    expect(screen.getByRole("heading", { level: 2, name: /Vì sao/ })).toBeInTheDocument();
+    expect(screen.getByText("Dễ phát hiện thùng bị mở")).toBeInTheDocument();
+    expect(screen.getByText("Kho vận, logistics")).toBeInTheDocument();
+  });
+});
+
+describe("CartonTapeArt", () => {
+  it("exposes an accessible label", () => {
+    render(<CartonTapeArt caption="Mô phỏng" tapeText="LOGO" />);
+    expect(screen.getByRole("img", { name: "Mô phỏng" })).toBeInTheDocument();
   });
 });

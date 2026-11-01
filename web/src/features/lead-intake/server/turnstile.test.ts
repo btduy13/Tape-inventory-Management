@@ -54,4 +54,15 @@ describe("verifyTurnstile", () => {
   it("accepts the Cloudflare test action", async () => {
     expect(await verifyTurnstile("tok", { secret: "s", action: "lead_submit", fetchImpl: reply({ success: true, action: "test" }) })).toBe(true);
   });
+
+  it("accepts Cloudflare testing-key results (hostname example.com, no action) despite hostnames", async () => {
+    const fetchImpl = reply({ success: true, hostname: "example.com", metadata: { result_with_testing_key: true } });
+    const opts = { secret: "s", action: "lead_submit", hostnames: ["localhost"], fetchImpl };
+    expect(await verifyTurnstile("tok", opts)).toBe(true);
+  });
+
+  it("still enforces hostnames when the testing-key flag is absent or false", async () => {
+    const fetchImpl = reply({ success: true, hostname: "example.com", metadata: { result_with_testing_key: false } });
+    expect(await verifyTurnstile("tok", { secret: "s", hostnames: ["localhost"], fetchImpl })).toBe(false);
+  });
 });

@@ -2,6 +2,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { parseStatusFilter } from "../lib/schemas";
+import { actorNamesViaService } from "./actor-names";
 import { getLeadDetail, listLeads, type LeadDetail, type LeadListItem } from "./queries";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -14,5 +15,5 @@ export async function loadLeadList(rawStatus: unknown): Promise<{ leads: LeadLis
 /** null => render notFound() (missing, invalid id, or hidden by RLS). */
 export async function loadLeadDetail(leadId: string): Promise<LeadDetail | null> {
   if (!UUID_RE.test(leadId)) return null;
-  return getLeadDetail(await createClient(), leadId);
+  return getLeadDetail(await createClient(), leadId, actorNamesViaService);
 }

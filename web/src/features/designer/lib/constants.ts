@@ -16,8 +16,16 @@ export const MIN_REPEAT_GAP_PX = 0;
 export const MAX_REPEAT_GAP_PX = 400;
 export const MIN_LOGO_SCALE = 0.2;
 export const MAX_LOGO_SCALE = 1.5;
-/** Logo offset limits, as a fraction of strip height. */
+/** Vertical offset limit for logo / text, as a fraction of strip height. */
 export const MAX_LOGO_OFFSET = 0.5;
+/** Horizontal offset limit for logo / text (fraction of strip height); the layout clamps further to the tile. */
+export const MAX_OFFSET_X = 3;
+/** Unprinted margin at each tape edge, as a fraction of tape width. Content stays inside the band. */
+export const PRINT_MARGIN_RATIO = 0.05;
+/** Keyboard nudge step (fraction of strip height); Shift multiplies by 5. */
+export const NUDGE_STEP = 0.02;
+/** WEBP / GIF logos are re-encoded to PNG client-side, capped to this many px per side. */
+export const CONVERT_MAX_SIDE = 2000;
 
 export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 

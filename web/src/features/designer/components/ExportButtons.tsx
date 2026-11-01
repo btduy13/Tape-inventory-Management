@@ -27,9 +27,9 @@ export function ExportButtons() {
     }
   }
 
-  const btn = "rounded-md border border-amber-700 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50";
+  const btn = "min-h-11 rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-800 hover:border-amber-500";
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2" aria-label={t.exportGroup} role="group">
       <button type="button" onClick={() => void onPng()} className={btn}>{t.exportPng}</button>
       <button type="button" onClick={onJson} className={btn}>{t.exportJson}</button>
       {error && <p role="alert" className="text-xs text-red-700">{t.exportFailed}</p>}

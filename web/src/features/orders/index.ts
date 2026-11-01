@@ -1,6 +1,7 @@
 // Public API of features/orders (server consumers: pages, layouts, admin feature).
 export { LeadsTable } from "./components/LeadsTable";
 export { LeadDetailView } from "./components/LeadDetailView";
+export { LeadsLiveRefresher } from "./components/LeadsLiveRefresher";
 export { PortalHeader } from "./components/PortalHeader";
 export { StatusBadge } from "./components/StatusBadge";
 export { StatusFilter } from "./components/StatusFilter";

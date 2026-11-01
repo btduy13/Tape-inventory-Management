@@ -17,13 +17,15 @@ export default async function DesignPage() {
   const nonce = h.get("x-nonce") ?? undefined;
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TURNSTILE_TEST_SITE_KEY;
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10">
+    <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col gap-10 px-4 pt-10 pb-24 lg:pb-10">
       <DesignProvider presets={presets}>
-        <div className="grid gap-10 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
           <DesignerPanel />
-          <DesignMockupBridge />
+          <div id="xem-3d" className="min-w-0 scroll-mt-4">
+            <DesignMockupBridge />
+          </div>
         </div>
-        <section id="yeu-cau-bao-gia" className="mx-auto w-full max-w-2xl rounded-lg border border-neutral-200 p-6">
+        <section id="yeu-cau-bao-gia" className="scroll-mt-4 mx-auto w-full max-w-2xl rounded-lg border border-neutral-200 p-6">
           <DesignLeadForm turnstileSiteKey={siteKey} nonce={nonce} />
         </section>
       </DesignProvider>

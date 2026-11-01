@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PRODUCTION_STEPS, type ProductionStep } from "@/lib/types";
 import { isIsoDate, vnToday } from "./dates";
 
-const uuid = z.string().uuid();
+const uuid = z.guid();
 const optionalText = (max: number) =>
   z
     .string()

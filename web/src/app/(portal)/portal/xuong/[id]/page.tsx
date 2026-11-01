@@ -7,7 +7,7 @@ import { WorkshopJobView } from "@/features/workshop";
 export default async function WorkshopJobPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await requireRole(ROLE_GROUPS.production);
   const id = (await params).id;
-  if (!z.string().uuid().safeParse(id).success) notFound();
+  if (!z.guid().safeParse(id).success) notFound();
   const view = await WorkshopJobView({ profile, jobId: id });
   if (!view) notFound();
   return view;

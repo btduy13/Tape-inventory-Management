@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ROLES, type AppRole, type Profile } from "@/lib/types";
 
 const role = z.enum(ROLES as unknown as [AppRole, ...AppRole[]]);
-const uuid = z.string().uuid();
+const uuid = z.guid();
 /** HTML checkbox: "on" when checked, absent otherwise. */
 const checkbox = z
   .union([z.literal("on"), z.literal("true"), z.literal("false"), z.literal("")])

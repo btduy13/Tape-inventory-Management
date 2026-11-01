@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isProductionRuntime, serverEnv } from "@/lib/env.server";
 import { sha256Hex } from "@/lib/security/hash";
 import { clientIp, rateLimitSubject, trustedProxyMode } from "@/lib/security/client-ip";
+import { scaledMaxHits } from "@/lib/security/rate-limit-scale";
 
 export interface RateLimitRule {
   /** Logical bucket, e.g. "lead-submit" or "quote-respond". */
@@ -46,7 +47,8 @@ export async function checkRateLimit(headers: Headers, rule: RateLimitRule): Pro
   const { data, error } = await createAdminClient().rpc("check_rate_limit", {
     p_key: key,
     p_window_seconds: rule.windowSeconds,
-    p_max_hits: rule.maxHits,
+    // Scaled up only outside production (shared local "unknown" bucket); see rate-limit-scale.ts.
+    p_max_hits: scaledMaxHits(rule.maxHits),
   });
   if (error) return false;
   return data === true;

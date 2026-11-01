@@ -13,7 +13,7 @@ const fmtDate = (iso: string) =>
 
 function Message({ text }: { text: string }) {
   return (
-    <main className="mx-auto max-w-2xl px-4 py-16 text-center">
+    <main className="mx-auto w-full max-w-2xl px-4 py-16 text-center">
       <p className="text-lg">{text}</p>
     </main>
   );
@@ -27,7 +27,7 @@ export async function PublicQuotePage({ token }: { token: string }) {
   const { quote } = result;
   const t = vi.quotes;
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-10">
+    <main className="mx-auto w-full min-w-0 max-w-3xl space-y-6 px-4 py-10">
       <header className="space-y-1">
         <p className="text-sm text-zinc-500">{vi.common.appName}</p>
         <h1 className="text-2xl font-semibold">{format(t.pageTitle, { code: quote.code })}</h1>

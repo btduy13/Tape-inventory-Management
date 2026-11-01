@@ -2,7 +2,7 @@
 
 **Owner:** `mockup3d` feature builder. Only this feature edits files in this folder.
 
-3D mockup (react-three-fiber/drei): rotatable tape roll + carton box with tape applied; texture fed live from the designer canvas.
+3D mockup (react-three-fiber/drei): three lazy views (tape roll, carton sealed with the tape, bubble-tea cup with a tape sticker band). Geometry is procedural (no model files); the camera is fitted to each object's bounding sphere (lib/camera.ts, lib/views.ts). Texture fed live from the designer canvas.
 
 ## Routes
 
