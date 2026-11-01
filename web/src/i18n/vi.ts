@@ -253,6 +253,7 @@ export const vi = {
     // Print ink count (logo colour analysis, max 3 inks). Tape film (background) is not an ink.
     inkCount: "Số màu in: {count}/{max}",
     inkCountLabel: "Số màu in",
+    inkNone: "chưa có chữ hoặc logo; màu chữ chỉ được tính khi bạn nhập nội dung in",
     // Shown instead of the raw count above INK_DISPLAY_CAP (photo / gradient logos report 20+ colours).
     inkCountMany: "Số màu in: hơn {cap} (tối đa {max})",
     inkMany: "hơn {cap}",

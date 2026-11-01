@@ -45,6 +45,7 @@ export function InkCounter({ className = "" }: { className?: string }) {
         <span className={inks.overLimit ? "text-red-700" : undefined}>{many ? format(t.inkCountMany, { cap: INK_DISPLAY_CAP, max: MAX_COLORS }) : format(t.inkCount, { count: inks.count, max: MAX_COLORS })}</span>
         {inks.overLimit && <span className="font-medium text-red-700">· {t.inkOver}</span>}
         {inks.logoCount > MAX_COLORS && <span className="font-medium text-red-700">({format(t.inkLogoCount, { count: inkCountText(inks.logoCount) })})</span>}
+        {inks.count === 0 && <span className="font-normal text-slate-600">· {t.inkNone}</span>}
       </p>
       {status && <p className={hint}>{status}</p>}
     </div>
