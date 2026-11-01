@@ -10,16 +10,20 @@ import { CartonTapeArt } from "./CartonTapeArt";
 import { TapeMarquee } from "./TapeMarquee";
 import { BTN, LP_CONTAINER, LP_H2, RING_ON_DARK } from "./ui";
 
-/** Front view of a printed tape roll (decorative), drawn behind the carton. */
+/** Printed tape roll lying flat, seen from above at the carton's angle (decorative). */
 function RollArt() {
   return (
-    <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" className="h-full w-full">
-      <circle cx="100" cy="100" r="96" className="fill-vt-yellow" />
-      <circle cx="100" cy="100" r="88" fill="none" strokeWidth="8" strokeDasharray="16 28" className="stroke-vt-navy-deep/45" />
-      <circle cx="100" cy="100" r="74" fill="none" strokeWidth="1.5" className="stroke-vt-navy-deep/15" />
-      <circle cx="100" cy="100" r="64" fill="none" strokeWidth="1.5" className="stroke-vt-navy-deep/15" />
-      <circle cx="100" cy="100" r="46" className="fill-lp-kraft" />
-      <circle cx="100" cy="100" r="33" className="fill-vt-blue-ink" />
+    <svg viewBox="0 0 200 150" aria-hidden="true" focusable="false" className="h-full w-full">
+      <ellipse cx="100" cy="128" rx="92" ry="20" className="fill-vt-blue-ink/50" />
+      {/* side band: the roll's thickness (tape width) */}
+      <path d="M8 62 v40 a92 40 0 0 0 184 0 v-40 z" className="fill-yellow-500" />
+      <path d="M30 104 h16 M64 113 h16 M100 116 h16 M136 112 h16 M168 103 h12" strokeWidth="5" strokeLinecap="round" className="stroke-vt-navy-deep/45" />
+      {/* top face: wound layers, kraft core, hole */}
+      <ellipse cx="100" cy="62" rx="92" ry="40" className="fill-vt-yellow" />
+      <ellipse cx="100" cy="62" rx="74" ry="32" fill="none" strokeWidth="1.5" className="stroke-vt-navy-deep/15" />
+      <ellipse cx="100" cy="62" rx="60" ry="26" fill="none" strokeWidth="1.5" className="stroke-vt-navy-deep/15" />
+      <ellipse cx="100" cy="62" rx="44" ry="19" className="fill-lp-kraft" />
+      <ellipse cx="100" cy="64" rx="35" ry="15" className="fill-vt-blue-ink" />
     </svg>
   );
 }
@@ -53,13 +57,14 @@ export function DesignCta() {
           </div>
 
           <div data-lp-reveal="up" className="lp-delay-1 relative mx-auto w-full max-w-sm sm:max-w-md lg:max-w-none">
-            <div className="absolute top-0 right-[4%] w-[34%]">
-              <div className="lp-roll aspect-square">
+            <div className="relative aspect-[372/318]">
+              <CartonTapeArt caption={t.heroArtCaption} tapeText={t.heroTapeText} />
+            </div>
+            {/* In front of the carton, bottom-left, so it reads as a separate object on the floor. */}
+            <div className="absolute bottom-[2%] left-0 w-[34%]">
+              <div className="aspect-[4/3]">
                 <RollArt />
               </div>
-            </div>
-            <div className="relative aspect-[372/318] pt-[8%]">
-              <CartonTapeArt caption={t.heroArtCaption} tapeText={t.heroTapeText} />
             </div>
           </div>
         </div>
