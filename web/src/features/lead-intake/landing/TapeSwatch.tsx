@@ -21,10 +21,11 @@ const STRIP: Record<TapeKind, { tape: string; text: string; mark: string; dot: s
     type: "text-xl md:text-3xl",
   },
   multi: {
-    tape: "bg-vt-red-deep",
+    // royal-blue base (the landing's one colour band) printed in yellow + red: reads as multi-colour
+    tape: "bg-vt-blue",
     text: "text-vt-yellow",
-    mark: "border-vt-yellow",
-    dot: "bg-white",
+    mark: "border-white",
+    dot: "bg-vt-red",
     size: "h-24 md:h-36",
     type: "text-2xl md:text-4xl",
   },

@@ -1,6 +1,9 @@
 // The hero's giant word "BĂNG KEO" with a printed tape strip unrolling from a roll and
 // weaving over/under the letters. Pure SVG, decorative (aria-hidden; the h1 carries sr-only text).
 // Weaving = layer order: "under" letters, then the tape, then "over" letters.
+// Only Ă, K and E sit above the tape: at the tape's height they have no enclosed counter, so the
+// strip shows cleanly between their strokes. B, N, G and O (closed bowls / counters at that height)
+// always carry the tape on top, so no tape fragment ever appears inside a letter's counter.
 // Each glyph is forced to a fixed width (textLength) so the layout is font-independent.
 // The strips run past the viewBox (overflow visible) so they bleed to the viewport edge;
 // the hero section clips them. One line from md up, two lines below md (height capped).
@@ -19,8 +22,8 @@ const DESKTOP: Layout = {
     { ch: "B", x: 60, y: 470, w: 190, over: false },
     { ch: "Ă", x: 264, y: 470, w: 210, over: true },
     { ch: "N", x: 488, y: 470, w: 210, over: false },
-    { ch: "G", x: 712, y: 470, w: 215, over: true },
-    { ch: "K", x: 997, y: 470, w: 205, over: false },
+    { ch: "G", x: 712, y: 470, w: 215, over: false },
+    { ch: "K", x: 997, y: 470, w: 205, over: true },
     { ch: "E", x: 1216, y: 470, w: 170, over: true },
     { ch: "O", x: 1400, y: 470, w: 225, over: false },
   ],
@@ -42,8 +45,8 @@ const MOBILE: Layout = {
     { ch: "B", x: 16, y: 400, w: 190, over: false },
     { ch: "Ă", x: 220, y: 400, w: 210, over: true },
     { ch: "N", x: 444, y: 400, w: 210, over: false },
-    { ch: "G", x: 668, y: 400, w: 215, over: true },
-    { ch: "K", x: 136, y: 760, w: 205, over: false },
+    { ch: "G", x: 668, y: 400, w: 215, over: false },
+    { ch: "K", x: 136, y: 760, w: 205, over: true },
     { ch: "E", x: 355, y: 760, w: 170, over: true },
     { ch: "O", x: 539, y: 760, w: 225, over: false },
   ],
@@ -127,7 +130,7 @@ function WordSvg({ layout, id, text, className }: { layout: Layout; id: string; 
       {layout.tapes.map((tape, i) => (
         <g key={i} mask={`url(#${id}-m${i})`}>
           {/* soft contact shadow so the strip reads as lying on the letters */}
-          <use href={`#${id}-p${i}`} transform="translate(0 10)" fill="none" strokeWidth={layout.tapeW} className="stroke-vt-red-dark/45" />
+          <use href={`#${id}-p${i}`} transform="translate(0 7)" fill="none" strokeWidth={layout.tapeW} className="stroke-vt-blue-ink/40" />
           <use href={`#${id}-p${i}`} fill="none" strokeWidth={layout.tapeW} className="stroke-vt-yellow" />
           <use href={`#${id}-p${i}`} transform={`translate(0 ${-layout.tapeW / 2 + 3})`} fill="none" strokeWidth="3" className="stroke-white/45" />
           <text fontSize="27" fontWeight="800" dominantBaseline="central" className="lp-display fill-vt-navy-deep">

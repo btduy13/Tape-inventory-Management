@@ -1,13 +1,13 @@
-// Landing hero: white site header with the full Vĩnh Thịnh logo (bolt + banner + characters, background removed), then a full-bleed brand-red band
-// with the giant word "BĂNG KEO" and a yellow printed tape strip weaving through the letters
-// (the logo's own yellow-on-red banner), a lead line and two CTAs. Server Component.
-// The printed marquee overlays the red/paper boundary (zero-height wrapper), so no seam shows.
+// Landing hero: white site header with the full Vĩnh Thịnh logo (bolt + banner + characters, background removed), then a full-bleed royal-blue band
+// with the giant white word "BĂNG KEO" and a yellow printed tape strip weaving through the letters,
+// a lead line and two CTAs (yellow primary, white outline secondary). Server Component.
+// The printed marquee overlays the blue/paper boundary (zero-height wrapper), so no seam shows.
 import Link from "next/link";
 import { getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
 import { HeroWord } from "./HeroWord";
 import { TapeMarquee } from "./TapeMarquee";
-import { BTN, LP_CONTAINER, RING_ON_DARK as ringOnRed, RING_ON_LIGHT as ringOnLight } from "./ui";
+import { BTN, LP_CONTAINER, RING_ON_DARK as ringOnBlue, RING_ON_LIGHT as ringOnLight } from "./ui";
 
 export function SiteHeader() {
   const t = getDictionary().landing;
@@ -56,9 +56,9 @@ export function Hero() {
   return (
     <>
       <SiteHeader />
-      <section className="relative isolate overflow-hidden bg-vt-red-deep text-white">
-        {/* soft brand-red light from the top-right, like the logo's lightning bolt */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(70%_60%_at_85%_0%,var(--vt-red)_0%,transparent_70%)]" />
+      <section className="relative isolate overflow-hidden bg-vt-blue text-white">
+        {/* soft light from the top-right so the flat blue field has some depth */}
+        <div aria-hidden="true" className="lp-glow-tr pointer-events-none absolute inset-0 -z-10" />
         <div className={`${LP_CONTAINER} flex min-h-[min(calc(100svh-4rem),46rem)] flex-col justify-center gap-6 pt-8 pb-16 md:min-h-0 md:gap-4 md:pt-8 md:pb-14 lg:min-h-[min(calc(100svh-5rem),46rem)] lg:pt-10 lg:pb-20`}>
           <h1 className="flex items-center py-2">
             <span className="sr-only">{t.heroTitle}</span>
@@ -67,18 +67,18 @@ export function Hero() {
             </span>
           </h1>
 
-          <div className="lp-fade grid items-end gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="lp-fade grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
             <p className="max-w-xl text-lg leading-snug font-medium text-white sm:text-xl">{t.heroLead}</p>
             <div className="flex flex-wrap gap-3">
               <Link
                 href={ROUTES.design}
-                className={`${BTN} bg-vt-yellow text-vt-ink ${ringOnRed}`}
+                className={`${BTN} bg-vt-yellow text-vt-ink ${ringOnBlue}`}
               >
                 {t.ctaDesign}
               </Link>
               <Link
                 href={`${ROUTES.design}#yeu-cau-bao-gia`}
-                className={`${BTN} border-2 border-white text-white hover:bg-white hover:text-vt-red-deep ${ringOnRed}`}
+                className={`${BTN} border-2 border-white text-white hover:bg-white hover:text-vt-blue ${ringOnBlue}`}
               >
                 {t.ctaQuote}
               </Link>
@@ -87,7 +87,7 @@ export function Hero() {
         </div>
       </section>
       <div aria-hidden="true" className="pointer-events-none relative z-10 h-0">
-        <TapeMarquee items={t.marquee} className="absolute top-0 -left-[5%] w-[110%] -translate-y-1/2 -rotate-2" />
+        <TapeMarquee items={t.marquee} className="lp-tilt absolute top-0 -left-[5%] w-[110%] -translate-y-1/2" />
       </div>
     </>
   );

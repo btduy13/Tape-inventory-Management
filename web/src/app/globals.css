@@ -56,6 +56,8 @@ body {
   --vt-blue: #252a9a;
   --vt-blue-soft: #3237ab;
   --vt-blue-ink: #141766;
+  /* landing glow (hero + closing): lighter royal blue for radial light on the blue bands (white on it 8.1:1) */
+  --vt-blue-glow: #3a41c4;
 }
 @theme inline {
   --color-vt-red: var(--vt-red);
@@ -70,7 +72,23 @@ body {
   --color-vt-blue: var(--vt-blue);
   --color-vt-blue-soft: var(--vt-blue-soft);
   --color-vt-blue-ink: var(--vt-blue-ink);
+  --color-vt-blue-glow: var(--vt-blue-glow);
 }
+
+/* Landing design system (one blue for every coloured band, red = accent only):            */
+/*   container  LP_CONTAINER (ui.ts) max 1440px, gutters 16 / 32 / 48px                       */
+/*   sections   py 80 / 112px; h2 = LP_H2; cards radius 2rem; buttons pill (BTN)               */
+/* soft radial light on the blue bands (hero top-right, closing area bottom-right) */
+.lp-glow-tr { background: radial-gradient(70% 60% at 85% 0%, var(--vt-blue-glow) 0%, transparent 70%); }
+.lp-glow-br { background: radial-gradient(60% 60% at 90% 30%, var(--vt-blue-glow) 0%, transparent 70%); }
+
+/* tilted marquees: the tilt shrinks on wide screens so the strip (52px tall) always covers the  */
+/* section seam it sits on (rise = half width x tan(angle) must stay under half the strip).     */
+.lp-tilt { rotate: -2deg; }
+.lp-tilt-rev { rotate: 2deg; }
+@media (min-width: 1280px) { .lp-tilt { rotate: -1.6deg; } .lp-tilt-rev { rotate: 1.6deg; } }
+@media (min-width: 1700px) { .lp-tilt { rotate: -1.2deg; } .lp-tilt-rev { rotate: 1.2deg; } }
+@media (min-width: 2200px) { .lp-tilt { rotate: -0.9deg; } .lp-tilt-rev { rotate: 0.9deg; } }
 
 /* line breaks: balanced headings, no orphans in copy (Vietnamese compounds use NBSP in vi.ts) */
 .lp-root :is(h1, h2, h3) { text-wrap: balance; }
