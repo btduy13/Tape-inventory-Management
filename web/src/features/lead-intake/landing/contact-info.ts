@@ -1,5 +1,6 @@
 // Business contact details for the landing page, from optional server env vars
 // (CONTACT_PHONE, CONTACT_EMAIL, CONTACT_ADDRESS, CONTACT_HOURS). Empty -> not shown.
+// businessContact() fills phone + email from DEFAULT_CONTACT when the env leaves them unset.
 
 export type ContactInfo = {
   phone: string | null;
@@ -31,6 +32,18 @@ export function contactInfoFromEnv(env: Env): ContactInfo {
     address: clean(env.CONTACT_ADDRESS),
     hours: clean(env.CONTACT_HOURS),
   };
+}
+
+/** Quote channels shown on the site: email, Zalo and calls (the phone serves both). */
+export const DEFAULT_CONTACT = { CONTACT_PHONE: "0903 003 882", CONTACT_EMAIL: "tque36@gmail.com" } as const;
+
+/** Site contact: CONTACT_* env, with DEFAULT_CONTACT for an unset phone / email. */
+export function businessContact(env: Env = process.env): ContactInfo {
+  return contactInfoFromEnv({
+    ...env,
+    CONTACT_PHONE: env.CONTACT_PHONE?.trim() || DEFAULT_CONTACT.CONTACT_PHONE,
+    CONTACT_EMAIL: env.CONTACT_EMAIL?.trim() || DEFAULT_CONTACT.CONTACT_EMAIL,
+  });
 }
 
 export function hasContactInfo(c: ContactInfo): boolean {

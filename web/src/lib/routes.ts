@@ -3,6 +3,7 @@
 export const ROUTES = {
   home: "/",
   design: "/thiet-ke",
+  terms: "/dieu-khoan",
   quoteView: (token: string) => `/q/${encodeURIComponent(token)}`,
   login: "/login",
   authCallback: "/auth/callback",

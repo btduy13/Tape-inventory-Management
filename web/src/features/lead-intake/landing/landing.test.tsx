@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { contactInfoFromEnv, hasContactInfo } from "./contact-info";
+import { businessContact, contactInfoFromEnv, hasContactInfo } from "./contact-info";
 import { PresetsShowcase, stripClass } from "./PresetsShowcase";
 import { HowItWorks } from "./HowItWorks";
 import { ProductShowcase } from "./ProductShowcase";
@@ -21,6 +21,12 @@ describe("contactInfoFromEnv", () => {
     expect(c.zaloHref).toBe("https://zalo.me/0901234567");
     expect(contactInfoFromEnv({ CONTACT_PHONE: "+84 901 234 567" }).zaloHref).toBe("https://zalo.me/0901234567");
     expect(hasContactInfo(contactInfoFromEnv({}))).toBe(false);
+  });
+
+  it("businessContact: env wins, unset phone / email use DEFAULT_CONTACT", () => {
+    expect(businessContact({}).email).toBe("tque36@gmail.com");
+    expect(businessContact({ CONTACT_PHONE: " " }).zaloHref).toBe("https://zalo.me/0903003882");
+    expect(businessContact({ CONTACT_EMAIL: "sales@bangkeo.vn" }).email).toBe("sales@bangkeo.vn");
   });
 
   it("drops malformed email / phone links", () => {
@@ -123,15 +129,18 @@ describe("CartonTapeArt", () => {
 describe("Contact", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("without contact env: honest copy, quote form as the channel, no CTA buttons", () => {
+  it("without contact env: default email, Zalo and phone, terms link, no CTA buttons", () => {
     vi.stubEnv("CONTACT_PHONE", "");
     vi.stubEnv("CONTACT_EMAIL", "");
     vi.stubEnv("CONTACT_ADDRESS", "");
     vi.stubEnv("CONTACT_HOURS", "");
     const { container } = render(<Contact />);
     const c = within(container);
-    expect(c.queryByText(/gửi email/)).not.toBeInTheDocument();
-    expect(c.getByRole("link", { name: "Gửi yêu cầu trực tuyến" })).toHaveAttribute("href", "/thiet-ke#yeu-cau-bao-gia");
+    expect(c.getByRole("link", { name: "tque36@gmail.com" })).toHaveAttribute("href", "mailto:tque36@gmail.com");
+    expect(c.getByRole("link", { name: "0903 003 882" })).toHaveAttribute("href", "tel:0903003882");
+    expect(c.getByRole("link", { name: "Nhắn tin tư vấn" })).toHaveAttribute("href", "https://zalo.me/0903003882");
+    expect(c.getByRole("link", { name: "Điều khoản sử dụng" })).toHaveAttribute("href", "/dieu-khoan");
+    expect(c.queryByRole("link", { name: "Gửi yêu cầu trực tuyến" })).not.toBeInTheDocument();
     expect(c.queryByRole("link", { name: "Thiết kế ngay" })).not.toBeInTheDocument();
     expect(c.queryByText("Tối đa 3 màu")).not.toBeInTheDocument();
   });
@@ -144,7 +153,7 @@ describe("Contact", () => {
     expect(c.getByRole("link", { name: "0901 234 567" })).toHaveAttribute("href", "tel:0901234567");
     expect(c.getByRole("link", { name: "sales@bangkeo.vn" })).toHaveAttribute("href", "mailto:sales@bangkeo.vn");
     expect(c.getByRole("link", { name: "Nhắn tin tư vấn" })).toHaveAttribute("href", "https://zalo.me/0901234567");
-    expect(c.getByText(/Gọi, nhắn Zalo hoặc gửi email/)).toBeInTheDocument();
+    expect(c.getByText(/gửi email, nhắn Zalo hoặc gọi điện/)).toBeInTheDocument();
     expect(c.queryByRole("link", { name: "Gửi yêu cầu trực tuyến" })).not.toBeInTheDocument();
   });
 });

@@ -1,9 +1,11 @@
 "use client";
 // Quote request form shown next to the designer on /thiet-ke.
 // The page passes `getDesign` from features/designer (see lib/design-contract.ts).
+import Link from "next/link";
 import { useCallback, useRef, type FormEvent } from "react";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 import { getDictionary } from "@/i18n";
+import { ROUTES } from "@/lib/routes";
 import type { GetLeadDesign } from "../lib/design-contract";
 import { FormField } from "./FormField";
 import { LeadSuccess } from "./LeadSuccess";
@@ -84,6 +86,13 @@ export function LeadForm({ getDesign, turnstileSiteKey, nonce, hideHeading = fal
         {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent motion-reduce:animate-none" aria-hidden="true" />}
         {busy ? t.submitting : t.submit}
       </button>
+      <p className="text-xs leading-5 text-slate-600">
+        {t.termsPrefix}{" "}
+        <Link href={ROUTES.terms} target="_blank" className="font-medium text-vt-navy underline underline-offset-2 hover:text-vt-red-deep">
+          {t.termsLink}
+        </Link>
+        .
+      </p>
     </form>
   );
 }

@@ -1,17 +1,19 @@
 // Contact section (anchor #lien-he) and page footer. Server Component.
 // Second half of the blue closing area: one compact panel (logo card + brand line | contact items
-// in a wrapping row). Channels only (phone, Zalo, email, address, hours from CONTACT_* env): the CTA
-// pair already sits right above, so no buttons here. No env -> the online quote form is the channel.
+// in a wrapping row). Channels only (phone, Zalo, email, address, hours from CONTACT_* env; phone +
+// email fall back to DEFAULT_CONTACT): the CTA pair already sits right above, so no buttons here.
+// No phone / email -> the online quote form is the channel. Bottom line: copyright + terms link.
 import { getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
-import { contactInfoFromEnv, hasContactInfo } from "./contact-info";
+import Link from "next/link";
+import { businessContact, hasContactInfo } from "./contact-info";
 import { LP_CONTAINER, RING_ON_DARK } from "./ui";
 
 type Row = { label: string; value: string; href?: string | null; external?: boolean };
 
 export function Contact() {
   const t = getDictionary().landing;
-  const info = contactInfoFromEnv(process.env);
+  const info = businessContact();
   const rows: Row[] = [];
   if (info.phone) rows.push({ label: t.contactPhone, value: info.phone, href: info.phoneHref });
   if (info.zaloHref) rows.push({ label: t.contactZalo, value: t.contactZaloValue, href: info.zaloHref, external: true });
@@ -65,6 +67,12 @@ export function Contact() {
             </dl>
           </div>
         </div>
+        <p className="mt-6 flex flex-wrap justify-between gap-x-6 gap-y-2 px-2 text-sm text-white/70">
+          <span>{t.footerCopy}</span>
+          <Link href={ROUTES.terms} className={`underline decoration-white/40 underline-offset-4 hover:text-vt-yellow ${RING_ON_DARK}`}>
+            {t.termsLink}
+          </Link>
+        </p>
       </div>
     </footer>
   );
