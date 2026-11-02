@@ -1,9 +1,9 @@
 // Search + filters as a plain GET form (works without JS, shareable URLs, server-rendered).
-// Multi-value enums render as chips (links); single enums / yes-no render as selects.
+// Every filter is a select. A multi-value filter takes comma-joined option values ("Đang mở" = several statuses).
 import Link from "next/link";
-import { getDictionary } from "@/i18n";
+import { format, getDictionary } from "@/i18n";
 import {
-  clearFilters, hasActiveFilters, listHref, serializeListParams, toggleFilterValue,
+  clearFilters, hasActiveFilters, listHref, serializeListParams,
   type ListSpec, type ListState,
 } from "../lib/list-params";
 import { AutoSubmit } from "./AutoSubmit";
@@ -14,10 +14,8 @@ const p = getDictionary().portalUi;
 
 export type FilterOption = { value: string; label: string };
 
-/** How to render one filter of the spec. `kind: "select"` works for single enum and bool filters. */
-export type FilterControl =
-  | { name: string; label: string; kind: "select"; options: readonly FilterOption[] }
-  | { name: string; label: string; kind: "chips"; options: readonly FilterOption[] };
+/** One filter of the spec as a select. For a multi enum an option value may join several values with ",". */
+export type FilterControl = { name: string; label: string; kind: "select"; options: readonly FilterOption[] };
 
 type Props = {
   basePath: string;
@@ -31,10 +29,9 @@ type Props = {
 };
 
 export function FilterBar({ basePath, spec, state, controls = [], searchPlaceholder = p.searchPlaceholder, dateRange, dateLabel }: Props) {
-  const selects = controls.filter((c) => c.kind === "select");
-  const chips = controls.filter((c) => c.kind === "chips");
+  const selects = controls;
   const formNames = new Set<string>(["q", "from", "to", "page", ...selects.map((c) => c.name)]);
-  // Everything else in the current URL (chips, sort, page size) rides along as hidden inputs.
+  // Everything else in the current URL (sort, page size) rides along as hidden inputs.
   const hidden = [...serializeListParams(spec, state).entries()].filter(([k]) => !formNames.has(k));
   const active = hasActiveFilters(state);
   const showDates = dateRange && !!spec.dateRange;
@@ -57,10 +54,7 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
           {selects.map((c) => (
             <label key={c.name} className="flex min-w-36 flex-col gap-1 text-xs font-medium text-pt-muted">
               {c.label}
-              <select name={c.name} defaultValue={state.filters[c.name]?.[0] ?? ""} className={inputClass}>
-                <option value="">{p.all}</option>
-                {c.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <FilterSelect control={c} values={state.filters[c.name] ?? []} />
             </label>
           ))}
           {showDates && (
@@ -88,40 +82,20 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
           )}
         </div>
       </form>
-      {chips.map((c) => (
-        <nav key={c.name} aria-label={c.label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-          <FilterChip href={listHref(basePath, spec, { ...state, page: 1, filters: omit(state.filters, c.name) })} on={!state.filters[c.name]?.length}>
-            {p.all}
-          </FilterChip>
-          {c.options.map((o) => (
-            <FilterChip key={o.value} href={listHref(basePath, spec, toggleFilterValue(spec, state, c.name, o.value))} on={!!state.filters[c.name]?.includes(o.value)}>
-              {o.label}
-            </FilterChip>
-          ))}
-        </nav>
-      ))}
     </div>
   );
 }
 
-function omit(filters: Record<string, string[]>, name: string): Record<string, string[]> {
-  const out = { ...filters };
-  delete out[name];
-  return out;
-}
-
-function FilterChip({ href, on, children }: { href: string; on: boolean; children: React.ReactNode }) {
+/** The URL may hold a combination no option names (a stat card link, a hand-edited URL): keep it as an extra option. */
+function FilterSelect({ control: c, values }: { control: FilterControl; values: readonly string[] }) {
+  const current = values.join(",");
+  const known = current === "" || c.options.some((o) => o.value === current);
+  const labels = values.map((v) => c.options.find((o) => o.value === v)?.label ?? v);
   return (
-    <Link
-      href={href}
-      aria-current={on ? "true" : undefined}
-      scroll={false}
-      className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-medium ${
-        on ? "border-vt-blue bg-vt-blue text-white" : "border-pt-line-strong bg-pt-surface text-pt-text hover:border-vt-blue"
-      }`}
-    >
-      {on && <Icon name="check" className="size-4" />}
-      {children}
-    </Link>
+    <select name={c.name} defaultValue={current} className={inputClass}>
+      <option value="">{p.all}</option>
+      {c.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {!known && <option value={current}>{labels.length <= 2 ? labels.join(", ") : format(p.selectedCount, { count: labels.length })}</option>}
+    </select>
   );
 }

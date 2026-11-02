@@ -73,7 +73,7 @@ export function KitDemo({ searchParams, role }: { searchParams: RawParams; role:
           dateLabel="Ngày cập nhật"
           controls={[
             { kind: "select", name: "owner", label: "Người phụ trách", options: [{ value: "Nhân viên A", label: "Nhân viên A" }, { value: "CTV Bình", label: "CTV Bình" }] },
-            { kind: "chips", name: "status", label: "Trạng thái", options: LEAD_STATUSES.map((s) => ({ value: s, label: t.leadStatus[s] })) },
+            { kind: "select", name: "status", label: "Trạng thái", options: LEAD_STATUSES.map((s) => ({ value: s, label: t.leadStatus[s] })) },
           ]}
         />
         <DataTable

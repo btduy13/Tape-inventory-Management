@@ -3,7 +3,7 @@ import Link from "next/link";
 import { format, getDictionary } from "@/i18n";
 import { FilterBar, InlineStatus, buttonClass, hasActiveFilters, type FilterControl } from "@/features/portal-ui";
 import { LEAD_STATUSES } from "@/lib/types";
-import { LEAD_SCAN_LIMIT, LEAD_SOURCES, UNASSIGNED, filteredHref, leadListEmpty } from "../lib/lead-list";
+import { LEAD_SCAN_LIMIT, LEAD_SOURCES, OPEN_STATUSES, UNASSIGNED, filteredHref, leadListEmpty } from "../lib/lead-list";
 import type { LeadListData } from "../server/load";
 import { CONTAIN_SCROLLERS } from "./contain-scrollers";
 import { LeadListTable } from "./LeadListTable";
@@ -29,7 +29,15 @@ export function LeadList({ data, basePath, detail, mine }: Props) {
     action: e.clear ? <Link href={filteredHref(basePath, {})} className={buttonClass("secondary", "sm")}>{t.portalUi.clearFilters}</Link> : undefined,
   };
   const controls: FilterControl[] = [
-    { kind: "chips", name: "status", label: c.filterStatus, options: LEAD_STATUSES.map((s) => ({ value: s, label: t.leadStatus[s] })) },
+    {
+      kind: "select",
+      name: "status",
+      label: c.filterStatus,
+      options: [
+        { value: OPEN_STATUSES.join(","), label: c.statusOpen },
+        ...LEAD_STATUSES.map((s) => ({ value: s, label: t.leadStatus[s] })),
+      ],
+    },
     ...(mine
       ? []
       : [{

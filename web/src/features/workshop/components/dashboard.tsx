@@ -37,7 +37,7 @@ function controls(users: WorkshopUser[] | null): FilterControl[] {
       ...users.map((u) => ({ value: u.id, label: u.name })), { value: NO_ASSIGNEE, label: wsCopy.unassigned },
     ] });
   }
-  out.push({ kind: "chips", name: "step", label: wsCopy.filterStep, options: BOARD_COLUMNS.map((c) => ({
+  out.push({ kind: "select", name: "step", label: wsCopy.filterStep, options: BOARD_COLUMNS.map((c) => ({
     value: c, label: c === "pending" ? t.workshop.pending : t.productionStep[c],
   })) });
   return out;
