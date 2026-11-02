@@ -30,9 +30,6 @@ function columns(role: AppRole): Column<JobListRow>[] {
     { key: "qty", header: wsCopy.colQty, sortKey: "qty", align: "end", cell: (r) => <span className="tabular-nums">{r.quantity.toLocaleString("vi-VN")}</span> },
     { key: "due", header: wsCopy.colDue, sortKey: "due", cell: (r) => <DueBadge dueDate={r.due_date} step={r.step} /> },
   ];
-  if (role === "admin") {
-    cols.push({ key: "assignee", header: wsCopy.colAssignee, cell: (r) => r.workshop_user_name ?? <span className="text-pt-muted">{wsCopy.unassigned}</span> });
-  }
   cols.push({ key: "updated", header: wsCopy.colUpdated, sortKey: "updated", className: "hidden xl:table-cell", mobile: "hidden", cell: (r) => <span className="whitespace-nowrap text-pt-muted">{dateTime(r.updated_at)}</span> });
   if (role === "workshop") {
     cols.push({

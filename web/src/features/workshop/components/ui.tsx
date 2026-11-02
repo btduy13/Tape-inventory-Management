@@ -37,9 +37,10 @@ export function DueBadge({ dueDate, step, size = "sm" }: { dueDate: string | nul
   );
 }
 
-export function ColorSwatches({ colors, size = "sm" }: { colors: string[] | null; size?: "sm" | "md" }) {
+/** `bare`: swatches only, no hex codes (workshop board cards). */
+export function ColorSwatches({ colors, size = "sm", bare = false }: { colors: string[] | null; size?: "sm" | "md"; bare?: boolean }) {
   if (!colors?.length) return <span>—</span>;
-  const px = size === "md" ? 24 : 16;
+  const px = size === "md" || bare ? 24 : 16;
   return (
     <span className="flex flex-wrap gap-2">
       {colors.map((c) => (
@@ -48,7 +49,7 @@ export function ColorSwatches({ colors, size = "sm" }: { colors: string[] | null
           <svg aria-hidden width={px} height={px} viewBox="0 0 16 16" className="rounded-sm border border-pt-line-strong">
             <rect width="16" height="16" fill={/^#[0-9a-f]{3,8}$/i.test(c) ? c : "transparent"} />
           </svg>
-          {c}
+          {bare ? <span className="sr-only">{c}</span> : c}
         </span>
       ))}
     </span>

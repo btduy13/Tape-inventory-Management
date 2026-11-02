@@ -822,7 +822,7 @@ export const vi = {
     navLeads: "Khách hàng",
     navMyLeads: "Khách của tôi",
     navWorkshop: "Xưởng",
-    navMyJobs: "Đơn của tôi",
+    navMyJobs: "Việc của xưởng",
     navUsers: "Người dùng",
     navTapeSpecs: "Quy cách",
     navPresets: "Mẫu kích thước",

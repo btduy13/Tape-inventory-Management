@@ -35,7 +35,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export function JobSpecs({ job }: { job: WorkshopJobRow }) {
+/** `floor`: workshop view, without order / customer codes or assignee (there is one workshop). */
+export function JobSpecs({ job, floor = false }: { job: WorkshopJobRow; floor?: boolean }) {
   return (
     <Section title={wsCopy.specs}>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -50,9 +51,12 @@ export function JobSpecs({ job }: { job: WorkshopJobRow }) {
           {job.print_text ? <span className="text-lg font-semibold">“{job.print_text}”</span> : "—"}
         </Row>
         <Row label={t.workshop.dueDate}><DueBadge dueDate={job.due_date} step={job.step} size="md" /></Row>
-        <Row label={t.workshop.orderCode}>{job.order_id ?? wsCopy.orderPending}</Row>
-        <Row label={t.workshop.leadCode}>{job.lead_code}</Row>
-        <Row label={t.workshop.assignee}>{job.workshop_user_name ?? t.workshop.unassigned}</Row>
+        {!floor && (
+          <>
+            <Row label={t.workshop.orderCode}>{job.order_id ?? wsCopy.orderPending}</Row>
+            <Row label={t.workshop.leadCode}>{job.lead_code}</Row>
+          </>
+        )}
       </dl>
       {job.production_note && (
         <div className="rounded-lg border border-pt-yellow-ink/30 bg-pt-yellow-tint px-4 py-3 text-pt-yellow-ink">
@@ -88,7 +92,10 @@ export function JobDesign({ job, urls }: { job: WorkshopJobRow; urls: DesignUrls
   );
 }
 
-export function StepHistory({ log }: { log: ProductionStepLog[] }) {
+/** The DB's hand-off note starts "Chuyển sang sản xuất: <order code> — ": the floor sees only the office's note. */
+const floorNote = (note: string) => note.replace(/^Chuyển sang sản xuất: \S+(?: — )?/, "");
+
+export function StepHistory({ log, floor = false }: { log: ProductionStepLog[]; floor?: boolean }) {
   return (
     <Section title={t.workshop.history}>
       {log.length === 0 ? (
@@ -101,7 +108,9 @@ export function StepHistory({ log }: { log: ProductionStepLog[] }) {
                 {e.from_step ? `${t.productionStep[e.from_step]} → ` : ""}{t.productionStep[e.to_step]}
               </div>
               <div className="text-pt-muted">{dateTime(e.created_at)} · {e.changed_by_name || "—"}</div>
-              {e.note && <div className="mt-1 whitespace-pre-wrap text-pt-text">{e.note}</div>}
+              {e.note && (floor ? floorNote(e.note) : e.note) && (
+                <div className="mt-1 whitespace-pre-wrap text-pt-text">{floor ? floorNote(e.note) : e.note}</div>
+              )}
             </li>
           ))}
         </ol>

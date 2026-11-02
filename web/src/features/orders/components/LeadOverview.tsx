@@ -1,10 +1,9 @@
-// /admin overview: KPI cards, counts per status, and short "Cần xử lý" queues (server component).
+// /admin overview: KPI cards and short "Cần xử lý" queues (server component).
 import Link from "next/link";
 import { format, getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
-import { LEAD_STATUSES } from "@/lib/types";
 import {
-  DataTable, ErrorState, LEAD_TONE, StatCard, StatGrid, StatusBadge, buttonClass, linkClass, type Column,
+  DataTable, ErrorState, LEAD_TONE, StatCard, StatGrid, buttonClass, linkClass, type Column,
 } from "@/features/portal-ui";
 import { OPEN_STATUSES, UNASSIGNED, filteredHref } from "../lib/lead-list";
 import { formatDateTime } from "../lib/timeline";
@@ -68,24 +67,6 @@ export function LeadOverview({ data, basePath }: { data: Overview; basePath: str
           href={filteredHref(basePath, { status: ["production", "shipping"] })}
         />
       </StatGrid>
-
-      <nav aria-label={c.byStatus} className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-pt-muted">{c.byStatus}</h2>
-        {/* Wraps instead of scrolling sideways: every status stays visible at any width. */}
-        <ul className="flex flex-wrap gap-2">
-          {LEAD_STATUSES.map((s) => (
-            <li key={s} className="shrink-0">
-              <Link
-                href={filteredHref(basePath, { status: [s] })}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-pt-line bg-pt-surface pl-1.5 pr-4 text-sm hover:border-vt-blue"
-              >
-                <StatusBadge status={s} />
-                <span className="font-semibold tabular-nums text-pt-text">{counts[s].toLocaleString("vi-VN")}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
 
       <section aria-labelledby="can-xu-ly" className="flex flex-col gap-3">
         <h2 id="can-xu-ly" className="text-lg font-semibold text-pt-text">{c.needsAction}</h2>

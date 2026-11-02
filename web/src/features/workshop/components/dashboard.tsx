@@ -11,8 +11,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
 import { BOARD_COLUMNS } from "../lib/group";
-import { NO_ASSIGNEE, countJobs, isFiltered, jobListSpec, queryJobs, toListRow, viewOf } from "../lib/list";
-import { listWorkshopJobs, listWorkshopUsers, type WorkshopUser } from "../server/queries";
+import { countJobs, isFiltered, jobListSpec, queryJobs, toListRow, viewOf } from "../lib/list";
+import { listWorkshopJobs, listWorkshopUsers } from "../server/queries";
 import { JobsTable } from "./JobsTable";
 import { BoardSort, ViewToggle } from "./JobsToolbar";
 import { LiveDot } from "./LiveDot";
@@ -22,7 +22,8 @@ import { WorkshopLiveRefresher } from "./WorkshopLiveRefresher";
 const t = getDictionary();
 const BASE = ROUTES.workshop;
 
-function controls(users: WorkshopUser[] | null): FilterControl[] {
+// One workshop only: no assignee filter.
+function controls(): FilterControl[] {
   const out: FilterControl[] = [
     { kind: "select", name: "due", label: wsCopy.filterDue, options: [
       { value: "overdue", label: wsCopy.dueOverdue }, { value: "today", label: wsCopy.dueToday },
@@ -32,11 +33,6 @@ function controls(users: WorkshopUser[] | null): FilterControl[] {
       { value: "open", label: wsCopy.stateOpen }, { value: "closed", label: wsCopy.stateClosed },
     ] },
   ];
-  if (users) {
-    out.push({ kind: "select", name: "assignee", label: wsCopy.filterAssignee, options: [
-      ...users.map((u) => ({ value: u.id, label: u.name })), { value: NO_ASSIGNEE, label: wsCopy.unassigned },
-    ] });
-  }
   out.push({ kind: "select", name: "step", label: wsCopy.filterStep, options: BOARD_COLUMNS.map((c) => ({
     value: c, label: c === "pending" ? t.workshop.pending : t.productionStep[c],
   })) });
@@ -56,6 +52,18 @@ export async function WorkshopDashboard({ profile, searchParams }: { profile: Pr
   const view = viewOf(state, profile.role);
   const now = new Date();
   const all = jobs.map((j) => toListRow(j, now));
+  // Workshop floor (one workshop, low-literacy users): no filters, no stats, no codes. Just the
+  // jobs, nearest due date first, each with one big "done" button.
+  if (!isAdmin) {
+    const { rows } = queryJobs(all, spec, defaultListState(spec), false);
+    return (
+      <div className="flex flex-col gap-6">
+        <WorkshopLiveRefresher />
+        <PageHeader title={wsCopy.myJobs} description={wsCopy.descFloor} meta={<LiveDot />} />
+        <WorkshopBoard jobs={rows} role={profile.role} />
+      </div>
+    );
+  }
   const counts = countJobs(all);
   const { rows, total } = queryJobs(all, spec, state, view === "table");
   const filtered = isFiltered(state);
@@ -81,7 +89,7 @@ export async function WorkshopDashboard({ profile, searchParams }: { profile: Pr
         basePath={BASE}
         spec={spec}
         state={state}
-        controls={controls(users)}
+        controls={controls()}
         searchPlaceholder={wsCopy.searchPlaceholder}
         dateRange
         dateLabel={wsCopy.dueRange}

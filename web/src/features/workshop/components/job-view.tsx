@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
 import { defaultDueDate, vnToday } from "../lib/dates";
+import { jobName } from "../lib/group";
 import { isClosedStep } from "../lib/steps";
 import { designUrls, getWorkshopJob, listStepLog, listWorkshopUsers } from "../server/queries";
 import { AdvanceStepForm } from "./AdvanceStepForm";
@@ -30,7 +31,8 @@ export async function WorkshopJobView({ profile, jobId }: { profile: Profile; jo
     designUrls(db, job),
     isAdmin ? listWorkshopUsers(db) : Promise.resolve([]),
   ]);
-  const code = job.order_id ?? job.lead_code;
+  // Workshop users see the job's name, never order / customer codes.
+  const code = isAdmin ? job.order_id ?? job.lead_code : jobName(job);
   const closed = isClosedStep(job.step);
 
   return (
@@ -72,14 +74,14 @@ export async function WorkshopJobView({ profile, jobId }: { profile: Profile; jo
             </Section>
           )}
           <div className="hidden lg:flex lg:flex-col">
-            <StepHistory log={log} />
+            <StepHistory log={log} floor={!isAdmin} />
           </div>
         </aside>
         <div className="flex min-w-0 flex-col gap-6 lg:order-1">
-          <JobSpecs job={job} />
+          <JobSpecs job={job} floor={!isAdmin} />
           <JobDesign job={job} urls={urls} />
           <div className="lg:hidden">
-            <StepHistory log={log} />
+            <StepHistory log={log} floor={!isAdmin} />
           </div>
         </div>
       </div>

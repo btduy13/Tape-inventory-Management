@@ -27,7 +27,35 @@ function Lane({ column, jobs, role }: { column: BoardColumn; jobs: JobListRow[];
   );
 }
 
+/** Workshop floor: one list of open jobs (nearest due date first), finished jobs folded below. */
+function FloorList({ jobs, role }: { jobs: readonly JobListRow[]; role: AppRole }) {
+  const open = jobs.filter((j) => j.phase === "open");
+  const closed = jobs.filter((j) => j.phase === "closed");
+  return (
+    <div className="flex flex-col gap-8">
+      {open.length > 0 ? (
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {open.map((job) => <JobCard key={job.job_id} job={job} role={role} />)}
+        </ul>
+      ) : (
+        <p className="text-lg font-semibold text-pt-text">{wsCopy.floorNoWork}</p>
+      )}
+      {closed.length > 0 && (
+        <details className="group flex flex-col gap-4">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-base font-semibold text-pt-muted hover:text-vt-blue">
+            {format(wsCopy.floorDone, { count: closed.length })}
+          </summary>
+          <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {closed.map((job) => <JobCard key={job.job_id} job={job} role={role} />)}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export function WorkshopBoard({ jobs, role }: { jobs: readonly JobListRow[]; role: AppRole }) {
+  if (role === "workshop") return <FloorList jobs={jobs} role={role} />;
   const lanes = BOARD_COLUMNS.map((c) => ({ c, jobs: jobs.filter((j) => j.stage === c) })).filter((l) => l.jobs.length > 0);
   const open = lanes.filter((l) => l.c === "pending" || !isClosedStep(l.c));
   const closed = lanes.filter((l) => l.c !== "pending" && isClosedStep(l.c));

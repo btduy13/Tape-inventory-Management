@@ -1,7 +1,10 @@
 // Workshop-only UI copy for the redesigned pages (shared strings stay in vi.workshop / vi.portalUi).
 // Kept here so this feature does not edit the shared dictionary file.
 export const wsCopy = {
-  myJobs: "Đơn của tôi",
+  myJobs: "Việc của xưởng",
+  descFloor: "Làm xong bước nào thì bấm nút xanh để báo.",
+  floorNoWork: "Hiện chưa có việc. Đơn mới sẽ tự hiện ở đây.",
+  floorDone: "Đơn đã làm xong ({count})",
   overviewTitle: "Tổng quan xưởng",
   descWorkshop: "Đơn được giao cho bạn. Bấm nút lớn trên thẻ để chuyển công đoạn.",
   descAdmin: "Mọi đơn sản xuất: giao xưởng, theo dõi hạn giao và công đoạn.",

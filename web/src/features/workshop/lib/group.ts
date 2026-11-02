@@ -18,6 +18,16 @@ export function groupJobs(jobs: readonly WorkshopJobRow[]): JobGroups {
 }
 
 /** "48mm × 100m × 50mic" (missing parts shown as "?"). */
+/**
+ * What the floor calls the job: the printed text ("Băng keo in “VINH THINH”"), else the size.
+ * The workshop never sees order / customer codes or customer details.
+ */
+export function jobName(job: Pick<WorkshopJobRow, "print_text" | "width_mm" | "length_m">): string {
+  const text = job.print_text?.trim();
+  if (text) return `Băng keo in “${text}”`;
+  return `Băng keo ${Number(job.width_mm)}mm × ${Number(job.length_m)}m`;
+}
+
 export function formatSize(job: Pick<WorkshopJobRow, "width_mm" | "length_m" | "thickness_mic">): string {
   const v = (n: number | null) => (n === null || n === undefined ? "?" : String(Number(n)));
   return `${v(job.width_mm)}mm × ${v(job.length_m)}m × ${v(job.thickness_mic)}mic`;
