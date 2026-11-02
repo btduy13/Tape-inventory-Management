@@ -12,8 +12,9 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const next = safeNextPath(typeof sp.next === "string" ? sp.next : null, ROUTES.portal);
-  if (await isLoggedInActiveUser()) redirect(next);
+  // Empty when there is no valid ?next=: the login action then picks the role's home.
+  const next = safeNextPath(typeof sp.next === "string" ? sp.next : null, "");
+  if (await isLoggedInActiveUser()) redirect(next || ROUTES.portal);
   return (
     <AuthCard title={t.auth.loginTitle}>
       <LoginForm next={next} linkError={sp.error === "link"} />
