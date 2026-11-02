@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { vi } from "@/i18n/vi";
+import { buttonClass } from "@/features/portal-ui/components/styles";
 import { createDraftQuoteAction, createQuoteVersionAction, getQuotePdfUrlAction } from "../server/actions-edit";
 
 type Props =
@@ -10,7 +11,7 @@ type Props =
   | { kind: "new-version"; quoteId: string }
   | { kind: "pdf"; quoteId: string };
 
-const btn = "rounded border border-zinc-300 px-3 py-1.5 text-sm disabled:opacity-50";
+const btnFor = (kind: Props["kind"]) => buttonClass(kind === "pdf" ? "ghost" : kind === "create" ? "primary" : "secondary", "sm");
 
 export function QuoteToolbarButton(props: Props) {
   const router = useRouter();
@@ -38,12 +39,12 @@ export function QuoteToolbarButton(props: Props) {
 
   const label = props.kind === "create" ? t.createQuote : props.kind === "new-version" ? t.newVersion : t.downloadPdf;
   return (
-    <span className="inline-flex items-center gap-2">
-      <button type="button" className={btn} disabled={pending} onClick={run}>
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <button type="button" className={btnFor(props.kind)} disabled={pending} onClick={run}>
         {pending ? vi.common.loading : label}
       </button>
       {error ? (
-        <span role="alert" className="text-sm text-red-700">
+        <span role="alert" className="text-sm font-medium text-pt-red-ink">
           {error}
         </span>
       ) : null}

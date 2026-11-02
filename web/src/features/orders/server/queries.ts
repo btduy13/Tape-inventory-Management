@@ -16,7 +16,7 @@ export type LeadListItem = Pick<
   "id" | "code" | "customer_name" | "phone" | "company" | "quantity" | "status" | "assigned_to" | "created_at" | "updated_at"
 > & { assigneeName: string | null };
 
-export type QuoteSummary = Pick<Quote, "id" | "version" | "status" | "total" | "currency" | "sent_at" | "responded_at">;
+export type QuoteSummary = Pick<Quote, "id" | "version" | "status" | "total" | "vat_percent" | "currency" | "sent_at" | "responded_at">;
 
 export type LeadDetail = {
   lead: Lead;
@@ -70,7 +70,7 @@ export async function getLeadDetail(
     db.from("lead_notes").select("*").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(200),
     db
       .from("quotes")
-      .select("id, version, status, total, currency, sent_at, responded_at")
+      .select("id, version, status, total, vat_percent, currency, sent_at, responded_at")
       .eq("lead_id", leadId)
       .order("version", { ascending: false }),
   ]);

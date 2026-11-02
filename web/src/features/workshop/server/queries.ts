@@ -66,3 +66,16 @@ export async function designUrls(db: Db, job: Pick<WorkshopJobRow, "preview_path
   ]);
   return { previewUrl, logoUrl };
 }
+
+/** vat_percent of the latest accepted quote (what the hand-off copies). Admin RLS; null if none. */
+export async function acceptedQuoteVat(db: Db, leadId: string): Promise<number | null> {
+  const { data } = await db
+    .from("quotes")
+    .select("vat_percent")
+    .eq("lead_id", leadId)
+    .eq("status", "accepted")
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? Number(data.vat_percent) : null;
+}

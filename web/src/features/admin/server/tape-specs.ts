@@ -37,6 +37,15 @@ export async function getLengthLimits(db: Db): Promise<TapeSpecSettings | null> 
   return data ?? null;
 }
 
+/** Widths + length limits for the admin page, with a failed-read flag (page error state). */
+export async function loadTapeSpecs(db: Db): Promise<{ widths: TapeWidth[]; settings: TapeSpecSettings | null; failed: boolean }> {
+  const [w, s] = await Promise.all([
+    db.from("tape_widths").select("*").order("sort_order", { ascending: true }).order("width_mm", { ascending: true }),
+    db.from("tape_spec_settings").select("*").maybeSingle(),
+  ]);
+  return { widths: w.data ?? [], settings: s.data ?? null, failed: !!w.error || !!s.error };
+}
+
 export async function addWidth(db: Db, input: AddWidthInput): Promise<SpecResult> {
   const rows = await listWidths(db);
   const { error } = await db

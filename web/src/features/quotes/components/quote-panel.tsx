@@ -2,14 +2,25 @@
 // admin/manager: editor for the latest version + actions. staff/ctv: read-only (RLS limits rows).
 import { format } from "@/i18n";
 import { vi } from "@/i18n/vi";
+import { ToneBadge, type Tone } from "@/features/portal-ui";
 import { canManagePrices } from "@/lib/auth/roles";
 import type { Profile } from "@/lib/types";
-import { canCreateNewVersion } from "../lib/rules";
+import { canCreateNewVersion, visibleQuotes } from "../lib/rules";
 import type { QuoteWithLines } from "../lib/types";
 import { listQuotesForLead } from "../server/queries";
 import { QuoteEditor } from "./quote-editor";
 import { QuoteLinesView } from "./quote-lines-view";
 import { QuoteToolbarButton } from "./quote-toolbar";
+
+/** Quote status colours (same meanings as the lead tones). */
+const QUOTE_TONE: Record<QuoteWithLines["status"], Tone> = {
+  draft: "grey",
+  sent: "yellow",
+  accepted: "green",
+  changes_requested: "red",
+  expired: "grey",
+  cancelled: "grey",
+};
 
 const fmtDateTime = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) : "—";
@@ -17,10 +28,10 @@ const fmtDateTime = (iso: string | null) =>
 function QuoteReadOnly({ quote }: { quote: QuoteWithLines }) {
   const t = vi.quotes;
   return (
-    <section className="space-y-2 rounded border border-zinc-200 p-4">
+    <section className="flex flex-col gap-3 rounded-lg border border-pt-line p-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">{format(t.version, { version: quote.version })}</h3>
-        <span className="text-sm text-zinc-600">{vi.quoteStatus[quote.status]}</span>
+        <h3 className="font-semibold text-pt-text">{format(t.version, { version: quote.version })}</h3>
+        <ToneBadge tone={QUOTE_TONE[quote.status]}>{vi.quoteStatus[quote.status]}</ToneBadge>
       </header>
       <QuoteLinesView
         lines={quote.lines}
@@ -29,7 +40,7 @@ function QuoteReadOnly({ quote }: { quote: QuoteWithLines }) {
         vatAmount={quote.vat_amount}
         total={quote.total}
       />
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-pt-muted">
         {t.sentAt}: {fmtDateTime(quote.sent_at)} · {t.respondedAt}: {fmtDateTime(quote.responded_at)}
       </p>
       {quote.customer_response_note ? (
@@ -43,20 +54,20 @@ function QuoteReadOnly({ quote }: { quote: QuoteWithLines }) {
 }
 
 export async function QuotePanel({ leadId, profile }: { leadId: string; profile: Profile }) {
-  const quotes = await listQuotesForLead(leadId);
   const pricing = canManagePrices(profile);
+  const quotes = visibleQuotes(await listQuotesForLead(leadId), pricing);
   const [latest, ...older] = quotes;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{vi.quotes.title}</h2>
+    <div className="flex flex-col gap-4">
+      {/* The page section supplies the "Báo giá" heading; this row holds the version actions. */}
+      <div className="flex flex-wrap items-center gap-2 empty:hidden">
         {pricing && !latest ? <QuoteToolbarButton kind="create" leadId={leadId} /> : null}
         {pricing && latest && canCreateNewVersion(latest.status) ? (
           <QuoteToolbarButton kind="new-version" quoteId={latest.id} />
         ) : null}
       </div>
-      {!latest ? <p className="text-sm text-zinc-500">{vi.quotes.noQuotes}</p> : null}
+      {!latest ? <p className="text-sm text-pt-muted">{pricing ? vi.quotes.noQuotes : vi.quotes.noSentQuotes}</p> : null}
       {latest && pricing && (latest.status === "draft" || latest.status === "sent") ? (
         <>
           <QuoteEditor key={latest.id} initial={latest} />

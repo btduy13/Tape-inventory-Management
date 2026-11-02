@@ -10,7 +10,8 @@ const qty = (n: number) => new Intl.NumberFormat("vi-VN", { maximumFractionDigit
 export function QuoteLinesView({ lines, subtotal, vatPercent, vatAmount, total }: Props) {
   const t = vi.quotes;
   return (
-    <div className="overflow-x-auto">
+    // tabIndex: scrolls sideways on narrow screens; keyboard users need focus to scroll it (WCAG 2.1.1).
+    <div role="region" aria-label={t.title} tabIndex={0} className="overflow-x-auto">
       <table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="border-b border-zinc-300 text-left">

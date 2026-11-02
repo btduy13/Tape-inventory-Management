@@ -236,3 +236,82 @@ body {
   }
   .lp-progress-y { transform: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Portal (admin, staff/CTV, workshop). Owner: features/portal-ui.     */
+/* Prefix: pt-. Cool paper canvas (not cream), brand blue for actions,  */
+/* navy-deep sidebar, yellow = "tape" marker for the current place,    */
+/* red only for "needs action now" / destructive / overdue.            */
+/* AA: muted on white 6.6:1, muted on canvas 6.1:1, every tint/ink     */
+/* pair >= 7:1, white on blue 11.2:1, yellow on navy-deep 14:1.        */
+/* ------------------------------------------------------------------ */
+:root {
+  --pt-canvas: #f3f4f9;
+  --pt-surface: #ffffff;
+  --pt-line: #dde0ec;
+  --pt-line-strong: #b9bed3;
+  --pt-text: #16173a;
+  --pt-muted: #555a78;
+  --pt-red-tint: #fdeaea;
+  --pt-red-ink: #9e1219;
+  --pt-blue-tint: #e9ebfb;
+  --pt-blue-ink: #252a9a;
+  --pt-yellow-tint: #fff6b0;
+  --pt-yellow-ink: #574500;
+  --pt-green-tint: #e1f2e7;
+  --pt-green-ink: #145c33;
+  --pt-amber-tint: #ffeccc;
+  --pt-amber-ink: #7a3b00;
+  --pt-grey-tint: #eceef3;
+  --pt-grey-ink: #4a4e63;
+}
+@theme inline {
+  --color-pt-canvas: var(--pt-canvas);
+  --color-pt-surface: var(--pt-surface);
+  --color-pt-line: var(--pt-line);
+  --color-pt-line-strong: var(--pt-line-strong);
+  --color-pt-text: var(--pt-text);
+  --color-pt-muted: var(--pt-muted);
+  --color-pt-red-tint: var(--pt-red-tint);
+  --color-pt-red-ink: var(--pt-red-ink);
+  --color-pt-blue-tint: var(--pt-blue-tint);
+  --color-pt-blue-ink: var(--pt-blue-ink);
+  --color-pt-yellow-tint: var(--pt-yellow-tint);
+  --color-pt-yellow-ink: var(--pt-yellow-ink);
+  --color-pt-green-tint: var(--pt-green-tint);
+  --color-pt-green-ink: var(--pt-green-ink);
+  --color-pt-amber-tint: var(--pt-amber-tint);
+  --color-pt-amber-ink: var(--pt-amber-ink);
+  --color-pt-grey-tint: var(--pt-grey-tint);
+  --color-pt-grey-ink: var(--pt-grey-ink);
+}
+
+.pt-root { background: var(--pt-canvas); color: var(--pt-text); font-variant-numeric: tabular-nums; }
+.pt-root :is(h1, h2, h3) { text-wrap: balance; }
+/* one focus ring for the whole portal; yellow inside the navy sidebar */
+.pt-root :focus-visible { outline: 3px solid var(--vt-blue); outline-offset: 2px; }
+.pt-root .pt-on-dark :focus-visible { outline-color: var(--vt-yellow); }
+
+/* stretched row link: the first cell's link covers the whole row (keyboard: one tab stop per row) */
+.pt-row { position: relative; }
+.pt-row-link::after { content: ""; position: absolute; inset: 0; }
+.pt-row :is(button, select, input, .pt-row-raise) { position: relative; z-index: 1; }
+
+/* the tape: workflow strip segments (current one is the yellow tape piece) */
+.pt-tape-seg { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%); }
+.pt-tape-seg:first-child { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); }
+
+/* drawer + dialogs */
+.pt-dialog::backdrop { background: rgb(22 23 58 / 0.55); }
+.pt-drawer[open] { animation: pt-drawer-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes pt-drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+.pt-toast { animation: pt-toast-in 200ms ease-out; }
+@keyframes pt-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* skeleton for loading states */
+.pt-skeleton { background: linear-gradient(90deg, var(--pt-grey-tint) 0%, var(--pt-surface) 50%, var(--pt-grey-tint) 100%); background-size: 200% 100%; animation: pt-shimmer 1.4s linear infinite; }
+@keyframes pt-shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-drawer[open], .pt-toast, .pt-skeleton { animation: none; }
+}

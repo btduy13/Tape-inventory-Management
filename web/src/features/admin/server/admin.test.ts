@@ -83,3 +83,30 @@ describe("presets / overview", () => {
     expect(c.cancelled).toBe(0);
   });
 });
+
+describe("page loaders report failed reads", () => {
+  const chain = (result: { data: unknown; error: unknown }) => {
+    const q: Record<string, unknown> = {};
+    for (const k of ["select", "order"]) q[k] = vi.fn(() => q);
+    q.maybeSingle = vi.fn().mockResolvedValue(result);
+    q.then = (ok: (v: unknown) => unknown) => Promise.resolve(result).then(ok);
+    return q;
+  };
+
+  it("loadUsers / loadPresets: rows on success, failed on error", async () => {
+    const { loadUsers } = await import("./queries");
+    const { loadPresets } = await import("./presets");
+    const okDb = { from: () => chain({ data: [{ id: "u" }], error: null }) } as unknown as Db;
+    const badDb = { from: () => chain({ data: null, error: { code: "42501" } }) } as unknown as Db;
+    expect(await loadUsers(okDb)).toEqual({ rows: [{ id: "u" }], failed: false });
+    expect(await loadUsers(badDb)).toEqual({ rows: [], failed: true });
+    expect((await loadPresets(badDb)).failed).toBe(true);
+  });
+
+  it("loadTapeSpecs fails when either read fails", async () => {
+    const { loadTapeSpecs } = await import("./tape-specs");
+    let n = 0;
+    const db = { from: () => chain(n++ === 0 ? { data: [], error: null } : { data: null, error: { code: "x" } }) } as unknown as Db;
+    expect(await loadTapeSpecs(db)).toEqual({ widths: [], settings: null, failed: true });
+  });
+});

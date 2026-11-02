@@ -1,9 +1,11 @@
 "use client";
 import { useActionState, useEffect, useRef } from "react";
 import { getDictionary } from "@/i18n";
+import { ActionStatus } from "@/features/portal-ui/components/States";
+import { TextareaField } from "@/features/portal-ui/components/Field";
+import { buttonClass } from "@/features/portal-ui/components/styles";
 import { addNoteAction } from "../server/actions";
 import { IDLE } from "../lib/action-state";
-import { ActionMessage, fieldClass, primaryButtonClass } from "./ActionMessage";
 
 const t = getDictionary();
 
@@ -16,12 +18,9 @@ export function NoteForm({ leadId }: { leadId: string }) {
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3">
       <input type="hidden" name="leadId" value={leadId} />
-      <label className="flex flex-col gap-1 text-sm">
-        {t.orders.addNote}
-        <textarea name="body" required maxLength={4000} rows={3} className={fieldClass} />
-      </label>
-      <ActionMessage state={state} />
-      <button type="submit" disabled={pending} className={primaryButtonClass}>{t.orders.addNote}</button>
+      <TextareaField label={t.orders.addNote} hint={t.leadsUi.noteAddHint} name="body" required maxLength={2000} rows={3} />
+      <ActionStatus state={state} />
+      <button type="submit" disabled={pending} className={buttonClass("secondary")}>{t.orders.addNote}</button>
     </form>
   );
 }

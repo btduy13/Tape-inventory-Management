@@ -11,6 +11,14 @@ export const isSendable = (status: QuoteStatus) => status === "draft" || status 
 export const canCreateNewVersion = (status: QuoteStatus) =>
   status === "sent" || status === "changes_requested" || status === "expired" || status === "cancelled";
 
+/**
+ * Quotes shown on the lead page. Viewers who cannot price only see quotes that reached the
+ * customer: a draft (often still 0 đ) would invite misquoting. Display only; RLS is unchanged.
+ */
+export function visibleQuotes<Q extends { status: QuoteStatus }>(quotes: readonly Q[], pricing: boolean): Q[] {
+  return pricing ? [...quotes] : quotes.filter((q) => q.status !== "draft");
+}
+
 export type SendBlocker = "not_sendable" | "no_lines" | "no_customer_email" | "zero_total";
 
 export function sendBlocker(input: {

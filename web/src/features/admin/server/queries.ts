@@ -17,6 +17,15 @@ export async function listUsers(db: Db): Promise<UserRow[]> {
   return data ?? [];
 }
 
+/** Same rows as listUsers, but reports a failed read so the page can show an error state. */
+export async function loadUsers(db: Db): Promise<{ rows: UserRow[]; failed: boolean }> {
+  const { data, error } = await db
+    .from("profiles")
+    .select("id, email, full_name, phone, role, is_active, created_at")
+    .order("created_at", { ascending: true });
+  return { rows: data ?? [], failed: !!error };
+}
+
 export type StatusCounts = Record<LeadStatus, number>;
 
 export function countByStatus(rows: readonly { status: LeadStatus }[]): StatusCounts {

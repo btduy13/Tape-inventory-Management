@@ -1,28 +1,25 @@
-import Link from "next/link";
 import { getDictionary } from "@/i18n";
 import { requireRole } from "@/lib/auth/require-role";
 import { ROLE_GROUPS } from "@/lib/auth/roles";
 import { ROUTES } from "@/lib/routes";
-import { AdminOverview } from "@/features/admin";
-import { LeadsLiveRefresher } from "@/features/orders";
+import { PageHeader, Section } from "@/features/portal-ui";
+import { LeadList, LeadOverview, loadLeadListPage, loadOverview } from "@/features/orders";
 
-const t = getDictionary();
+const c = getDictionary().leadsUi;
 
-export default async function AdminPage() {
-  await requireRole(ROLE_GROUPS.admin);
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function AdminPage({ searchParams }: Props) {
+  const profile = await requireRole(ROLE_GROUPS.admin);
+  // The lead table's realtime subscription refreshes the whole page, counts included.
+  const [overview, list] = await Promise.all([loadOverview(), loadLeadListPage(profile, await searchParams)]);
   return (
-    <div className="flex flex-col gap-6">
-      {/* Status counts follow new / changed leads without a reload. */}
-      <LeadsLiveRefresher />
-      <h1 className="text-xl font-semibold">{t.admin.title}</h1>
-      <AdminOverview />
-      <nav className="flex flex-wrap gap-3 text-sm">
-        <Link href={ROUTES.portal} className="text-amber-800 hover:underline">{t.nav.portal}</Link>
-        <Link href={ROUTES.adminUsers} className="text-amber-800 hover:underline">{t.admin.users}</Link>
-        <Link href={ROUTES.adminPresets} className="text-amber-800 hover:underline">{t.admin.presets}</Link>
-        <Link href={ROUTES.adminTapeSpecs} className="text-amber-800 hover:underline">{t.tapeSpec.title}</Link>
-        <Link href={ROUTES.workshop} className="text-amber-800 hover:underline">{t.nav.workshop}</Link>
-      </nav>
+    <div className="flex flex-col gap-8">
+      <PageHeader title={c.overviewTitle} description={c.overviewDesc} />
+      <LeadOverview data={overview} basePath={ROUTES.admin} />
+      <Section id="danh-sach" title={c.allLeads} variant="plain">
+        <LeadList data={list} basePath={ROUTES.admin} detail="admin" mine={false} />
+      </Section>
     </div>
   );
 }

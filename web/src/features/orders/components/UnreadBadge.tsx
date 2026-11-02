@@ -7,7 +7,7 @@ export function UnreadBadge({ count }: { count: number }) {
   return (
     <span
       aria-live="polite"
-      className="inline-flex min-w-6 items-center justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white"
+      className="inline-flex min-w-6 items-center justify-center rounded-full bg-pt-red-ink px-2 py-0.5 text-xs font-semibold text-white"
       title={format(t.orders.unreadCount, { count })}
     >
       {count > 99 ? "99+" : count}

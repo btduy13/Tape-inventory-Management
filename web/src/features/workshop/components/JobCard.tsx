@@ -1,36 +1,53 @@
+// Job ticket on the board: what to make (size, rolls, colours, text), when it is due, and for a
+// workshop user the one-tap next-step button. The whole card links to the job; the button sits
+// above the link (.pt-row rules).
 import Link from "next/link";
-import { getDictionary } from "@/i18n";
+import { StepBadge, surfaceClass } from "@/features/portal-ui";
+import { format, getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
-import type { AppRole, WorkshopJobRow } from "@/lib/types";
+import type { AppRole } from "@/lib/types";
+import { wsCopy } from "../lib/copy";
 import { formatSize } from "../lib/group";
-import { dueState } from "../lib/dates";
+import type { JobListRow } from "../lib/list";
 import { AdvanceStepForm } from "./AdvanceStepForm";
-import { DueBadge, StepBadge } from "./ui";
+import { ColorSwatches, DueBadge } from "./ui";
 
 const t = getDictionary();
 
-/** Card on the board. Workshop users get the one-tap next-step button right on the card. */
-export function JobCard({ job, role }: { job: WorkshopJobRow; role: AppRole }) {
-  const overdue = dueState(job.due_date, job.step) === "overdue";
+export function JobCard({ job, role }: { job: JobListRow; role: AppRole }) {
+  const overdue = job.due_state === "overdue";
   return (
-    <li className={`flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm ${overdue ? "border-red-500 ring-1 ring-red-500" : "border-neutral-200"}`}>
-      <Link href={ROUTES.workshopJob(job.job_id)} className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-mono text-lg font-semibold">{job.order_id ?? job.lead_code}</span>
-          <StepBadge step={job.step} />
+    <li
+      data-job={job.code}
+      data-overdue={overdue ? "1" : undefined}
+      className={`pt-row ${surfaceClass} flex flex-col gap-3 p-4 ${overdue ? "border-l-[6px] border-l-pt-red-ink" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col">
+          <Link href={ROUTES.workshopJob(job.job_id)} className="pt-row-link text-xl font-bold tracking-tight text-pt-text hover:text-vt-blue">
+            {job.code}
+          </Link>
+          {job.order_id && <span className="text-xs text-pt-muted">{format(wsCopy.lead, { code: job.lead_code })}</span>}
         </div>
-        <div className="text-base">{formatSize(job)}</div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-700">
-          <span>{t.workshop.quantity}: <b>{job.quantity.toLocaleString("vi-VN")}</b></span>
-          {job.print_text && <span className="truncate">“{job.print_text}”</span>}
-        </div>
+        <StepBadge step={job.step} />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-lg font-semibold tabular-nums text-pt-text">{formatSize(job)}</span>
+        <span className="text-base text-pt-text">
+          <b className="tabular-nums">{format(wsCopy.rolls, { count: job.quantity.toLocaleString("vi-VN") })}</b>
+        </span>
+      </div>
+      <ColorSwatches colors={job.colors} />
+      {job.print_text && <p className="line-clamp-2 text-sm text-pt-text">“{job.print_text}”</p>}
+      <div className="flex flex-wrap items-center gap-2">
         <DueBadge dueDate={job.due_date} step={job.step} />
         {role === "admin" && (
-          <div className="text-xs text-neutral-500">{t.workshop.assignee}: {job.workshop_user_name ?? t.workshop.unassigned}</div>
+          <span className="text-xs text-pt-muted">{t.workshop.assignee}: {job.workshop_user_name ?? t.workshop.unassigned}</span>
         )}
-        <span className="text-sm text-amber-800 underline">{t.workshop.open}</span>
-      </Link>
-      {job.order_id && role === "workshop" && <AdvanceStepForm jobId={job.job_id} step={job.step} role={role} compact />}
+      </div>
+      {job.order_id && role === "workshop" && job.phase === "open" && (
+        <AdvanceStepForm jobId={job.job_id} code={job.code} step={job.step} role={role} compact />
+      )}
     </li>
   );
 }

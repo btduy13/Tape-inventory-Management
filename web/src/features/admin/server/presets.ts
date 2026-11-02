@@ -18,6 +18,16 @@ export async function listPresets(db: Db): Promise<TapePreset[]> {
   return data ?? [];
 }
 
+/** listPresets with a failed-read flag (page error state). */
+export async function loadPresets(db: Db): Promise<{ rows: TapePreset[]; failed: boolean }> {
+  const { data, error } = await db
+    .from("tape_presets")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("width_mm", { ascending: true });
+  return { rows: data ?? [], failed: !!error };
+}
+
 function reasonFor(code: string | undefined): Exclude<PresetResult, { ok: true }>["reason"] {
   if (code === "23505") return "duplicate";
   if (code === "42501") return "forbidden";

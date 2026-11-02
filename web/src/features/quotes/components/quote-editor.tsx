@@ -13,10 +13,11 @@ import { estimateTotals } from "../lib/totals";
 import type { QuoteWithLines } from "../lib/types";
 import { saveQuoteDraftAction } from "../server/actions-edit";
 import { sendQuoteAction } from "../server/actions-send";
+import { ToneBadge } from "@/features/portal-ui/components/StatusBadge";
+import { buttonClass, inputClass, textareaClass } from "@/features/portal-ui/components/styles";
 import { QuoteLineRow } from "./quote-line-row";
 
 const t = vi.quotes;
-const field = "rounded border border-zinc-300 px-2 py-1 disabled:bg-zinc-100";
 
 export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
   const router = useRouter();
@@ -75,26 +76,22 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
   const totals = dirty ? estimate : { subtotal: quote.subtotal, vatAmount: quote.vat_amount, total: quote.total };
 
   return (
-    <section className="space-y-3 rounded border border-zinc-200 p-4">
+    <section className="flex flex-col gap-4 rounded-lg border border-pt-line p-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">
-          {t.title} · {format(t.version, { version: quote.version })}
-        </h3>
-        <span className="text-sm text-zinc-600">
-          {t.status}: {vi.quoteStatus[quote.status]}
-        </span>
+        <h3 className="font-semibold text-pt-text">{format(t.version, { version: quote.version })}</h3>
+        <ToneBadge tone={quote.status === "sent" ? "yellow" : "grey"}>{`${t.status}: ${vi.quoteStatus[quote.status]}`}</ToneBadge>
       </header>
-      {!editable ? <p className="text-sm text-amber-700">{t.readOnlyHint}</p> : null}
+      {!editable ? <p className="text-sm text-pt-yellow-ink">{t.readOnlyHint}</p> : null}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
-          <thead>
-            <tr className="border-b border-zinc-300 text-left">
-              <th className="py-2">{t.description}</th>
-              <th>{t.unit}</th>
-              <th className="text-right">{t.quantity}</th>
-              <th className="text-right">{t.unitPrice}</th>
-              <th className="pr-2 text-right">{t.lineTotal}</th>
+          <thead className="text-xs text-pt-muted">
+            <tr className="border-b border-pt-line text-left">
+              <th className="py-2 font-semibold">{t.description}</th>
+              <th className="font-semibold">{t.unit}</th>
+              <th className="text-right font-semibold">{t.quantity}</th>
+              <th className="text-right font-semibold">{t.unitPrice}</th>
+              <th className="pr-2 text-right font-semibold">{t.lineTotal}</th>
               <th />
             </tr>
           </thead>
@@ -117,7 +114,7 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
       {editable ? (
         <button
           type="button"
-          className="text-sm text-amber-800 underline hover:text-amber-900"
+          className={buttonClass("ghost", "sm", "self-start text-vt-blue")}
           disabled={pending || form.lines.length >= 50}
           onClick={() => update({ lines: [...form.lines, emptyLine()] })}
         >
@@ -126,30 +123,30 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-pt-text">
           {t.vatPercent}
           <input
-            className={field}
+            className={inputClass}
             inputMode="decimal"
             value={form.vatPercent}
             disabled={!editable || pending}
             onChange={(e) => update({ vatPercent: e.target.value })}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-pt-text">
           {t.validUntil}
           <input
             type="date"
-            className={field}
+            className={inputClass}
             value={form.validUntil}
             disabled={!editable || pending}
             onChange={(e) => update({ validUntil: e.target.value })}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm sm:col-span-3">
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-pt-text sm:col-span-3">
           {t.notes}
           <textarea
-            className={field}
+            className={textareaClass}
             rows={3}
             maxLength={4000}
             value={form.notes}
@@ -159,21 +156,21 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
         </label>
       </div>
 
-      <dl className="ml-auto grid max-w-xs grid-cols-2 gap-y-1 text-sm">
+      <dl className="ml-auto grid w-full max-w-xs grid-cols-2 gap-y-1 text-sm tabular-nums">
         <dt>{t.subtotal}</dt>
         <dd className="text-right">{formatVnd(totals.subtotal)}</dd>
         <dt>{t.vat}</dt>
         <dd className="text-right">{formatVnd(totals.vatAmount)}</dd>
-        <dt className="font-semibold">{t.total}</dt>
-        <dd className="text-right font-semibold">{formatVnd(totals.total)}</dd>
+        <dt className="border-t border-pt-line pt-1 font-semibold">{t.total}</dt>
+        <dd className="border-t border-pt-line pt-1 text-right text-base font-bold">{formatVnd(totals.total)}</dd>
       </dl>
-      <p className="text-right text-xs text-zinc-500">{dirty ? t.estimateHint : t.savedTotalsHint}</p>
+      <p className="text-right text-xs text-pt-muted">{dirty ? t.estimateHint : t.savedTotalsHint}</p>
 
       <div className="flex flex-wrap items-center gap-2">
         {editable ? (
           <button
             type="button"
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-50"
+            className={buttonClass("secondary")}
             disabled={pending || !dirty}
             onClick={() => save()}
           >
@@ -183,7 +180,7 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
         {isSendable(quote.status) && !confirming ? (
           <button
             type="button"
-            className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+            className={buttonClass("primary")}
             disabled={pending}
             onClick={() => setConfirming(true)}
           >
@@ -191,11 +188,11 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
           </button>
         ) : null}
         {isSendable(quote.status) && confirming ? (
-          <span role="group" aria-label={t.sendConfirm} className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-neutral-800">{t.sendConfirm}</span>
+          <span role="group" aria-label={t.sendConfirm} className="flex flex-wrap items-center gap-2 rounded-lg bg-pt-yellow-tint p-2">
+            <span className="text-sm font-medium text-pt-text">{t.sendConfirm}</span>
             <button
               type="button"
-              className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+              className={buttonClass("primary")}
               disabled={pending}
               onClick={() => (dirty ? save(send) : send())}
             >
@@ -203,7 +200,7 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
             </button>
             <button
               type="button"
-              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm"
+              className={buttonClass("secondary", "sm")}
               disabled={pending}
               onClick={() => setConfirming(false)}
             >
@@ -211,10 +208,10 @@ export function QuoteEditor({ initial }: { initial: QuoteWithLines }) {
             </button>
           </span>
         ) : null}
-        {pending ? <span className="text-sm text-zinc-500">{vi.common.loading}</span> : null}
+        {pending ? <span className="text-sm text-pt-muted">{vi.common.loading}</span> : null}
       </div>
       {message ? (
-        <p role="status" className={message.kind === "ok" ? "text-sm text-green-700" : "text-sm text-red-700"}>
+        <p role="status" className={`rounded-lg px-3 py-2 text-sm font-medium ${message.kind === "ok" ? "bg-pt-green-tint text-pt-green-ink" : "bg-pt-red-tint text-pt-red-ink"}`}>
           {message.text}
         </p>
       ) : null}

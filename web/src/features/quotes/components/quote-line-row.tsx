@@ -4,6 +4,8 @@ import { formatVnd } from "@/i18n";
 import { vi } from "@/i18n/vi";
 import { parseMoney, parseQty, type EditorLine } from "../lib/editor-state";
 import { lineTotal } from "../lib/totals";
+import { Icon } from "@/features/portal-ui/components/Icon";
+import { inputClass } from "@/features/portal-ui/components/styles";
 
 interface Props {
   line: EditorLine;
@@ -13,12 +15,12 @@ interface Props {
   onRemove: () => void;
 }
 
-const input = "w-full rounded border border-zinc-300 px-2 py-1 disabled:bg-zinc-100";
+const input = inputClass;
 
 export function QuoteLineRow({ line, disabled, canRemove, onChange, onRemove }: Props) {
   const t = vi.quotes;
   return (
-    <tr className="border-b border-zinc-200 align-top">
+    <tr className="border-b border-pt-line align-top">
       <td className="py-1 pr-2">
         <textarea
           aria-label={t.description}
@@ -60,13 +62,13 @@ export function QuoteLineRow({ line, disabled, canRemove, onChange, onRemove }: 
           onChange={(e) => onChange({ unitPrice: e.target.value })}
         />
       </td>
-      <td className="w-36 py-2 pr-2 text-right">
+      <td className="w-36 py-3 pr-2 text-right font-medium tabular-nums">
         {formatVnd(lineTotal(parseQty(line.quantity), parseMoney(line.unitPrice)))}
       </td>
-      <td className="w-10 py-1">
+      <td className="w-12 py-1">
         {!disabled && canRemove ? (
-          <button type="button" className="text-red-600" aria-label={t.removeLine} onClick={onRemove}>
-            ×
+          <button type="button" className="inline-flex size-11 items-center justify-center rounded-lg text-pt-red-ink hover:bg-pt-red-tint" aria-label={t.removeLine} onClick={onRemove}>
+            <Icon name="close" className="size-4" />
           </button>
         ) : null}
       </td>
