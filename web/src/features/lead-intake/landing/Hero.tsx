@@ -76,12 +76,12 @@ export function Hero() {
               >
                 {t.ctaDesign}
               </Link>
-              <Link
-                href={`${ROUTES.design}#yeu-cau-bao-gia`}
+              <a
+                href="#lien-he"
                 className={`${BTN} border-2 border-white text-white hover:bg-white hover:text-vt-blue ${ringOnBlue}`}
               >
-                {t.ctaQuote}
-              </Link>
+                {t.ctaContact}
+              </a>
             </div>
           </div>
         </div>

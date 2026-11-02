@@ -89,7 +89,7 @@ describe("Hero", () => {
     for (const svg of container.querySelectorAll("h1 svg")) expect(svg).toHaveAttribute("aria-hidden", "true");
     const design = screen.getAllByRole("link", { name: "Thiết kế ngay" });
     expect(design.every((a) => a.getAttribute("href") === "/thiet-ke")).toBe(true);
-    expect(screen.getByRole("link", { name: "Nhận báo giá" })).toHaveAttribute("href", "/thiet-ke#yeu-cau-bao-gia");
+    expect(screen.getByRole("link", { name: "Liên hệ tư vấn" })).toHaveAttribute("href", "#lien-he");
   });
 
   it("has no spec pill tags (specs live in the product section)", () => {

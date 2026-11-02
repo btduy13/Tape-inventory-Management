@@ -22,15 +22,31 @@ export default async function DesignPage() {
   const [spec, h] = await Promise.all([getTapeSpec(), headers()]);
   const nonce = h.get("x-nonce") ?? undefined;
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TURNSTILE_TEST_SITE_KEY;
-  // Over-3-ink dialog + step 4 channels: CONTACT_* env, defaults from DEFAULT_CONTACT.
+  // Over-3-ink dialog, step 4 channels and the "message a designer" Zalo link: CONTACT_* env,
+  // defaults from DEFAULT_CONTACT.
   const contact = businessContact();
   return (
     <div className="flex min-h-full flex-1 flex-col bg-vt-paper text-slate-900">
       <PublicHeader />
       <main className={`${LP_CONTAINER} flex min-w-0 flex-1 flex-col gap-5 pt-5 sm:pt-8 lg:pb-12`}>
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-vt-ink sm:text-3xl">{t.designer.title}</h1>
-          <p className="text-sm text-slate-600 sm:text-base">{t.designer.pageSubtitle}</p>
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="text-2xl font-bold tracking-tight text-vt-ink sm:text-3xl">{t.designer.title}</h1>
+            <p className="text-sm text-slate-600 sm:text-base">{t.designer.pageSubtitle}</p>
+          </div>
+          {contact.zaloHref && (
+            <a
+              href={contact.zaloHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-vt-navy bg-white px-4 text-sm font-semibold text-vt-navy transition-colors duration-150 hover:bg-vt-navy hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vt-navy motion-reduce:transition-none"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />
+              </svg>
+              {t.designer.messageDesigner}
+            </a>
+          )}
         </div>
         <DesignProvider spec={spec}>
           <DesignerPanel

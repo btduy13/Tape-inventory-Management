@@ -225,6 +225,7 @@ export const vi = {
     // Configurator layout (steps, stage, summary).
     pageSubtitle: "Chọn quy cách, thêm chữ hoặc logo, xem 3D rồi gửi yêu cầu báo giá.",
     backHome: "Trang chủ",
+    messageDesigner: "Nhắn tin cho tư vấn thiết kế",
     stageTitle: "Bản xem trước",
     pinPreview: "Ghim bản xem trước khi cuộn",
     stepsLabel: "Các bước thiết kế",
