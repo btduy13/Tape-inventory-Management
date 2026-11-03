@@ -64,9 +64,9 @@ export function nextActionFor(status: LeadStatus, role: AppRole): NextAction | n
   return { actor: stage.actor, actionKey: stage.actionKey, mine: actorIncludes(stage.actor, role) };
 }
 
-/** Production steps on the main road (huy is a side exit, admin only). */
+/** Production steps on the main road (huy is a side exit, admin only). 4 steps since 0024. */
 export const PRODUCTION_FLOW: readonly ProductionStep[] = [
-  "cho_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao",
+  "cho_san_xuat", "dang_san_xuat", "san_sang_giao", "da_giao",
 ] as const;
 
 export function stepIndex(step: ProductionStep): number {

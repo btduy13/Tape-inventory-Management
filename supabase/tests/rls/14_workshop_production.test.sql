@@ -1,8 +1,9 @@
--- Regression tests for migrations 0020_workshop_role + 0021_production_jobs.
+-- Regression tests for migrations 0020_workshop_role + 0021_production_jobs
+-- (steps updated for the 4-step model of 0023/0024; v2 features: 16_workshop_v2.test.sql).
 -- Requires seed.sql (workshop a006, workshop2 a007). Run: npm run db:test   (from web/)
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(91);
+select plan(92);
 
 -- helpers -------------------------------------------------------------------------------------
 create function pg_temp.login(p_uid uuid) returns void language plpgsql as $$
@@ -70,8 +71,8 @@ select pg_temp.accepted_lead('00000000-0000-0000-0000-0000000c0023', '00000000-0
 -- Schema ----------------------------------------------------------------------------------------
 select ok('workshop' = any (enum_range(null::public.app_role)::text[]), 'app_role has workshop');
 select is(enum_range(null::public.production_step)::text[],
-  array['cho_san_xuat','dang_in','dang_cat_cuon','dong_goi','san_sang_giao','da_giao','huy'],
-  'production steps in order');
+  array['cho_san_xuat','dang_san_xuat','dang_in','dang_cat_cuon','dong_goi','san_sang_giao','da_giao','huy'],
+  'production steps in order (dang_in / dang_cat_cuon / dong_goi retired)');
 select ok(not has_table_privilege('authenticated', 'public.production_jobs', 'INSERT')
       and not has_table_privilege('authenticated', 'public.production_jobs', 'UPDATE')
       and not has_table_privilege('authenticated', 'public.production_jobs', 'DELETE')
@@ -269,33 +270,33 @@ select is(
 -- Step transitions -----------------------------------------------------------------------------
 select pg_temp.login('00000000-0000-0000-0000-00000000a006');
 select throws_ok(
-  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dang_cat_cuon')$$,
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'san_sang_giao')$$,
   '42501', null, 'workshop cannot skip a step');
 select throws_ok(
   $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'huy')$$,
   '42501', null, 'workshop cannot cancel');
 select throws_ok(
-  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0023'), 'dang_in')$$,
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0023'), 'dang_san_xuat')$$,
   '22023', null, 'no step change before conversion');
 select lives_ok(
-  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dang_in', 'Bắt đầu in')$$,
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dang_san_xuat', 'Bắt đầu in')$$,
   'workshop moves to the next step with a note');
 select pg_temp.logout();
 
 select is(
   (select row(from_step, to_step, changed_by, changed_by_name, note)::text from public.production_step_log
     where job_id = (select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021')
-      and to_step = 'dang_in'),
-  row('cho_san_xuat'::public.production_step, 'dang_in'::public.production_step,
+      and to_step = 'dang_san_xuat'),
+  row('cho_san_xuat'::public.production_step, 'dang_san_xuat'::public.production_step,
       '00000000-0000-0000-0000-00000000a006'::uuid, 'Xưởng 1', 'Bắt đầu in')::text,
   'step change is logged with who and note');
 
 select pg_temp.login('00000000-0000-0000-0000-00000000a007');
 select throws_ok(
-  $$select public.advance_production_step('00000000-0000-0000-0000-000000000000'::uuid, 'dang_in')$$,
+  $$select public.advance_production_step('00000000-0000-0000-0000-000000000000'::uuid, 'dang_san_xuat')$$,
   'P0002', null, 'unknown job');
 select throws_ok(
-  format($$select public.advance_production_step(%L, 'dang_cat_cuon')$$,
+  format($$select public.advance_production_step(%L, 'san_sang_giao')$$,
          (select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021')),
   'P0002', null, 'workshop2 cannot change workshop''s job');
 select is((select count(*)::int from public.production_step_log
@@ -304,11 +305,10 @@ select is((select count(*)::int from public.production_step_log
 select pg_temp.logout();
 
 select pg_temp.login('00000000-0000-0000-0000-00000000a006');
-select lives_ok($$
-  select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dang_cat_cuon');
-  select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dong_goi');
-$$, 'workshop: dang_cat_cuon, dong_goi');
-select is((select count(*)::int from public.production_step_log), 4, 'workshop reads only its own job logs (4)');
+select throws_ok(
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dong_goi')$$,
+  '22023', null, 'retired steps are rejected');
+select is((select count(*)::int from public.production_step_log), 2, 'workshop reads only its own job logs (2)');
 select pg_temp.logout();
 select is((select status from public.leads where id = '00000000-0000-0000-0000-0000000c0021'),
   'production'::public.lead_status, 'lead stays in production while producing');
@@ -322,13 +322,20 @@ select is((select status from public.leads where id = '00000000-0000-0000-0000-0
   'shipping'::public.lead_status, 'san_sang_giao -> lead shipping');
 
 select pg_temp.login('00000000-0000-0000-0000-00000000a006');
+select throws_ok(
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'da_giao')$$,
+  '42501', null, 'workshop cannot set da_giao (delivery note only)');
+select pg_temp.logout();
+select pg_temp.login('00000000-0000-0000-0000-00000000a001');
 select lives_ok(
   $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'da_giao')$$,
-  'workshop: da_giao');
+  'admin: da_giao');
+select pg_temp.logout();
+select pg_temp.login('00000000-0000-0000-0000-00000000a006');
 select is((select desktop_delivered from public.workshop_jobs()
             where lead_id = '00000000-0000-0000-0000-0000000c0021'), true, 'workshop_jobs shows the desktop flag');
 select throws_ok(
-  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dong_goi')$$,
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'san_sang_giao')$$,
   '42501', null, 'workshop cannot move a delivered job back');
 select pg_temp.logout();
 select is(
@@ -339,12 +346,15 @@ select is(
 -- Admin: any step, cancel ---------------------------------------------------------------------
 select pg_temp.login('00000000-0000-0000-0000-00000000a001');
 select lives_ok(
-  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dong_goi', 'giao nhầm')$$,
+  $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0021'), 'dang_san_xuat', 'giao nhầm')$$,
   'admin moves a delivered job back');
 select lives_ok(
   $$select public.advance_production_step((select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0022'), 'huy')$$,
   'admin cancels a job');
-select is((select count(*)::int from public.workshop_jobs()), 3, 'admin workshop_jobs sees all jobs');
+select is((select count(*)::int from public.workshop_jobs()
+            where lead_id in ('00000000-0000-0000-0000-0000000c0021', '00000000-0000-0000-0000-0000000c0022',
+                              '00000000-0000-0000-0000-0000000c0023')), 3,
+  'admin workshop_jobs sees all jobs (incl. other users'' and cancelled)');
 select pg_temp.logout();
 select is(
   (select row(l.status, o.da_giao)::text from public.leads l join public.bang_keo_in_orders o on o.id = l.production_order_id
@@ -379,7 +389,7 @@ select is((select count(*)::int from public.workshop_jobs() where lead_id = '000
 select is((select count(*)::int from storage.objects where name like '00000000-0000-0000-0000-0000000c0023/%'), 0,
   'unassigned workshop loses the design files');
 select throws_ok(
-  format($$select public.advance_production_step(%L, 'dang_in')$$,
+  format($$select public.advance_production_step(%L, 'dang_san_xuat')$$,
          (select id from public.production_jobs where lead_id = '00000000-0000-0000-0000-0000000c0023')),
   'P0002', null, 'workshop cannot change a job that has no workshop user');
 select throws_ok(
@@ -394,11 +404,12 @@ select throws_ok($$select * from public.workshop_jobs()$$, '42501', null, 'deact
 select pg_temp.logout();
 update public.profiles set is_active = true where id = '00000000-0000-0000-0000-00000000a006';
 
--- Electron writes keep working (no trigger was added on the legacy table) ---------------------
+-- Electron writes keep working (0024 adds only the production sync trigger) ------------------
 select is(
-  (select count(*)::int from pg_trigger
-    where tgrelid = 'public.bang_keo_in_orders'::regclass and not tgisinternal), 0,
-  'migrations add no trigger to bang_keo_in_orders');
+  (select array_agg(tgname::text) from pg_trigger
+    where tgrelid = 'public.bang_keo_in_orders'::regclass and not tgisinternal),
+  array['bang_keo_in_orders_production_sync'],
+  'migrations add only the production sync trigger to bang_keo_in_orders');
 select lives_ok(
   format($$set local role electron_app;
            update public.bang_keo_in_orders set ngay_du_kien = ngay_du_kien + 1, da_giao = true, tien_coc = 5000 where id = %L;

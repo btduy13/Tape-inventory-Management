@@ -3,6 +3,7 @@ import { Section, linkClass, surfaceClass } from "@/features/portal-ui";
 import { getDictionary } from "@/i18n";
 import type { ProductionStepLog, WorkshopJobRow } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
+import { floorNote } from "../lib/group";
 import type { DesignUrls } from "../server/queries";
 import { ColorSwatches, DueBadge } from "./ui";
 
@@ -54,7 +55,7 @@ export function JobSpecs({ job, floor = false }: { job: WorkshopJobRow; floor?: 
         {!floor && (
           <>
             <Row label={t.workshop.orderCode}>{job.order_id ?? wsCopy.orderPending}</Row>
-            <Row label={t.workshop.leadCode}>{job.lead_code}</Row>
+            {job.lead_code && <Row label={t.workshop.leadCode}>{job.lead_code}</Row>}
           </>
         )}
       </dl>
@@ -91,9 +92,6 @@ export function JobDesign({ job, urls }: { job: WorkshopJobRow; urls: DesignUrls
     </Section>
   );
 }
-
-/** The DB's hand-off note starts "Chuyển sang sản xuất: <order code> — ": the floor sees only the office's note. */
-const floorNote = (note: string) => note.replace(/^Chuyển sang sản xuất: \S+(?: — )?/, "");
 
 export function StepHistory({ log, floor = false }: { log: ProductionStepLog[]; floor?: boolean }) {
   return (

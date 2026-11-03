@@ -21,12 +21,14 @@ export type QuoteStatus =
 
 export const ROLES: readonly AppRole[] = ["admin", "manager", "staff", "ctv", "workshop"] as const;
 
-/** Production (workshop) steps, in order. `huy` (cancelled) is admin only. Mirrors 0021. */
+/** Production (workshop) steps. `huy` (cancelled) is admin only. Since 0024 jobs use only
+ *  cho_san_xuat -> dang_san_xuat -> san_sang_giao -> da_giao; dang_in / dang_cat_cuon / dong_goi
+ *  remain in the enum as history in production_step_log. */
 export type ProductionStep =
-  | "cho_san_xuat" | "dang_in" | "dang_cat_cuon" | "dong_goi" | "san_sang_giao" | "da_giao" | "huy";
+  | "cho_san_xuat" | "dang_san_xuat" | "dang_in" | "dang_cat_cuon" | "dong_goi" | "san_sang_giao" | "da_giao" | "huy";
 
 export const PRODUCTION_STEPS: readonly ProductionStep[] = [
-  "cho_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy",
+  "cho_san_xuat", "dang_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy",
 ] as const;
 
 /** Postgres numeric comes back from PostgREST as number (or string for huge values). */
@@ -131,9 +133,10 @@ export type QuoteToken = {
 
 export type RateLimit = { key: string; window_start: Timestamp; hits: number };
 
-/** Workshop job (no customer / price data). order_id null = assigned, not converted yet. */
+/** Workshop job (no customer / price data). order_id null = assigned, not converted yet.
+ *  lead_id null = job of an order created in the desktop app / web admin (0024). */
 export type ProductionJob = {
-  id: Uuid; lead_id: Uuid; order_id: string | null; workshop_user_id: Uuid | null;
+  id: Uuid; lead_id: Uuid | null; order_id: string | null; order_table: string; workshop_user_id: Uuid | null;
   step: ProductionStep; due_date: string | null; production_note: string | null;
   assigned_at: Timestamp | null; converted_by: Uuid | null; converted_at: Timestamp | null;
   created_at: Timestamp; updated_at: Timestamp;
@@ -144,15 +147,26 @@ export type ProductionStepLog = {
   changed_by: Uuid | null; changed_by_name: string | null; note: string | null; created_at: Timestamp;
 };
 
-/** Row of rpc('workshop_jobs'): production specs only (fixed column list in SQL). */
+/** Row of rpc('workshop_jobs'): production specs only (fixed column list in SQL). Lead-less jobs
+ *  (0024) have lead_id / lead_code null and colours as names from the order ("Đỏ"), not hex. */
 export type WorkshopJobRow = {
-  job_id: Uuid; lead_id: Uuid; lead_code: string; order_id: string | null; step: ProductionStep;
+  job_id: Uuid; lead_id: Uuid | null; lead_code: string | null; order_id: string | null; step: ProductionStep;
   due_date: string | null; production_note: string | null;
   workshop_user_id: Uuid | null; workshop_user_name: string | null;
   quantity: number; width_mm: Numeric | null; length_m: Numeric | null; thickness_mic: Numeric | null;
   colors: string[] | null; print_text: string | null; design_json: Partial<DesignJson> | null;
   preview_path: string | null; logo_path: string | null; desktop_delivered: boolean;
   converted_at: Timestamp | null; updated_at: Timestamp;
+  order_name: string | null; order_table: string;
+};
+
+/** Row of rpc('create_delivery_note'): the raw token exists only in this response. */
+export type DeliveryNoteCreated = {
+  note_id: Uuid; token: string; job_id: Uuid; order_id: string | null; order_name: string | null;
+  quantity: number; width_mm: Numeric | null; length_m: Numeric | null; thickness_mic: Numeric | null;
+  colors: string[] | null; print_text: string | null; due_date: string | null;
+  recipient_name: string | null; recipient_phone: string | null; recipient_address: string | null;
+  created_at: Timestamp;
 };
 
 // ---------------------------------------------------------------------------
@@ -207,6 +221,13 @@ export type Database = {
         Args: { p_job_id: Uuid; p_to: ProductionStep; p_note?: string | null };
         Returns: ProductionJob;
       };
+      // Workshop v2 (0024): admin assigns any job; admin / assigned workshop user creates a delivery note.
+      assign_workshop_job: { Args: { p_job_id: Uuid; p_user_id: Uuid | null }; Returns: ProductionJob };
+      create_delivery_note: { Args: { p_job_id: Uuid }; Returns: DeliveryNoteCreated[] };
+      // Admin-only order RPCs (0024). Shapes live in features/admin-orders/lib/types.ts.
+      admin_orders_list: { Args: { p_filter?: Record<string, unknown> }; Returns: Record<string, unknown>[] };
+      admin_order_get: { Args: { p_id: string }; Returns: Record<string, unknown> };
+      admin_order_create: { Args: { p_payload: Record<string, unknown> }; Returns: { order_id: string; job_id: Uuid | null }[] };
     };
     Enums: { app_role: AppRole; lead_status: LeadStatus; quote_status: QuoteStatus; production_step: ProductionStep };
     CompositeTypes: { [_ in never]: never };
@@ -218,7 +239,11 @@ export type TablesInsert<T extends keyof Database["public"]["Tables"]> = Databas
 export type TablesUpdate<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"];
 
 /** Storage buckets (all private). Object path: `<lead_id>/<file>`. */
-export const STORAGE_BUCKETS = { logos: "logos", previews: "previews", quotes: "quotes" } as const;
+export const STORAGE_BUCKETS = {
+  logos: "logos", previews: "previews", quotes: "quotes",
+  /** Delivery confirmation photos: `<note_id>/<name>.jpg`, service_role writes, admin reads (0024). */
+  deliveryPhotos: "delivery-photos",
+} as const;
 export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
 
 // ---------------------------------------------------------------------------

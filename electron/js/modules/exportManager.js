@@ -267,14 +267,14 @@ async function proceedToExportPreview() {
 
   exportPreviewData = {
     customer_name: firstOrder ? firstOrder.ten_khach_hang : "",
-    address: "",
+    address: firstOrder?.dia_chi_khach_hang || "",
     products: products,
     deposit: depositTotal
   };
 
   // Prefill form review
   document.getElementById('preview-customer-name').value = exportPreviewData.customer_name;
-  document.getElementById('preview-customer-address').value = "";
+  document.getElementById('preview-customer-address').value = exportPreviewData.address;
   // Tiền cọc mặc định = tổng tiền cọc của các đơn đã chọn (vẫn sửa được trước khi in).
   document.getElementById('preview-deposit').value = String(depositTotal);
 

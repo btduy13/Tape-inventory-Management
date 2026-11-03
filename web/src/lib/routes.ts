@@ -11,15 +11,23 @@ export const ROUTES = {
   portalLead: (id: string) => `/portal/leads/${id}`,
   workshop: "/portal/xuong",
   workshopJob: (id: string) => `/portal/xuong/${id}`,
+  /** Printable delivery note (A5 + QR) of a production job. */
+  workshopDeliveryNote: (id: string) => `/portal/xuong/${id}/phieu-giao`,
+  /** Public delivery confirmation opened from the delivery note QR (no login). */
+  deliveryConfirm: (token: string) => `/giao/${encodeURIComponent(token)}`,
   admin: "/admin",
   adminUsers: "/admin/users",
   adminPresets: "/admin/presets",
   /** Tape widths + length range for the designer (0022). */
   adminTapeSpecs: "/admin/quy-cach",
   adminLead: (id: string) => `/admin/leads/${id}`,
+  adminOrders: "/admin/don-hang",
+  adminOrderNew: "/admin/don-hang/moi",
+  adminOrder: (id: string) => `/admin/don-hang/${encodeURIComponent(id)}`,
   api: {
     leads: "/api/leads",
     quoteRespond: (token: string) => `/api/q/${encodeURIComponent(token)}/respond`,
+    deliveryConfirm: (token: string) => `/api/giao/${encodeURIComponent(token)}`,
   },
 } as const;
 

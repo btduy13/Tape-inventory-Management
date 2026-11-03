@@ -70,6 +70,12 @@ test('insert/update only accept allowlisted columns and plain values', () => {
   assert.throws(() => update({ quote_items: 'not json' }), /JSON/);
   assert.throws(() => update({ quote_items: '{"a":1}' }), /danh sách/);
   assert.throws(() => update({ ten_hang: 'x'.repeat(10001) }), /quá dài/);
+  // SĐT/địa chỉ giao khách: được ghi ở cả 3 bảng, giới hạn 30 / 500 ký tự
+  for (const type of ['bang_keo_in', 'bang_keo', 'truc_in']) {
+    assert.doesNotThrow(() => insert({ id: 'X-1', sdt_khach_hang: '0'.repeat(30), dia_chi_khach_hang: 'a'.repeat(500) }, type));
+  }
+  assert.throws(() => update({ sdt_khach_hang: '0'.repeat(31) }), /quá dài/);
+  assert.throws(() => update({ dia_chi_khach_hang: 'a'.repeat(501) }), /quá dài/);
 
   const built = update({ ten_hang: 'A', vat: 8, ngay_du_kien: '2026-10-12', ctv: undefined });
   assert.equal(built.sql, 'UPDATE bang_keo_orders SET ten_hang = $1, vat = $2, ngay_du_kien = $3, ctv = $4 WHERE id = $5');

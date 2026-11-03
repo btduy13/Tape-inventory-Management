@@ -1,25 +1,24 @@
-// Job ticket on the board: what to make (size, rolls, colours, text), when it is due, and for a
-// workshop user the one-tap next-step button. The whole card links to the job; the button sits
-// above the link (.pt-row rules).
+// Job ticket on the board: the order's name, what to make (size, rolls, colours, text), when it is
+// due, and for a workshop user the one-tap next-step button (or "Tạo phiếu giao hàng" when ready).
+// The whole card links to the job; the button sits above the link (.pt-row rules).
 import Link from "next/link";
 import { StepBadge, surfaceClass } from "@/features/portal-ui";
 import { format, getDictionary } from "@/i18n";
 import { ROUTES } from "@/lib/routes";
 import type { AppRole } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
-import { formatSize, jobName } from "../lib/group";
+import { formatSize } from "../lib/group";
 import type { JobListRow } from "../lib/list";
 import { AdvanceStepForm } from "./AdvanceStepForm";
 import { ColorSwatches, DueBadge } from "./ui";
 
 const t = getDictionary();
 
-
 export function JobCard({ job, role }: { job: JobListRow; role: AppRole }) {
   const overdue = job.due_state === "overdue";
   // Workshop: the job's name only (no order / customer codes), big text, one button.
   const floor = role === "workshop";
-  const name = jobName(job);
+  const name = job.name;
   return (
     <li
       data-job={job.code}
@@ -29,9 +28,14 @@ export function JobCard({ job, role }: { job: JobListRow; role: AppRole }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col">
           <Link href={ROUTES.workshopJob(job.job_id)} className="pt-row-link text-xl font-bold tracking-tight text-pt-text hover:text-vt-blue">
-            {floor ? name : job.code}
+            {name}
           </Link>
-          {!floor && job.order_id && <span className="text-xs text-pt-muted">{format(wsCopy.lead, { code: job.lead_code })}</span>}
+          {!floor && (
+            <span className="text-xs text-pt-muted">
+              {job.code}
+              {job.order_id && job.lead_code ? ` · ${format(wsCopy.lead, { code: job.lead_code })}` : ""}
+            </span>
+          )}
         </div>
         <StepBadge step={job.step} />
       </div>

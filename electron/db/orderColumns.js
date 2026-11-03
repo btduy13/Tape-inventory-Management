@@ -3,7 +3,10 @@
 // lấy trực tiếp từ renderer mà phải khớp chính xác một mục ở đây.
 const { orderTable, paramError, plainObject, recordId } = require('./params');
 
-const COMMON_HEAD = ['id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien'];
+const COMMON_HEAD = [
+  'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+  'sdt_khach_hang', 'dia_chi_khach_hang'
+];
 const COMMON_STATUS = ['da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote'];
 
 const INSERT_COLUMNS = Object.freeze({
@@ -40,6 +43,8 @@ const INSERT_COLUMNS = Object.freeze({
 const UPDATE_EXCLUDED = new Set(['id', 'thoi_gian', ...COMMON_STATUS]);
 
 const MAX_TEXT_LENGTH = 10000;
+// Giới hạn riêng cho thông tin liên hệ khách (khớp maxlength trên form)
+const COLUMN_TEXT_LIMITS = Object.freeze({ sdt_khach_hang: 30, dia_chi_khach_hang: 500 });
 const MAX_QUOTE_ITEMS_LENGTH = 2 * 1024 * 1024;
 
 function columnValue(column, value) {
@@ -59,7 +64,7 @@ function columnValue(column, value) {
     return value;
   }
   if (typeof value === 'string') {
-    if (value.length > MAX_TEXT_LENGTH) throw paramError(`Giá trị cột ${column} quá dài`);
+    if (value.length > (COLUMN_TEXT_LIMITS[column] ?? MAX_TEXT_LENGTH)) throw paramError(`Giá trị cột ${column} quá dài`);
     return value;
   }
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;

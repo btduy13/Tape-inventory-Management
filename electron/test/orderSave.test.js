@@ -111,6 +111,25 @@ test('standard order saves use the rounded VAT and identical profit parts', asyn
   assert.equal(saved.loi_nhuan - saved.tien_hoa_hong - saved.tien_ship, saved.loi_nhuan_rong);
 });
 
+test('order saves include optional customer phone and delivery address', async () => {
+  const { context, calls } = saveHarness({
+    'bk-ten-hang': 'BK', 'bk-ten-khach-hang': 'K', 'bk-so-luong': '2', 'bk-don-gia-goc': '10', 'bk-don-gia-ban': '20',
+    'bk-ngay-du-kien': '2026-10-12', 'bk-sdt-khach-hang': ' 0901234567 ', 'bk-dia-chi-khach-hang': '12 Lê Lợi, Q1'
+  });
+  await context.saveBangKeo(null, 'order');
+  assert.equal(calls.length, 1);
+  const columns = /INSERT INTO bang_keo_orders \(([^)]*)\)/.exec(calls[0].sql)[1].split(',').map(column => column.trim());
+  const saved = Object.fromEntries(columns.map((column, index) => [column, calls[0].params[index]]));
+  assert.equal(saved.sdt_khach_hang, '0901234567');
+  assert.equal(saved.dia_chi_khach_hang, '12 Lê Lợi, Q1');
+
+  const empty = saveHarness({ ...validBki });
+  await empty.context.saveBangKeoIn(null, 'order');
+  const emptyColumns = /INSERT INTO bang_keo_in_orders \(([^)]*)\)/.exec(empty.calls[0].sql)[1].split(',').map(column => column.trim());
+  assert.equal(empty.calls[0].params[emptyColumns.indexOf('sdt_khach_hang')], null);
+  assert.equal(empty.calls[0].params[emptyColumns.indexOf('dia_chi_khach_hang')], null);
+});
+
 test('inserts retry with the next id after a unique violation', async () => {
   const { context, calls } = saveHarness(validBki, (sql, params, attempt) => (
     attempt === 1 ? { ok: false, error: 'duplicate key value violates unique constraint "bang_keo_in_orders_pkey"' } : { ok: true }

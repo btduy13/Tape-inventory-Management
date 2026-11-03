@@ -42,6 +42,7 @@ export const LEAD_TONE: Readonly<Record<LeadStatus, Tone>> = {
 
 export const STEP_TONE: Readonly<Record<ProductionStep, Tone>> = {
   cho_san_xuat: "grey",
+  dang_san_xuat: "amber",
   dang_in: "amber",
   dang_cat_cuon: "amber",
   dong_goi: "amber",

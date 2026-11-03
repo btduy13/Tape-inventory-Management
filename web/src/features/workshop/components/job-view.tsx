@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
 import { defaultDueDate, vnToday } from "../lib/dates";
-import { jobName } from "../lib/group";
+import { jobCode, jobName } from "../lib/group";
 import { isClosedStep } from "../lib/steps";
 import { designUrls, getWorkshopJob, listStepLog, listWorkshopUsers } from "../server/queries";
 import { AdvanceStepForm } from "./AdvanceStepForm";
@@ -31,16 +31,17 @@ export async function WorkshopJobView({ profile, jobId }: { profile: Profile; jo
     designUrls(db, job),
     isAdmin ? listWorkshopUsers(db) : Promise.resolve([]),
   ]);
-  // Workshop users see the job's name, never order / customer codes.
-  const code = isAdmin ? job.order_id ?? job.lead_code : jobName(job);
+  // Title = the order's name for everyone; only admin sees the codes (small line under it).
+  const name = jobName(job);
   const closed = isClosedStep(job.step);
 
   return (
     <div className="flex flex-col gap-6">
       <WorkshopLiveRefresher jobId={jobId} />
       <PageHeader
-        title={code}
-        breadcrumbs={[{ label: wsCopy.backToList, href: ROUTES.workshop }, { label: code }]}
+        title={name}
+        description={isAdmin ? jobCode(job) + (job.order_id && job.lead_code ? ` · ${job.lead_code}` : "") : undefined}
+        breadcrumbs={[{ label: wsCopy.backToList, href: ROUTES.workshop }, { label: name }]}
         meta={
           <>
             {job.order_id ? <StepBadge step={job.step} size="md" /> : <span className="text-sm font-medium text-pt-muted">{t.workshop.pending}</span>}
@@ -55,9 +56,9 @@ export async function WorkshopJobView({ profile, jobId }: { profile: Profile; jo
         <aside className="flex flex-col gap-6 lg:order-2">
           {job.order_id ? (
             <Section title={wsCopy.stepPanel} description={format(wsCopy.nowAt, { step: t.productionStep[job.step] })}>
-              <AdvanceStepForm jobId={job.job_id} code={code} step={job.step} role={profile.role} />
+              <AdvanceStepForm jobId={job.job_id} code={name} step={job.step} role={profile.role} />
             </Section>
-          ) : (
+          ) : job.lead_id ? (
             <Section title={wsCopy.convertPanel}>
               <ConvertForm
                 leadId={job.lead_id}
@@ -67,10 +68,10 @@ export async function WorkshopJobView({ profile, jobId }: { profile: Profile; jo
                 currentWorkshopUserId={job.workshop_user_id}
               />
             </Section>
-          )}
+          ) : null}
           {isAdmin && !closed && (
             <Section title={wsCopy.assignPanel}>
-              <AssignWorkshopForm leadId={job.lead_id} users={users} currentUserId={job.workshop_user_id} />
+              <AssignWorkshopForm jobId={job.job_id} users={users} currentUserId={job.workshop_user_id} />
             </Section>
           )}
           <div className="hidden lg:flex lg:flex-col">
@@ -79,7 +80,8 @@ export async function WorkshopJobView({ profile, jobId }: { profile: Profile; jo
         </aside>
         <div className="flex min-w-0 flex-col gap-6 lg:order-1">
           <JobSpecs job={job} floor={!isAdmin} />
-          <JobDesign job={job} urls={urls} />
+          {/* Jobs from the desktop app / web admin have no design file (no lead). */}
+          {job.lead_id && <JobDesign job={job} urls={urls} />}
           <div className="lg:hidden">
             <StepHistory log={log} floor={!isAdmin} />
           </div>

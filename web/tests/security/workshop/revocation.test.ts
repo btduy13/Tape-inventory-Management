@@ -69,10 +69,10 @@ describe("realtime + unassign", () => {
     expect((await (await seedActor("admin")).db.rpc("assign_production_job", { p_lead_id: leadId, p_user_id: null })).error).toBeNull();
     expect(await visibleJobs()).toBe(0);
     expect((await worker.db.storage.from("previews").createSignedUrl(`${leadId}/preview.png`, 60)).error).not.toBeNull();
-    expect((await worker.db.rpc("advance_production_step", { p_job_id: jobId, p_to: "dang_in" })).error?.code).toBe("P0002");
+    expect((await worker.db.rpc("advance_production_step", { p_job_id: jobId, p_to: "dang_san_xuat" })).error?.code).toBe("P0002");
 
     sink.length = 0;
-    expect((await (await seedActor("admin")).db.rpc("advance_production_step", { p_job_id: jobId, p_to: "dang_in", p_note: "SEC after unassign" })).error).toBeNull();
+    expect((await (await seedActor("admin")).db.rpc("advance_production_step", { p_job_id: jobId, p_to: "dang_san_xuat", p_note: "SEC after unassign" })).error).toBeNull();
     await new Promise((r) => setTimeout(r, 3000));
     expect(sink.filter((r) => r.id === jobId || r.job_id === jobId)).toEqual([]);
   });
@@ -85,7 +85,7 @@ describe("realtime + unassign", () => {
     expect(error?.code).toBe("42501");
     const { data } = await worker.db.from("production_jobs").select("id");
     expect(data ?? []).toEqual([]);
-    expect((await worker.db.rpc("advance_production_step", { p_job_id: jobId, p_to: "dang_cat_cuon" })).error).not.toBeNull();
+    expect((await worker.db.rpc("advance_production_step", { p_job_id: jobId, p_to: "san_sang_giao" })).error).not.toBeNull();
     await setActive(worker.id, true);
     expect(await visibleJobs()).toBe(1);
   });

@@ -27,6 +27,7 @@ let statsAttachmentContext = null;
 
 const statsDetailColumnHeaders = {
   id: 'Mã Đơn Hàng', thoi_gian: 'Ngày Tạo', ten_hang: 'Tên Hàng', ten_khach_hang: 'Khách Hàng',
+  sdt_khach_hang: 'SĐT Khách', dia_chi_khach_hang: 'Địa Chỉ Giao',
   ngay_du_kien: 'Ngày Giao', quy_cach: 'Quy Cách', quy_cach_mm: 'Quy Cách (mm)', quy_cach_m: 'Quy Cách (m)',
   quy_cach_mic: 'Quy Cách (mic)', cuon_cay: 'Cuộn/Cây', so_luong: 'Số Lượng', phi_sl: 'Phí SL',
   mau_keo: 'Màu Keo', phi_keo: 'Phí Keo', mau_sac: 'Màu Sắc', phi_mau: 'Phí Màu',
@@ -44,7 +45,7 @@ const statsDetailColumnHeaders = {
 
 const statsDetailColumnsMap = {
   bang_keo_in: [
-    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic',
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic',
     'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat',
     'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc',
     'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loai_truc', 'ten_truc', 'truc_chu_vi',
@@ -53,12 +54,12 @@ const statsDetailColumnsMap = {
     'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ],
   truc_in: [
-    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo',
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo',
     'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'cong_no_ncc', 'ctv', 'hoa_hong',
     'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ],
   bang_keo: [
-    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
     'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'cong_no_ncc', 'ctv', 'hoa_hong',
     'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ]

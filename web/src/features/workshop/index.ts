@@ -2,3 +2,4 @@
 export { WorkshopDashboard } from "./components/dashboard";
 export { WorkshopJobView } from "./components/job-view";
 export { ProductionHandoffPanel } from "./components/handoff";
+export { WorkshopDeliveryNoteView } from "./components/delivery-note-view";

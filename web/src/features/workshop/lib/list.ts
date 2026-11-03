@@ -4,7 +4,7 @@ import { applyListInMemory } from "@/features/portal-ui/lib/apply-memory";
 import { defineListSpec, pageSlice, type ListSpec, type ListState } from "@/features/portal-ui/lib/list-params";
 import type { WorkshopJobRow } from "@/lib/types";
 import { dueState, type DueState } from "./dates";
-import { BOARD_COLUMNS, type BoardColumn } from "./group";
+import { BOARD_COLUMNS, jobCode, jobName, type BoardColumn } from "./group";
 import { isClosedStep } from "./steps";
 
 export type JobView = "board" | "table";
@@ -16,6 +16,8 @@ export const NO_ASSIGNEE = "none";
 /** A job plus the derived columns the list filters / sorts on. */
 export type JobListRow = WorkshopJobRow & {
   code: string;
+  /** Title on every view (jobName). */
+  name: string;
   stage: BoardColumn;
   step_rank: number;
   due_state: DueState;
@@ -27,7 +29,8 @@ export function toListRow(job: WorkshopJobRow, now: Date = new Date()): JobListR
   const stage: BoardColumn = job.order_id ? job.step : "pending";
   return {
     ...job,
-    code: job.order_id ?? job.lead_code,
+    code: jobCode(job),
+    name: jobName(job),
     stage,
     step_rank: BOARD_COLUMNS.indexOf(stage),
     due_state: dueState(job.due_date, job.step, now),
@@ -49,12 +52,13 @@ export function jobListSpec(assigneeIds: readonly string[] | null) {
         step: { column: "step_rank", firstDir: "asc" },
         updated: { column: "updated_at", firstDir: "desc" },
         code: { column: "code", firstDir: "asc" },
+        name: { column: "name", firstDir: "asc" },
         qty: { column: "quantity", firstDir: "desc" },
       },
       default: { key: "due", dir: "asc" },
       tiebreak: "code",
     },
-    search: { columns: ["code", "lead_code", "print_text", "production_note", "workshop_user_name"] },
+    search: { columns: ["name", "code", "lead_code", "print_text", "production_note", "workshop_user_name"] },
     filters: {
       step: { kind: "enum", column: "stage", values: BOARD_COLUMNS, multi: true },
       due: { kind: "enum", column: "due_state", values: DUE_FILTER_VALUES },
@@ -111,17 +115,18 @@ export function queryJobs(rows: readonly JobListRow[], spec: ListSpec, state: Li
   return { rows: pageSlice(ordered, state), total };
 }
 
-export type JobCounts = { overdue: number; today: number; active: number; ready: number; pending: number };
+export type JobCounts = { overdue: number; today: number; waiting: number; active: number; ready: number; pending: number };
 
 /** Header counters over every visible job (before filters). */
 export function countJobs(rows: readonly JobListRow[]): JobCounts {
-  const c: JobCounts = { overdue: 0, today: 0, active: 0, ready: 0, pending: 0 };
+  const c: JobCounts = { overdue: 0, today: 0, waiting: 0, active: 0, ready: 0, pending: 0 };
   for (const r of rows) {
     if (r.due_state === "overdue") c.overdue++;
     if (r.due_state === "today") c.today++;
     if (r.stage === "pending") c.pending++;
+    else if (r.stage === "cho_san_xuat") c.waiting++;
+    else if (r.stage === "dang_san_xuat") c.active++;
     else if (r.stage === "san_sang_giao") c.ready++;
-    else if (r.phase === "open") c.active++;
   }
   return c;
 }

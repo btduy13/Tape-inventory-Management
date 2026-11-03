@@ -12,6 +12,10 @@ const t = getDictionary();
 export const floorButton =
   "inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-vt-blue px-4 py-3 text-base font-bold text-white hover:bg-vt-blue-ink disabled:cursor-not-allowed disabled:opacity-55";
 
+/** Same size, green: "Tạo phiếu giao hàng" (the job is finished on the floor). */
+export const floorButtonGo =
+  "inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-pt-green-ink px-4 py-3 text-base font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55";
+
 const DUE_TONE: Partial<Record<DueState, Tone>> = { overdue: "red", today: "yellow", soon: "amber" };
 
 const DUE_LABEL: Partial<Record<DueState, string>> = {
@@ -37,7 +41,12 @@ export function DueBadge({ dueDate, step, size = "sm" }: { dueDate: string | nul
   );
 }
 
-/** `bare`: swatches only, no hex codes (workshop board cards). */
+const isHex = (c: string) => /^#[0-9a-f]{3,8}$/i.test(c);
+
+/**
+ * `bare`: swatches only, no hex codes (workshop board cards). Jobs from the desktop app carry
+ * colour names ("Đỏ"), not hex: a name is always written out (there is no swatch to show).
+ */
 export function ColorSwatches({ colors, size = "sm", bare = false }: { colors: string[] | null; size?: "sm" | "md"; bare?: boolean }) {
   if (!colors?.length) return <span>—</span>;
   const px = size === "md" || bare ? 24 : 16;
@@ -45,11 +54,17 @@ export function ColorSwatches({ colors, size = "sm", bare = false }: { colors: s
     <span className="flex flex-wrap gap-2">
       {colors.map((c) => (
         <span key={c} className="inline-flex items-center gap-1.5 rounded-lg border border-pt-line-strong bg-pt-surface px-2 py-1 text-xs font-medium tabular-nums">
-          {/* SVG fill attribute, not an inline style: the production CSP blocks style attributes. */}
-          <svg aria-hidden width={px} height={px} viewBox="0 0 16 16" className="rounded-sm border border-pt-line-strong">
-            <rect width="16" height="16" fill={/^#[0-9a-f]{3,8}$/i.test(c) ? c : "transparent"} />
-          </svg>
-          {bare ? <span className="sr-only">{c}</span> : c}
+          {isHex(c) ? (
+            <>
+              {/* SVG fill attribute, not an inline style: the production CSP blocks style attributes. */}
+              <svg aria-hidden width={px} height={px} viewBox="0 0 16 16" className="rounded-sm border border-pt-line-strong">
+                <rect width="16" height="16" fill={c} />
+              </svg>
+              {bare ? <span className="sr-only">{c}</span> : c}
+            </>
+          ) : (
+            <span className={size === "md" || bare ? "text-sm" : undefined}>{c}</span>
+          )}
         </span>
       ))}
     </span>

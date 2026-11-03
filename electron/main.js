@@ -270,7 +270,7 @@ function writeLogToFile(level, message) {
 
 // 2. KHỞI TẠO KẾT NỐI SUPABASE POSTGRESQL
 // Tăng SCHEMA_VERSION mỗi khi thay đổi cột/trigger/backfill bên dưới để migration chạy lại một lần.
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const MIGRATION_LOCK_KEY = 482917301; // khóa advisory để nhiều máy không migrate cùng lúc
 
 async function runDatabaseMigrations(pool) {
@@ -327,7 +327,9 @@ async function runDatabaseMigrations(pool) {
           ADD COLUMN IF NOT EXISTS is_quote BOOLEAN DEFAULT FALSE,
           ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0,
           ADD COLUMN IF NOT EXISTS vat_percent NUMERIC DEFAULT 0,
-          ADD COLUMN IF NOT EXISTS quote_items JSONB DEFAULT '[]'::jsonb
+          ADD COLUMN IF NOT EXISTS quote_items JSONB DEFAULT '[]'::jsonb,
+          ADD COLUMN IF NOT EXISTS sdt_khach_hang TEXT,
+          ADD COLUMN IF NOT EXISTS dia_chi_khach_hang TEXT
       `);
     }
     await client.query(`

@@ -25,17 +25,43 @@ export type Database = {
           Tables: {
             "bang_keo_in_orders": {
                   Row: {
-                    "cong_no_khach": number | null,"da_giao": boolean | null,"da_tat_toan": boolean | null,"don_gia_ban": number | null,"id": string,"is_quote": boolean | null,"mau_sac": string | null,"ngay_du_kien": string,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien_ban": number | null,"thoi_gian": string | null,"tien_coc": number | null,"vat": number | null,"vat_percent": number | null
+                    "cong_no_khach": number | null,"cong_no_ncc": number | null,"ctv": string | null,"cuon_cay": number | null,"da_giao": boolean | null,"da_gui_email": boolean | null,"da_tat_toan": boolean | null,"dia_chi_khach_hang": string | null,"don_gia_ban": number | null,"don_gia_goc": number | null,"don_gia_von": number | null,"hoa_hong": number | null,"id": string,"is_quote": boolean | null,"loai_truc": string | null,"loi_giay": string | null,"loi_nhuan": number | null,"loi_nhuan_rong": number | null,"mau_keo": string | null,"mau_sac": string | null,"ngay_du_kien": string,"phi_cat": number | null,"phi_keo": number | null,"phi_mau": number | null,"phi_size": number | null,"phi_sl": number | null,"quote_items": Json | null,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"sdt_khach_hang": string | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"ten_truc": string | null,"thanh_tien_ban": number | null,"thanh_tien_goc": number | null,"thoi_gian": string | null,"thung_bao": string | null,"tien_coc": number | null,"tien_hoa_hong": number | null,"tien_ship": number | null,"truc_chu_vi": number | null,"truc_ctv": string | null,"truc_gia_ban": number | null,"truc_gia_goc": number | null,"truc_hoa_hong": number | null,"truc_loi_nhuan": number | null,"truc_loi_nhuan_rong": number | null,"truc_so_luong": number | null,"truc_thanh_tien_ban": number | null,"truc_thanh_tien_goc": number | null,"truc_tien_hoa_hong": number | null,"truc_vat": number | null,"truc_vat_percent": number | null,"vat": number | null,"vat_percent": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "cong_no_khach"?: number | null,"da_giao"?: boolean | null,"da_tat_toan"?: boolean | null,"don_gia_ban"?: number | null,"id": string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien": string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null,"tien_coc"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"cuon_cay"?: number | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"don_gia_von"?: number | null,"hoa_hong"?: number | null,"id": string,"is_quote"?: boolean | null,"loai_truc"?: string | null,"loi_giay"?: string | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien": string,"phi_cat"?: number | null,"phi_keo"?: number | null,"phi_mau"?: number | null,"phi_size"?: number | null,"phi_sl"?: number | null,"quote_items"?: Json | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"ten_truc"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"thung_bao"?: string | null,"tien_coc"?: number | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"truc_chu_vi"?: number | null,"truc_ctv"?: string | null,"truc_gia_ban"?: number | null,"truc_gia_goc"?: number | null,"truc_hoa_hong"?: number | null,"truc_loi_nhuan"?: number | null,"truc_loi_nhuan_rong"?: number | null,"truc_so_luong"?: number | null,"truc_thanh_tien_ban"?: number | null,"truc_thanh_tien_goc"?: number | null,"truc_tien_hoa_hong"?: number | null,"truc_vat"?: number | null,"truc_vat_percent"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
                   }
                   Update: {
-                    "cong_no_khach"?: number | null,"da_giao"?: boolean | null,"da_tat_toan"?: boolean | null,"don_gia_ban"?: number | null,"id"?: string,"is_quote"?: boolean | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null,"tien_coc"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"cuon_cay"?: number | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"don_gia_von"?: number | null,"hoa_hong"?: number | null,"id"?: string,"is_quote"?: boolean | null,"loai_truc"?: string | null,"loi_giay"?: string | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"phi_cat"?: number | null,"phi_keo"?: number | null,"phi_mau"?: number | null,"phi_size"?: number | null,"phi_sl"?: number | null,"quote_items"?: Json | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"ten_truc"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"thung_bao"?: string | null,"tien_coc"?: number | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"truc_chu_vi"?: number | null,"truc_ctv"?: string | null,"truc_gia_ban"?: number | null,"truc_gia_goc"?: number | null,"truc_hoa_hong"?: number | null,"truc_loi_nhuan"?: number | null,"truc_loi_nhuan_rong"?: number | null,"truc_so_luong"?: number | null,"truc_thanh_tien_ban"?: number | null,"truc_thanh_tien_goc"?: number | null,"truc_tien_hoa_hong"?: number | null,"truc_vat"?: number | null,"truc_vat_percent"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
                   }
                   Relationships: [
                     
+                  ]
+                },"delivery_notes": {
+                  Row: {
+                    "confirmed_at": string | null,"created_at": string,"created_by": string | null,"id": string,"job_id": string,"photo_path": string | null,"recipient_address": string | null,"recipient_name": string | null,"recipient_phone": string | null,"revoked_at": string | null,"token_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"job_id": string,"photo_path"?: string | null,"recipient_address"?: string | null,"recipient_name"?: string | null,"recipient_phone"?: string | null,"revoked_at"?: string | null,"token_hash": string
+                  }
+                  Update: {
+                    "confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"job_id"?: string,"photo_path"?: string | null,"recipient_address"?: string | null,"recipient_name"?: string | null,"recipient_phone"?: string | null,"revoked_at"?: string | null,"token_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_notes_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_notes_job_id_fkey"
+      columns: ["job_id"]
+isOneToOne: false
+      referencedRelation: "production_jobs"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"designs": {
                   Row: {
@@ -169,14 +195,14 @@ isOneToOne: false
                   ]
                 },"production_jobs": {
                   Row: {
-                    "assigned_at": string | null,"converted_at": string | null,"converted_by": string | null,"created_at": string,"due_date": string | null,"id": string,"lead_id": string,"order_id": string | null,"production_note": string | null,"step": Database["public"]['Enums']["production_step"],"updated_at": string,"workshop_user_id": string | null
+                    "assigned_at": string | null,"converted_at": string | null,"converted_by": string | null,"created_at": string,"due_date": string | null,"id": string,"lead_id": string | null,"order_id": string | null,"order_table": string,"production_note": string | null,"step": Database["public"]['Enums']["production_step"],"updated_at": string,"workshop_user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_at"?: string | null,"converted_at"?: string | null,"converted_by"?: string | null,"created_at"?: string,"due_date"?: string | null,"id"?: string,"lead_id": string,"order_id"?: string | null,"production_note"?: string | null,"step"?: Database["public"]['Enums']["production_step"],"updated_at"?: string,"workshop_user_id"?: string | null
+                    "assigned_at"?: string | null,"converted_at"?: string | null,"converted_by"?: string | null,"created_at"?: string,"due_date"?: string | null,"id"?: string,"lead_id"?: string | null,"order_id"?: string | null,"order_table"?: string,"production_note"?: string | null,"step"?: Database["public"]['Enums']["production_step"],"updated_at"?: string,"workshop_user_id"?: string | null
                   }
                   Update: {
-                    "assigned_at"?: string | null,"converted_at"?: string | null,"converted_by"?: string | null,"created_at"?: string,"due_date"?: string | null,"id"?: string,"lead_id"?: string,"order_id"?: string | null,"production_note"?: string | null,"step"?: Database["public"]['Enums']["production_step"],"updated_at"?: string,"workshop_user_id"?: string | null
+                    "assigned_at"?: string | null,"converted_at"?: string | null,"converted_by"?: string | null,"created_at"?: string,"due_date"?: string | null,"id"?: string,"lead_id"?: string | null,"order_id"?: string | null,"order_table"?: string,"production_note"?: string | null,"step"?: Database["public"]['Enums']["production_step"],"updated_at"?: string,"workshop_user_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -367,7 +393,20 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "advance_production_step":
+            "admin_order_create":
+{ Args: { "p_payload": Json }; Returns: {
+              "job_id": string,"order_id": string
+            }[]
+                           },
+"admin_order_get":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"admin_orders_list":
+{ Args: { "p_filter"?: Json }; Returns: {
+              "cong_no_khach": number,"da_giao": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"id": string,"job_id": string,"lead_id": string,"loi_nhuan_rong": number,"ngay_du_kien": string,"sdt_khach_hang": string,"so_luong": number,"step": Database["public"]['Enums']["production_step"],"ten_hang": string,"ten_khach_hang": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"tong_tien": number,"total_count": number,"vat": number,"workshop_user_id": string,"workshop_user_name": string
+            }[]
+                           },
+"advance_production_step":
 { Args: { "p_job_id": string,"p_note"?: string,"p_to": Database["public"]['Enums']["production_step"] }; Returns: {
               "assigned_at": string | null,
 "converted_at": string | null,
@@ -375,8 +414,9 @@ isOneToOne: false
 "created_at": string,
 "due_date": string | null,
 "id": string,
-"lead_id": string,
+"lead_id": string | null,
 "order_id": string | null,
+"order_table": string,
 "production_note": string | null,
 "step": Database["public"]['Enums']["production_step"],
 "updated_at": string,
@@ -421,8 +461,31 @@ isOneToOne: false
 "created_at": string,
 "due_date": string | null,
 "id": string,
-"lead_id": string,
+"lead_id": string | null,
 "order_id": string | null,
+"order_table": string,
+"production_note": string | null,
+"step": Database["public"]['Enums']["production_step"],
+"updated_at": string,
+"workshop_user_id": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "production_jobs"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"assign_workshop_job":
+{ Args: { "p_job_id": string,"p_user_id": string }; Returns: {
+              "assigned_at": string | null,
+"converted_at": string | null,
+"converted_by": string | null,
+"created_at": string,
+"due_date": string | null,
+"id": string,
+"lead_id": string | null,
+"order_id": string | null,
+"order_table": string,
 "production_note": string | null,
 "step": Database["public"]['Enums']["production_step"],
 "updated_at": string,
@@ -468,11 +531,26 @@ isOneToOne: false
 "check_rate_limit":
 { Args: { "p_key": string,"p_max_hits": number,"p_window_seconds": number }; Returns: boolean
                            },
+"confirm_delivery":
+{ Args: { "p_photo_path": string,"p_token_hash": string }; Returns: {
+              "confirmed_at": string,"job_id": string,"note_id": string
+            }[]
+                           },
 "convert_lead_to_production":
 { Args: { "p_due_date": string,"p_lead_id": string,"p_note"?: string,"p_workshop_user_id"?: string }; Returns: string
                            },
+"create_delivery_note":
+{ Args: { "p_job_id": string }; Returns: {
+              "colors": (string)[],"created_at": string,"due_date": string,"job_id": string,"length_m": number,"note_id": string,"order_id": string,"order_name": string,"print_text": string,"quantity": number,"recipient_address": string,"recipient_name": string,"recipient_phone": string,"thickness_mic": number,"token": string,"width_mm": number
+            }[]
+                           },
 "current_app_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["app_role"]
+                           },
+"delivery_note_by_token":
+{ Args: { "p_token_hash": string }; Returns: {
+              "confirmed_at": string,"created_at": string,"job_id": string,"job_step": Database["public"]['Enums']["production_step"],"note_id": string,"order_name": string,"quantity": number,"recipient_name": string,"status": string
+            }[]
                            },
 "electron_app_purge_large_objects":
 { Args: Record<PropertyKey, never>; Returns: number
@@ -504,6 +582,34 @@ isOneToOne: false
 "next_bang_keo_in_order_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"order_payload_num":
+{ Args: { "p_key": string,"p_payload": Json }; Returns: number
+                           },
+"order_payload_text":
+{ Args: { "p_key": string,"p_max": number,"p_payload": Json }; Returns: string
+                           },
+"production_apply_step":
+{ Args: { "p_by_name"?: string,"p_job_id": string,"p_note"?: string,"p_to": Database["public"]['Enums']["production_step"] }; Returns: {
+              "assigned_at": string | null,
+"converted_at": string | null,
+"converted_by": string | null,
+"created_at": string,
+"due_date": string | null,
+"id": string,
+"lead_id": string | null,
+"order_id": string | null,
+"order_table": string,
+"production_note": string | null,
+"step": Database["public"]['Enums']["production_step"],
+"updated_at": string,
+"workshop_user_id": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "production_jobs"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "production_step_label":
 { Args: { "p_step": Database["public"]['Enums']["production_step"] }; Returns: string
                            },
@@ -518,12 +624,12 @@ isOneToOne: false
                            },
 "workshop_jobs":
 { Args: { "p_job_id"?: string }; Returns: {
-              "colors": (string)[],"converted_at": string,"design_json": Json,"desktop_delivered": boolean,"due_date": string,"job_id": string,"lead_code": string,"lead_id": string,"length_m": number,"logo_path": string,"order_id": string,"preview_path": string,"print_text": string,"production_note": string,"quantity": number,"step": Database["public"]['Enums']["production_step"],"thickness_mic": number,"updated_at": string,"width_mm": number,"workshop_user_id": string,"workshop_user_name": string
+              "colors": (string)[],"converted_at": string,"design_json": Json,"desktop_delivered": boolean,"due_date": string,"job_id": string,"lead_code": string,"lead_id": string,"length_m": number,"logo_path": string,"order_id": string,"order_name": string,"order_table": string,"preview_path": string,"print_text": string,"production_note": string,"quantity": number,"step": Database["public"]['Enums']["production_step"],"thickness_mic": number,"updated_at": string,"width_mm": number,"workshop_user_id": string,"workshop_user_name": string
             }[]
                            }
           }
           Enums: {
-            "app_role": "admin"|"manager"|"staff"|"ctv"|"workshop","lead_status": "new"|"assigned"|"consulting"|"quoted"|"accepted"|"production"|"shipping"|"done"|"cancelled","production_step": "cho_san_xuat"|"dang_in"|"dang_cat_cuon"|"dong_goi"|"san_sang_giao"|"da_giao"|"huy","quote_status": "draft"|"sent"|"accepted"|"changes_requested"|"expired"|"cancelled"
+            "app_role": "admin"|"manager"|"staff"|"ctv"|"workshop","lead_status": "new"|"assigned"|"consulting"|"quoted"|"accepted"|"production"|"shipping"|"done"|"cancelled","production_step": "cho_san_xuat"|"dang_san_xuat"|"dang_in"|"dang_cat_cuon"|"dong_goi"|"san_sang_giao"|"da_giao"|"huy","quote_status": "draft"|"sent"|"accepted"|"changes_requested"|"expired"|"cancelled"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -643,7 +749,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "app_role": ["admin", "manager", "staff", "ctv", "workshop"],"lead_status": ["new", "assigned", "consulting", "quoted", "accepted", "production", "shipping", "done", "cancelled"],"production_step": ["cho_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy"],"quote_status": ["draft", "sent", "accepted", "changes_requested", "expired", "cancelled"]
+            "app_role": ["admin", "manager", "staff", "ctv", "workshop"],"lead_status": ["new", "assigned", "consulting", "quoted", "accepted", "production", "shipping", "done", "cancelled"],"production_step": ["cho_san_xuat", "dang_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy"],"quote_status": ["draft", "sent", "accepted", "changes_requested", "expired", "cancelled"]
           }
         }
 } as const

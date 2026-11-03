@@ -119,6 +119,7 @@ async function autofillBangKeoInData(tenHang, mode = 'order') {
       const order = res.rows[0];
       
       document.getElementById(`${prefix}ten-khach-hang`).value = order.ten_khach_hang || "";
+      fillCustomerContact(prefix, order);
       document.getElementById(`${prefix}qc-mm`).value = order.quy_cach_mm || "";
       document.getElementById(`${prefix}qc-m`).value = order.quy_cach_m || "";
       document.getElementById(`${prefix}qc-mic`).value = order.quy_cach_mic || "";
@@ -308,6 +309,7 @@ async function saveBangKeoIn(event, mode = 'order') {
       thoi_gian: new Date(),
       ten_hang: tenHang,
       ten_khach_hang: tenKhachHang,
+      ...readCustomerContact(prefix),
       ngay_du_kien: deliveryDate,
       quy_cach_mm: parseFloat(document.getElementById(`${prefix}qc-mm`).value) || null,
       quy_cach_m: parseFloat(document.getElementById(`${prefix}qc-m`).value) || null,
@@ -460,6 +462,7 @@ async function saveOrderAttachments(orderId, orderType, filePaths) {
 // Cột ghi khi tạo đơn Băng Keo In (thứ tự giữ nguyên như câu INSERT cũ)
 const BANG_KEO_IN_INSERT_COLUMNS = [
   'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+  'sdt_khach_hang', 'dia_chi_khach_hang',
   'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong',
   'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size',
   'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban',
@@ -470,6 +473,21 @@ const BANG_KEO_IN_INSERT_COLUMNS = [
   'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv',
   'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'
 ];
+
+// SĐT và địa chỉ giao của khách (không bắt buộc); dùng chung cho form tạo đơn/báo giá cả 3 loại
+function readCustomerContact(prefix) {
+  return {
+    sdt_khach_hang: document.getElementById(`${prefix}sdt-khach-hang`)?.value.trim() || null,
+    dia_chi_khach_hang: document.getElementById(`${prefix}dia-chi-khach-hang`)?.value.trim() || null
+  };
+}
+
+function fillCustomerContact(prefix, order) {
+  const phone = document.getElementById(`${prefix}sdt-khach-hang`);
+  const address = document.getElementById(`${prefix}dia-chi-khach-hang`);
+  if (phone) phone.value = order.sdt_khach_hang || "";
+  if (address) address.value = order.dia_chi_khach_hang || "";
+}
 
 // Dựng giá trị cho thao tác order.insert (tiến trình chính kiểm tra tên cột theo danh sách cho phép)
 function buildOrderInsertValues(orderId, data, columns) {
@@ -547,6 +565,7 @@ function clearFormBangKeoIn(mode = 'order') {
 
   document.getElementById(`${prefix}ten-hang`).value = "";
   document.getElementById(`${prefix}ten-khach-hang`).value = "";
+  fillCustomerContact(prefix, {});
   document.getElementById(`${prefix}qc-mm`).value = "";
   document.getElementById(`${prefix}qc-m`).value = "";
   document.getElementById(`${prefix}qc-mic`).value = "";

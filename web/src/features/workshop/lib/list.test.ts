@@ -9,10 +9,11 @@ const W1 = "00000000-0000-0000-0000-00000000a006";
 let n = 0;
 const job = (over: Partial<WorkshopJobRow>): WorkshopJobRow => ({
   job_id: `00000000-0000-0000-0000-${String(++n).padStart(12, "0")}`, lead_id: "x", lead_code: `L${n}`,
-  order_id: `BK-${n}`, step: "dang_in", due_date: "2026-11-09", production_note: null,
+  order_id: `BK-${n}`, step: "dang_san_xuat", due_date: "2026-11-09", production_note: null,
   workshop_user_id: null, workshop_user_name: null, quantity: 100, width_mm: 48, length_m: 100,
   thickness_mic: 50, colors: null, print_text: null, design_json: null, preview_path: null, logo_path: null,
-  desktop_delivered: false, converted_at: null, updated_at: "2026-11-01T00:00:00Z", ...over,
+  desktop_delivered: false, converted_at: null, updated_at: "2026-11-01T00:00:00Z",
+  order_name: null, order_table: "bang_keo_in_orders", ...over,
 });
 
 const rows = [
@@ -20,7 +21,7 @@ const rows = [
   job({ order_id: "BK-B", due_date: "2026-11-02", step: "san_sang_giao", workshop_user_id: W1 }), // today
   job({ order_id: "BK-C", due_date: "2026-10-01", step: "da_giao", quantity: 900 }), // closed, old
   job({ order_id: null, step: "cho_san_xuat", lead_code: "L-P", due_date: null }), // pending
-  job({ order_id: "BK-D", due_date: "2026-11-20", quantity: 5000 }),
+  job({ order_id: "BK-D", due_date: "2026-11-20", quantity: 5000, step: "cho_san_xuat", order_name: "Băng keo Trà Sữa", lead_id: null, lead_code: null }),
 ].map((j) => toListRow(j, NOW));
 
 const adminSpec = jobListSpec([W1]);
@@ -28,7 +29,8 @@ const workshopSpec = jobListSpec(null);
 
 describe("toListRow", () => {
   it("derives code, stage, due state, phase, assignee", () => {
-    expect(rows[0]).toMatchObject({ code: "BK-A", stage: "dang_in", due_state: "overdue", phase: "open", assignee: "none" });
+    expect(rows[0]).toMatchObject({ code: "BK-A", name: "Băng keo in “Cà phê Đà Lạt”", stage: "dang_san_xuat", due_state: "overdue", phase: "open", assignee: "none" });
+    expect(rows[4]).toMatchObject({ code: "BK-D", name: "Băng keo Trà Sữa", stage: "cho_san_xuat" });
     expect(rows[2]).toMatchObject({ due_state: "ok", phase: "closed" });
     expect(rows[3]).toMatchObject({ code: "L-P", stage: "pending", due_state: "none" });
     expect(rows[1]!.assignee).toBe(W1);
@@ -54,6 +56,8 @@ describe("queryJobs", () => {
     expect(f({ due: "overdue" })).toEqual(["BK-A"]);
     expect(f({ phase: "closed" })).toEqual(["BK-C"]);
     expect(f({ q: "da lat" })).toEqual(["BK-A"]);
+    expect(f({ q: "tra sua" })).toEqual(["BK-D"]);
+    expect(f({ step: "cho_san_xuat" })).toEqual(["BK-D"]);
     expect(f({ from: "2026-11-02", to: "2026-11-30" })).toEqual(["BK-B", "BK-D"]);
   });
 
@@ -96,7 +100,7 @@ describe("view + counts", () => {
     expect(listHref("/portal/xuong", workshopSpec, withView(s, "table", "workshop"))).toBe("/portal/xuong?view=table");
   });
 
-  it("counts overdue / today / active / ready / pending", () => {
-    expect(countJobs(rows)).toEqual({ overdue: 1, today: 1, active: 2, ready: 1, pending: 1 });
+  it("counts overdue / today / waiting / active / ready / pending", () => {
+    expect(countJobs(rows)).toEqual({ overdue: 1, today: 1, waiting: 1, active: 1, ready: 1, pending: 1 });
   });
 });

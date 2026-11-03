@@ -13,7 +13,13 @@ const salesFormConfigs = {
   bang_keo: { formId: 'form-bang-keo', prefix: 'bk-' },
   truc_in: { formId: 'form-truc-in', prefix: 'ti-' }
 };
-const quoteSharedFields = new Set(['ten-hang', 'ten-khach-hang']);
+const quoteSharedFields = new Set(['ten-hang', 'ten-khach-hang', 'sdt-khach-hang', 'dia-chi-khach-hang']);
+// SĐT/địa chỉ giao nằm cạnh tên khách trong thẻ "Khách hàng", không chuyển xuống phần kê khai
+const customerContactSuffixes = ['sdt-khach-hang', 'dia-chi-khach-hang'];
+
+function isCustomerContactControl(control, prefix) {
+  return customerContactSuffixes.some(suffix => control.id === `${prefix}${suffix}`);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   Object.keys(quoteDraftConfigs).forEach(type => {
@@ -166,6 +172,7 @@ function restructureSalesForm(type, config) {
   allGroups.forEach(group => {
     const control = group.querySelector('input, select, textarea');
     if (!control || control === productInput || control === customerInput || control === dateInput) return;
+    if (isCustomerContactControl(control, config.prefix)) return;
     (control.readOnly ? resultGrid : entryGrid).append(group);
   });
   organizeQuoteEntryGroups(entryGrid, config.prefix, quoteEntryGroupConfigs[type]);
@@ -251,6 +258,7 @@ function restructureQuoteForm(type) {
   allGroups.forEach(group => {
     const control = group.querySelector('input, select, textarea');
     if (!control || control === productInput || control === customerInput) return;
+    if (isCustomerContactControl(control, config.prefix)) return;
     (control.readOnly ? resultGrid : entryGrid).append(group);
   });
   organizeQuoteEntryGroups(entryGrid, config.prefix, quoteEntryGroupConfigs[type]);
@@ -768,6 +776,7 @@ async function loadQuoteIntoEditor(quoteId, type, data) {
   const items = normalizeStoredQuoteItems(data, type);
   document.getElementById(`${config.prefix}ten-hang`).value = data.ten_hang || '';
   document.getElementById(`${config.prefix}ten-khach-hang`).value = data.ten_khach_hang || '';
+  fillCustomerContact(config.prefix, data);
 
   const drafts = items.map((item, index) => {
     const savedAxes = JSON.parse(JSON.stringify(item.axes || []));
@@ -802,9 +811,9 @@ function cancelQuoteEditing(type) {
 
 // Không ghi đè thoi_gian khi sửa: báo giá giữ ngày tạo gốc.
 const quoteUpdateColumns = {
-  bang_keo_in: ['ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv', 'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'],
-  bang_keo: ['ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items'],
-  truc_in: ['ten_hang', 'ten_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items']
+  bang_keo_in: ['ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong', 'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_giay', 'thung_bao', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc', 'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv', 'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'],
+  bang_keo: ['ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items'],
+  truc_in: ['ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'vat_percent', 'quote_items']
 };
 
 async function saveEditedQuoteIfNeeded(type, data) {

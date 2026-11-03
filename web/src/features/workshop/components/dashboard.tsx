@@ -79,7 +79,8 @@ export async function WorkshopDashboard({ profile, searchParams }: { profile: Pr
       <StatGrid>
         <StatCard label={wsCopy.statOverdue} value={counts.overdue} tone="red" href={only(spec, state, { due: ["overdue"] })} />
         <StatCard label={wsCopy.statToday} value={counts.today} tone="yellow" href={only(spec, state, { due: ["today"] })} />
-        <StatCard label={wsCopy.statActive} value={counts.active} tone="amber" href={only(spec, state, { step: ["cho_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi"] })} />
+        <StatCard label={wsCopy.statWaiting} value={counts.waiting} tone="grey" href={only(spec, state, { step: ["cho_san_xuat"] })} />
+        <StatCard label={wsCopy.statActive} value={counts.active} tone="amber" href={only(spec, state, { step: ["dang_san_xuat"] })} />
         <StatCard label={wsCopy.statReady} value={counts.ready} tone="green" href={only(spec, state, { step: ["san_sang_giao"] })} />
         {(isAdmin || counts.pending > 0) && (
           <StatCard label={wsCopy.statPending} value={counts.pending} tone="grey" href={only(spec, state, { step: ["pending"] })} />

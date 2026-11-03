@@ -56,7 +56,7 @@ export function KitDemo({ searchParams, role }: { searchParams: RawParams; role:
       </Section>
 
       <Section title={t.portalUi.productionFlow}>
-        <ProductionStepper step="dang_cat_cuon" />
+        <ProductionStepper step="dang_san_xuat" />
       </Section>
 
       <Section title="Nhãn trạng thái">

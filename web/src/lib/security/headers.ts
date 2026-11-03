@@ -6,6 +6,18 @@ export interface HeaderEntry {
   value: string;
 }
 
+function permissionsPolicy(camera: boolean): string {
+  return `camera=${camera ? "(self)" : "()"}, microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()`;
+}
+
+/** Path patterns (next.config `headers` syntax) whose pages may use the camera. */
+export const CAMERA_PATHS = ["/giao/:token"] as const;
+
+/** Overrides Permissions-Policy on CAMERA_PATHS (later next.config entries win). */
+export function cameraPermissionsHeaders(): HeaderEntry[] {
+  return [{ key: "Permissions-Policy", value: permissionsPolicy(true) }];
+}
+
 export function staticSecurityHeaders(): HeaderEntry[] {
   return [
     { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
@@ -13,10 +25,7 @@ export function staticSecurityHeaders(): HeaderEntry[] {
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-    {
-      key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
-    },
+    { key: "Permissions-Policy", value: permissionsPolicy(false) },
     { key: "X-DNS-Prefetch-Control", value: "on" },
   ];
 }

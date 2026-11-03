@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
-import { advanceStep, assignWorkshop, convertLeadToProduction } from "./mutations";
+import { advanceStep, assignJob, assignWorkshop, convertLeadToProduction, createDeliveryNote } from "./mutations";
 import { getWorkshopJob, listWorkshopJobs } from "./queries";
 
 type Db = SupabaseClient<Database>;
@@ -42,11 +42,11 @@ describe("convertLeadToProduction", () => {
 describe("advanceStep / assignWorkshop", () => {
   it("advance calls advance_production_step and maps errors", async () => {
     const { db, rpc } = rpcDb({});
-    expect(await advanceStep(db, { jobId: JOB, to: "dang_in", note: null })).toEqual({ ok: true });
-    expect(rpc).toHaveBeenCalledWith("advance_production_step", { p_job_id: JOB, p_to: "dang_in", p_note: null });
+    expect(await advanceStep(db, { jobId: JOB, to: "dang_san_xuat", note: null })).toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith("advance_production_step", { p_job_id: JOB, p_to: "dang_san_xuat", p_note: null });
     expect(await advanceStep(rpcDb({ error: { code: "42501" } }).db, { jobId: JOB, to: "huy", note: null }))
       .toEqual({ ok: false, reason: "forbidden" });
-    expect(await advanceStep(rpcDb({ error: { code: "P0002" } }).db, { jobId: JOB, to: "dang_in", note: null }))
+    expect(await advanceStep(rpcDb({ error: { code: "P0002" } }).db, { jobId: JOB, to: "dang_san_xuat", note: null }))
       .toEqual({ ok: false, reason: "notFound" });
   });
 
@@ -67,5 +67,27 @@ describe("queries go through workshop_jobs only", () => {
     expect(rpc).toHaveBeenCalledWith("workshop_jobs", { p_job_id: JOB });
     expect(await listWorkshopJobs(rpcDb({ error: { code: "42501" } }).db)).toEqual([]);
     expect(await getWorkshopJob(rpcDb({ data: [] }).db, JOB)).toBeNull();
+  });
+});
+
+describe("xưởng v2 RPCs (0024)", () => {
+  it("assignJob calls assign_workshop_job by job id", async () => {
+    const { db, rpc } = rpcDb({});
+    expect(await assignJob(db, { jobId: JOB, userId: null })).toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith("assign_workshop_job", { p_job_id: JOB, p_user_id: null });
+    expect(await assignJob(rpcDb({ error: { code: "22023" } }).db, { jobId: JOB, userId: LEAD })).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("createDeliveryNote takes the single row and maps errors", async () => {
+    const note = { note_id: LEAD, token: "t".repeat(43), job_id: JOB };
+    const single = vi.fn().mockResolvedValue({ data: note, error: null });
+    const rpc = vi.fn().mockReturnValue({ single });
+    expect(await createDeliveryNote({ rpc } as unknown as Db, JOB)).toEqual({ ok: true, note });
+    expect(rpc).toHaveBeenCalledWith("create_delivery_note", { p_job_id: JOB });
+    const failing = (error: { code: string }) => ({ rpc: () => ({ single: async () => ({ data: null, error }) }) }) as unknown as Db;
+    expect(await createDeliveryNote(failing({ code: "22023" }), JOB)).toEqual({ ok: false, reason: "notReady" });
+    expect(await createDeliveryNote(failing({ code: "P0002" }), JOB)).toEqual({ ok: false, reason: "notFound" });
+    expect(await createDeliveryNote(failing({ code: "42501" }), JOB)).toEqual({ ok: false, reason: "forbidden" });
+    expect(await createDeliveryNote(failing({ code: "PGRST116" }), JOB)).toEqual({ ok: false, reason: "generic" });
   });
 });

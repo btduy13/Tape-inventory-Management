@@ -61,6 +61,8 @@ const excelImportAliases = {
   truc_vat: ['VAT Trục', 'Tiền VAT Trục', 'truc_vat'],
   ten_hang: ['Tên hàng', 'Ten hang', 'ten_hang'],
   ten_khach_hang: ['Tên khách hàng', 'Khách hàng', 'Ten khach hang', 'ten_khach_hang'],
+  sdt_khach_hang: ['SĐT khách', 'SĐT khách hàng', 'SĐT', 'Số điện thoại', 'Điện thoại', 'sdt_khach_hang'],
+  dia_chi_khach_hang: ['Địa chỉ giao', 'Địa chỉ khách hàng', 'Địa chỉ', 'dia_chi_khach_hang'],
   ngay_du_kien: ['Ngày dự kiến', 'Ngày giao', 'Ngay du kien', 'ngay_du_kien'],
   quy_cach_mm: ['Quy cách (mm)', 'QC mm', 'quy_cach_mm'],
   quy_cach_m: ['Quy cách (m)', 'QC m', 'quy_cach_m'],
@@ -265,6 +267,8 @@ function mapBangKeoInImport(row) {
     thoi_gian: new Date(),
     ten_hang: parseImportText(get('ten_hang')),
     ten_khach_hang: parseImportText(get('ten_khach_hang')),
+    sdt_khach_hang: parseImportText(get('sdt_khach_hang')),
+    dia_chi_khach_hang: parseImportText(get('dia_chi_khach_hang')),
     ngay_du_kien: parseImportDate(get('ngay_du_kien')),
     quy_cach_mm: parseImportNumber(get('quy_cach_mm')) || null,
     quy_cach_m: parseImportNumber(get('quy_cach_m')) || null,
@@ -373,6 +377,8 @@ function mapSimpleImport(row, type) {
     thoi_gian: new Date(),
     ten_hang: parseImportText(get('ten_hang')),
     ten_khach_hang: parseImportText(get('ten_khach_hang')),
+    sdt_khach_hang: parseImportText(get('sdt_khach_hang')),
+    dia_chi_khach_hang: parseImportText(get('dia_chi_khach_hang')),
     ngay_du_kien: parseImportDate(get('ngay_du_kien')),
     quy_cach: parseImportText(get('quy_cach')),
     so_luong: parseImportNumber(get('so_luong')),
@@ -398,7 +404,7 @@ function mapSimpleImport(row, type) {
 }
 
 // Giới hạn độ dài theo cột varchar trong DB để báo lỗi theo dòng thay vì lỗi 22001 chung.
-const IMPORT_TEXT_LIMITS = { ten_hang: 255, ten_khach_hang: 255, mau_keo: 100, mau_sac: 100, ctv: 100, loi_giay: 100, thung_bao: 100, quy_cach: 100 };
+const IMPORT_TEXT_LIMITS = { ten_hang: 255, ten_khach_hang: 255, sdt_khach_hang: 30, dia_chi_khach_hang: 500, mau_keo: 100, mau_sac: 100, ctv: 100, loi_giay: 100, thung_bao: 100, quy_cach: 100 };
 
 function validateImportData(data, rowNumber) {
   const errors = [];
@@ -632,7 +638,7 @@ function showExcelImportErrors(errors, summary = '') {
 // Cột ghi khi nhập Excel (thứ tự giữ nguyên như câu INSERT cũ); SQL do tiến trình chính dựng
 const IMPORT_INSERT_COLUMNS = {
   bang_keo_in: [
-    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien',
     'quy_cach_mm', 'quy_cach_m', 'quy_cach_mic', 'cuon_cay', 'so_luong',
     'phi_sl', 'mau_keo', 'phi_keo', 'mau_sac', 'phi_mau', 'phi_size',
     'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc', 'don_gia_ban',
@@ -645,14 +651,14 @@ const IMPORT_INSERT_COLUMNS = {
     'vat', 'vat_percent', 'truc_vat', 'truc_vat_percent'
   ],
   truc_in: [
-    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien',
     'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc',
     'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
     'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
     'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote', 'vat', 'vat_percent'
   ],
   bang_keo: [
-    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien',
     'quy_cach', 'so_luong', 'mau_sac', 'don_gia_goc', 'thanh_tien',
     'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
     'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',

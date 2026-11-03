@@ -104,6 +104,28 @@ test('converted quote edit preserves stored multi-size totals and only saves sha
   assert.equal(context.storedOrder.quote_items.length, 2);
 });
 
+test('converted quote edit keeps customer phone and address editable and saves them', async () => {
+  const { context, elements } = editHarness('bang_keo_in');
+  vm.runInContext('editOrderDataGlobal = { quote_items: [{ quantity: 2, unitPrice: 100 }] };', context);
+  const inputs = [...elements].filter(([id]) => id.startsWith('edit-') && elements.get(id).value !== undefined)
+    .map(([id, input]) => Object.assign(input, { id }));
+  context.document.createElement = () => ({ setAttribute() {} });
+  context.configureStructuredOrderEdit({ querySelectorAll: () => inputs, prepend() {} });
+  assert.equal(elements.get('edit-sdt-khach-hang').disabled, undefined, 'phone stays editable');
+  assert.equal(elements.get('edit-dia-chi-khach-hang').disabled, undefined, 'address stays editable');
+  assert.equal(elements.get('edit-so-luong').disabled, true, 'money / size inputs are locked');
+  const calls = [];
+  context.window.electronAPI = { dbRun: async (action, params) => { calls.push({ action, params }); return { ok: true }; } };
+  vm.runInContext('utils.showToast = () => {}; closeModal = () => {}; switchTab = async () => {};', context);
+  elements.get('edit-sdt-khach-hang').value = '0909000111';
+  elements.get('edit-dia-chi-khach-hang').value = '5 Lê Lợi, Q1';
+  await context.submitEditOrder();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].action, 'order.update');
+  assert.equal(calls[0].params.values.sdt_khach_hang, '0909000111');
+  assert.equal(calls[0].params.values.dia_chi_khach_hang, '5 Lê Lợi, Q1');
+});
+
 test('edit attached axis: totals, VAT, commission and old-axis validation stay consistent', () => {
   const { context, elements } = editHarness('bang_keo_in');
   context.updateEditOrderCalculations();

@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Cột ghi khi tạo đơn (thứ tự giữ nguyên như câu INSERT cũ); SQL do tiến trình chính dựng
 const TRUC_IN_INSERT_COLUMNS = [
   'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
+  'sdt_khach_hang', 'dia_chi_khach_hang',
   'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc',
   'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
   'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
@@ -56,6 +57,7 @@ async function autofillTrucInData(tenHang, mode = 'order') {
       const order = res.rows[0];
       
       document.getElementById(`${prefix}ten-khach-hang`).value = order.ten_khach_hang || "";
+      fillCustomerContact(prefix, order);
       document.getElementById(`${prefix}quy-cach`).value = order.quy_cach || "";
       document.getElementById(`${prefix}so-luong`).value = order.so_luong || "";
       document.getElementById(`${prefix}mau-sac`).value = order.mau_sac || "";
@@ -156,6 +158,7 @@ async function saveTrucIn(event, mode = 'order') {
       thoi_gian: new Date(),
       ten_hang: tenHang,
       ten_khach_hang: tenKhachHang,
+      ...readCustomerContact(prefix),
       ngay_du_kien: deliveryDate,
       quy_cach: document.getElementById(`${prefix}quy-cach`).value.trim() || null,
       so_luong: soLuong,
@@ -229,6 +232,7 @@ function clearFormTrucIn(mode = 'order') {
 
   document.getElementById(`${prefix}ten-hang`).value = "";
   document.getElementById(`${prefix}ten-khach-hang`).value = "";
+  fillCustomerContact(prefix, {});
   document.getElementById(`${prefix}quy-cach`).value = "";
   document.getElementById(`${prefix}so-luong`).value = "";
   document.getElementById(`${prefix}mau-sac`).value = "";

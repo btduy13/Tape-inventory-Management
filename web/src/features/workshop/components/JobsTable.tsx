@@ -17,11 +17,16 @@ const dateTime = (iso: string) =>
 function columns(role: AppRole): Column<JobListRow>[] {
   const cols: Column<JobListRow>[] = [
     {
-      key: "code", header: wsCopy.colCode, sortKey: "code", mobile: "title",
+      // The order's name is the title; admin gets the code(s) as a small second line.
+      key: "name", header: wsCopy.colName, sortKey: "name", mobile: "title",
       cell: (r) => (
         <span className="flex flex-col">
-          <span className="text-base">{r.code}</span>
-          {r.order_id && <span className="text-xs font-normal text-pt-muted">{r.lead_code}</span>}
+          <span className="text-base">{r.name}</span>
+          {role !== "workshop" && (
+            <span className="text-xs font-normal text-pt-muted">
+              {r.code}{r.order_id && r.lead_code ? ` · ${r.lead_code}` : ""}
+            </span>
+          )}
         </span>
       ),
     },
@@ -34,7 +39,7 @@ function columns(role: AppRole): Column<JobListRow>[] {
   if (role === "workshop") {
     cols.push({
       key: "action", header: wsCopy.colAction, className: "w-64",
-      cell: (r) => (r.order_id && r.phase === "open" ? <AdvanceStepForm jobId={r.job_id} code={r.code} step={r.step} role={role} compact /> : null),
+      cell: (r) => (r.order_id && r.phase === "open" ? <AdvanceStepForm jobId={r.job_id} code={r.name} step={r.step} role={role} compact /> : null),
     });
   }
   return cols;

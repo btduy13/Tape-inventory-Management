@@ -354,12 +354,20 @@ function buildEditInput(label, id, value, options = {}) {
   const max = options.max !== undefined ? ` max="${options.max}"` : '';
   const readonly = options.readonly ? ' readonly' : '';
   const step = type === 'number' ? ' step="any"' : '';
+  const maxlength = options.maxlength ? ` maxlength="${options.maxlength}"` : '';
   return `
     <div class="form-group">
       <label class="form-label" for="${id}">${label}${options.required ? ' *' : ''}</label>
-      <input type="${type}" id="${id}" class="${classes}" value="${escapeAppHtml(value)}"${step}${min}${max}${required}${readonly}>
+      <input type="${type}" id="${id}" class="${classes}" value="${escapeAppHtml(value)}"${step}${min}${max}${maxlength}${required}${readonly}>
     </div>
   `;
+}
+
+// SĐT và địa chỉ giao: không bắt buộc, dùng chung cho form sửa của cả 3 loại đơn
+function buildEditCustomerContactInputs(o) {
+  return `
+      ${buildEditInput('SĐT khách', 'edit-sdt-khach-hang', o.sdt_khach_hang, { type: 'tel', maxlength: 30 })}
+      ${buildEditInput('Địa chỉ giao', 'edit-dia-chi-khach-hang', o.dia_chi_khach_hang, { maxlength: 500 })}`;
 }
 
 function generateBangKeoInEditForm(o) {
@@ -369,6 +377,7 @@ function generateBangKeoInEditForm(o) {
       ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
       ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
       ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
+      ${buildEditCustomerContactInputs(o)}
       ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', utils.toDateInputValue(o.ngay_du_kien), { type: 'date', required: true })}
       ${buildEditInput('Quy cách (mm)', 'edit-qc-mm', o.quy_cach_mm, { type: 'number' })}
       ${buildEditInput('Quy cách (m)', 'edit-qc-m', o.quy_cach_m, { type: 'number' })}
@@ -441,6 +450,7 @@ function generateTrucInEditForm(o) {
       ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
       ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
       ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
+      ${buildEditCustomerContactInputs(o)}
       ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', utils.toDateInputValue(o.ngay_du_kien), { type: 'date', required: true })}
       ${buildEditInput('Quy cách', 'edit-quy-cach', o.quy_cach)}
       ${buildEditInput('Màu sắc', 'edit-mau-sac', o.mau_sac)}
@@ -483,14 +493,14 @@ function hasStructuredEditItems() {
 
 function configureStructuredOrderEdit(form) {
   if (!hasStructuredEditItems()) return;
-  const editable = new Set(['edit-ten-hang', 'edit-ten-khach-hang', 'edit-ngay-du-kien']);
+  const editable = new Set(['edit-ten-hang', 'edit-ten-khach-hang', 'edit-sdt-khach-hang', 'edit-dia-chi-khach-hang', 'edit-ngay-du-kien']);
   form.querySelectorAll('input, select').forEach(input => {
     if (!editable.has(input.id)) { input.disabled = true; input.required = false; }
   });
   const note = document.createElement('p');
   note.className = 'edit-section-title';
   note.setAttribute('role', 'note');
-  note.textContent = 'Đơn này được chuyển từ báo giá và có chi tiết kích thước/trục riêng. Tại đây chỉ sửa tên hàng, khách hàng và ngày giao; các giá trị tài chính được giữ nguyên. Hiện cần chỉnh kích thước, giá và trục trong báo giá trước khi chuyển thành đơn hàng.';
+  note.textContent = 'Đơn này được chuyển từ báo giá và có chi tiết kích thước/trục riêng. Tại đây chỉ sửa tên hàng, khách hàng, SĐT, địa chỉ giao và ngày giao; các giá trị tài chính được giữ nguyên. Hiện cần chỉnh kích thước, giá và trục trong báo giá trước khi chuyển thành đơn hàng.';
   form.prepend(note);
 }
 
@@ -585,6 +595,10 @@ async function submitEditOrder() {
     const tenHang = document.getElementById('edit-ten-hang').value.trim();
     const tenKhachHang = document.getElementById('edit-ten-khach-hang').value.trim();
     const ngayDuKien = document.getElementById('edit-ngay-du-kien').value;
+    const contact = {
+      sdt_khach_hang: document.getElementById('edit-sdt-khach-hang')?.value.trim() || null,
+      dia_chi_khach_hang: document.getElementById('edit-dia-chi-khach-hang')?.value.trim() || null
+    };
     if (hasStructuredEditItems()) {
       if (!tenHang || !tenKhachHang || !ngayDuKien) {
         utils.showToast('Vui lòng nhập đủ tên hàng, khách hàng và ngày giao', 'warning');
@@ -593,7 +607,7 @@ async function submitEditOrder() {
       const response = await window.electronAPI.dbRun('order.update', {
         orderType: editOrderType,
         id: editOrderId,
-        values: { ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien }
+        values: { ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien, ...contact }
       });
       if (!response.ok) {
         utils.showToast('Lỗi cập nhật đơn hàng: ' + response.error, 'danger');
@@ -645,7 +659,7 @@ async function submitEditOrder() {
       }
 
       values = {
-        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien,
+        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien, ...contact,
         quy_cach_mm: parseFloat(document.getElementById('edit-qc-mm').value) || null, quy_cach_m: quyCachM || null,
         quy_cach_mic: parseFloat(document.getElementById('edit-qc-mic').value) || null, cuon_cay: cuonCay || null, so_luong: soLuong,
         phi_sl: utils.parseCurrency(document.getElementById('edit-phi-sl').value), mau_keo: document.getElementById('edit-mau-keo').value.trim() || null,
@@ -673,7 +687,7 @@ async function submitEditOrder() {
       }
       const result = calculateEditOrder();
       const common = {
-        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien,
+        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien, ...contact,
         quy_cach: document.getElementById('edit-quy-cach').value.trim() || null,
         so_luong: soLuong, mau_sac: document.getElementById('edit-mau-sac').value.trim() || null
       };
@@ -773,7 +787,8 @@ async function exportCurrentFormToExcel() {
   const getVatExportValues = (totalId, vatId) => {
     const total = utils.parseCurrency(document.getElementById(totalId)?.value);
     const percent = orderMath.percent(document.getElementById(vatId)?.value);
-    return { percent, amount: total * percent / 100 };
+    // Cùng công thức làm tròn với form/DB (orderMath.vatAmount), không để số lẻ trong Excel.
+    return { percent, amount: orderMath.vatAmount(total, percent) };
   };
 
   if (activeForm === 'bang-keo-in') {
@@ -783,6 +798,8 @@ async function exportCurrentFormToExcel() {
       'Tên Hàng': document.getElementById(`${prefix}bki-ten-hang`).value.trim(),
       'Ngày dự kiến': document.getElementById(`${prefix}bki-ngay-du-kien`)?.value || '',
       'Tên Khách Hàng': document.getElementById(`${prefix}bki-ten-khach-hang`).value.trim(),
+      'SĐT khách': document.getElementById(`${prefix}bki-sdt-khach-hang`)?.value.trim() || '',
+      'Địa chỉ giao': document.getElementById(`${prefix}bki-dia-chi-khach-hang`)?.value.trim() || '',
       'Quy Cách (mm)': parseFloat(document.getElementById(`${prefix}bki-qc-mm`).value) || '',
       'Quy Cách (m)': parseFloat(document.getElementById(`${prefix}bki-qc-m`).value) || '',
       'Quy Cách (mic)': parseFloat(document.getElementById(`${prefix}bki-qc-mic`).value) || '',
@@ -821,6 +838,8 @@ async function exportCurrentFormToExcel() {
       'Tiền VAT Trục': axisVat.amount,
       'CTV Trục': document.getElementById(`${prefix}bki-truc-ctv`)?.value.trim() || '',
       'Hoa hồng Trục (%)': parseFloat(document.getElementById(`${prefix}bki-truc-hoa-hong-percent`)?.value) || 0,
+      'Tiền hoa hồng Trục': document.getElementById(`${prefix}bki-loai-truc`)?.value === 'moi'
+        ? utils.parseCurrency(document.getElementById(`${prefix}bki-truc-tien-hoa-hong`)?.value) : 0,
       'Lãi Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-loi-nhuan`)?.value),
       'Lãi ròng Trục': utils.parseCurrency(document.getElementById(`${prefix}bki-truc-loi-nhuan-rong`)?.value),
       'Lợi nhuận': utils.parseCurrency(document.getElementById(`${prefix}bki-loi-nhuan`).value),
@@ -834,6 +853,8 @@ async function exportCurrentFormToExcel() {
       'Tên Hàng': document.getElementById(`${prefix}bk-ten-hang`).value.trim(),
       'Ngày dự kiến': document.getElementById(`${prefix}bk-ngay-du-kien`)?.value || '',
       'Tên Khách Hàng': document.getElementById(`${prefix}bk-ten-khach-hang`).value.trim(),
+      'SĐT khách': document.getElementById(`${prefix}bk-sdt-khach-hang`)?.value.trim() || '',
+      'Địa chỉ giao': document.getElementById(`${prefix}bk-dia-chi-khach-hang`)?.value.trim() || '',
       'Quy Cách': document.getElementById(`${prefix}bk-quy-cach`).value.trim(),
       'Số lượng': parseFloat(document.getElementById(`${prefix}bk-so-luong`).value) || 0,
       'Màu sắc': document.getElementById(`${prefix}bk-mau-sac`).value.trim(),
@@ -858,6 +879,8 @@ async function exportCurrentFormToExcel() {
       'Tên Hàng': document.getElementById(`${prefix}ti-ten-hang`).value.trim(),
       'Ngày dự kiến': document.getElementById(`${prefix}ti-ngay-du-kien`)?.value || '',
       'Tên Khách Hàng': document.getElementById(`${prefix}ti-ten-khach-hang`).value.trim(),
+      'SĐT khách': document.getElementById(`${prefix}ti-sdt-khach-hang`)?.value.trim() || '',
+      'Địa chỉ giao': document.getElementById(`${prefix}ti-dia-chi-khach-hang`)?.value.trim() || '',
       'Quy Cách': document.getElementById(`${prefix}ti-quy-cach`).value.trim(),
       'Số lượng': parseFloat(document.getElementById(`${prefix}ti-so-luong`).value) || 0,
       'Màu sắc': document.getElementById(`${prefix}ti-mau-sac`).value.trim(),

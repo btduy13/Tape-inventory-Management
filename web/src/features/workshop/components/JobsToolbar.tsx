@@ -32,6 +32,7 @@ export function ViewToggle({ basePath, spec, state, view, role }: Props & { view
 const BOARD_SORTS = [
   ["due", wsCopy.sortDue],
   ["updated", wsCopy.sortUpdated],
+  ["name", wsCopy.sortName],
   ["code", wsCopy.sortCode],
   ["qty", wsCopy.sortQty],
 ] as const;

@@ -43,6 +43,12 @@ export type ConvertInput = z.infer<ReturnType<typeof convertSchema>>;
 export const assignSchema = z.object({ leadId: uuid, userId: optionalUuid });
 export type AssignInput = z.infer<typeof assignSchema>;
 
+/** Admin: assign any job by id (assign_workshop_job, 0024; also lead-less jobs). */
+export const assignJobSchema = z.object({ jobId: uuid, userId: optionalUuid });
+export type AssignJobInput = z.infer<typeof assignJobSchema>;
+
+export const deliveryNoteSchema = z.object({ jobId: uuid });
+
 export type WorkshopActionState = { status: "idle" | "error" | "success"; message?: string };
 export const IDLE: WorkshopActionState = { status: "idle" };
 export const fail = (message: string): WorkshopActionState => ({ status: "error", message });

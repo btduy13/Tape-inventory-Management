@@ -1,9 +1,9 @@
-// Writes go ONLY through the SECURITY DEFINER RPCs of migration 0021 (role, assignment, due date
-// and step rules are enforced in SQL). Never write production_jobs or legacy tables directly.
+// Writes go ONLY through the SECURITY DEFINER RPCs of migrations 0021 / 0024 (role, assignment,
+// due date and step rules are enforced in SQL). Never write production_jobs or legacy tables directly.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/types";
-import type { AdvanceInput, AssignInput, ConvertInput } from "../lib/schemas";
+import type { Database, DeliveryNoteCreated } from "@/lib/types";
+import type { AdvanceInput, AssignInput, AssignJobInput, ConvertInput } from "../lib/schemas";
 
 type Db = SupabaseClient<Database>;
 type PgError = { code?: string; message?: string } | null;
@@ -57,4 +57,27 @@ export async function advanceStep(db: Db, input: AdvanceInput): Promise<Mutation
 export async function assignWorkshop(db: Db, input: AssignInput): Promise<MutationResult> {
   const { error } = await db.rpc("assign_production_job", { p_lead_id: input.leadId, p_user_id: input.userId });
   return mapError(error);
+}
+
+/** Admin: assign any job by id, lead-less ones included (0024). */
+export async function assignJob(db: Db, input: AssignJobInput): Promise<MutationResult> {
+  const { error } = await db.rpc("assign_workshop_job", { p_job_id: input.jobId, p_user_id: input.userId });
+  return mapError(error);
+}
+
+export type DeliveryNoteResult =
+  | { ok: true; note: DeliveryNoteCreated }
+  | { ok: false; reason: "forbidden" | "notFound" | "notReady" | "generic" };
+
+/** Admin or the assigned workshop user, job at san_sang_giao. Revokes the job's older open notes. */
+export async function createDeliveryNote(db: Db, jobId: string): Promise<DeliveryNoteResult> {
+  const { data, error } = await db.rpc("create_delivery_note", { p_job_id: jobId }).single();
+  if (error) {
+    if (error.code === "42501") return { ok: false, reason: "forbidden" };
+    if (error.code === "P0002") return { ok: false, reason: "notFound" };
+    if (error.code === "22023") return { ok: false, reason: "notReady" };
+    return { ok: false, reason: "generic" };
+  }
+  const note = data as DeliveryNoteCreated | null;
+  return note?.token ? { ok: true, note } : { ok: false, reason: "generic" };
 }

@@ -24,7 +24,7 @@ describe("WorkflowStepper", () => {
   });
 
   it("production strip is focusable too", () => {
-    render(<ProductionStepper step="dang_in" />);
+    render(<ProductionStepper step="dang_san_xuat" />);
     expect(screen.getByRole("list", { name: vi.portalUi.productionFlow }).getAttribute("tabindex")).toBe("0");
   });
 });

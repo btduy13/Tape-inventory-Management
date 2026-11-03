@@ -50,6 +50,8 @@ export const vi = {
   },
   productionStep: {
     cho_san_xuat: "Chờ sản xuất",
+    dang_san_xuat: "Đang sản xuất",
+    // dang_in / dang_cat_cuon / dong_goi: history only since 0024 (old step log rows).
     dang_in: "Đang in",
     dang_cat_cuon: "Đang cắt cuộn",
     dong_goi: "Đóng gói",
@@ -833,6 +835,7 @@ export const vi = {
     navMyLeads: "Khách của tôi",
     navWorkshop: "Xưởng",
     navMyJobs: "Việc của xưởng",
+    navOrders: "Đơn hàng",
     navUsers: "Người dùng",
     navTapeSpecs: "Quy cách",
     navPresets: "Mẫu kích thước",
