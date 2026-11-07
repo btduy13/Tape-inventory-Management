@@ -1,11 +1,11 @@
 // DANH SÁCH CỘT ĐƯỢC PHÉP GHI CHO TỪNG BẢNG ĐƠN HÀNG
 // order.insert / order.update chỉ chấp nhận các cột trong danh sách này; tên cột không bao giờ
 // lấy trực tiếp từ renderer mà phải khớp chính xác một mục ở đây.
-const { orderTable, paramError, plainObject, recordId } = require('./params');
+const { orderTable, paramError, plainObject, recordId, uuid } = require('./params');
 
 const COMMON_HEAD = [
   'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'ngay_du_kien',
-  'sdt_khach_hang', 'dia_chi_khach_hang'
+  'sdt_khach_hang', 'dia_chi_khach_hang', 'customer_id'
 ];
 const COMMON_STATUS = ['da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote'];
 
@@ -36,6 +36,14 @@ const INSERT_COLUMNS = Object.freeze({
     'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
     'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
     ...COMMON_STATUS, 'vat', 'vat_percent', 'quote_items'
+  ]),
+  // Băng keo Thank you (bảng 0027): không có quote_items, cong_no_* do trigger tính
+  thank_you_orders: new Set([
+    ...COMMON_HEAD,
+    'kich_thuoc', 'mau_sac', 'so_luong', 'don_gia_ban', 'thanh_tien_ban', 'vat', 'vat_percent',
+    'tien_coc', 'cong_no_khach', 'don_gia_von', 'thanh_tien_von', 'tien_ship', 'loi_nhuan',
+    'loi_nhuan_rong', 'ctv', 'hoa_hong', 'tien_hoa_hong', 'ghi_chu',
+    ...COMMON_STATUS
   ])
 });
 
@@ -44,11 +52,12 @@ const UPDATE_EXCLUDED = new Set(['id', 'thoi_gian', ...COMMON_STATUS]);
 
 const MAX_TEXT_LENGTH = 10000;
 // Giới hạn riêng cho thông tin liên hệ khách (khớp maxlength trên form)
-const COLUMN_TEXT_LIMITS = Object.freeze({ sdt_khach_hang: 30, dia_chi_khach_hang: 500 });
+const COLUMN_TEXT_LIMITS = Object.freeze({ sdt_khach_hang: 30, dia_chi_khach_hang: 500, kich_thuoc: 255, ghi_chu: 2000 });
 const MAX_QUOTE_ITEMS_LENGTH = 2 * 1024 * 1024;
 
 function columnValue(column, value) {
   if (column === 'id') return recordId(value);
+  if (column === 'customer_id') return value === null || value === undefined ? null : uuid(value, 'mã khách hàng');
   if (column === 'quote_items') {
     if (typeof value !== 'string' || value.length > MAX_QUOTE_ITEMS_LENGTH) throw paramError('Dữ liệu dòng báo giá không hợp lệ');
     let parsed;

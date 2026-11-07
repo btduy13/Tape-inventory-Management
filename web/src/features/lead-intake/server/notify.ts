@@ -29,9 +29,3 @@ export async function notifyNewLead(notifier: LeadNotifier, data: NewLeadEmailDa
   if (failed > 0) console.error(`[lead-intake] ${failed} notification(s) failed for lead ${data.code}`);
   return failed;
 }
-
-/** Used until features/email publishes its index.ts (see lib/email-contract.ts). */
-export const noopNotifier: LeadNotifier = {
-  async sendCustomerConfirmation() {},
-  async sendAdminNewLead() {},
-};

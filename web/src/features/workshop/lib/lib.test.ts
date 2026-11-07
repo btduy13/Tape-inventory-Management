@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { WorkshopJobRow } from "@/lib/types";
 import { addDays, defaultDueDate, dueState, formatDueDate, isIsoDate, vnToday } from "./dates";
-import { floorNote, formatSize, groupJobs, jobCode, jobName } from "./group";
+import { floorNote, formatSize, jobCode, jobName } from "./group";
 import { advanceSchema, assignSchema, convertSchema } from "./schemas";
-import { canMoveTo, isBackward, isClosedStep, needsDeliveryNote, nextStep, stepOptionsFor, stepRank } from "./steps";
+import { isBackward, isClosedStep, needsDeliveryNote, nextStep, stepOptionsFor, stepRank } from "./steps";
 
 const UUID = "6f1c1f0e-8a7b-4c2d-9e3f-1a2b3c4d5e6f";
 // 2026-11-01 20:00 UTC = 2026-11-02 03:00 in Vietnam (UTC+7)
@@ -29,9 +29,6 @@ describe("steps (mirror of production_step_next / advance_production_step, 0024)
     expect(stepOptionsFor("workshop", "san_sang_giao")).toEqual([]);
     expect(needsDeliveryNote("san_sang_giao") && !needsDeliveryNote("dang_san_xuat")).toBe(true);
     expect(stepOptionsFor("workshop", "da_giao")).toEqual([]);
-    expect(canMoveTo("workshop", "san_sang_giao", "dang_san_xuat")).toBe(false);
-    expect(canMoveTo("workshop", "cho_san_xuat", "san_sang_giao")).toBe(false);
-    expect(canMoveTo("workshop", "dang_san_xuat", "huy")).toBe(false);
     for (const r of ["manager", "staff", "ctv"] as const) expect(stepOptionsFor(r, "dang_san_xuat")).toEqual([]);
   });
 
@@ -104,25 +101,7 @@ describe("grouping", () => {
     updated_at: "2026-11-01T00:00:00Z", order_name: null, order_table: "bang_keo_in_orders", ...over,
   });
 
-  it("puts unconverted jobs in pending and sorts by due date", () => {
-    const g = groupJobs([
-      job({ lead_code: "B", due_date: "2026-11-10" }),
-      job({ lead_code: "A", due_date: "2026-11-05" }),
-      job({ order_id: null, step: "cho_san_xuat", lead_code: "P" }),
-      job({ step: "huy", lead_code: "H" }),
-    ]);
-    expect(g.pending.map((j) => j.lead_code)).toEqual(["P"]);
-    expect(g.dang_san_xuat.map((j) => j.lead_code)).toEqual(["A", "B"]);
-    expect(g.huy).toHaveLength(1);
-    expect(g.cho_san_xuat).toHaveLength(0);
-  });
-
-  it("lead-less jobs (desktop app / web admin) sort by order id", () => {
-    const g = groupJobs([
-      job({ lead_id: null, lead_code: null, order_id: "BK-2", due_date: null }),
-      job({ lead_id: null, lead_code: null, order_id: "BK-1", due_date: null }),
-    ]);
-    expect(g.dang_san_xuat.map((j) => j.order_id)).toEqual(["BK-1", "BK-2"]);
+  it("jobCode falls back to the job id", () => {
     expect(jobCode(job({ order_id: null, lead_code: null }))).toBe(UUID);
   });
 

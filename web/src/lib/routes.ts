@@ -24,6 +24,10 @@ export const ROUTES = {
   adminOrders: "/admin/don-hang",
   adminOrderNew: "/admin/don-hang/moi",
   adminOrder: (id: string) => `/admin/don-hang/${encodeURIComponent(id)}`,
+  adminOrderEdit: (id: string) => `/admin/don-hang/${encodeURIComponent(id)}/sua`,
+  adminCustomers: "/admin/khach-hang",
+  adminCustomer: (id: string) => `/admin/khach-hang/${encodeURIComponent(id)}`,
+  adminCustomerReview: "/admin/khach-hang/gop",
   api: {
     leads: "/api/leads",
     quoteRespond: (token: string) => `/api/q/${encodeURIComponent(token)}/respond`,

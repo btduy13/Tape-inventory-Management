@@ -1,0 +1,22 @@
+// UI copy of the /admin KPI overview (mirrors the app's Tổng quan tab).
+export const dashboardCopy = {
+  title: "Kinh doanh tháng này",
+  description: "Đơn thật (không tính báo giá) của cả 4 loại: băng keo in, băng keo, trục in, Thank you.",
+  loadError: "Không tải được số liệu kinh doanh. Tải lại trang để thử lại.",
+  orders: "Đơn trong tháng",
+  revenue: "Doanh thu tháng",
+  revenueHint: "Chưa gồm VAT, như app",
+  profit: "Lợi nhuận ròng tháng",
+  openDebt: "Khách còn nợ",
+  supplierDebt: "Nợ nhà cung cấp",
+  debtHint: "Đơn chưa tất toán",
+  overdue: "Đơn quá hạn",
+  overdueHint: "Chưa giao, quá ngày dự kiến",
+  dueSoon: "Sắp đến hạn",
+  dueSoonHint: "Giao trong 3 ngày tới",
+  pendingQuotes: "Báo giá đang chờ",
+  newLeads: "Yêu cầu mới trong tháng",
+  pipelineTitle: "Xưởng",
+  notInWorkshop: "Chưa vào xưởng",
+  notInWorkshopHint: "Đơn băng keo in chưa giao, chưa có lệnh xưởng",
+} as const;

@@ -65,6 +65,7 @@ export type Lead = {
   company: string | null; quantity: number; customer_note: string | null;
   status: LeadStatus; assigned_to: Uuid | null; assigned_at: Timestamp | null;
   production_order_id: string | null; source_ip_hash: string | null; user_agent: string | null;
+  customer_id: Uuid | null;
   created_at: Timestamp; updated_at: Timestamp;
 };
 
@@ -187,7 +188,7 @@ export type Database = {
       tape_presets: Table<TapePreset, Opt<TapePreset, "id" | "sort_order" | "is_active" | "created_at" | "updated_at">>;
       tape_widths: Table<TapeWidth, Opt<TapeWidth, "id" | "sort_order" | "is_active" | "created_at" | "updated_at">>;
       tape_spec_settings: Table<TapeSpecSettings, Opt<TapeSpecSettings, "id" | "thickness_mic" | "updated_at">>;
-      leads: Table<Lead, Opt<Lead, "id" | "code" | "email" | "company" | "customer_note" | "status" | "assigned_to" | "assigned_at" | "production_order_id" | "source_ip_hash" | "user_agent" | "created_at" | "updated_at">>;
+      leads: Table<Lead, Opt<Lead, "id" | "code" | "email" | "company" | "customer_note" | "status" | "assigned_to" | "assigned_at" | "production_order_id" | "source_ip_hash" | "user_agent" | "customer_id" | "created_at" | "updated_at">>;
       designs: Table<Design, Opt<Design, "id" | "preset_id" | "colors" | "print_text" | "design_json" | "logo_path" | "preview_path" | "created_at">>;
       lead_status_log: Table<LeadStatusLog, Opt<Omit<LeadStatusLog, "id">, "from_status" | "changed_by" | "note" | "created_at">>;
       lead_assignments: Table<LeadAssignment, Opt<Omit<LeadAssignment, "id">, "assigned_to" | "assigned_by" | "created_at">>;
@@ -228,6 +229,16 @@ export type Database = {
       admin_orders_list: { Args: { p_filter?: Record<string, unknown> }; Returns: Record<string, unknown>[] };
       admin_order_get: { Args: { p_id: string }; Returns: Record<string, unknown> };
       admin_order_create: { Args: { p_payload: Record<string, unknown> }; Returns: { order_id: string; job_id: Uuid | null }[] };
+      // Admin-only customer RPCs (0028). Shapes live in features/customers/lib/types.ts.
+      admin_customers_list: { Args: { p_q?: string; p_limit?: number; p_offset?: number }; Returns: Record<string, unknown>[] };
+      admin_customer_get: { Args: { p_id: Uuid }; Returns: Record<string, unknown> };
+      admin_customer_create: { Args: { p_payload: Record<string, unknown> }; Returns: Uuid };
+      admin_customer_update: { Args: { p_id: Uuid; p_payload: Record<string, unknown> }; Returns: Record<string, unknown> };
+      admin_customer_merge: { Args: { p_target: Uuid; p_sources: Uuid[] }; Returns: number };
+      admin_customer_review_list: { Args: { p_limit?: number; p_offset?: number }; Returns: Record<string, unknown>[] };
+      admin_customer_review_resolve: { Args: { p_source_table: string; p_source_id: string; p_customer_id?: Uuid }; Returns: undefined };
+      // Admin overview numbers (0029). Shape: features/admin/server/dashboard.ts.
+      admin_dashboard: { Args: Record<string, never>; Returns: Record<string, unknown> };
     };
     Enums: { app_role: AppRole; lead_status: LeadStatus; quote_status: QuoteStatus; production_step: ProductionStep };
     CompositeTypes: { [_ in never]: never };

@@ -16,7 +16,7 @@ function harness() {
     'stats-date-from': '', 'stats-date-to': '', 'stats-giao-filter': 'all', 'stats-ctv-filter': ''
   }).map(([id, value]) => [id, { value }]));
   const context = vm.createContext({
-    utils: { formatDate: value => value || '', formatCurrency: value => String(value || 0), escapeHtml: String },
+    utils: { ...require('../js/utils'), formatDate: value => value || '', formatCurrency: value => String(value || 0), escapeHtml: String },
     document: { getElementById: id => controls[id], querySelectorAll: () => [] },
     orderMath,
     console
@@ -134,7 +134,7 @@ const debtSampleRows = [
 ];
 
 test('debt SQL in settlement / toggle / quote conversion matches orderMath.outstandingFromOrder', () => {
-  for (const [tableName, orderType] of [['bang_keo_in_orders', 'bang_keo_in'], ['bang_keo_orders', 'bang_keo'], ['truc_in_orders', 'truc_in']]) {
+  for (const [tableName, orderType] of [['bang_keo_in_orders', 'bang_keo_in'], ['bang_keo_orders', 'bang_keo'], ['truc_in_orders', 'truc_in'], ['thank_you_orders', 'thank_you']]) {
     const expression = orderMath.customerDebtSqlExpression(tableName);
     for (const row of debtSampleRows) {
       assert.equal(evaluateDebtSql(expression, row), orderMath.outstandingFromOrder(row, orderType), `${tableName} ${JSON.stringify(row)}`);
@@ -259,7 +259,7 @@ test('thongke no longer ships the broken amount-in-words helper or inline handle
 
 test('Excel status words round-trip through the import boolean parser', () => {
   const { context } = harness();
-  const importContext = vm.createContext({ Date, orderMath, window: { electronAPI: {} } });
+  const importContext = vm.createContext({ Date, orderMath, utils: require('../js/utils'), window: { electronAPI: {} } });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/modules/excelImport.js'), 'utf8'), importContext);
   const [done] = context.buildStatsExcelRows([{ id: 'B-1', da_giao: true, da_tat_toan: true, da_gui_email: true }], 'bang_keo');
   const [open] = context.buildStatsExcelRows([{ id: 'B-2', da_giao: false, da_tat_toan: false }], 'bang_keo');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { randomToken, sha256Hex, timingSafeEqual } from "./hash";
+import { randomToken, sha256Hex } from "./hash";
 
 describe("hash helpers", () => {
   it("sha256Hex matches known vector", async () => {
@@ -12,11 +12,5 @@ describe("hash helpers", () => {
     const t = randomToken();
     expect(t).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(t).not.toBe(randomToken());
-  });
-
-  it("timingSafeEqual compares correctly", () => {
-    expect(timingSafeEqual("abc", "abc")).toBe(true);
-    expect(timingSafeEqual("abc", "abd")).toBe(false);
-    expect(timingSafeEqual("abc", "ab")).toBe(false);
   });
 });

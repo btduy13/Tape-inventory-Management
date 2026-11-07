@@ -16,15 +16,16 @@ function emailAddress(value) {
   return address;
 }
 
-// Cập nhật cờ tất toán + công nợ trong cùng câu lệnh; công thức dùng chung với orderMath.outstandingFromOrder
+// Cập nhật cờ giao/tất toán + công nợ trong cùng câu lệnh; cờ NULL = giữ nguyên.
+// Công thức dùng chung với orderMath.outstandingFromOrder.
 function settlementUpdateSql(table) {
   const customerDebt = orderMath.customerDebtSqlExpression(table);
   const supplierDebt = orderMath.supplierDebtSqlExpression(table);
   return `UPDATE ${table}
-      SET da_giao = $1,
-          da_tat_toan = $2,
-          cong_no_khach = CASE WHEN $2 THEN 0 ELSE ${customerDebt} END,
-          cong_no_ncc = CASE WHEN $2 THEN 0 ELSE ${supplierDebt} END
+      SET da_giao = COALESCE($1, da_giao),
+          da_tat_toan = COALESCE($2, da_tat_toan),
+          cong_no_khach = CASE WHEN COALESCE($2, da_tat_toan, FALSE) THEN 0 ELSE ${customerDebt} END,
+          cong_no_ncc = CASE WHEN COALESCE($2, da_tat_toan, FALSE) THEN 0 ELSE ${supplierDebt} END
       WHERE id = $3`;
 }
 
@@ -88,10 +89,11 @@ const writeActions = {
     values: [p.recordId(id)]
   }),
 
-  'order.setDeliveryAndSettlement': ({ orderType, id, delivered, settled }) => ({
-    sql: settlementUpdateSql(p.orderTable(orderType)),
-    values: [p.bool(delivered, 'đã giao'), p.bool(settled, 'đã tất toán'), p.recordId(id)]
-  }),
+  'order.setDeliveryAndSettlement': ({ orderType, id, delivered, settled }) => {
+    const values = [p.optionalBool(delivered, 'đã giao'), p.optionalBool(settled, 'đã tất toán'), p.recordId(id)];
+    if (values[0] === null && values[1] === null) throw p.paramError('Chưa chọn trạng thái cần đổi');
+    return { sql: settlementUpdateSql(p.orderTable(orderType)), values };
+  },
 
   'order.delete': ({ orderType, id }) => ({
     sql: `DELETE FROM ${p.orderTable(orderType)} WHERE id = $1`,

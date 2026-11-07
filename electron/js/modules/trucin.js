@@ -36,7 +36,7 @@ const TRUC_IN_INSERT_COLUMNS = [
   'quy_cach', 'so_luong', 'mau_sac', 'mau_keo', 'don_gia_goc', 'thanh_tien_goc',
   'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'ctv', 'hoa_hong',
   'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong',
-  'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote', 'vat', 'vat_percent', 'quote_items'
+  'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote', 'vat', 'vat_percent', 'quote_items', 'customer_id'
 ];
 
 // 1. Tìm gợi ý tên hàng từ lịch sử đơn Trục In
@@ -255,5 +255,5 @@ function clearFormTrucIn(mode = 'order') {
 
   // Ngày giao mặc định: ngày mai theo giờ địa phương (không dùng toISOString/UTC)
   const deliveryDate = document.getElementById(`${prefix}ngay-du-kien`);
-  if (deliveryDate) deliveryDate.value = tomorrowDeliveryDateValue();
+  if (deliveryDate) deliveryDate.value = utils.tomorrowDateInputValue();
 }

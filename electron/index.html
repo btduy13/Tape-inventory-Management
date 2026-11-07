@@ -250,6 +250,7 @@
                         <button class="pill active" id="btn-sales-bki" data-action-click="switchSalesForm" data-args='["sales-form-bang-keo-in"]'>Băng Keo In Logo</button>
                         <button class="pill" id="btn-sales-bk" data-action-click="switchSalesForm" data-args='["sales-form-bang-keo"]'>Băng Keo Thường</button>
                         <button class="pill" id="btn-sales-ti" data-action-click="switchSalesForm" data-args='["sales-form-truc-in"]'>Gia Công Trục In</button>
+                        <button class="pill" id="btn-sales-ty" data-action-click="switchSalesForm" data-args='["sales-form-thank-you"]'>Băng Keo Thank you</button>
                     </div>
 
                     <!-- Sub-panes cho các form bán hàng -->
@@ -695,6 +696,120 @@
                                 <div class="btn-row">
                                     <button type="button" class="btn btn-secondary" data-action-click="clearForm" data-args='["truc-in"]'>Xóa form</button>
                                     <button type="button" class="btn btn-secondary" data-action-click="calculateTrucIn">Tính toán</button>
+                                    <button type="submit" class="btn btn-primary">Lưu đơn hàng</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="sales-form-thank-you" class="sales-form-pane" style="display: none;">
+                        <form id="form-thank-you" data-action-submit="saveThankYou" data-args='["$event"]'>
+                            <div class="form-card">
+                                <h3 class="form-section-title">Thông tin cơ bản</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="position: relative;">
+                                        <label class="form-label" for="ty-ten-hang">Tên hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ty-ten-hang" class="form-control" placeholder="Băng keo Thank you..." required autocomplete="off">
+                                        <div class="autocomplete-suggestions" id="ty-suggestions"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-ngay-du-kien">Ngày giao dự kiến <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="date" id="ty-ngay-du-kien" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-ten-khach-hang">Tên khách hàng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ty-ten-khach-hang" class="form-control" placeholder="Tên khách hàng..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-sdt-khach-hang">SĐT khách</label>
+                                        <input type="tel" id="ty-sdt-khach-hang" class="form-control" placeholder="Số điện thoại..." maxlength="30" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-dia-chi-khach-hang">Địa chỉ giao</label>
+                                        <input type="text" id="ty-dia-chi-khach-hang" class="form-control" placeholder="Địa chỉ giao hàng..." maxlength="500" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-kich-thuoc">Kích thước</label>
+                                        <input type="text" id="ty-kich-thuoc" class="form-control" placeholder="Ví dụ: 48mm x 100m" maxlength="255">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-so-luong">Số lượng <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="number" step="any" id="ty-so-luong" class="form-control" placeholder="Số lượng bán..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-mau-sac">Màu sắc</label>
+                                        <input type="text" id="ty-mau-sac" class="form-control" placeholder="Màu in..." maxlength="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-ghi-chu">Ghi chú</label>
+                                        <input type="text" id="ty-ghi-chu" class="form-control" placeholder="Ghi chú đơn..." maxlength="2000">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <h3 class="form-section-title">Giá và Chi phí</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-don-gia-von">Đơn giá vốn (đ)</label>
+                                        <input type="text" id="ty-don-gia-von" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-thanh-tien-von">Thành tiền vốn (đ)</label>
+                                        <input type="text" id="ty-thanh-tien-von" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-don-gia-ban">Đơn giá bán <span style="color:var(--color-danger)">*</span></label>
+                                        <input type="text" id="ty-don-gia-ban" class="form-control currency-format" placeholder="Đơn giá bán ra..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-thanh-tien-ban">Thành tiền bán (đ)</label>
+                                        <input type="text" id="ty-thanh-tien-ban" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-vat">VAT tổng (%)</label>
+                                        <input type="number" id="ty-vat" class="form-control" value="0" min="0" max="100" step="any">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-vat-amount">Tiền VAT (đ)</label>
+                                        <input type="text" id="ty-vat-amount" class="form-control calculated-field" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-tien-coc">Tiền cọc (đ)</label>
+                                        <input type="text" id="ty-tien-coc" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-cong-no-khach">Công nợ khách (đ)</label>
+                                        <input type="text" id="ty-cong-no-khach" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-ctv">Cộng tác viên (CTV)</label>
+                                        <input type="text" id="ty-ctv" class="form-control" placeholder="CTV môi giới...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-hoa-hong-percent">Hoa hồng (%)</label>
+                                        <input type="number" min="0" max="100" step="any" id="ty-hoa-hong-percent" class="form-control" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-tien-hoa-hong">Tiền hoa hồng (đ)</label>
+                                        <input type="text" id="ty-tien-hoa-hong" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-loi-nhuan">Lợi nhuận (đ)</label>
+                                        <input type="text" id="ty-loi-nhuan" class="form-control" value="0" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-tien-ship">Tiền ship (đ)</label>
+                                        <input type="text" id="ty-tien-ship" class="form-control currency-format" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="ty-loi-nhuan-rong">Lợi nhuận ròng (đ)</label>
+                                        <input type="text" id="ty-loi-nhuan-rong" class="form-control" value="0" readonly style="font-weight:700; color:var(--color-success);">
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button type="button" class="btn btn-secondary" data-action-click="clearForm" data-args='["thank-you"]'>Xóa form</button>
+                                    <button type="button" class="btn btn-secondary" data-action-click="calculateThankYou">Tính toán</button>
                                     <button type="submit" class="btn btn-primary">Lưu đơn hàng</button>
                                 </div>
                             </div>
@@ -1186,6 +1301,7 @@
                   <option value="bang_keo_in">Băng Keo In</option>
                   <option value="bang_keo">Băng Keo thường</option>
                   <option value="truc_in">Trục In</option>
+                  <option value="thank_you">Thank you</option>
                 </select>
                             </div>
                             <div class="form-group">
@@ -1294,6 +1410,7 @@
                                     <button class="pill active" data-action-click="switchStatsSubtab" data-args='["bang-keo-in"]'>Băng Keo In</button>
                                     <button class="pill" data-action-click="switchStatsSubtab" data-args='["truc-in"]'>Trục In</button>
                                     <button class="pill" data-action-click="switchStatsSubtab" data-args='["bang-keo"]'>Băng Keo</button>
+                                    <button class="pill" data-action-click="switchStatsSubtab" data-args='["thank-you"]'>Thank you</button>
                                 </div>
 
                                 <div class="chart-filters" id="stats-view-modes">
@@ -1470,14 +1587,22 @@
             <div class="modal-body">
                 <div class="form-card" style="padding: 16px; margin-bottom: 16px;">
                     <div id="bulk-stats-status-label" style="font-weight:700; margin-bottom: 12px;">0 đơn đã chọn</div>
-                    <label style="display:flex; align-items:center; gap:10px; margin-bottom: 10px;">
-            <input type="checkbox" id="bulk-stats-da-giao" checked>
-            <span>Đã giao hàng</span>
-          </label>
-                    <label style="display:flex; align-items:center; gap:10px;">
-            <input type="checkbox" id="bulk-stats-da-tat-toan" checked>
-            <span>Đã tất toán</span>
-          </label>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label class="form-label" for="bulk-stats-da-giao">Giao hàng</label>
+                        <select id="bulk-stats-da-giao" class="form-control">
+                            <option value="">Giữ nguyên</option>
+                            <option value="true">Đã giao</option>
+                            <option value="false">Chưa giao</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="bulk-stats-da-tat-toan">Tất toán</label>
+                        <select id="bulk-stats-da-tat-toan" class="form-control">
+                            <option value="">Giữ nguyên</option>
+                            <option value="true">Đã tất toán</option>
+                            <option value="false">Chưa tất toán</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1680,6 +1805,7 @@
               <option value="bang_keo_in">Băng Keo In</option>
               <option value="truc_in">Trục In</option>
               <option value="bang_keo">Băng Keo</option>
+              <option value="thank_you">Thank you</option>
             </select>
                         <input type="text" id="export-filter-search" class="form-control" placeholder="Tìm kiếm đơn..." style="width: 160px; height: 32px; font-size:12px;" data-action-input="loadExportOrdersTable">
                     </div>
@@ -1860,6 +1986,8 @@
             </div>
             <div class="modal-body">
                 <p id="confirm-action-message" style="white-space: pre-line; margin: 0; line-height: 1.6;"></p>
+                <label class="form-label" for="confirm-action-date" id="confirm-action-date-label" hidden>Ngày giao dự kiến</label>
+                <input type="date" id="confirm-action-date" class="form-control" hidden>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-action-click="utils.resolveConfirmAction" data-args='[false]'>Hủy</button>
@@ -1887,6 +2015,8 @@
     <script src="js/modules/bangkeoin.js"></script>
     <script src="js/modules/bangkeo.js"></script>
     <script src="js/modules/trucin.js"></script>
+    <script src="js/modules/thankyou.js"></script>
+    <script src="js/modules/customers.js"></script>
     <script src="js/modules/thongke.js"></script>
     <script src="js/modules/excelImport.js"></script>
     <script src="js/modules/emailDialog.js"></script>

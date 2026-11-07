@@ -27,11 +27,20 @@ anon_function_allow(sig) as (
 ),
 electron_table_allow(tbl) as (
   values ('bang_keo_orders'), ('bang_keo_in_orders'), ('truc_in_orders'),
-         ('order_attachments'), ('email_history')
+         ('order_attachments'), ('email_history'),
+         ('thank_you_orders')                                    -- 0027: Thank you tab in the app
 ),
 legacy_tables(tbl) as (
   values ('bang_keo_orders'), ('bang_keo_in_orders'), ('truc_in_orders'),
-         ('order_attachments'), ('email_history'), ('app_schema_meta')
+         ('order_attachments'), ('email_history'), ('app_schema_meta'),
+         ('thank_you_orders'), ('thank_you_migration_map'),      -- 0027: admin RPCs / owner only
+         ('customers'), ('customer_match_candidates'),           -- 0028: admin RPCs / electron_customer_* only
+         ('customer_backfill_log')
+),
+electron_function_allow(sig) as (
+  -- 0028: the app's customer picker (SECURITY DEFINER, no table grant on customers)
+  values ('electron_customer_search(text,uuid,integer)'),
+         ('electron_customer_create(text,text,text,text)')
 ),
 pub_tables as (
   select c.oid, c.relname, c.relrowsecurity
@@ -150,7 +159,8 @@ checks(check_name, failing) as (
   select 'electron_app_executes_no_public_function',
          (select string_agg(sig, ', ' order by sig) from pub_functions f, ea
            where has_function_privilege(ea.oid, f.oid, 'EXECUTE')
-             and f.sig not in (select sig from anon_function_allow))
+             and f.sig not in (select sig from anon_function_allow)
+             and f.sig not in (select sig from electron_function_allow))
   union all
   select 'electron_app_ddl_guard_trigger_enabled',
          (select case

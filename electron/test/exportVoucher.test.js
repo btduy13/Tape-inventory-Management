@@ -15,7 +15,7 @@ function voucherHarness() {
   const context = vm.createContext({
     console, orderMath,
     document: { getElementById: element },
-    utils: {
+    utils: { ...require('../js/utils'),
       formatCurrency: value => String(Math.round(Number(value) || 0)),
       showToast: (message, type) => toasts.push({ message, type })
     },

@@ -404,12 +404,14 @@ select throws_ok($$select * from public.workshop_jobs()$$, '42501', null, 'deact
 select pg_temp.logout();
 update public.profiles set is_active = true where id = '00000000-0000-0000-0000-00000000a006';
 
--- Electron writes keep working (0024 adds only the production sync trigger) ------------------
+-- Electron writes keep working (0024 adds only the production sync trigger; 0025 the production
+-- debt triggers, which production already has) -----------------------------------------------
 select is(
-  (select array_agg(tgname::text) from pg_trigger
+  (select array_agg(tgname::text order by tgname) from pg_trigger
     where tgrelid = 'public.bang_keo_in_orders'::regclass and not tgisinternal),
-  array['bang_keo_in_orders_production_sync'],
-  'migrations add only the production sync trigger to bang_keo_in_orders');
+  array['bang_keo_in_orders_production_sync', 'trg_sync_customer_debt', 'trg_sync_supplier_debt',
+        'zz_resolve_customer'],  -- 0028: links the customer by phone, never raises
+  'bang_keo_in_orders has the production sync trigger and the production debt triggers only');
 select lives_ok(
   format($$set local role electron_app;
            update public.bang_keo_in_orders set ngay_du_kien = ngay_du_kien + 1, da_giao = true, tien_coc = 5000 where id = %L;

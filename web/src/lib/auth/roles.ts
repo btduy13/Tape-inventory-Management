@@ -25,5 +25,3 @@ export function hasRole(profile: Pick<Profile, "role" | "is_active"> | null, all
 export const canManagePrices = (p: Pick<Profile, "role" | "is_active"> | null) => hasRole(p, ROLE_GROUPS.pricing);
 export const canAssign = (p: Pick<Profile, "role" | "is_active"> | null) => hasRole(p, ROLE_GROUPS.admin);
 export const seesAllLeads = (p: Pick<Profile, "role" | "is_active"> | null) => hasRole(p, ROLE_GROUPS.pricing);
-export const isWorkshop = (p: Pick<Profile, "role" | "is_active"> | null) => hasRole(p, ROLE_GROUPS.workshop);
-export const canUseWorkshop = (p: Pick<Profile, "role" | "is_active"> | null) => hasRole(p, ROLE_GROUPS.production);

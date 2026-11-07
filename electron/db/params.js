@@ -4,7 +4,8 @@
 const ORDER_TABLES = Object.freeze({
   bang_keo_in: 'bang_keo_in_orders',
   bang_keo: 'bang_keo_orders',
-  truc_in: 'truc_in_orders'
+  truc_in: 'truc_in_orders',
+  thank_you: 'thank_you_orders'
 });
 
 const CONTROL_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
@@ -88,6 +89,17 @@ function dateOnly(value, name = 'ngày') {
   return value;
 }
 
+// Bỏ trống (null) = giữ nguyên giá trị hiện có
+function optionalBool(value, name = 'giá trị') {
+  return value === null || value === undefined ? null : bool(value, name);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuid(value, name = 'mã') {
+  if (typeof value !== 'string' || !UUID.test(value)) throw paramError(`${name} không hợp lệ`);
+  return value;
+}
+
 function oneOf(value, allowed, name = 'giá trị') {
   if (!allowed.includes(value)) throw paramError(`${name} không hợp lệ`);
   return value;
@@ -99,6 +111,7 @@ module.exports = {
   dateOnly,
   nonNegativeInt,
   oneOf,
+  optionalBool,
   orderIdPrefix,
   orderTable,
   orderType,
@@ -107,5 +120,6 @@ module.exports = {
   positiveInt,
   recordId,
   text,
-  timestamp
+  timestamp,
+  uuid
 };

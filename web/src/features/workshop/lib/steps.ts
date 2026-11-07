@@ -48,7 +48,3 @@ export function stepOptionsFor(role: AppRole, step: ProductionStep): ProductionS
   const next = nextStep(step);
   return next && next !== "da_giao" ? [next] : [];
 }
-
-export function canMoveTo(role: AppRole, from: ProductionStep, to: ProductionStep): boolean {
-  return stepOptionsFor(role, from).includes(to);
-}

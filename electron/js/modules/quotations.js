@@ -395,9 +395,9 @@ function renderQuoteDraftTabs(type) {
   bindQuoteDraftTabEvents(type);
   container.innerHTML = state.drafts.map((draft, index) => `
     <button type="button" class="quote-draft-tab ${draft.id === state.activeId ? 'active' : ''}"
-      role="tab" aria-selected="${draft.id === state.activeId}" data-quote-draft-id="${escapeQuoteHtml(draft.id)}">
-      <span>${escapeQuoteHtml(quoteDraftLabel(type, draft, index))}</span>
-      ${state.drafts.length > 1 ? `<span class="quote-draft-close" title="Xóa kích thước" data-quote-draft-close="${escapeQuoteHtml(draft.id)}">×</span>` : ''}
+      role="tab" aria-selected="${draft.id === state.activeId}" data-quote-draft-id="${utils.escapeHtml(draft.id)}">
+      <span>${utils.escapeHtml(quoteDraftLabel(type, draft, index))}</span>
+      ${state.drafts.length > 1 ? `<span class="quote-draft-close" title="Xóa kích thước" data-quote-draft-close="${utils.escapeHtml(draft.id)}">×</span>` : ''}
     </button>
   `).join('');
   const count = document.getElementById(`quote-draft-count-${type}`);
@@ -512,8 +512,8 @@ function renderQuoteAxisTree() {
     <div class="quote-axis-node">
       <span class="quote-tree-branch">${index === axes.length - 1 ? '└─' : '├─'}</span>
       <div class="quote-axis-node-main">
-        <strong>Trục ${index + 1}: ${escapeQuoteHtml(axis.name)}</strong>
-        <small>Chu vi ${escapeQuoteHtml(axis.circumference || '-')} · SL ${utils.formatCurrency(axis.quantity)} · ${utils.formatCurrency(axis.unitPrice)}đ/trục · VAT ${Number(orderMath.vatPercentFromAmount(axis.vat, axis.total, axis.vatPercent)).toFixed(2).replace(/\.00$/, '')}% = ${utils.formatCurrency(axis.vat)}đ</small>
+        <strong>Trục ${index + 1}: ${utils.escapeHtml(axis.name)}</strong>
+        <small>Chu vi ${utils.escapeHtml(axis.circumference || '-')} · SL ${utils.formatCurrency(axis.quantity)} · ${utils.formatCurrency(axis.unitPrice)}đ/trục · VAT ${Number(orderMath.vatPercentFromAmount(axis.vat, axis.total, axis.vatPercent)).toFixed(2).replace(/\.00$/, '')}% = ${utils.formatCurrency(axis.vat)}đ</small>
       </div>
       <strong class="quote-axis-node-total">${utils.formatCurrency(axis.total)}đ</strong>
       <button type="button" class="quote-tree-action" data-quote-axis-action="edit" data-axis-index="${index}">Sửa</button>
@@ -540,7 +540,7 @@ function getPrimaryQuoteSpecification(type, data) {
     const mic = data.quy_cach_mic || '-';
     return `${mm}mm x ${m}m (${mic}mic)`;
   }
-  return data.quy_cach || '-';
+  return data.quy_cach || data.kich_thuoc || '-';
 }
 
 function normalizeStoredQuoteItems(data, type) {
@@ -696,15 +696,6 @@ function quoteMonthFilterMatches(dateValue, monthFilter, now = new Date()) {
   return date.getFullYear() === year && date.getMonth() + 1 === month;
 }
 
-function quoteDateInputValue(value) {
-  if (!value) return '';
-  if (typeof utils !== 'undefined' && typeof utils.toDateInputValue === 'function') return utils.toDateInputValue(value);
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
-  // Ngày theo giờ địa phương (toISOString là UTC, lệch một ngày ở múi giờ +7).
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 function legacyQuoteFields(type, item, data, index) {
   const shared = index === 0 ? data : {};
   if (type === 'bang_keo_in') {
@@ -823,6 +814,8 @@ async function saveEditedQuoteIfNeeded(type, data) {
   for (const column of columns) {
     values[column] = column === 'quote_items' ? JSON.stringify(data[column] || []) : data[column];
   }
+  // Chỉ có khi người dùng vừa chọn/tạo khách (readCustomerContact)
+  if (data.customer_id) values.customer_id = data.customer_id;
   const response = await window.electronAPI.dbRun('order.update', {
     orderType: type,
     id: editingQuoteState.id,
@@ -948,17 +941,18 @@ function renderQuotationsTable(rows) {
     let typeLabel = "Băng Keo In";
     if (row.type === 'bang_keo') typeLabel = "Băng Keo thường";
     if (row.type === 'truc_in') typeLabel = "Trục In";
+    if (row.type === 'thank_you') typeLabel = "Thank you";
 
     tr.innerHTML = `
-      <td><strong>${escapeQuoteHtml(row.id)}</strong></td>
-      <td>${escapeQuoteHtml(utils.formatDate(row.thoi_gian))}</td>
-      <td>${escapeQuoteHtml(row.ten_hang)} (${typeLabel})<br><small>${items.length} kích thước · ${axes.length} trục</small></td>
-      <td>${escapeQuoteHtml(row.ten_khach_hang)}</td>
+      <td><strong>${utils.escapeHtml(row.id)}</strong></td>
+      <td>${utils.escapeHtml(utils.formatDate(row.thoi_gian))}</td>
+      <td>${utils.escapeHtml(row.ten_hang)} (${typeLabel})<br><small>${items.length} kích thước · ${axes.length} trục</small></td>
+      <td>${utils.escapeHtml(row.ten_khach_hang)}</td>
       <td style="text-align: right;">${Number(priceSummary.quantity || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })}</td>
       <td style="text-align: right;">${unitPriceCell}</td>
       <td style="text-align: right; font-weight: 700;">${utils.formatCurrency(quoteTotal)}đ</td>
       <td style="text-align: center;">
-        <button class="btn btn-secondary btn-sm" data-quote-list-action="edit" style="padding:2px 8px; font-size:11px; margin-right:4px;">✏️ Sửa</button>
+        ${quoteDraftConfigs[row.type] ? `<button class="btn btn-secondary btn-sm" data-quote-list-action="edit" style="padding:2px 8px; font-size:11px; margin-right:4px;">✏️ Sửa</button>` : ''}
         <button class="btn btn-secondary btn-sm" data-quote-list-action="pdf" style="padding:2px 8px; font-size:11px; margin-right:4px;">👁️ Xem PDF</button>
         <button class="btn btn-primary btn-sm" data-quote-list-action="convert" style="padding:2px 8px; font-size:11px; margin-right:4px;">🔄 Chuyển Đơn</button>
         <button class="btn btn-danger btn-sm" data-quote-list-action="delete" style="padding:2px 8px; font-size:11px;">🗑️ Xóa</button>
@@ -984,7 +978,7 @@ function renderQuotationsTable(rows) {
       itemRow.innerHTML = `
         <td><span class="quote-tree-branch">${itemIndex === items.length - 1 ? '└─' : '├─'}</span> Kích thước ${itemIndex + 1}</td>
         <td></td>
-        <td><strong>${escapeQuoteHtml(item.specification)}</strong><br><small>${escapeQuoteHtml(item.details?.printColor || item.details?.color || '')}</small></td>
+        <td><strong>${utils.escapeHtml(item.specification)}</strong><br><small>${utils.escapeHtml(item.details?.printColor || item.details?.color || '')}</small></td>
         <td></td>
         <td style="text-align:right;">${utils.formatCurrency(item.quantity)}</td>
         <td style="text-align:right;">${utils.formatCurrency(item.unitPrice)}đ</td>
@@ -998,7 +992,7 @@ function renderQuotationsTable(rows) {
         axisRow.innerHTML = `
           <td><span class="quote-tree-branch quote-tree-branch-axis">└─</span> Trục ${axisIndex + 1}</td>
           <td></td>
-          <td><strong>${escapeQuoteHtml(axis.name || 'Trục mới')}</strong><br><small>Chu vi ${escapeQuoteHtml(axis.circumference || '-')}</small></td>
+          <td><strong>${utils.escapeHtml(axis.name || 'Trục mới')}</strong><br><small>Chu vi ${utils.escapeHtml(axis.circumference || '-')}</small></td>
           <td></td>
           <td style="text-align:right;">${utils.formatCurrency(axis.quantity)}</td>
           <td style="text-align:right;">${utils.formatCurrency(axis.unitPrice)}đ</td>
@@ -1046,19 +1040,10 @@ async function downloadQuotePDFById(quoteId, type) {
 }
 
 // 5. Hàm tạo HTML và lưu PDF
-function escapeQuoteHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[char]));
-}
 
 async function generateAndSaveQuotePDF(quoteId, type, data) {
   try {
-    const typeLabel = type === 'bang_keo_in' ? 'Băng Keo In Logo' : (type === 'bang_keo' ? 'Băng Keo thường' : 'Trục In');
+    const typeLabel = { bang_keo_in: 'Băng Keo In Logo', bang_keo: 'Băng Keo thường', thank_you: 'Băng keo Thank you' }[type] || 'Trục In';
     const company = utils.companyInfo || {};
     const quoteItems = normalizeStoredQuoteItems(data, type);
     const allAxes = quoteItems.flatMap((item, itemIndex) => (item.axes || []).map(axis => ({ ...axis, itemIndex })));
@@ -1074,8 +1059,8 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
     const quoteItemRows = quoteItems.map((item, index) => `
             <tr>
               <td style="text-align: center;">${index + 1}</td>
-              <td><strong>${escapeQuoteHtml(data.ten_hang)}</strong><br><small>Màu keo/sắc: ${escapeQuoteHtml(`${item.details?.glueColor || data.mau_keo || ''} ${item.details?.printColor || item.details?.color || data.mau_sac || ''}`.trim() || '-')}</small></td>
-              <td>${escapeQuoteHtml(item.specification)}</td>
+              <td><strong>${utils.escapeHtml(data.ten_hang)}</strong><br><small>Màu keo/sắc: ${utils.escapeHtml(`${item.details?.glueColor || data.mau_keo || ''} ${item.details?.printColor || item.details?.color || data.mau_sac || ''}`.trim() || '-')}</small></td>
+              <td>${utils.escapeHtml(item.specification)}</td>
               <td style="text-align: right;">${utils.formatCurrency(item.quantity)}</td>
               <td style="text-align: right;">${utils.formatCurrency(item.unitPrice)}đ</td>
               <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(item.total)}đ</td>
@@ -1084,8 +1069,8 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
     const axisQuoteRows = allAxes.map((axis, index) => `
             <tr>
               <td style="text-align: center;">${quoteItems.length + index + 1}</td>
-              <td><strong>${escapeQuoteHtml(axis.name || 'Trục mới')}</strong><br><small>Trục của kích thước ${axis.itemIndex + 1}</small></td>
-              <td>Chu vi: ${escapeQuoteHtml(axis.circumference || '-')}</td>
+              <td><strong>${utils.escapeHtml(axis.name || 'Trục mới')}</strong><br><small>Trục của kích thước ${axis.itemIndex + 1}</small></td>
+              <td>Chu vi: ${utils.escapeHtml(axis.circumference || '-')}</td>
               <td style="text-align: right;">${utils.formatCurrency(axis.quantity)}</td>
               <td style="text-align: right;">${utils.formatCurrency(axis.unitPrice)}đ</td>
               <td style="text-align: right; font-weight: bold;">${utils.formatCurrency(axis.total)}đ</td>
@@ -1160,17 +1145,17 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
         <div class="accent"></div>
         <div class="header">
           <div class="company company-brand">
-            <img class="company-logo" src="${escapeQuoteHtml(quoteLogoRelativeUrl())}" alt="Logo">
+            <img class="company-logo" src="${utils.escapeHtml(quoteLogoRelativeUrl())}" alt="Logo">
             <div>
-              <p class="company-name">${escapeQuoteHtml(company.name)}</p>
-              <p class="info-text"><strong>Địa chỉ:</strong> ${escapeQuoteHtml(company.address)}</p>
-              <p class="info-text"><strong>Hotline:</strong> ${escapeQuoteHtml(company.hotline)}</p>
+              <p class="company-name">${utils.escapeHtml(company.name)}</p>
+              <p class="info-text"><strong>Địa chỉ:</strong> ${utils.escapeHtml(company.address)}</p>
+              <p class="info-text"><strong>Hotline:</strong> ${utils.escapeHtml(company.hotline)}</p>
             </div>
           </div>
           <div class="quote-meta">
             <p class="title">BẢNG BÁO GIÁ</p>
             <div class="meta-pill">
-              <div class="meta-row"><span>Số</span><strong>${escapeQuoteHtml(quoteId)}</strong></div>
+              <div class="meta-row"><span>Số</span><strong>${utils.escapeHtml(quoteId)}</strong></div>
               <div class="meta-row"><span>Ngày</span><strong>${data.thoi_gian ? utils.formatDate(data.thoi_gian) : ''}</strong></div>
             </div>
           </div>
@@ -1179,8 +1164,8 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
         <div class="section-title">Thông tin khách hàng</div>
         <div class="info-card">
           <table class="info-grid">
-            <tr><td class="label">Khách hàng</td><td><strong>${escapeQuoteHtml(data.ten_khach_hang)}</strong></td></tr>
-            <tr><td class="label">Loại hàng</td><td>${escapeQuoteHtml(typeLabel)}</td></tr>
+            <tr><td class="label">Khách hàng</td><td><strong>${utils.escapeHtml(data.ten_khach_hang)}</strong></td></tr>
+            <tr><td class="label">Loại hàng</td><td>${utils.escapeHtml(typeLabel)}</td></tr>
           </table>
         </div>
 
@@ -1214,7 +1199,7 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
           </tr>
         </table>
 
-        <p class="words-text"><strong>Bằng chữ:</strong> ${escapeQuoteHtml(totalWords)}</p>
+        <p class="words-text"><strong>Bằng chữ:</strong> ${utils.escapeHtml(totalWords)}</p>
         <p class="note">Báo giá có hiệu lực theo thỏa thuận tại thời điểm xác nhận đơn hàng.</p>
 
         <table class="signatures">
@@ -1225,8 +1210,8 @@ async function generateAndSaveQuotePDF(quoteId, type, data) {
             </td>
             <td>
               <p><strong>NGƯỜI BÁO GIÁ</strong></p>
-              <p class="sign-name">${escapeQuoteHtml(company.representative || '')}</p>
-              <p style="margin: 4px 0 0; color:#64748b;">HP: ${escapeQuoteHtml(company.representativePhone || '')}</p>
+              <p class="sign-name">${utils.escapeHtml(company.representative || '')}</p>
+              <p style="margin: 4px 0 0; color:#64748b;">HP: ${utils.escapeHtml(company.representativePhone || '')}</p>
             </td>
           </tr>
         </table>
@@ -1297,12 +1282,12 @@ function openQuotePdfPreview(quoteId, htmlContent, previewLogoSrc = '') {
   }
   quotePdfPreviewState = { quoteId, htmlContent };
   if (title) title.textContent = `Xem trước báo giá ${quoteId}`;
-  const relativeLogoAttr = `src="${escapeQuoteHtml(quoteLogoRelativeUrl())}"`;
+  const relativeLogoAttr = `src="${utils.escapeHtml(quoteLogoRelativeUrl())}"`;
   frame.srcdoc = htmlContent.replace(
     '</head>',
     '<style>body { padding: 24mm 18mm 18mm; }</style></head>'
   ).split(relativeLogoAttr).join(previewLogoSrc
-    ? `src="${escapeQuoteHtml(previewLogoSrc)}"`
+    ? `src="${utils.escapeHtml(previewLogoSrc)}"`
     : 'src="data:," style="display:none"');
   modal.classList.add('active');
 }
@@ -1357,17 +1342,10 @@ function getQuoteConversionSteps(type, quoteId, newOrderId, convertedAt, deliver
   ];
 }
 
-// Ngày mai theo giờ máy dạng 'YYYY-MM-DD' (dùng utils.tomorrowDateInputValue khi có).
-function quoteTomorrowDateValue(now = new Date()) {
-  if (typeof utils !== 'undefined' && typeof utils.tomorrowDateInputValue === 'function') return utils.tomorrowDateInputValue();
-  const date = new Date(now.getTime());
-  date.setDate(date.getDate() + 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 function getQuoteOrderType(type) {
   if (type === 'bang_keo') return 'bang_keo';
   if (type === 'truc_in') return 'truc_in';
+  if (type === 'thank_you') return 'thank_you';
   return 'bang_keo_in';
 }
 
@@ -1424,10 +1402,14 @@ async function convertQuoteToOrder(quoteId, type, triggerButton = null) {
   quoteConversionsInFlight.add(quoteId);
   if (triggerButton) triggerButton.disabled = true;
   try {
-    if (!await utils.confirmAction(
-      `Bạn có chắc muốn chuyển báo giá ${quoteId} thành đơn đặt hàng thực tế không?\nHành động này sẽ tạo mã đơn hàng mới.`,
-      { title: 'Chuyển báo giá', confirmText: 'Tạo đơn hàng' }
-    )) {
+    // Hộp xác nhận có ô ngày giao (mặc định ngày mai); trả về 'YYYY-MM-DD' hoặc false khi hủy
+    const deliveryDate = await utils.confirmAction(
+      `Chuyển báo giá ${quoteId} thành đơn đặt hàng thực tế?\nHành động này sẽ tạo mã đơn hàng mới.`,
+      { title: 'Chuyển báo giá', confirmText: 'Tạo đơn hàng', date: utils.tomorrowDateInputValue() }
+    );
+    if (!deliveryDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)) {
+      utils.showToast('Vui lòng chọn ngày giao dự kiến', 'warning');
       return;
     }
 
@@ -1437,11 +1419,12 @@ async function convertQuoteToOrder(quoteId, type, triggerButton = null) {
     let idPrefix = 'BK';
     if (orderType === 'bang_keo') idPrefix = 'B';
     if (orderType === 'truc_in') idPrefix = 'TI';
+    if (orderType === 'thank_you') idPrefix = 'TY';
 
     // 1-2. Tạo mã ID đơn hàng mới và cập nhật đơn + tệp đính kèm trên cùng một transaction;
     // nếu mã bị trùng (máy khác vừa dùng) thì thử lại với mã kế tiếp.
     const { orderId: newOrderId, result: res } = await runWithGeneratedOrderId(idPrefix, orderType, orderId =>
-      window.electronAPI.dbTransaction(getQuoteConversionSteps(type, quoteId, orderId, new Date(), quoteTomorrowDateValue()))
+      window.electronAPI.dbTransaction(getQuoteConversionSteps(type, quoteId, orderId, new Date(), deliveryDate))
     );
 
     if (!res.ok) {

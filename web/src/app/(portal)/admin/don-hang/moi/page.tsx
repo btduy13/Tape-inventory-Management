@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/require-role";
 import { ROLE_GROUPS } from "@/lib/auth/roles";
-import { NewOrderView } from "@/features/admin-orders";
+import { NewOrderView, parseOrderType } from "@/features/admin-orders";
 
-export const metadata: Metadata = { title: "Lên đơn băng keo in" };
+export const metadata: Metadata = { title: "Lên đơn" };
 
-export default async function AdminOrderNewPage() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function AdminOrderNewPage({ searchParams }: Props) {
   await requireRole(ROLE_GROUPS.admin);
-  return <NewOrderView />;
+  const sp = await searchParams;
+  return <NewOrderView type={parseOrderType(sp.type)} quote={sp.quote === "1"} />;
 }

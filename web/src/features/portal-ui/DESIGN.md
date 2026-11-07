@@ -1,7 +1,6 @@
 # Portal redesign spec (admin, staff/CTV, workshop)
 
 Owner: `features/portal-ui` (shell, kit, list helpers). Page agents implement pages with this kit.
-Living reference: `/admin/_kit` (dev only, admin only; folder `app/(portal)/admin/%5Fkit`).
 Screenshots + browser checks: `web/test-results/portal-foundation/` (`node test-results/portal-foundation/kit-shots.mjs`).
 
 ## 1. Audit (what exists today, all kept)
@@ -66,7 +65,7 @@ copy/owners: `lib/workflow.ts` (`LEAD_PIPELINE`, `nextActionFor(status, role)`);
 
 Every page: `<PageHeader title description? breadcrumbs? actions? meta? />` then content, gap 24px (shell does the container: max 1400px, gutters 16/24/32).
 
-- **/admin Tổng quan**: header; `StatGrid` of `StatCard` per open status (href `/portal?status=x`, tone `LEAD_TONE`), "Cần xử lý" sections: new unassigned leads, quotes awaiting customer, accepted not converted, overdue jobs (each a small `DataTable` without pagination, link "Xem tất cả" to the filtered list). `LeadsLiveRefresher` stays.
+- **/admin Tổng quan**: header; `StatGrid` of `StatCard` per open status (href `/portal?status=x`, tone `LEAD_TONE`), "Cần xử lý" sections: new unassigned leads, quotes awaiting customer, accepted not converted, overdue jobs (each a small `DataTable` without pagination, link "Xem tất cả" to the filtered list).
 - **/portal Khách hàng** (all internal roles): header (admin: none; title per role "Khách hàng" / "Khách của tôi"); `FilterBar` (search code/name/phone/company; chips status multi; select assignee (admin/manager only); date range created_at); `DataTable` columns Mã (link), Khách hàng (name + company/phone), Trạng thái (`StatusBadge`, mobile badge), Số cuộn (end), Người phụ trách (hidden for staff/ctv), Cập nhật; sort: updated (default desc), created, code, customer, quantity. Keep realtime unread via `rowClassName` + live dot in header `meta`. Server: `applyListQuery(db.from("leads").select(..., { count: "exact" }), LEADS_SPEC, state)`.
 - **Lead detail**: header (title = code, meta = `StatusBadge size="md"`, breadcrumbs Khách hàng › code, actions = the role's primary next action button anchor e.g. "#bao-gia"); `WorkflowStepper`; 2 columns lg (`minmax(0,1fr) 22rem`): main = Khách hàng + Thiết kế (Section), Báo giá (`quotesSlot`), Lịch sử; aside = Phân công (admin), Sản xuất (admin), Đổi trạng thái, Ghi chú. Phone: aside panels come right after the stepper (action first).
 - **/portal/xuong**: header + `FilterBar` (search order/lead code/print text; chips step; select assignee (admin); date range due_date `type: "date"`); toggle view Bảng / Theo công đoạn (`?view=board`) — board keeps grouping + one-tap next-step for workshop; table uses `applyListInMemory` over `workshop_jobs()`. Sort: due (default asc, nulls last), step, updated. Overdue rows: red tone badge, never colour alone.
@@ -120,7 +119,7 @@ const { rows, total } = applyListInMemory(jobs, JOBS_SPEC, state);      // small
 ```
 URL params: `q, sort, dir, from, to, page, size` + one param per filter (`status=new,quoted`). Filter names
 cannot be reserved names. Also: `serializeListParams`, `listHref`, `patchListState` (resets page),
-`toggleSort`, `toggleFilterValue`, `clearFilters`, `hasActiveFilters`, `sanitizeSearch`, `pageCount`.
+`toggleSort`, `clearFilters`, `hasActiveFilters`, `sanitizeSearch`, `pageCount`.
 Security: columns only from the spec; search text is sanitized (letters/digits/space/`@.+-`, 80 chars) and
 sent as a quoted `ilike` operand; dates validated and bounded in VN time (+07:00); RLS still decides rows.
 DB search is not accent-insensitive (in-memory search is).
@@ -143,4 +142,4 @@ Type: system sans (Vietnamese glyphs), tabular numbers on the portal root, scale
 Radius ladder: controls 8px, surfaces 12px, badges + chips pill. No shadows, no gradients; borders only.
 Motion: drawer slide 180ms, toast rise 200ms, skeleton shimmer; all off under `prefers-reduced-motion`.
 Rules: no inline `style` (CSP), no CSS modules, no all-caps labels, Vietnamese sentence-case copy in `vi.portalUi`.
-A11y: AA contrast, visible focus everywhere, ≥ 44px targets, `aria-sort`, `aria-current`, dialogs native, skip link, 360–1920 without horizontal scroll (tables become cards < 768px; workflow strips scroll inside themselves; other wide tables go in `ScrollRegion`, which is focusable and named).
+A11y: AA contrast, visible focus everywhere, ≥ 44px targets, `aria-sort`, `aria-current`, dialogs native, skip link, 360–1920 without horizontal scroll (tables become cards < 768px; workflow strips scroll inside themselves; other wide tables scroll inside a focusable, named region).

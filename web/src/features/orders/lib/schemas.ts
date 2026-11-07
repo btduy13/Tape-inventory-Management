@@ -23,12 +23,6 @@ export const addNoteSchema = z.object({
 });
 export type AddNoteInput = z.infer<typeof addNoteSchema>;
 
-/** `?status=` filter on the list page; anything unknown means "all". */
-export function parseStatusFilter(raw: unknown): LeadStatus | null {
-  const r = leadStatus.safeParse(Array.isArray(raw) ? raw[0] : raw);
-  return r.success ? r.data : null;
-}
-
 export function formToObject(form: FormData): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of form.entries()) {

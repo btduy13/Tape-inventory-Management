@@ -2,19 +2,12 @@
 // to their assigned leads, so no role filtering happens here.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Design, Lead, LeadStatus, Quote } from "@/lib/types";
+import type { Database, Design, Lead, Quote } from "@/lib/types";
 import { STORAGE_BUCKETS } from "@/lib/types";
 import { actorIds, buildTimeline, type TimelineEntry } from "../lib/timeline";
 import type { NameResolver } from "./actor-names";
 
 type Db = SupabaseClient<Database>;
-
-export const LEAD_LIST_LIMIT = 200;
-
-export type LeadListItem = Pick<
-  Lead,
-  "id" | "code" | "customer_name" | "phone" | "company" | "quantity" | "status" | "assigned_to" | "created_at" | "updated_at"
-> & { assigneeName: string | null };
 
 export type QuoteSummary = Pick<Quote, "id" | "version" | "status" | "total" | "vat_percent" | "currency" | "sent_at" | "responded_at">;
 
@@ -34,20 +27,6 @@ export async function profileNames(db: Db, ids: readonly string[]): Promise<Reco
   const out: Record<string, string> = {};
   for (const p of data ?? []) out[p.id] = p.full_name || p.email || "";
   return out;
-}
-
-export async function listLeads(db: Db, status: LeadStatus | null = null): Promise<LeadListItem[]> {
-  let q = db
-    .from("leads")
-    .select("id, code, customer_name, phone, company, quantity, status, assigned_to, created_at, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(LEAD_LIST_LIMIT);
-  if (status) q = q.eq("status", status);
-  const { data, error } = await q;
-  if (error) throw new Error(`listLeads failed: ${error.code ?? "unknown"}`);
-  const rows = data ?? [];
-  const names = await profileNames(db, [...new Set(rows.map((r) => r.assigned_to).filter((x): x is string => !!x))]);
-  return rows.map((r) => ({ ...r, assigneeName: r.assigned_to ? names[r.assigned_to] ?? null : null }));
 }
 
 const PREVIEW_URL_TTL_SECONDS = 600;

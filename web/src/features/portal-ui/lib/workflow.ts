@@ -30,13 +30,6 @@ export const LEAD_PIPELINE: readonly PipelineStage[] = [
   { status: "done", phase: "closed", actor: null, actionKey: null },
 ] as const;
 
-export const PHASE_OF: Readonly<Record<LeadStatus, Phase>> = {
-  new: "sales", assigned: "sales", consulting: "sales",
-  quoted: "deal", accepted: "deal",
-  production: "make", shipping: "make",
-  done: "closed", cancelled: "closed",
-};
-
 /** Index on the main road; cancelled = -1. */
 export function pipelineIndex(status: LeadStatus): number {
   return LEAD_PIPELINE.findIndex((s) => s.status === status);

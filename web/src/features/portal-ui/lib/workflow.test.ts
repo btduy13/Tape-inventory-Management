@@ -3,7 +3,7 @@ import { getDictionary } from "@/i18n";
 import { LEAD_STATUSES, PRODUCTION_STEPS, ROLES } from "@/lib/types";
 import { homeFor, isNavActive, navFor } from "./nav";
 import { LEAD_TONE, STEP_TONE } from "./status-tones";
-import { LEAD_PIPELINE, PHASE_OF, nextActionFor, pipelineIndex, stageStates, stepIndex } from "./workflow";
+import { LEAD_PIPELINE, nextActionFor, pipelineIndex, stageStates, stepIndex } from "./workflow";
 
 const t = getDictionary().portalUi;
 
@@ -36,11 +36,8 @@ describe("workflow", () => {
     expect(stageStates(3, -1)).toEqual(["todo", "todo", "todo"]);
   });
 
-  it("every status and step has a phase / tone", () => {
-    for (const s of LEAD_STATUSES) {
-      expect(PHASE_OF[s]).toBeTruthy();
-      expect(LEAD_TONE[s]).toBeTruthy();
-    }
+  it("every status and step has a tone", () => {
+    for (const s of LEAD_STATUSES) expect(LEAD_TONE[s]).toBeTruthy();
     for (const s of PRODUCTION_STEPS) expect(STEP_TONE[s]).toBeTruthy();
   });
 });
@@ -57,6 +54,8 @@ describe("nav", () => {
   it("shows settings to admin only and the workshop only to admin / workshop", () => {
     const hrefs = (r: (typeof ROLES)[number]) => navFor(r).flatMap((g) => g.items.map((i) => i.href));
     expect(hrefs("admin")).toContain("/admin/users");
+    const admin = hrefs("admin");
+    expect(admin.indexOf("/admin/khach-hang")).toBe(admin.indexOf("/admin/don-hang") + 1);
     for (const r of ["manager", "staff", "ctv", "workshop"] as const) expect(hrefs(r).some((h) => h.startsWith("/admin"))).toBe(false);
     expect(hrefs("staff")).not.toContain("/portal/xuong");
     expect(hrefs("workshop")).toEqual(["/portal/xuong"]);

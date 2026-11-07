@@ -88,8 +88,9 @@ test('insert/update only accept allowlisted columns and plain values', () => {
   assert.equal(inserted.values[2], "O'Reilly");
 });
 
-test('insert column allowlists cover exactly the three order tables', () => {
-  assert.deepEqual(Object.keys(INSERT_COLUMNS).sort(), ['bang_keo_in_orders', 'bang_keo_orders', 'truc_in_orders']);
+test('insert column allowlists cover exactly the four order tables', () => {
+  assert.deepEqual(Object.keys(INSERT_COLUMNS).sort(), ['bang_keo_in_orders', 'bang_keo_orders', 'thank_you_orders', 'truc_in_orders']);
+  for (const columns of Object.values(INSERT_COLUMNS)) assert.ok(columns.has('customer_id'));
   for (const columns of Object.values(INSERT_COLUMNS)) {
     for (const column of columns) assert.match(column, /^[a-z_]+$/);
   }
@@ -127,4 +128,34 @@ test('transactions accept only write actions and keep step order', () => {
   ]);
   assert.deepEqual(steps.map(step => step.action), ['order.delete', 'attachment.deleteForOrder']);
   assert.equal(steps[0].sql, 'DELETE FROM bang_keo_orders WHERE id = $1');
+});
+
+test('customer_id must be a uuid or null; thank you orders write their own columns', () => {
+  const id = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b';
+  const insert = buildDbAction('order.insert', { orderType: 'thank_you', values: { id: 'TY-11-26-001', kich_thuoc: '5x5', ghi_chu: 'x', customer_id: id } }, 'write');
+  assert.match(insert.sql, /^INSERT INTO thank_you_orders \(id, kich_thuoc, ghi_chu, customer_id\)/);
+  assert.equal(insert.values[3], id);
+  assert.equal(buildDbAction('order.update', { orderType: 'bang_keo', id: 'B-1', values: { customer_id: null } }, 'write').values[0], null);
+  assert.throws(() => buildDbAction('order.update', { orderType: 'bang_keo', id: 'B-1', values: { customer_id: '1 OR 1=1' } }, 'write'), /mã khách hàng/);
+  assert.throws(() => buildDbAction('order.insert', { orderType: 'thank_you', values: { id: 'TY-1', quote_items: '[]' } }, 'write'), /quote_items/);
+  assert.throws(() => buildDbAction('order.insert', { orderType: 'bang_keo', values: { id: 'B-1', kich_thuoc: 'x' } }, 'write'), /kich_thuoc/);
+});
+
+test('bulk status: a null flag keeps the stored value, both null is rejected', () => {
+  const built = buildDbAction('order.setDeliveryAndSettlement', { orderType: 'thank_you', id: 'TY-1', delivered: null, settled: true }, 'write');
+  assert.deepEqual(built.values, [null, true, 'TY-1']);
+  assert.match(built.sql, /da_giao = COALESCE\(\$1, da_giao\)/);
+  assert.match(built.sql, /CASE WHEN COALESCE\(\$2, da_tat_toan, FALSE\) THEN 0 ELSE GREATEST\(COALESCE\(thanh_tien_ban, 0\) \+ COALESCE\(vat, 0\) - COALESCE\(tien_coc, 0\), 0\) END/);
+  assert.throws(() => buildDbAction('order.setDeliveryAndSettlement', { orderType: 'bang_keo', id: 'B-1', delivered: null, settled: null }, 'write'), /Chưa chọn/);
+});
+
+test('customer picker actions call only the two granted functions', () => {
+  const search = buildDbAction('customer.search', { query: '' }, 'read');
+  assert.match(search.sql, /FROM electron_customer_search\(\$1, NULL, 20\)/);
+  assert.deepEqual(search.values, [null]);
+  const create = buildDbAction('customer.create', { name: 'Chị Lan', phone: '', address: 'Q1' }, 'read');
+  assert.match(create.sql, /^SELECT electron_customer_create\(\$1, \$2, \$3\) AS id$/);
+  assert.deepEqual(create.values, ['Chị Lan', null, 'Q1']);
+  assert.throws(() => buildDbAction('customer.create', { name: '' }, 'read'), /tên khách/);
+  assert.throws(() => buildDbAction('customer.create', { name: 'A', phone: '1'.repeat(31) }, 'read'), /SĐT/);
 });

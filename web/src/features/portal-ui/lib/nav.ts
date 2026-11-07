@@ -2,12 +2,12 @@
 import { ROUTES } from "@/lib/routes";
 import type { AppRole } from "@/lib/types";
 
-export type IconName = "overview" | "leads" | "workshop" | "users" | "ruler" | "layers";
+export type IconName = "overview" | "customers" | "leads" | "workshop" | "users" | "ruler" | "layers";
 
 export type NavItem = {
   href: string;
   /** Key in vi.portalUi. */
-  labelKey: "navOverview" | "navLeads" | "navMyLeads" | "navWorkshop" | "navMyJobs" | "navOrders" | "navUsers" | "navTapeSpecs" | "navPresets";
+  labelKey: "navOverview" | "navLeads" | "navMyLeads" | "navWorkshop" | "navMyJobs" | "navOrders" | "navCustomers" | "navUsers" | "navTapeSpecs" | "navPresets";
   icon: IconName;
   /** Active on the exact href or on any of these path prefixes. */
   prefixes?: readonly string[];
@@ -28,6 +28,7 @@ export function navFor(role: AppRole): NavGroup[] {
             { href: ROUTES.portal, labelKey: "navLeads", icon: "leads", prefixes: leadPrefixes },
             { href: ROUTES.workshop, labelKey: "navWorkshop", icon: "workshop", prefixes: [`${ROUTES.workshop}/`] },
             { href: ROUTES.adminOrders, labelKey: "navOrders", icon: "layers", prefixes: [`${ROUTES.adminOrders}/`] },
+            { href: ROUTES.adminCustomers, labelKey: "navCustomers", icon: "customers", prefixes: [`${ROUTES.adminCustomers}/`] },
           ],
         },
         {

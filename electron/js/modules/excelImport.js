@@ -14,7 +14,7 @@ const excelImportConfigs = {
       'Giá bán Trục', 'CTV Trục', 'Hoa hồng Trục (%)', 'Đã giao', 'Đã tất toán'
     ],
     sample: [
-      'Băng keo in logo', 'Khách A', nextDateString(), 48, 90, 50, 6, 100,
+      'Băng keo in logo', 'Khách A', utils.tomorrowDateInputValue(), 48, 90, 50, 6, 100,
       0, 'Trong', 0, 'Đỏ', 0, 0, 0, 120000, 25000, 500000, 'CTV A', 5,
       '3 ly', 'Thùng', 0, 'Trục mới', 'Trục 48', 150, 1, 300000, 450000, 'CTV A', 10, 'Chưa', 'Chưa'
     ]
@@ -29,7 +29,7 @@ const excelImportConfigs = {
       'Màu sắc', 'Màu keo', 'Đơn giá gốc', 'Đơn giá bán', 'CTV',
       'Hoa hồng (%)', 'Tiền ship', 'Đã giao', 'Đã tất toán'
     ],
-    sample: ['Trục in mẫu', 'Khách B', nextDateString(), '48x90', 2, 'Đỏ', 'Trong', 200000, 350000, '', 0, 0, 'Chưa', 'Chưa']
+    sample: ['Trục in mẫu', 'Khách B', utils.tomorrowDateInputValue(), '48x90', 2, 'Đỏ', 'Trong', 200000, 350000, '', 0, 0, 'Chưa', 'Chưa']
   },
   bang_keo: {
     label: 'Băng Keo',
@@ -41,7 +41,7 @@ const excelImportConfigs = {
       'Màu sắc', 'Đơn giá gốc', 'Đơn giá bán', 'CTV', 'Hoa hồng (%)',
       'Tiền ship', 'Đã giao', 'Đã tất toán'
     ],
-    sample: ['Băng keo trong', 'Khách C', nextDateString(), '48mm x 100y', 50, 'Trong', 12000, 18000, '', 0, 0, 'Chưa', 'Chưa']
+    sample: ['Băng keo trong', 'Khách C', utils.tomorrowDateInputValue(), '48mm x 100y', 50, 'Trong', 12000, 18000, '', 0, 0, 'Chưa', 'Chưa']
   }
 };
 
@@ -99,24 +99,6 @@ const excelImportAliases = {
 };
 
 let excelImportInProgress = false;
-
-// Ngày mai theo giờ máy (không dùng toISOString vì UTC lùi ngày ở UTC+7)
-function nextDateString() {
-  if (typeof utils !== 'undefined' && typeof utils.tomorrowDateInputValue === 'function') {
-    return utils.tomorrowDateInputValue();
-  }
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function todayImportDateString() {
-  if (typeof utils !== 'undefined' && typeof utils.toDateInputValue === 'function') {
-    return utils.toDateInputValue(new Date());
-  }
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 // Tạo ngày local và từ chối ngày tràn (vd. 31/02 sẽ không bị đẩy sang tháng 3)
 function buildValidImportDate(year, month, day) {
@@ -208,7 +190,7 @@ function parseImportDate(value) {
   }
   const text = String(value ?? '').trim();
   if (!text) {
-    const [y, m, d] = nextDateString().split('-').map(Number);
+    const [y, m, d] = utils.tomorrowDateInputValue().split('-').map(Number);
     return buildValidImportDate(y, m, d);
   }
   const parts = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
@@ -472,7 +454,10 @@ function buildSequentialOrderIds(firstId, count) {
 async function exportImportTemplate() {
   const orderType = typeof getStatsOrderTypeKey === 'function' ? getStatsOrderTypeKey() : 'bang_keo_in';
   const config = excelImportConfigs[orderType];
-  if (!config) return;
+  if (!config) {
+    utils.showToast('Loại đơn này chưa hỗ trợ nhập/mẫu Excel', 'warning');
+    return;
+  }
 
   try {
     const worksheet = XLSX.utils.aoa_to_sheet([config.headers, config.sample]);
@@ -491,7 +476,7 @@ async function exportImportTemplate() {
 
     const savePath = await window.electronAPI.showSaveDialog({
       title: `Lưu mẫu nhập ${config.label}`,
-      defaultPath: `${config.templateName}_${todayImportDateString()}.xlsx`,
+      defaultPath: `${config.templateName}_${utils.toDateInputValue(new Date())}.xlsx`,
       filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
     });
 
@@ -526,7 +511,10 @@ async function importOrdersFromExcel() {
 async function runExcelImport() {
   const orderType = typeof getStatsOrderTypeKey === 'function' ? getStatsOrderTypeKey() : 'bang_keo_in';
   const config = excelImportConfigs[orderType];
-  if (!config) return;
+  if (!config) {
+    utils.showToast('Loại đơn này chưa hỗ trợ nhập/mẫu Excel', 'warning');
+    return;
+  }
 
   const file = await window.electronAPI.showOpenDialog({
     title: `Chọn file Excel nhập ${config.label}`,
@@ -681,14 +669,4 @@ function buildBangKeoInImportStatement(orderId, data) {
 
 function buildSimpleImportStatement(orderId, data, type) {
   return buildImportInsertStatement(orderId, data, type === 'truc_in' ? 'truc_in' : 'bang_keo');
-}
-
-async function insertBangKeoInImport(orderId, data) {
-  const statement = buildBangKeoInImportStatement(orderId, data);
-  return window.electronAPI.dbRun(statement.action, statement.params);
-}
-
-async function insertSimpleImport(orderId, data, type) {
-  const statement = buildSimpleImportStatement(orderId, data, type);
-  return window.electronAPI.dbRun(statement.action, statement.params);
 }

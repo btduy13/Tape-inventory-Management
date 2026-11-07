@@ -48,6 +48,8 @@ const readActions = {
       SELECT id, thoi_gian, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $1 AND ${NOT_QUOTE}
       UNION ALL
       SELECT id, thoi_gian, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $1 AND ${NOT_QUOTE}
+      UNION ALL
+      SELECT id, thoi_gian, thanh_tien_ban FROM thank_you_orders WHERE thoi_gian >= $1 AND ${NOT_QUOTE}
     ) AS combined`,
     values: [p.timestamp(since, 'mốc thời gian')]
   }),
@@ -63,6 +65,8 @@ const readActions = {
       SELECT ten_hang, thoi_gian, so_luong FROM truc_in_orders WHERE thoi_gian >= $1 AND ${NOT_QUOTE}
       UNION ALL
       SELECT ten_hang, thoi_gian, so_luong FROM bang_keo_orders WHERE thoi_gian >= $1 AND ${NOT_QUOTE}
+      UNION ALL
+      SELECT ten_hang, thoi_gian, so_luong FROM thank_you_orders WHERE thoi_gian >= $1 AND ${NOT_QUOTE}
     ) AS combined
     GROUP BY ten_hang
     ORDER BY total_qty DESC NULLS LAST
@@ -84,6 +88,8 @@ const readActions = {
       SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, cong_no_ncc, is_quote FROM truc_in_orders
       UNION ALL
       SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, cong_no_ncc, is_quote FROM bang_keo_orders
+      UNION ALL
+      SELECT ngay_du_kien, da_giao, da_tat_toan, cong_no_khach, cong_no_ncc, is_quote FROM thank_you_orders
     ) AS combined`,
     values: []
   }),
@@ -100,6 +106,8 @@ const readActions = {
       SELECT thoi_gian, so_luong, thanh_tien_ban FROM truc_in_orders WHERE thoi_gian >= $2 AND ${NOT_QUOTE}
       UNION ALL
       SELECT thoi_gian, so_luong, thanh_tien_ban FROM bang_keo_orders WHERE thoi_gian >= $2 AND ${NOT_QUOTE}
+      UNION ALL
+      SELECT thoi_gian, so_luong, thanh_tien_ban FROM thank_you_orders WHERE thoi_gian >= $2 AND ${NOT_QUOTE}
     ) AS combined
     GROUP BY period
     ORDER BY period`,
@@ -117,6 +125,8 @@ const readActions = {
       SELECT ten_hang, so_luong FROM truc_in_orders WHERE ${NOT_QUOTE}
       UNION ALL
       SELECT ten_hang, so_luong FROM bang_keo_orders WHERE ${NOT_QUOTE}
+      UNION ALL
+      SELECT ten_hang, so_luong FROM thank_you_orders WHERE ${NOT_QUOTE}
     ) AS combined
     GROUP BY ten_hang
     ORDER BY total_quantity DESC`,
@@ -130,6 +140,8 @@ const readActions = {
     SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'truc_in' as type FROM truc_in_orders WHERE ${NOT_QUOTE}
     UNION ALL
     SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'bang_keo' as type FROM bang_keo_orders WHERE ${NOT_QUOTE}
+    UNION ALL
+    SELECT id, thoi_gian, ten_hang, ten_khach_hang, so_luong, don_gia_ban, 'thank_you' as type FROM thank_you_orders WHERE ${NOT_QUOTE}
     ORDER BY thoi_gian DESC`,
     values: []
   }),
@@ -144,6 +156,9 @@ const readActions = {
       UNION ALL
       SELECT to_jsonb(q) AS order_data, thoi_gian, 'truc_in' AS type
       FROM truc_in_orders q WHERE is_quote = TRUE
+      UNION ALL
+      SELECT to_jsonb(q) AS order_data, thoi_gian, 'thank_you' AS type
+      FROM thank_you_orders q WHERE is_quote = TRUE
       ORDER BY thoi_gian DESC`,
     values: []
   }),
@@ -164,6 +179,8 @@ const readActions = {
       SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM truc_in_orders WHERE ${NOT_QUOTE}
       UNION ALL
       SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, COALESCE(loi_nhuan_rong, 0) AS loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM bang_keo_orders WHERE ${NOT_QUOTE}
+      UNION ALL
+      SELECT da_giao, ngay_du_kien, da_tat_toan, cong_no_khach, cong_no_ncc, loi_nhuan_rong, 0 AS truc_loi_nhuan_rong, NULL AS loai_truc FROM thank_you_orders WHERE ${NOT_QUOTE}
     ) AS combined`,
     values: []
   }),
@@ -193,6 +210,23 @@ const readActions = {
   'attachment.getData': ({ id }) => ({
     sql: "SELECT content_type, encode(data, 'base64') AS base64_data FROM order_attachments WHERE id = $1",
     values: [p.positiveInt(id, 'mã tệp')]
+  }),
+
+  // Ô chọn khách (0028): tìm theo tên/SĐT; từ khóa trống = 20 khách cập nhật gần nhất
+  'customer.search': ({ query }) => ({
+    sql: 'SELECT id, name, phone, address, company FROM electron_customer_search($1, NULL, 20)',
+    values: [p.text(query, { name: 'từ khóa', max: 200, allowEmpty: true }) || null]
+  }),
+
+  // Tạo khách qua hàm SECURITY DEFINER (một câu SELECT, tự commit). Trùng đúng một SĐT thì hàm trả
+  // về khách sẵn có; nhiều khách cùng SĐT hoặc thiếu tên thì báo lỗi 22023.
+  'customer.create': ({ name, phone, address }) => ({
+    sql: 'SELECT electron_customer_create($1, $2, $3) AS id',
+    values: [
+      p.text(name, { name: 'tên khách', max: 255 }),
+      p.text(phone ?? '', { name: 'SĐT', max: 30, allowEmpty: true }) || null,
+      p.text(address ?? '', { name: 'địa chỉ', max: 500, allowEmpty: true }) || null
+    ]
   }),
 
   'emailHistory.suggestions': () => ({

@@ -176,25 +176,6 @@ export function toggleSort(spec: ListSpec, state: ListState, key: string): ListS
   return patchListState(state, { sort: key, dir });
 }
 
-/** Chip click: adds / removes a value (multi) or selects / clears it (single). */
-export function toggleFilterValue(spec: ListSpec, state: ListState, name: string, value: string): ListState {
-  const def = spec.filters?.[name];
-  if (!def || parseFilter(def, value).length === 0) return state;
-  const current = state.filters[name] ?? [];
-  const on = current.includes(value);
-  let values: string[];
-  if (def.kind === "enum" && def.multi) {
-    const set = new Set(on ? current.filter((v) => v !== value) : [...current, value]);
-    values = def.values.filter((v) => set.has(v));
-  } else {
-    values = on ? [] : [value];
-  }
-  const filters = { ...state.filters };
-  if (values.length > 0) filters[name] = values;
-  else delete filters[name];
-  return patchListState(state, { filters });
-}
-
 export function clearFilters(state: ListState): ListState {
   return patchListState(state, { q: "", filters: {}, from: null, to: null });
 }

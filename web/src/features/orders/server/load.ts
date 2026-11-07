@@ -5,18 +5,12 @@ import { seesAllLeads } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { leadListSpec, type LeadListSpec, type LeadRow } from "../lib/lead-list";
-import { parseStatusFilter } from "../lib/schemas";
 import { actorNamesViaService } from "./actor-names";
 import { listAssigneeOptions, listLeadPage, type AssigneeOption } from "./lead-list";
 import { loadLeadOverview, type LeadOverview } from "./overview";
-import { getLeadDetail, listLeads, type LeadDetail, type LeadListItem } from "./queries";
+import { getLeadDetail, type LeadDetail } from "./queries";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export async function loadLeadList(rawStatus: unknown): Promise<{ leads: LeadListItem[]; status: ReturnType<typeof parseStatusFilter> }> {
-  const status = parseStatusFilter(rawStatus);
-  return { leads: await listLeads(await createClient(), status), status };
-}
 
 export type LeadListData = {
   spec: LeadListSpec;

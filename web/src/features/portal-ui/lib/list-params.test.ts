@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clampPage, clearFilters, defaultListState, defineListSpec, hasActiveFilters, isValidDate, listHref, pageCount, pageSlice,
-  parseListParams, patchListState, sanitizeSearch, serializeListParams, toggleFilterValue, toggleSort,
+  parseListParams, patchListState, sanitizeSearch, serializeListParams, toggleSort,
 } from "./list-params";
 
 const spec = defineListSpec({
@@ -116,17 +116,6 @@ describe("state transitions", () => {
     expect(toggleSort(spec, base, "updated")).toMatchObject({ sort: "updated", dir: "asc", page: 1 });
     expect(toggleSort(spec, base, "name")).toMatchObject({ sort: "name", dir: "asc" });
     expect(toggleSort(spec, base, "nope")).toBe(base);
-  });
-  it("toggleFilterValue adds/removes (multi) and selects/clears (single)", () => {
-    const a = toggleFilterValue(spec, base, "status", "quoted");
-    const b = toggleFilterValue(spec, a, "status", "new");
-    expect(b.filters.status).toEqual(["new", "quoted"]);
-    expect(toggleFilterValue(spec, b, "status", "new").filters.status).toEqual(["quoted"]);
-    const c = toggleFilterValue(spec, base, "owner", "a");
-    expect(toggleFilterValue(spec, c, "owner", "b").filters.owner).toEqual(["b"]);
-    expect(toggleFilterValue(spec, toggleFilterValue(spec, c, "owner", "b"), "owner", "b").filters.owner).toBeUndefined();
-    expect(toggleFilterValue(spec, base, "status", "evil")).toBe(base);
-    expect(toggleFilterValue(spec, base, "nope", "x")).toBe(base);
   });
   it("clearFilters / hasActiveFilters", () => {
     const s = parseListParams(spec, { q: "a", status: "new", from: "2026-01-01", sort: "code" });

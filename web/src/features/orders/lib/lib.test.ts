@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildTimeline, actorIds, formatDateTime } from "./timeline";
 import { countUnread, isUnread, markSeen, parseBaseline, parseSeen } from "./unread";
 import { affectedLeadId, leadFilter, lostAssignment } from "./realtime-events";
-import { addNoteSchema, changeStatusSchema, parseStatusFilter } from "./schemas";
+import { addNoteSchema, changeStatusSchema } from "./schemas";
 import { classifyDbError } from "./action-state";
 
 const ID = "6f1c1f0e-8a7b-4c2d-9e3f-1a2b3c4d5e6f";
@@ -87,11 +87,8 @@ describe("schemas", () => {
     expect(changeStatusSchema.safeParse({ leadId: ID, to: "done", note: "x".repeat(1001) }).success).toBe(false);
   });
 
-  it("validates notes and filter", () => {
+  it("validates notes", () => {
     expect(addNoteSchema.safeParse({ leadId: ID, body: "   " }).success).toBe(false);
-    expect(parseStatusFilter("quoted")).toBe("quoted");
-    expect(parseStatusFilter(["done", "x"])).toBe("done");
-    expect(parseStatusFilter("x' or 1=1")).toBeNull();
   });
 
   it("classifies db errors", () => {

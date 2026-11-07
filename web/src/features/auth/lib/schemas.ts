@@ -10,10 +10,8 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(256),
   next: z.string().max(512).optional().nullable(),
 });
-export type LoginInput = z.infer<typeof loginSchema>;
 
 export const resetRequestSchema = z.object({ email });
-export type ResetRequestInput = z.infer<typeof resetRequestSchema>;
 
 export const updatePasswordSchema = z
   .object({
@@ -21,7 +19,6 @@ export const updatePasswordSchema = z
     confirm: z.string().max(256),
   })
   .refine((v) => v.password === v.confirm, { message: "passwordMismatch", path: ["confirm"] });
-export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 
 /** FormData -> plain object with string values only (files and duplicates ignored). */
 export function formToObject(form: FormData): Record<string, string> {

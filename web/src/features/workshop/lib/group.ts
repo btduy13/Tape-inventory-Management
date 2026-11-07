@@ -5,21 +5,9 @@ import { BOARD_STEPS } from "./steps";
 export type BoardColumn = ProductionStep | "pending";
 export const BOARD_COLUMNS: readonly BoardColumn[] = ["pending", ...BOARD_STEPS];
 
-export type JobGroups = Record<BoardColumn, WorkshopJobRow[]>;
-
-const byDue = (a: WorkshopJobRow, b: WorkshopJobRow) =>
-  (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31") || jobCode(a).localeCompare(jobCode(b));
-
 /** Office reference of a job (admin only): order id, else lead code, else the job id. */
 export function jobCode(job: Pick<WorkshopJobRow, "order_id" | "lead_code" | "job_id">): string {
   return job.order_id ?? job.lead_code ?? job.job_id;
-}
-
-export function groupJobs(jobs: readonly WorkshopJobRow[]): JobGroups {
-  const groups = Object.fromEntries(BOARD_COLUMNS.map((c) => [c, [] as WorkshopJobRow[]])) as JobGroups;
-  for (const job of jobs) groups[job.order_id ? job.step : "pending"].push(job);
-  for (const c of BOARD_COLUMNS) groups[c].sort(byDue);
-  return groups;
 }
 
 /**

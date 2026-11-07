@@ -35,7 +35,7 @@ web/
     security/csp.ts           buildCsp(), generateNonce()
     security/headers.ts       static security headers (next.config.ts)
     security/csrf.ts          assertSameOrigin() for route handlers
-    security/hash.ts          sha256Hex, randomToken, timingSafeEqual
+    security/hash.ts          sha256Hex, randomToken
     security/rate-limit.ts    checkRateLimit(headers, RATE_LIMITS.x), hashIp()
   src/features/<name>/        one folder per feature (README.md states ownership)
   test/                       vitest setup + server-only stub

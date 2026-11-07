@@ -60,7 +60,6 @@ export const leadFieldsSchema = z.object({
 });
 
 export type LeadFields = z.infer<typeof leadFieldsSchema>;
-export type LeadFieldsInput = Record<LeadFieldName, string>;
 
 /** First error message per field, for the form and the 422 response. */
 export function fieldErrors(error: z.ZodError): Partial<Record<LeadFieldName, string>> {

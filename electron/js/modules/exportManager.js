@@ -6,15 +6,6 @@ var exportVisibleOrderIds = null;
 var exportAllOrders = [];
 var exportPreviewData = null;
 
-function escapeExportHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 // Một bộ định dạng số lượng dùng chung cho bảng chọn đơn, bảng xem trước và phiếu in (không bao giờ ra "NaN").
 function formatExportQuantity(value) {
   const parsed = Number(value);
@@ -22,17 +13,16 @@ function formatExportQuantity(value) {
   return parsed.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
 }
 
-function getExportTableNameByOrderId(orderId) {
-  if (orderId.startsWith('BK-')) return 'bang_keo_in_orders';
-  if (orderId.startsWith('TI-')) return 'truc_in_orders';
-  return 'bang_keo_orders';
-}
-
-// Loại đơn (khóa thao tác dữ liệu) suy từ tiền tố mã đơn, khớp getExportTableNameByOrderId
+// Loại đơn (khóa thao tác dữ liệu) suy từ tiền tố mã đơn
 function getExportOrderTypeByOrderId(orderId) {
   if (orderId.startsWith('BK-')) return 'bang_keo_in';
   if (orderId.startsWith('TI-')) return 'truc_in';
+  if (orderId.startsWith('TY-')) return 'thank_you';
   return 'bang_keo';
+}
+
+function getExportTableNameByOrderId(orderId) {
+  return `${getExportOrderTypeByOrderId(orderId)}_orders`;
 }
 
 // Khởi động Modal chọn đơn hàng để xuất
@@ -152,10 +142,10 @@ function loadExportOrdersTable() {
       <td style="text-align: center;">
         <input type="checkbox" ${selectedExportOrderIds.has(row.id) ? 'checked' : ''}>
       </td>
-      <td><strong>${escapeExportHtml(row.id)}</strong></td>
-      <td>${escapeExportHtml(utils.formatDate(row.thoi_gian))}</td>
-      <td>${escapeExportHtml(row.ten_hang)}</td>
-      <td>${escapeExportHtml(row.ten_khach_hang)}</td>
+      <td><strong>${utils.escapeHtml(row.id)}</strong></td>
+      <td>${utils.escapeHtml(utils.formatDate(row.thoi_gian))}</td>
+      <td>${utils.escapeHtml(row.ten_hang)}</td>
+      <td>${utils.escapeHtml(row.ten_khach_hang)}</td>
       <td style="text-align: right;">${formatExportQuantity(row.so_luong)}${qtyLabel}</td>
       <td style="text-align: right;">${utils.formatCurrency(row.don_gia_ban)}đ</td>
     `;
@@ -291,6 +281,8 @@ function getExportSpecsAndUnit(order, tableName) {
   let unit = "cuộn";
   if (tableName === 'bang_keo_in_orders') {
     specs = `${parseInt(order.quy_cach_mm || 0)}mm x ${parseInt(order.quy_cach_m || 0)}m x ${parseInt(order.quy_cach_mic || 0)}mic`;
+  } else if (tableName === 'thank_you_orders') {
+    specs = String(order.kich_thuoc ?? '');
   } else if (tableName === 'truc_in_orders') {
     const quyCach = String(order.quy_cach ?? '');
     specs = quyCach ? (quyCach.toLowerCase().endsWith('mm') ? quyCach : `${quyCach}mm`) : "";
@@ -415,14 +407,14 @@ function renderPreviewProductsTable() {
   exportPreviewData.products.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.product)}" data-preview-field="product"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.specs)}" data-preview-field="specs"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.bg_color)}" data-preview-field="bg_color"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.text_color)}" data-preview-field="text_color"></td>
-      <td><input type="text" class="preview-input" value="${escapeExportHtml(p.unit)}" data-preview-field="unit"></td>
-      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${escapeExportHtml(p.quantity)}" data-preview-numeric="quantity"></td>
-      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${escapeExportHtml(p.price)}" data-preview-numeric="price"></td>
-      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${escapeExportHtml(p.vat || 0)}" data-preview-numeric="vat"></td>
+      <td><input type="text" class="preview-input" value="${utils.escapeHtml(p.product)}" data-preview-field="product"></td>
+      <td><input type="text" class="preview-input" value="${utils.escapeHtml(p.specs)}" data-preview-field="specs"></td>
+      <td><input type="text" class="preview-input" value="${utils.escapeHtml(p.bg_color)}" data-preview-field="bg_color"></td>
+      <td><input type="text" class="preview-input" value="${utils.escapeHtml(p.text_color)}" data-preview-field="text_color"></td>
+      <td><input type="text" class="preview-input" value="${utils.escapeHtml(p.unit)}" data-preview-field="unit"></td>
+      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${utils.escapeHtml(p.quantity)}" data-preview-numeric="quantity"></td>
+      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${utils.escapeHtml(p.price)}" data-preview-numeric="price"></td>
+      <td><input type="number" min="0" class="preview-input" style="text-align: right;" value="${utils.escapeHtml(p.vat || 0)}" data-preview-numeric="vat"></td>
       <td style="text-align: right; font-weight: 500;" id="preview-product-total-${idx}">${utils.formatCurrency(p.total)}đ</td>
       <td style="text-align: center;">
         <button class="btn btn-danger btn-sm" data-preview-delete style="padding: 2px 6px;">×</button>
@@ -498,12 +490,6 @@ function buildVoucherPdfHtml() {
   `;
 }
 
-function exportTodayFileDate() {
-  if (typeof utils.toDateInputValue === 'function') return utils.toDateInputValue(new Date());
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
 async function saveCurrentVoucherPdf() {
   const printArea = document.getElementById('voucher-print-area');
   if (!printArea || !printArea.innerHTML.trim()) {
@@ -514,7 +500,7 @@ async function saveCurrentVoucherPdf() {
   const prefix = activeExportDocType === 'phieu_giao_hang' ? 'phieu_giao_hang' : 'don_dat_hang';
   const savePath = await window.electronAPI.showSaveDialog({
     title: "Lưu chứng từ PDF",
-    defaultPath: `${prefix}_${exportTodayFileDate()}.pdf`,
+    defaultPath: `${prefix}_${utils.toDateInputValue(new Date())}.pdf`,
     filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
   });
 
@@ -580,11 +566,11 @@ function generateCombinedPrintInvoice() {
   exportPreviewData.products.forEach((p, idx) => {
     rowsHtml += `
       <tr>
-        <td style="border: 0.5px solid #000; padding: 4px; text-align: left;">${escapeExportHtml(p.product)}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.specs)}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.text_color || "")}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.bg_color || "")}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${escapeExportHtml(p.unit)}</td>
+        <td style="border: 0.5px solid #000; padding: 4px; text-align: left;">${utils.escapeHtml(p.product)}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${utils.escapeHtml(p.specs)}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${utils.escapeHtml(p.text_color || "")}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${utils.escapeHtml(p.bg_color || "")}</td>
+        <td style="border: 0.5px solid #000; padding: 4px;">${utils.escapeHtml(p.unit)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${formatExportQuantity(p.quantity)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.price)}</td>
         <td style="border: 0.5px solid #000; padding: 4px;">${utils.formatCurrency(p.vat || 0)}</td>
@@ -620,7 +606,7 @@ function generateCombinedPrintInvoice() {
             NGƯỜI NHẬN HÀNG
           </td>
           <td style="width: 50%; text-align: right; font-weight: bold; vertical-align: top; padding-right: 20px; line-height: 1.4;">
-            ${escapeExportHtml(company.name || '')}<br>
+            ${utils.escapeHtml(company.name || '')}<br>
             <span style="font-weight: normal; font-size: 8pt; display: block; margin-top: 2px;">ĐẠI DIỆN THƯƠNG MẠI</span>
           </td>
         </tr>
@@ -631,8 +617,8 @@ function generateCombinedPrintInvoice() {
         <tr>
           <td></td>
           <td style="text-align: right; font-weight: bold; padding-right: 20px; line-height: 1.3;">
-            ${escapeExportHtml(company.representative || '')}<br>
-            <span style="font-weight: normal; font-size: 8pt; font-style: italic;">HP:${escapeExportHtml(company.representativePhone || '')}</span>
+            ${utils.escapeHtml(company.representative || '')}<br>
+            <span style="font-weight: normal; font-size: 8pt; font-style: italic;">HP:${utils.escapeHtml(company.representativePhone || '')}</span>
           </td>
         </tr>
       </table>
@@ -653,9 +639,9 @@ function generateCombinedPrintInvoice() {
               <img src="assets/logo.png" alt="Logo" style="width: 64px; height: 64px; object-fit: contain; display: block;">
             </td>
             <td style="text-align: center; vertical-align: middle;">
-              <div style="color: #1d4ed8; font-size: 15pt; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${escapeExportHtml(company.name || '')}</div>
-              <div style="font-size: 10pt; color: #334155; margin-bottom: 2px;">${escapeExportHtml(company.address || '')}</div>
-              <div style="font-size: 10pt; color: #334155;">Hotline: ${escapeExportHtml(company.hotline || '')}</div>
+              <div style="color: #1d4ed8; font-size: 15pt; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${utils.escapeHtml(company.name || '')}</div>
+              <div style="font-size: 10pt; color: #334155; margin-bottom: 2px;">${utils.escapeHtml(company.address || '')}</div>
+              <div style="font-size: 10pt; color: #334155;">Hotline: ${utils.escapeHtml(company.hotline || '')}</div>
             </td>
             <td style="width: 72px;"></td>
           </tr>
@@ -664,19 +650,19 @@ function generateCombinedPrintInvoice() {
 
       <!-- Title -->
       <div style="text-align: center; font-size: 20pt; font-weight: bold; margin-top: 15px; margin-bottom: 25px; text-transform: uppercase;">
-        ${escapeExportHtml(title)}
+        ${utils.escapeHtml(title)}
       </div>
 
       <!-- Khách hàng -->
       <table style="width: 100%; border-collapse: collapse; border: none; font-size: 10pt; margin-bottom: 15px;">
         <tr style="height: 24px;">
           <td style="width: 12%; font-weight: bold; padding: 2px 0;">Kính gửi:</td>
-          <td style="width: 68%; padding: 2px 0; font-size: 11pt;">${customerName ? escapeExportHtml(customerName) : '................................................................................'}</td>
+          <td style="width: 68%; padding: 2px 0; font-size: 11pt;">${customerName ? utils.escapeHtml(customerName) : '................................................................................'}</td>
           <td style="width: 20%; padding: 2px 0; text-align: right; font-weight: bold;">Ngày: ${dateStr}</td>
         </tr>
         <tr style="height: 24px;">
           <td style="font-weight: bold; padding: 2px 0;">Địa chỉ:</td>
-          <td colspan="2" style="padding: 2px 0;">${address ? escapeExportHtml(address) : '................................................................................'}</td>
+          <td colspan="2" style="padding: 2px 0;">${address ? utils.escapeHtml(address) : '................................................................................'}</td>
         </tr>
       </table>
 
@@ -726,7 +712,7 @@ function generateCombinedPrintInvoice() {
 
       <!-- Tiền bằng chữ -->
       <div style="font-style: italic; margin-bottom: 30px; font-size: 10pt;">
-        Số tiền bằng chữ: <strong>${escapeExportHtml(wordsAmount)} đồng chẵn.</strong>
+        Số tiền bằng chữ: <strong>${utils.escapeHtml(wordsAmount)} đồng chẵn.</strong>
       </div>
 
       <!-- Ký tá -->

@@ -1,14 +1,8 @@
-// Pure display helpers for the admin order pages.
+// Pure display helpers for the admin order pages. Money: formatVnd from @/i18n.
+import { formatVnd } from "@/i18n";
 import type { OrderOrigin } from "./types";
 
-const vnd = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
 const num = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
-
-/** 1234567 -> "1.234.567 đ"; null / NaN -> "—". */
-export function money(value: unknown): string {
-  const n = toNumber(value);
-  return n === null ? "—" : `${vnd.format(Math.round(n))} đ`;
-}
 
 export function plain(value: unknown): string {
   const n = toNumber(value);
@@ -20,6 +14,32 @@ export function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+/** RPC money (number, numeric string) through the shared formatVnd; null / NaN -> "—".
+ *  Also used by features/admin and features/customers. */
+export function money(value: unknown): string {
+  const n = toNumber(value);
+  return n === null ? "—" : formatVnd(Math.round(n));
+}
+
+const short = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
+
+/** Stat cards: 1 234 567 890 -> "1,2 tỷ", 25 400 000 -> "25,4 tr" (full amount goes in the hint). */
+export function vndShort(value: number): string {
+  const a = Math.abs(value);
+  if (a >= 1e9) return `${short.format(value / 1e9)} tỷ`;
+  if (a >= 1e6) return `${short.format(value / 1e6)} tr`;
+  return formatVnd(value);
+}
+
+/** Port of SQL public.normalize_vn_phone (0028): "+84 912.345.678" -> "0912345678", invalid -> null. */
+export function normalizeVnPhone(phone: string | null | undefined): string | null {
+  let v = (phone ?? "").replace(/[^0-9]/g, "");
+  if (v.startsWith("0084")) v = `0${v.slice(4)}`;
+  else if (v.startsWith("84") && (v.length === 11 || v.length === 12)) v = `0${v.slice(2)}`;
+  else if (v.length === 9 && !v.startsWith("0")) v = `0${v}`;
+  return /^0[1-9][0-9]{8,9}$/.test(v) ? v : null;
 }
 
 /** "2026-11-03" or "2026-11-03T10:20:00" -> "03/11/2026" (calendar day as stored, no tz shift). */

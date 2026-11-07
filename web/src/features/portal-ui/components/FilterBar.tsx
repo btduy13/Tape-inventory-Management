@@ -26,14 +26,18 @@ type Props = {
   /** Show from/to date inputs (needs spec.dateRange). */
   dateRange?: boolean;
   dateLabel?: string;
+  /** Filters "Xóa lọc" keeps (e.g. the tab a list is on). */
+  pinned?: readonly string[];
 };
 
-export function FilterBar({ basePath, spec, state, controls = [], searchPlaceholder = p.searchPlaceholder, dateRange, dateLabel }: Props) {
+export function FilterBar({ basePath, spec, state, controls = [], searchPlaceholder = p.searchPlaceholder, dateRange, dateLabel, pinned = [] }: Props) {
   const selects = controls;
   const formNames = new Set<string>(["q", "from", "to", "page", ...selects.map((c) => c.name)]);
   // Everything else in the current URL (sort, page size) rides along as hidden inputs.
   const hidden = [...serializeListParams(spec, state).entries()].filter(([k]) => !formNames.has(k));
-  const active = hasActiveFilters(state);
+  const cleared = clearFilters(state);
+  for (const name of pinned) if (state.filters[name]) cleared.filters[name] = state.filters[name];
+  const active = hasActiveFilters({ ...state, filters: Object.fromEntries(Object.entries(state.filters).filter(([k]) => !pinned.includes(k))) });
   const showDates = dateRange && !!spec.dateRange;
 
   return (
@@ -76,7 +80,7 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
         <div className="flex gap-2">
           <button type="submit" className={buttonClass("primary", "md", "flex-1 lg:flex-none")}>{p.applyFilters}</button>
           {active && (
-            <Link href={listHref(basePath, spec, clearFilters(state))} className={buttonClass("ghost", "md", "flex-1 lg:flex-none")}>
+            <Link href={listHref(basePath, spec, cleared)} className={buttonClass("ghost", "md", "flex-1 lg:flex-none")}>
               {p.clearFilters}
             </Link>
           )}

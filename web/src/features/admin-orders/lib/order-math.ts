@@ -1,5 +1,5 @@
-// TS port of the printed-tape money math in electron/js/orderMath.js (number, percent, money,
-// vatAmount, calculateLine, calculatePrintedTape, outstandingFromOrder). Used for the live totals
+// TS port of the order money math in electron/js/orderMath.js (number, percent, money, vatAmount,
+// calculateLine, calculateStandardOrder, calculatePrintedTape, outstandingFromOrder). Used for the live totals
 // of the web order form only: admin_order_create recomputes every amount in SQL with the same
 // formulas, so the form can never store a number the desktop app would not. Keep in sync with the
 // JS file (order-math.parity.test.ts compares both on the same inputs).
@@ -28,6 +28,16 @@ export function vatAmount(base: Num, vatPercentValue: Num): number {
   return money((Math.max(0, number(base)) * percent(vatPercentValue)) / 100);
 }
 
+/** VAT percent of a stored row: the stored percent, else derived from the amount (old app rows). */
+export function vatPercentFromAmount(vat: Num, base: Num, storedPercent?: Num): number {
+  if (number(storedPercent) > 0) return Math.round(percent(storedPercent) * 100) / 100;
+  const total = number(base);
+  if (total <= 0) return 0;
+  return Math.round((Math.max(0, number(vat)) / total) * 10000) / 100;
+}
+
+const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+
 export type LineInput = { quantity?: Num; costPrice?: Num; salePrice?: Num; shipping?: Num; commissionPercent?: Num };
 
 export type Line = {
@@ -52,6 +62,22 @@ export function calculateLine(input: LineInput = {}): Line {
   };
 }
 
+export type StandardOrderInput = LineInput & {
+  /** Percent wins over the legacy `vat` amount when the key is present (same as the JS). */
+  vatPercent?: Num; vat?: Num; deposit?: Num; settled?: boolean;
+};
+
+export type StandardOrderResult = Line & { vatPercent: number; vat: number; outstanding: number };
+
+/** Plain tape, print axis and Thank you (one line, no axis). The SQL passes a deposit for Thank you only. */
+export function calculateStandardOrder(input: StandardOrderInput = {}): StandardOrderResult {
+  const line = calculateLine(input);
+  const vatPercent = percent(input.vatPercent);
+  const vat = has(input, "vatPercent") ? vatAmount(line.saleTotal, vatPercent) : money(Math.max(0, number(input.vat)));
+  const deposit = money(Math.max(0, number(input.deposit)));
+  return { ...line, vatPercent, vat, outstanding: input.settled ? 0 : Math.max(0, line.saleTotal + vat - deposit) };
+}
+
 export type PrintedTapeInput = {
   quantity?: Num; rollLength?: Num; rollsPerTree?: Num;
   baseCost?: Num; quantityFee?: Num; glueFee?: Num; colorFee?: Num; sizeFee?: Num; cuttingFee?: Num;
@@ -69,8 +95,6 @@ export type PrintedTapeResult = {
   combinedCostTotal: number; combinedSaleTotal: number; combinedProfit: number;
   combinedCommission: number; combinedNetProfit: number; outstanding: number;
 };
-
-const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 
 export function calculatePrintedTape(input: PrintedTapeInput = {}): PrintedTapeResult {
   const rollLength = Math.max(0, number(input.rollLength));

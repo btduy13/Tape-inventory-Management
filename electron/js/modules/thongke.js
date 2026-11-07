@@ -40,7 +40,8 @@ const statsDetailColumnHeaders = {
   truc_gia_goc: 'Giá Gốc Trục', truc_gia_ban: 'Giá Bán Trục', truc_vat: 'VAT Trục', truc_thanh_tien_goc: 'Tiền Gốc Trục',
   truc_thanh_tien_ban: 'Tiền Bán Trục', truc_ctv: 'CTV Trục', truc_hoa_hong: 'HH Trục (%)',
   truc_tien_hoa_hong: 'Tiền H.Hồng Trục',
-  truc_loi_nhuan: 'Lãi Trục', truc_loi_nhuan_rong: 'Lãi Ròng Trục', da_gui_email: 'Đã Email'
+  truc_loi_nhuan: 'Lãi Trục', truc_loi_nhuan_rong: 'Lãi Ròng Trục', da_gui_email: 'Đã Email',
+  kich_thuoc: 'Kích Thước', thanh_tien_von: 'Tiền Vốn', ghi_chu: 'Ghi Chú'
 };
 
 const statsDetailColumnsMap = {
@@ -62,13 +63,18 @@ const statsDetailColumnsMap = {
     'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'quy_cach', 'so_luong', 'mau_sac',
     'don_gia_goc', 'thanh_tien', 'don_gia_ban', 'thanh_tien_ban', 'cong_no_khach', 'cong_no_ncc', 'ctv', 'hoa_hong',
     'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'da_giao', 'da_tat_toan', 'da_gui_email'
+  ],
+  thank_you: [
+    'id', 'thoi_gian', 'ten_hang', 'ten_khach_hang', 'sdt_khach_hang', 'dia_chi_khach_hang', 'ngay_du_kien', 'kich_thuoc', 'so_luong', 'mau_sac',
+    'don_gia_von', 'thanh_tien_von', 'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc', 'ctv', 'hoa_hong',
+    'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat', 'ghi_chu', 'da_giao', 'da_tat_toan', 'da_gui_email'
   ]
 };
 
 const statsCurrencyColumns = new Set([
   'phi_sl', 'phi_keo', 'phi_mau', 'phi_size', 'phi_cat', 'don_gia_von', 'don_gia_goc', 'thanh_tien_goc',
   'don_gia_ban', 'thanh_tien_ban', 'tien_coc', 'cong_no_khach', 'cong_no_ncc', 'tien_hoa_hong', 'loi_nhuan', 'tien_ship', 'loi_nhuan_rong', 'vat',
-  'thanh_tien', 'truc_gia_goc', 'truc_gia_ban', 'truc_vat', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
+  'thanh_tien', 'thanh_tien_von', 'truc_gia_goc', 'truc_gia_ban', 'truc_vat', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban',
   'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong'
 ]);
 
@@ -146,10 +152,8 @@ function switchStatsSubtab(subtab) {
   pills.forEach(p => p.classList.remove('active'));
   
   // Active pill tương ứng
-  let index = 0;
-  if (subtab === 'truc-in') index = 1;
-  if (subtab === 'bang-keo') index = 2;
-  pills[index].classList.add('active');
+  const index = ['bang-keo-in', 'truc-in', 'bang-keo', 'thank-you'].indexOf(subtab);
+  pills[Math.max(0, index)].classList.add('active');
 
   // Đặt lại các filters về mặc định
   document.getElementById('stats-search').value = "";
@@ -195,6 +199,7 @@ async function loadStatsTableData() {
 function getStatsOrderTypeKey() {
   if (statsActiveSubtab === 'truc-in') return 'truc_in';
   if (statsActiveSubtab === 'bang-keo') return 'bang_keo';
+  if (statsActiveSubtab === 'thank-you') return 'thank_you';
   return 'bang_keo_in';
 }
 
@@ -746,8 +751,6 @@ function showStatsContextMenu(e, row) {
   const menu = document.getElementById('custom-context-menu');
   if (!menu) return;
 
-  const typeLabel = statsActiveSubtab === 'bang-keo-in' ? 'Băng Keo In' : (statsActiveSubtab === 'truc-in' ? 'Trục In' : 'Băng Keo');
-  
   const orderId = row.id;
   const subtab = statsActiveSubtab;
   menu.innerHTML = `
@@ -918,7 +921,7 @@ async function exportStatsExcel() {
 
     const savePath = await window.electronAPI.showSaveDialog({
       title: 'Lưu file xuất Excel',
-      defaultPath: `don_hang_${orderType}_${statsTodayFileDate()}.xlsx`,
+      defaultPath: `don_hang_${orderType}_${utils.toDateInputValue(new Date())}.xlsx`,
       filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
     });
 
@@ -931,12 +934,6 @@ async function exportStatsExcel() {
   } catch (err) {
     utils.showToast('Lỗi xuất Excel: ' + err.message, 'danger');
   }
-}
-
-function statsTodayFileDate() {
-  if (typeof utils.toDateInputValue === 'function') return utils.toDateInputValue(new Date());
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 function buildStatsOrderExcelRow(row, orderType) {
@@ -1311,13 +1308,6 @@ async function uploadAttachmentFile(input) {
   input.value = '';
 }
 
-// Tương thích với mã cũ sau khi gộp tab Lịch sử vào Thống kê
-async function loadHistoryData() { return loadStatsData(); }
-function applyHistoryFilters() { filterStatsTable(); }
-async function deleteSelectedHistory() { return deleteSelectedStats(); }
-async function exportHistoryExcel() { return exportStatsExcel(); }
-async function sendSelectedHistoryEmail() { return sendSelectedStatsEmail(); }
-
 function openBulkStatsStatusDialog() {
   const selectedIds = getSelectedStatsOrderIds();
   if (selectedIds.length === 0) {
@@ -1327,8 +1317,8 @@ function openBulkStatsStatusDialog() {
 
   const label = document.getElementById('bulk-stats-status-label');
   if (label) label.innerText = `${selectedIds.length} đơn đã chọn`;
-  document.getElementById('bulk-stats-da-giao').checked = true;
-  document.getElementById('bulk-stats-da-tat-toan').checked = true;
+  document.getElementById('bulk-stats-da-giao').value = '';
+  document.getElementById('bulk-stats-da-tat-toan').value = '';
   document.getElementById('modal-bulk-stats-status').classList.add('active');
 }
 
@@ -1340,20 +1330,26 @@ async function applyBulkStatsStatus() {
     return;
   }
 
-  const daGiao = document.getElementById('bulk-stats-da-giao').checked;
-  const daTatToan = document.getElementById('bulk-stats-da-tat-toan').checked;
-  const orderType = getStatsOrderTypeKey();
-
-  let successCount = 0;
-  for (const id of selectedIds) {
-    const res = await window.electronAPI.dbRun('order.setDeliveryAndSettlement', {
-      orderType, id, delivered: daGiao, settled: daTatToan
-    });
-    if (res.ok) successCount++;
+  // '' = giữ nguyên, 'true' / 'false' = đặt cờ; mọi đơn cập nhật trong MỘT transaction (lỗi thì không đơn nào đổi)
+  const flag = id => ({ true: true, false: false }[document.getElementById(id).value] ?? null);
+  const delivered = flag('bulk-stats-da-giao');
+  const settled = flag('bulk-stats-da-tat-toan');
+  if (delivered === null && settled === null) {
+    utils.showToast("Chọn ít nhất một trạng thái cần đổi", "warning");
+    return;
   }
+  const orderType = getStatsOrderTypeKey();
+  const res = await window.electronAPI.dbTransaction(selectedIds.map(id => ({
+    action: 'order.setDeliveryAndSettlement', params: { orderType, id, delivered, settled }
+  })));
 
   closeModal('modal-bulk-stats-status');
-  utils.showToast(`Đã cập nhật ${successCount}/${selectedIds.length} đơn`, successCount === selectedIds.length ? "success" : "warning");
+  if (res?.ok) {
+    const updated = (res.results || []).filter(result => Number(result.rowCount || 0) > 0).length;
+    utils.showToast(`Đã cập nhật ${updated}/${selectedIds.length} đơn`, updated === selectedIds.length ? "success" : "warning");
+  } else {
+    utils.showToast(`Không cập nhật được trạng thái: ${res?.error || 'lỗi cơ sở dữ liệu'}`, "danger");
+  }
   loadStatsData();
   if (typeof loadDashboardData === 'function') loadDashboardData();
 }

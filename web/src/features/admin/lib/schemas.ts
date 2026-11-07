@@ -38,8 +38,6 @@ export const presetSchema = z.object({
 });
 export type PresetInput = z.infer<typeof presetSchema>;
 
-export const leadIdSchema = z.object({ leadId: uuid });
-
 /** Mirrors the SQL guard: an admin cannot demote or deactivate their own account. */
 export function isSelfLockout(actor: Pick<Profile, "id">, input: UpdateUserInput): boolean {
   return actor.id === input.userId && (input.role !== "admin" || !input.isActive);

@@ -144,6 +144,7 @@
   function outstandingFromOrder(order = {}, orderType = 'bang_keo_in') {
     const saleTotal = Math.max(0, number(order.thanh_tien_ban));
     const vat = Math.max(0, number(order.vat));
+    if (orderType === 'thank_you') return order.da_tat_toan ? 0 : Math.max(0, saleTotal + vat - Math.max(0, number(order.tien_coc)));
     if (orderType !== 'bang_keo_in') return order.da_tat_toan ? 0 : saleTotal + vat;
     const axisTotal = order.loai_truc === 'moi' ? Math.max(0, number(order.truc_thanh_tien_ban)) : 0;
     const axisVat = order.loai_truc === 'moi' ? Math.max(0, number(order.truc_vat)) : 0;
@@ -154,6 +155,7 @@
   // Biểu thức SQL công nợ khách / nợ NCC dùng chung cho tất toán, mở lại và chuyển báo giá thành đơn.
   // Phải luôn khớp outstandingFromOrder (có test kiểm tra chéo).
   function customerDebtSqlExpression(tableName) {
+    if (tableName === 'thank_you_orders') return `GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`;
     return tableName === 'bang_keo_in_orders'
       ? `GREATEST(COALESCE(thanh_tien_ban, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_ban, 0) + COALESCE(truc_vat, 0) ELSE 0 END + COALESCE(vat, 0) - COALESCE(tien_coc, 0), 0)`
       : `GREATEST(COALESCE(thanh_tien_ban, 0) + COALESCE(vat, 0), 0)`;
@@ -163,6 +165,7 @@
     if (tableName === 'bang_keo_in_orders') {
       return `GREATEST(COALESCE(thanh_tien_goc, 0) + CASE WHEN loai_truc = 'moi' THEN COALESCE(truc_thanh_tien_goc, 0) ELSE 0 END, 0)`;
     }
+    if (tableName === 'thank_you_orders') return `GREATEST(COALESCE(thanh_tien_von, 0), 0)`;
     return tableName === 'bang_keo_orders'
       ? `GREATEST(COALESCE(thanh_tien, 0), 0)`
       : `GREATEST(COALESCE(thanh_tien_goc, 0), 0)`;

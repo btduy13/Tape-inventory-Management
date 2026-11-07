@@ -32,11 +32,6 @@ export async function listWidths(db: Db): Promise<TapeWidth[]> {
   return data ?? [];
 }
 
-export async function getLengthLimits(db: Db): Promise<TapeSpecSettings | null> {
-  const { data } = await db.from("tape_spec_settings").select("*").maybeSingle();
-  return data ?? null;
-}
-
 /** Widths + length limits for the admin page, with a failed-read flag (page error state). */
 export async function loadTapeSpecs(db: Db): Promise<{ widths: TapeWidth[]; settings: TapeSpecSettings | null; failed: boolean }> {
   const [w, s] = await Promise.all([

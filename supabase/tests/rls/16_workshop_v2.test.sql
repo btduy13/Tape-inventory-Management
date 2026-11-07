@@ -90,16 +90,16 @@ select ok(
   and has_function_privilege('service_role', 'public.confirm_delivery(text,text)', 'EXECUTE'),
   'token RPCs are service_role only');
 select ok(
-  not has_function_privilege('anon', 'public.admin_orders_list(jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.admin_order_get(text)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.admin_order_create(jsonb)', 'EXECUTE')
+  not has_function_privilege('anon', 'public.admin_orders_list(jsonb,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.admin_order_get(text,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.admin_order_create(jsonb,text,boolean)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.create_delivery_note(uuid)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.assign_workshop_job(uuid,uuid)', 'EXECUTE'),
   'anon cannot execute the new RPCs');
 select ok(
   (select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc
-    where oid in ('public.admin_orders_list(jsonb)'::regprocedure, 'public.admin_order_get(text)'::regprocedure,
-                  'public.admin_order_create(jsonb)'::regprocedure, 'public.create_delivery_note(uuid)'::regprocedure,
+    where oid in ('public.admin_orders_list(jsonb,text)'::regprocedure, 'public.admin_order_get(text,text)'::regprocedure,
+                  'public.admin_order_create(jsonb,text,boolean)'::regprocedure, 'public.create_delivery_note(uuid)'::regprocedure,
                   'public.delivery_note_by_token(text)'::regprocedure, 'public.confirm_delivery(text,text)'::regprocedure)),
   'new RPCs are SECURITY DEFINER with an empty search_path');
 select ok(

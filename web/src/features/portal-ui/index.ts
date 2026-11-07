@@ -12,17 +12,15 @@ export { Toast, type ToastMessage } from "./components/Toast";
 export { EmptyState, ErrorState, LoadingState, NotFoundState, InlineStatus, ActionStatus, type InlineTone } from "./components/States";
 export { Field, TextField, SelectField, TextareaField, CheckboxField } from "./components/Field";
 export { Icon, type IconName } from "./components/Icon";
-export { ScrollRegion } from "./components/ScrollRegion";
 export { buttonClass, inputClass, textareaClass, checkboxClass, surfaceClass, linkClass, type ButtonVariant } from "./components/styles";
 
 export {
-  defineListSpec, parseListParams, serializeListParams, listHref, patchListState, toggleSort, toggleFilterValue,
+  defineListSpec, parseListParams, serializeListParams, listHref, patchListState, toggleSort,
   clearFilters, hasActiveFilters, defaultListState, sanitizeSearch, pageCount, clampPage, pageSlice,
   type ListSpec, type ListState, type FilterDef, type SortDir, type RawParams,
 } from "./lib/list-params";
 export { applyListQuery, type ListQuery } from "./lib/apply-query";
 export { applyListInMemory, foldText } from "./lib/apply-memory";
-export { LEAD_PIPELINE, PHASE_OF, PRODUCTION_FLOW, nextActionFor, pipelineIndex, type Actor, type Phase } from "./lib/workflow";
+export { LEAD_PIPELINE, PRODUCTION_FLOW, nextActionFor, pipelineIndex, type Actor, type Phase } from "./lib/workflow";
 export { LEAD_TONE, STEP_TONE, TONE_CLASS, type Tone } from "./lib/status-tones";
 export { navFor, homeFor } from "./lib/nav";
-export { KitDemo } from "./demo/KitDemo";

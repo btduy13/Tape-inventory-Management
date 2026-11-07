@@ -164,9 +164,7 @@ test('default delivery date is local tomorrow, not a UTC date string', () => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const expected = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
-  assert.equal(context.tomorrowDeliveryDateValue(), expected);
-  context.utils.tomorrowDateInputValue = () => '2030-01-02';
-  assert.equal(context.tomorrowDeliveryDateValue(), '2030-01-02');
+  assert.equal(require('../js/utils').tomorrowDateInputValue(), expected);
   for (const file of ['bangkeoin.js', 'bangkeo.js', 'trucin.js']) {
     const source = fs.readFileSync(path.join(__dirname, '../js/modules', file), 'utf8');
     assert.doesNotMatch(source, /toISOString\(\)\.split/, file);

@@ -29,7 +29,7 @@ function setDefaultDates() {
   const tomorrowStr = utils.tomorrowDateInputValue();
 
   const ids = [
-    'bki-ngay-du-kien', 'bk-ngay-du-kien', 'ti-ngay-du-kien'
+    'bki-ngay-du-kien', 'bk-ngay-du-kien', 'ti-ngay-du-kien', 'ty-ngay-du-kien'
   ];
 
   ids.forEach(id => {
@@ -94,7 +94,8 @@ function switchSalesForm(paneId) {
   const buttonMap = {
     'sales-form-bang-keo-in': 'btn-sales-bki',
     'sales-form-bang-keo': 'btn-sales-bk',
-    'sales-form-truc-in': 'btn-sales-ti'
+    'sales-form-truc-in': 'btn-sales-ti',
+    'sales-form-thank-you': 'btn-sales-ty'
   };
   const btnId = buttonMap[paneId];
   if (btnId) document.getElementById(btnId).classList.add('active');
@@ -129,6 +130,8 @@ function clearForm(type, mode = 'order') {
     if (typeof clearFormBangKeo === 'function') clearFormBangKeo(mode);
   } else if (type === 'truc-in') {
     if (typeof clearFormTrucIn === 'function') clearFormTrucIn(mode);
+  } else if (type === 'thank-you') {
+    if (typeof clearFormThankYou === 'function') clearFormThankYou();
   }
   if (mode === 'quote' && typeof clearQuoteItems === 'function') {
     const quoteType = type === 'bang-keo-in' ? 'bang_keo_in' : (type === 'truc-in' ? 'truc_in' : 'bang_keo');
@@ -312,8 +315,15 @@ async function openEditOrderDialog(orderId, orderType) {
     modalBody.innerHTML = generateBangKeoInEditForm(order);
   } else if (orderType === 'truc_in') {
     modalBody.innerHTML = generateTrucInEditForm(order);
+  } else if (orderType === 'thank_you') {
+    modalBody.innerHTML = generateThankYouEditForm(order);
   } else {
     modalBody.innerHTML = generateBangKeoEditForm(order);
+  }
+  // Ô chọn khách: giữ customer_id đang lưu; chỉ gửi lên khi người dùng chọn/tạo khách khác
+  if (typeof attachCustomerPicker === 'function') {
+    attachCustomerPicker('edit-');
+    setPickedCustomer('edit-', order.customer_id || '');
   }
 
   // Khởi chạy định dạng tiền tệ cho form edit
@@ -336,16 +346,6 @@ async function openEditOrderDialog(orderId, orderType) {
   document.getElementById('modal-edit-order').classList.add('active');
 }
 
-// HTML Generator cho form sửa Băng Keo In
-function escapeAppHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function buildEditInput(label, id, value, options = {}) {
   const type = options.type || 'text';
   const classes = `form-control${options.currency ? ' currency-format' : ''}`;
@@ -358,7 +358,7 @@ function buildEditInput(label, id, value, options = {}) {
   return `
     <div class="form-group">
       <label class="form-label" for="${id}">${label}${options.required ? ' *' : ''}</label>
-      <input type="${type}" id="${id}" class="${classes}" value="${escapeAppHtml(value)}"${step}${min}${max}${maxlength}${required}${readonly}>
+      <input type="${type}" id="${id}" class="${classes}" value="${utils.escapeHtml(value)}"${step}${min}${max}${maxlength}${required}${readonly}>
     </div>
   `;
 }
@@ -442,8 +442,8 @@ function toggleEditAxisFields() {
   updateEditOrderCalculations();
 }
 
-// HTML Generator cho form sửa Trục In
-function generateTrucInEditForm(o) {
+// HTML Generator cho form sửa Trục In / Băng keo thường (bang_keo_orders không có cột mau_keo)
+function generateTrucInEditForm(o, orderType = 'truc_in') {
   return `
     <form id="edit-order-form" class="form-grid edit-order-grid">
       <h4 class="edit-section-title">Thông tin đơn hàng</h4>
@@ -454,7 +454,7 @@ function generateTrucInEditForm(o) {
       ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', utils.toDateInputValue(o.ngay_du_kien), { type: 'date', required: true })}
       ${buildEditInput('Quy cách', 'edit-quy-cach', o.quy_cach)}
       ${buildEditInput('Màu sắc', 'edit-mau-sac', o.mau_sac)}
-      ${editOrderTypeGlobal === 'truc_in' ? buildEditInput('Màu keo', 'edit-mau-keo', o.mau_keo) : ''}
+      ${orderType === 'truc_in' ? buildEditInput('Màu keo', 'edit-mau-keo', o.mau_keo) : ''}
       <h4 class="edit-section-title">Giá và chi phí</h4>
       ${buildEditInput('Số lượng', 'edit-so-luong', o.so_luong, { type: 'number', min: 0, required: true })}
       ${buildEditInput('Đơn giá gốc', 'edit-don-gia-goc', utils.formatCurrency(o.don_gia_goc), { currency: true, required: true })}
@@ -470,7 +470,34 @@ function generateTrucInEditForm(o) {
 
 // HTML Generator cho form sửa Băng Keo thường
 function generateBangKeoEditForm(o) {
-  return generateTrucInEditForm(o); // Cấu trúc tương tự Trục In
+  return generateTrucInEditForm(o, 'bang_keo');
+}
+
+// HTML Generator cho form sửa Băng keo Thank you
+function generateThankYouEditForm(o) {
+  return `
+    <form id="edit-order-form" class="form-grid edit-order-grid">
+      <h4 class="edit-section-title">Thông tin đơn hàng</h4>
+      ${buildEditInput('Mã đơn hàng', 'edit-order-id', o.id, { readonly: true })}
+      ${buildEditInput('Tên hàng', 'edit-ten-hang', o.ten_hang, { required: true })}
+      ${buildEditInput('Khách hàng', 'edit-ten-khach-hang', o.ten_khach_hang, { required: true })}
+      ${buildEditCustomerContactInputs(o)}
+      ${buildEditInput('Ngày giao dự kiến', 'edit-ngay-du-kien', utils.toDateInputValue(o.ngay_du_kien), { type: 'date', required: true })}
+      ${buildEditInput('Kích thước', 'edit-kich-thuoc', o.kich_thuoc, { maxlength: 255 })}
+      ${buildEditInput('Màu sắc', 'edit-mau-sac', o.mau_sac)}
+      ${buildEditInput('Ghi chú', 'edit-ghi-chu', o.ghi_chu, { maxlength: 2000 })}
+      <h4 class="edit-section-title">Giá và chi phí</h4>
+      ${buildEditInput('Số lượng', 'edit-so-luong', o.so_luong, { type: 'number', min: 0, required: true })}
+      ${buildEditInput('Đơn giá vốn', 'edit-don-gia-von', utils.formatCurrency(o.don_gia_von), { currency: true })}
+      ${buildEditInput('Đơn giá bán', 'edit-don-gia-ban', utils.formatCurrency(o.don_gia_ban), { currency: true, required: true })}
+      ${buildEditInput('Tiền cọc', 'edit-tien-coc', utils.formatCurrency(o.tien_coc), { currency: true })}
+      ${buildEditInput('VAT tổng (%)', 'edit-vat', editVatPercentValue(o.vat_percent, o.vat, o.thanh_tien_ban), { type: 'number', min: 0, max: 100, step: 'any' })}
+      ${buildEditInput('Hoa hồng (%)', 'edit-hoa-hong-percent', o.hoa_hong, { type: 'number', min: 0, max: 100 })}
+      ${buildEditInput('Tiền ship', 'edit-tien-ship', utils.formatCurrency(o.tien_ship), { currency: true })}
+      ${buildEditInput('CTV', 'edit-ctv', o.ctv)}
+      ${generateEditCalculationFields()}
+    </form>
+  `;
 }
 
 function generateEditCalculationFields() {
@@ -529,6 +556,9 @@ function calculateEditOrder() {
     vatPercent: value('edit-vat'),
     settled: !!editOrderDataGlobal?.da_tat_toan
   };
+  if (editOrderTypeGlobal === 'thank_you') {
+    return orderMath.calculateStandardOrder({ ...common, costPrice: money('edit-don-gia-von'), deposit: money('edit-tien-coc') });
+  }
   if (editOrderTypeGlobal !== 'bang_keo_in') {
     return orderMath.calculateStandardOrder({ ...common, costPrice: money('edit-don-gia-goc') });
   }
@@ -599,6 +629,9 @@ async function submitEditOrder() {
       sdt_khach_hang: document.getElementById('edit-sdt-khach-hang')?.value.trim() || null,
       dia_chi_khach_hang: document.getElementById('edit-dia-chi-khach-hang')?.value.trim() || null
     };
+    // Không ghi lại customer_id cũ của dòng: chỉ gửi khi người dùng đã chọn/tạo khách khác
+    const pickedCustomer = document.getElementById('edit-ten-khach-hang')?.dataset?.customerId || '';
+    if (pickedCustomer && pickedCustomer !== String(editOrderDataGlobal?.customer_id || '')) contact.customer_id = pickedCustomer;
     if (hasStructuredEditItems()) {
       if (!tenHang || !tenKhachHang || !ngayDuKien) {
         utils.showToast('Vui lòng nhập đủ tên hàng, khách hàng và ngày giao', 'warning');
@@ -678,6 +711,15 @@ async function submitEditOrder() {
         truc_hoa_hong: isNewAxis ? result.axis.commissionPercent : 0, truc_tien_hoa_hong: result.axis.commission,
         truc_loi_nhuan: result.axis.profit, truc_loi_nhuan_rong: result.axis.netProfit,
         truc_vat: result.axis.vat, truc_vat_percent: axisVatPercent, vat: result.vat, vat_percent: vatPercent
+      };
+    } else if (editOrderType === 'thank_you') {
+      const value = id => document.getElementById(id).value.trim() || null;
+      values = {
+        ten_hang: tenHang, ten_khach_hang: tenKhachHang, ngay_du_kien: ngayDuKien, ...contact,
+        kich_thuoc: value('edit-kich-thuoc'), mau_sac: value('edit-mau-sac'), ghi_chu: value('edit-ghi-chu'),
+        so_luong: soLuong, don_gia_von: utils.parseCurrency(document.getElementById('edit-don-gia-von').value),
+        don_gia_ban: donGiaBan, ctv, hoa_hong: hoaHong,
+        ...thankYouMoneyColumns(calculateEditOrder(), utils.parseCurrency(document.getElementById('edit-tien-coc').value))
       };
     } else {
       const donGiaGoc = utils.parseCurrency(document.getElementById('edit-don-gia-goc').value);
@@ -778,6 +820,7 @@ async function exportCurrentFormToExcel() {
     if (document.getElementById('sales-form-bang-keo-in').style.display !== 'none') activeForm = 'bang-keo-in';
     else if (document.getElementById('sales-form-bang-keo').style.display !== 'none') activeForm = 'bang-keo';
     else if (document.getElementById('sales-form-truc-in').style.display !== 'none') activeForm = 'truc-in';
+    else if (document.getElementById('sales-form-thank-you')?.style.display === 'block') activeForm = 'thank-you';
   } else {
     if (document.getElementById('quotes-form-bang-keo-in').style.display !== 'none') activeForm = 'bang-keo-in';
     else if (document.getElementById('quotes-form-bang-keo').style.display !== 'none') activeForm = 'bang-keo';
@@ -900,6 +943,19 @@ async function exportCurrentFormToExcel() {
       'Lợi nhuận ròng': utils.parseCurrency(document.getElementById(`${prefix}ti-loi-nhuan-rong`).value)
     };
     await writeSingleRowExcel(data, mode === 'quote' ? 'q-ti' : 'ti');
+  } else if (activeForm === 'thank-you') {
+    const text = id => document.getElementById(`ty-${id}`)?.value.trim() || '';
+    const money = id => utils.parseCurrency(text(id));
+    const result = calculateThankYou();
+    await writeSingleRowExcel({
+      'Tên Hàng': text('ten-hang'), 'Ngày dự kiến': text('ngay-du-kien'), 'Tên Khách Hàng': text('ten-khach-hang'),
+      'SĐT khách': text('sdt-khach-hang'), 'Địa chỉ giao': text('dia-chi-khach-hang'), 'Kích thước': text('kich-thuoc'),
+      'Số lượng': parseFloat(text('so-luong')) || 0, 'Màu sắc': text('mau-sac'), 'Ghi chú': text('ghi-chu'),
+      'Đơn giá vốn': money('don-gia-von'), 'Thành tiền vốn': result.costTotal, 'Đơn giá bán': money('don-gia-ban'),
+      'Thành tiền bán': result.saleTotal, 'VAT (%)': result.vatPercent, 'Tiền VAT': result.vat, 'Tiền cọc': money('tien-coc'),
+      'Công nợ khách': result.outstanding, 'CTV': text('ctv'), 'Hoa hồng (%)': result.commissionPercent,
+      'Tiền hoa hồng': result.commission, 'Lợi nhuận': result.profit, 'Tiền ship': result.shipping, 'Lợi nhuận ròng': result.netProfit
+    }, 'ty');
   }
 }
 
@@ -909,6 +965,7 @@ const commandPaletteActions = [
   { title: 'Tạo đơn Băng Keo In', description: 'Mở form bán hàng Băng Keo In Logo', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-bang-keo-in') },
   { title: 'Tạo đơn Băng Keo thường', description: 'Mở form bán hàng Băng Keo thường', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-bang-keo') },
   { title: 'Tạo đơn Trục In', description: 'Mở form gia công Trục In', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-truc-in') },
+  { title: 'Tạo đơn Thank you', description: 'Mở form bán hàng Băng keo Thank you', group: 'Bán hàng', run: () => jumpToSalesForm('sales-form-thank-you') },
   { title: 'Tạo báo giá', description: 'Mở khu vực báo giá đơn hàng', group: 'Báo giá', run: () => switchTab('quotes-creation') },
   { title: 'Danh sách báo giá', description: 'Xem và chuyển báo giá thành đơn hàng', group: 'Báo giá', run: () => switchTab('quotes-list') },
   { title: 'Thống kê', description: 'Theo dõi giao hàng, công nợ, lịch sử đơn và xuất Excel', group: 'Báo cáo', run: () => switchTab('thong-ke') },
@@ -928,6 +985,9 @@ const commandPaletteActions = [
 function initializeUiEnhancements() {
   updateFooterClock();
   setInterval(updateFooterClock, 30000);
+  // Web và máy khác cùng sửa một bảng: tự tải lại Tổng quan / Thống kê mỗi 30 giây và khi quay lại cửa sổ
+  setInterval(autoRefreshActiveTab, 30000);
+  window.addEventListener('focus', autoRefreshActiveTab);
   // Ủy quyền sự kiện cho danh sách lệnh (không dùng onclick inline để tương thích CSP)
   document.getElementById('command-palette-results')?.addEventListener('click', event => {
     const button = event.target.closest('[data-command-index]');
@@ -947,6 +1007,32 @@ function initializeUiEnhancements() {
       target.click();
     }
   });
+}
+
+let autoRefreshRunning = false;
+
+// Bỏ qua khi đang mở hộp thoại/menu hoặc cửa sổ ẩn; Thống kê giữ nguyên các dòng đang chọn.
+async function autoRefreshActiveTab() {
+  if (autoRefreshRunning || document.hidden || getTopActiveModal()) return;
+  if (activeTab !== 'dashboard' && activeTab !== 'thong-ke') return;
+  const menuOpen = ['custom-context-menu', 'stats-column-filter-menu'].some(id => document.getElementById(id)?.style.display === 'block');
+  if (menuOpen) return;
+  autoRefreshRunning = true;
+  try {
+    if (activeTab === 'dashboard') {
+      await loadDashboardData();
+      return;
+    }
+    const selected = new Set(getSelectedStatsOrderIds());
+    await loadStatsData();
+    if (selected.size === 0) return;
+    getVisibleStatsRows().forEach(row => row.classList.toggle('selected', selected.has(row.dataset.id)));
+    updateStatsSelectionSummary();
+  } catch (_) {
+    // Lỗi tải đã được từng hàm báo; lần sau thử lại
+  } finally {
+    autoRefreshRunning = false;
+  }
 }
 
 function updateFooterClock() {
@@ -1041,10 +1127,10 @@ function renderCommandResults() {
   results.innerHTML = commandPaletteFilteredActions.map((action, index) => `
     <button type="button" id="command-result-${index}" role="option" tabindex="-1" aria-selected="${index === commandPaletteSelectedIndex ? 'true' : 'false'}" class="command-result ${index === commandPaletteSelectedIndex ? 'active' : ''}" data-command-index="${index}">
       <span>
-        <strong>${escapeAppHtml(action.title)}</strong>
-        <small>${escapeAppHtml(action.description)}</small>
+        <strong>${utils.escapeHtml(action.title)}</strong>
+        <small>${utils.escapeHtml(action.description)}</small>
       </span>
-      <span class="badge badge-gray">${escapeAppHtml(action.group)}</span>
+      <span class="badge badge-gray">${utils.escapeHtml(action.group)}</span>
     </button>
   `).join('');
 
@@ -1108,6 +1194,7 @@ function getActiveSaveFormId() {
     if (isVisible('sales-form-bang-keo-in')) return 'form-bang-keo-in';
     if (isVisible('sales-form-bang-keo')) return 'form-bang-keo';
     if (isVisible('sales-form-truc-in')) return 'form-truc-in';
+    if (isVisible('sales-form-thank-you')) return 'form-thank-you';
   } else if (activeTab === 'quotes-creation') {
     if (isVisible('quotes-form-bang-keo-in')) return 'form-quote-bang-keo-in';
     if (isVisible('quotes-form-bang-keo')) return 'form-quote-bang-keo';
@@ -1228,6 +1315,7 @@ window.addEventListener('keydown', async (e) => {
         if (document.getElementById('sales-form-bang-keo-in').style.display !== 'none') calculateBangKeoIn('order');
         else if (document.getElementById('sales-form-bang-keo').style.display !== 'none') calculateBangKeo('order');
         else if (document.getElementById('sales-form-truc-in').style.display !== 'none') calculateTrucIn('order');
+        else if (document.getElementById('sales-form-thank-you').style.display !== 'none') calculateThankYou();
       } else if (activeTab === 'quotes-creation') {
         if (document.getElementById('quotes-form-bang-keo-in').style.display !== 'none') calculateBangKeoIn('quote');
         else if (document.getElementById('quotes-form-bang-keo').style.display !== 'none') calculateBangKeo('quote');

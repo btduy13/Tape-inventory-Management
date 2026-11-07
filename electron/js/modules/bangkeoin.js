@@ -471,22 +471,28 @@ const BANG_KEO_IN_INSERT_COLUMNS = [
   'loi_nhuan_rong', 'da_giao', 'da_tat_toan', 'da_gui_email', 'is_quote',
   'loai_truc', 'ten_truc', 'truc_chu_vi', 'truc_so_luong', 'truc_gia_goc',
   'truc_gia_ban', 'truc_thanh_tien_goc', 'truc_thanh_tien_ban', 'truc_ctv',
-  'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items'
+  'truc_hoa_hong', 'truc_tien_hoa_hong', 'truc_loi_nhuan', 'truc_loi_nhuan_rong', 'truc_vat', 'truc_vat_percent', 'vat', 'vat_percent', 'quote_items',
+  'customer_id'
 ];
 
-// SĐT và địa chỉ giao của khách (không bắt buộc); dùng chung cho form tạo đơn/báo giá cả 3 loại
+// SĐT, địa chỉ giao và khách đã chọn (customers.js) — không bắt buộc; dùng chung cho form tạo đơn/báo giá.
+// customer_id chỉ gửi khi người dùng đã chọn/tạo khách; bỏ trống thì trigger DB gắn khách theo SĐT.
 function readCustomerContact(prefix) {
+  const customerId = document.getElementById(`${prefix}ten-khach-hang`)?.dataset?.customerId;
   return {
     sdt_khach_hang: document.getElementById(`${prefix}sdt-khach-hang`)?.value.trim() || null,
-    dia_chi_khach_hang: document.getElementById(`${prefix}dia-chi-khach-hang`)?.value.trim() || null
+    dia_chi_khach_hang: document.getElementById(`${prefix}dia-chi-khach-hang`)?.value.trim() || null,
+    ...(customerId ? { customer_id: customerId } : {})
   };
 }
 
+// Điền lại liên hệ (xóa form / tự điền theo đơn cũ) luôn bỏ khách đã chọn
 function fillCustomerContact(prefix, order) {
   const phone = document.getElementById(`${prefix}sdt-khach-hang`);
   const address = document.getElementById(`${prefix}dia-chi-khach-hang`);
   if (phone) phone.value = order.sdt_khach_hang || "";
   if (address) address.value = order.dia_chi_khach_hang || "";
+  if (typeof setPickedCustomer === 'function') setPickedCustomer(prefix, '');
 }
 
 // Dựng giá trị cho thao tác order.insert (tiến trình chính kiểm tra tên cột theo danh sách cho phép)
@@ -532,16 +538,6 @@ async function runWithGeneratedOrderId(prefix, orderType, runner, maxAttempts = 
     minimumSequence = orderMath.orderIdSequence(orderId);
   }
   return { orderId, result: result || { ok: false, error: 'Không thể tạo mã đơn hàng mới' } };
-}
-
-// Giá trị mặc định cho ô ngày giao: ngày mai theo giờ địa phương (YYYY-MM-DD).
-function tomorrowDeliveryDateValue() {
-  if (typeof utils !== 'undefined' && typeof utils.tomorrowDateInputValue === 'function') {
-    return utils.tomorrowDateInputValue();
-  }
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 }
 
 // Ctrl+S có thể bỏ qua kiểm tra của form, nên tự kiểm tra ngày giao (YYYY-MM-DD) trước khi lưu.
@@ -601,5 +597,5 @@ function clearFormBangKeoIn(mode = 'order') {
   
   // Đặt ngày dự kiến mặc định là hôm sau (theo giờ địa phương, không dùng toISOString/UTC)
   const deliveryDate = document.getElementById(`${prefix}ngay-du-kien`);
-  if (deliveryDate) deliveryDate.value = tomorrowDeliveryDateValue();
+  if (deliveryDate) deliveryDate.value = utils.tomorrowDateInputValue();
 }

@@ -1,8 +1,7 @@
 // Admin read models (logged-in admin's RLS client).
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, LeadStatus, Profile } from "@/lib/types";
-import { LEAD_STATUSES } from "@/lib/types";
+import type { Database, Profile } from "@/lib/types";
 
 type Db = SupabaseClient<Database>;
 
@@ -24,18 +23,4 @@ export async function loadUsers(db: Db): Promise<{ rows: UserRow[]; failed: bool
     .select("id, email, full_name, phone, role, is_active, created_at")
     .order("created_at", { ascending: true });
   return { rows: data ?? [], failed: !!error };
-}
-
-export type StatusCounts = Record<LeadStatus, number>;
-
-export function countByStatus(rows: readonly { status: LeadStatus }[]): StatusCounts {
-  const counts = Object.fromEntries(LEAD_STATUSES.map((s) => [s, 0])) as StatusCounts;
-  for (const r of rows) counts[r.status] += 1;
-  return counts;
-}
-
-/** Status counts over the most recent leads (bounded; dashboard summary only). */
-export async function leadStatusCounts(db: Db, limit = 5000): Promise<StatusCounts> {
-  const { data } = await db.from("leads").select("status").order("created_at", { ascending: false }).limit(limit);
-  return countByStatus(data ?? []);
 }

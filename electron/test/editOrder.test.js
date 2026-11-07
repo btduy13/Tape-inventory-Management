@@ -13,7 +13,7 @@ function editHarness(type) {
     document: { addEventListener() {}, getElementById: id => elements.get(id) },
     window: { addEventListener() {} }
   });
-  for (const file of ['utils.js', 'app.js']) {
+  for (const file of ['utils.js', 'app.js', 'modules/thankyou.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', file), 'utf8'), context);
   }
   vm.runInContext(`editOrderTypeGlobal = '${type}'; editOrderIdGlobal = 'TEST-1'; editOrderDataGlobal = {};`, context);
@@ -22,7 +22,8 @@ function editHarness(type) {
     tien_ship: 100, don_gia_von: 600, quy_cach_m: 90, cuon_cay: 1,
     loai_truc: 'moi', ten_truc: 'Trục', truc_so_luong: 2, truc_gia_goc: 100,
     truc_gia_ban: 500, truc_hoa_hong: 25, truc_vat_percent: 10, tien_coc: 1000 };
-  const html = type === 'bang_keo_in' ? context.generateBangKeoInEditForm(order) : context.generateTrucInEditForm(order);
+  const generators = { bang_keo_in: 'generateBangKeoInEditForm', bang_keo: 'generateBangKeoEditForm', truc_in: 'generateTrucInEditForm', thank_you: 'generateThankYouEditForm' };
+  const html = context[generators[type]](order);
   for (const match of html.matchAll(/<input[^>]*id="([^"]+)"[^>]*value="([^"]*)"[^>]*>/g)) {
     elements.set(match[1], { value: match[2], readonly: match[0].includes(' readonly') });
   }
@@ -33,7 +34,7 @@ function editHarness(type) {
   return { context, elements, html };
 }
 
-for (const type of ['bang_keo', 'truc_in', 'bang_keo_in']) {
+for (const type of ['bang_keo', 'truc_in', 'bang_keo_in', 'thank_you']) {
   test(`edit ${type}: commission and VAT update from current inputs`, () => {
     const { context, elements } = editHarness(type);
     context.updateEditOrderCalculations();

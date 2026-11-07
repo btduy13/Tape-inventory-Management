@@ -25,14 +25,82 @@ export type Database = {
           Tables: {
             "bang_keo_in_orders": {
                   Row: {
-                    "cong_no_khach": number | null,"cong_no_ncc": number | null,"ctv": string | null,"cuon_cay": number | null,"da_giao": boolean | null,"da_gui_email": boolean | null,"da_tat_toan": boolean | null,"dia_chi_khach_hang": string | null,"don_gia_ban": number | null,"don_gia_goc": number | null,"don_gia_von": number | null,"hoa_hong": number | null,"id": string,"is_quote": boolean | null,"loai_truc": string | null,"loi_giay": string | null,"loi_nhuan": number | null,"loi_nhuan_rong": number | null,"mau_keo": string | null,"mau_sac": string | null,"ngay_du_kien": string,"phi_cat": number | null,"phi_keo": number | null,"phi_mau": number | null,"phi_size": number | null,"phi_sl": number | null,"quote_items": Json | null,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"sdt_khach_hang": string | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"ten_truc": string | null,"thanh_tien_ban": number | null,"thanh_tien_goc": number | null,"thoi_gian": string | null,"thung_bao": string | null,"tien_coc": number | null,"tien_hoa_hong": number | null,"tien_ship": number | null,"truc_chu_vi": number | null,"truc_ctv": string | null,"truc_gia_ban": number | null,"truc_gia_goc": number | null,"truc_hoa_hong": number | null,"truc_loi_nhuan": number | null,"truc_loi_nhuan_rong": number | null,"truc_so_luong": number | null,"truc_thanh_tien_ban": number | null,"truc_thanh_tien_goc": number | null,"truc_tien_hoa_hong": number | null,"truc_vat": number | null,"truc_vat_percent": number | null,"vat": number | null,"vat_percent": number | null
+                    "cong_no_khach": number | null,"cong_no_ncc": number | null,"ctv": string | null,"cuon_cay": number | null,"customer_id": string | null,"da_giao": boolean | null,"da_gui_email": boolean | null,"da_tat_toan": boolean | null,"dia_chi_khach_hang": string | null,"don_gia_ban": number | null,"don_gia_goc": number | null,"don_gia_von": number | null,"hoa_hong": number | null,"id": string,"is_quote": boolean | null,"loai_truc": string | null,"loi_giay": string | null,"loi_nhuan": number | null,"loi_nhuan_rong": number | null,"mau_keo": string | null,"mau_sac": string | null,"ngay_du_kien": string,"phi_cat": number | null,"phi_keo": number | null,"phi_mau": number | null,"phi_size": number | null,"phi_sl": number | null,"quote_items": Json | null,"quy_cach_m": number | null,"quy_cach_mic": number | null,"quy_cach_mm": number | null,"sdt_khach_hang": string | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"ten_truc": string | null,"thanh_tien_ban": number | null,"thanh_tien_goc": number | null,"thoi_gian": string | null,"thung_bao": string | null,"tien_coc": number | null,"tien_hoa_hong": number | null,"tien_ship": number | null,"truc_chu_vi": number | null,"truc_ctv": string | null,"truc_gia_ban": number | null,"truc_gia_goc": number | null,"truc_hoa_hong": number | null,"truc_loi_nhuan": number | null,"truc_loi_nhuan_rong": number | null,"truc_so_luong": number | null,"truc_thanh_tien_ban": number | null,"truc_thanh_tien_goc": number | null,"truc_tien_hoa_hong": number | null,"truc_vat": number | null,"truc_vat_percent": number | null,"vat": number | null,"vat_percent": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"cuon_cay"?: number | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"don_gia_von"?: number | null,"hoa_hong"?: number | null,"id": string,"is_quote"?: boolean | null,"loai_truc"?: string | null,"loi_giay"?: string | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien": string,"phi_cat"?: number | null,"phi_keo"?: number | null,"phi_mau"?: number | null,"phi_size"?: number | null,"phi_sl"?: number | null,"quote_items"?: Json | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"ten_truc"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"thung_bao"?: string | null,"tien_coc"?: number | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"truc_chu_vi"?: number | null,"truc_ctv"?: string | null,"truc_gia_ban"?: number | null,"truc_gia_goc"?: number | null,"truc_hoa_hong"?: number | null,"truc_loi_nhuan"?: number | null,"truc_loi_nhuan_rong"?: number | null,"truc_so_luong"?: number | null,"truc_thanh_tien_ban"?: number | null,"truc_thanh_tien_goc"?: number | null,"truc_tien_hoa_hong"?: number | null,"truc_vat"?: number | null,"truc_vat_percent"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"cuon_cay"?: number | null,"customer_id"?: string | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"don_gia_von"?: number | null,"hoa_hong"?: number | null,"id": string,"is_quote"?: boolean | null,"loai_truc"?: string | null,"loi_giay"?: string | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien": string,"phi_cat"?: number | null,"phi_keo"?: number | null,"phi_mau"?: number | null,"phi_size"?: number | null,"phi_sl"?: number | null,"quote_items"?: Json | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"ten_truc"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"thung_bao"?: string | null,"tien_coc"?: number | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"truc_chu_vi"?: number | null,"truc_ctv"?: string | null,"truc_gia_ban"?: number | null,"truc_gia_goc"?: number | null,"truc_hoa_hong"?: number | null,"truc_loi_nhuan"?: number | null,"truc_loi_nhuan_rong"?: number | null,"truc_so_luong"?: number | null,"truc_thanh_tien_ban"?: number | null,"truc_thanh_tien_goc"?: number | null,"truc_tien_hoa_hong"?: number | null,"truc_vat"?: number | null,"truc_vat_percent"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
                   }
                   Update: {
-                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"cuon_cay"?: number | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"don_gia_von"?: number | null,"hoa_hong"?: number | null,"id"?: string,"is_quote"?: boolean | null,"loai_truc"?: string | null,"loi_giay"?: string | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"phi_cat"?: number | null,"phi_keo"?: number | null,"phi_mau"?: number | null,"phi_size"?: number | null,"phi_sl"?: number | null,"quote_items"?: Json | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"ten_truc"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"thung_bao"?: string | null,"tien_coc"?: number | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"truc_chu_vi"?: number | null,"truc_ctv"?: string | null,"truc_gia_ban"?: number | null,"truc_gia_goc"?: number | null,"truc_hoa_hong"?: number | null,"truc_loi_nhuan"?: number | null,"truc_loi_nhuan_rong"?: number | null,"truc_so_luong"?: number | null,"truc_thanh_tien_ban"?: number | null,"truc_thanh_tien_goc"?: number | null,"truc_tien_hoa_hong"?: number | null,"truc_vat"?: number | null,"truc_vat_percent"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"cuon_cay"?: number | null,"customer_id"?: string | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"don_gia_von"?: number | null,"hoa_hong"?: number | null,"id"?: string,"is_quote"?: boolean | null,"loai_truc"?: string | null,"loi_giay"?: string | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"phi_cat"?: number | null,"phi_keo"?: number | null,"phi_mau"?: number | null,"phi_size"?: number | null,"phi_sl"?: number | null,"quote_items"?: Json | null,"quy_cach_m"?: number | null,"quy_cach_mic"?: number | null,"quy_cach_mm"?: number | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"ten_truc"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"thung_bao"?: string | null,"tien_coc"?: number | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"truc_chu_vi"?: number | null,"truc_ctv"?: string | null,"truc_gia_ban"?: number | null,"truc_gia_goc"?: number | null,"truc_hoa_hong"?: number | null,"truc_loi_nhuan"?: number | null,"truc_loi_nhuan_rong"?: number | null,"truc_so_luong"?: number | null,"truc_thanh_tien_ban"?: number | null,"truc_thanh_tien_goc"?: number | null,"truc_tien_hoa_hong"?: number | null,"truc_vat"?: number | null,"truc_vat_percent"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bang_keo_in_orders_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bang_keo_orders": {
+                  Row: {
+                    "cong_no_khach": number | null,"cong_no_ncc": number | null,"ctv": string | null,"customer_id": string | null,"da_giao": boolean | null,"da_gui_email": boolean | null,"da_tat_toan": boolean | null,"dia_chi_khach_hang": string | null,"don_gia_ban": number | null,"don_gia_goc": number | null,"hoa_hong": number | null,"id": string,"is_quote": boolean | null,"loi_nhuan": number | null,"loi_nhuan_rong": number | null,"mau_sac": string | null,"ngay_du_kien": string,"quote_items": Json | null,"quy_cach": string | null,"sdt_khach_hang": string | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien": number | null,"thanh_tien_ban": number | null,"thoi_gian": string | null,"tien_hoa_hong": number | null,"tien_ship": number | null,"vat": number | null,"vat_percent": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"customer_id"?: string | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"hoa_hong"?: number | null,"id": string,"is_quote"?: boolean | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_sac"?: string | null,"ngay_du_kien": string,"quote_items"?: Json | null,"quy_cach"?: string | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien"?: number | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                  }
+                  Update: {
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"customer_id"?: string | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"hoa_hong"?: number | null,"id"?: string,"is_quote"?: boolean | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"quote_items"?: Json | null,"quy_cach"?: string | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien"?: number | null,"thanh_tien_ban"?: number | null,"thoi_gian"?: string | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bang_keo_orders_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"customer_backfill_log": {
+                  Row: {
+                    "applied_at": string,"applied_by": string | null,"customer_created": boolean,"customer_id": string,"group_key": string | null,"id": number,"source_id": string,"source_table": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "applied_at"?: string,"applied_by"?: string | null,"customer_created"?: boolean,"customer_id": string,"group_key"?: string | null,"id"?: number,"source_id": string,"source_table": string
+                  }
+                  Update: {
+                    "applied_at"?: string,"applied_by"?: string | null,"customer_created"?: boolean,"customer_id"?: string,"group_key"?: string | null,"id"?: number,"source_id"?: string,"source_table"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"customer_match_candidates": {
+                  Row: {
+                    "created_at": string,"customer_id": string | null,"decision": string,"dia_chi_khach_hang": string | null,"group_key": string | null,"name_norm": string | null,"phone_norm": string | null,"reason": string,"resolved_at": string | null,"resolved_by": string | null,"sdt_khach_hang": string | null,"source_id": string,"source_table": string,"status": string,"ten_khach_hang": string | null,"thoi_gian": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"customer_id"?: string | null,"decision": string,"dia_chi_khach_hang"?: string | null,"group_key"?: string | null,"name_norm"?: string | null,"phone_norm"?: string | null,"reason": string,"resolved_at"?: string | null,"resolved_by"?: string | null,"sdt_khach_hang"?: string | null,"source_id": string,"source_table": string,"status"?: string,"ten_khach_hang"?: string | null,"thoi_gian"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"customer_id"?: string | null,"decision"?: string,"dia_chi_khach_hang"?: string | null,"group_key"?: string | null,"name_norm"?: string | null,"phone_norm"?: string | null,"reason"?: string,"resolved_at"?: string | null,"resolved_by"?: string | null,"sdt_khach_hang"?: string | null,"source_id"?: string,"source_table"?: string,"status"?: string,"ten_khach_hang"?: string | null,"thoi_gian"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"customers": {
+                  Row: {
+                    "address": string | null,"company": string | null,"created_at": string,"id": string,"name": string,"note": string | null,"phone": string | null,"phone_norm": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address"?: string | null,"company"?: string | null,"created_at"?: string,"id"?: string,"name": string,"note"?: string | null,"phone"?: string | null,"phone_norm"?: never,"updated_at"?: string
+                  }
+                  Update: {
+                    "address"?: string | null,"company"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"note"?: string | null,"phone"?: string | null,"phone_norm"?: never,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -88,6 +156,20 @@ isOneToOne: false
       referencedRelation: "tape_presets"
       referencedColumns: ["id"]
     }
+                  ]
+                },"email_history": {
+                  Row: {
+                    "email_address": string,"id": number,"last_sent_at": string,"sent_count": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "email_address": string,"id"?: number,"last_sent_at"?: string,"sent_count"?: number | null
+                  }
+                  Update: {
+                    "email_address"?: string,"id"?: number,"last_sent_at"?: string,"sent_count"?: number | null
+                  }
+                  Relationships: [
+                    
                   ]
                 },"lead_assignments": {
                   Row: {
@@ -175,14 +257,14 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "assigned_at": string | null,"assigned_to": string | null,"code": string,"company": string | null,"created_at": string,"customer_name": string,"customer_note": string | null,"email": string | null,"id": string,"phone": string,"production_order_id": string | null,"quantity": number,"source_ip_hash": string | null,"status": Database["public"]['Enums']["lead_status"],"updated_at": string,"user_agent": string | null
+                    "assigned_at": string | null,"assigned_to": string | null,"code": string,"company": string | null,"created_at": string,"customer_id": string | null,"customer_name": string,"customer_note": string | null,"email": string | null,"id": string,"phone": string,"production_order_id": string | null,"quantity": number,"source_ip_hash": string | null,"status": Database["public"]['Enums']["lead_status"],"updated_at": string,"user_agent": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_at"?: string | null,"assigned_to"?: string | null,"code"?: string,"company"?: string | null,"created_at"?: string,"customer_name": string,"customer_note"?: string | null,"email"?: string | null,"id"?: string,"phone": string,"production_order_id"?: string | null,"quantity": number,"source_ip_hash"?: string | null,"status"?: Database["public"]['Enums']["lead_status"],"updated_at"?: string,"user_agent"?: string | null
+                    "assigned_at"?: string | null,"assigned_to"?: string | null,"code"?: string,"company"?: string | null,"created_at"?: string,"customer_id"?: string | null,"customer_name": string,"customer_note"?: string | null,"email"?: string | null,"id"?: string,"phone": string,"production_order_id"?: string | null,"quantity": number,"source_ip_hash"?: string | null,"status"?: Database["public"]['Enums']["lead_status"],"updated_at"?: string,"user_agent"?: string | null
                   }
                   Update: {
-                    "assigned_at"?: string | null,"assigned_to"?: string | null,"code"?: string,"company"?: string | null,"created_at"?: string,"customer_name"?: string,"customer_note"?: string | null,"email"?: string | null,"id"?: string,"phone"?: string,"production_order_id"?: string | null,"quantity"?: number,"source_ip_hash"?: string | null,"status"?: Database["public"]['Enums']["lead_status"],"updated_at"?: string,"user_agent"?: string | null
+                    "assigned_at"?: string | null,"assigned_to"?: string | null,"code"?: string,"company"?: string | null,"created_at"?: string,"customer_id"?: string | null,"customer_name"?: string,"customer_note"?: string | null,"email"?: string | null,"id"?: string,"phone"?: string,"production_order_id"?: string | null,"quantity"?: number,"source_ip_hash"?: string | null,"status"?: Database["public"]['Enums']["lead_status"],"updated_at"?: string,"user_agent"?: string | null
                   }
                   Relationships: [
                     {
@@ -191,7 +273,27 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "leads_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
     }
+                  ]
+                },"order_attachments": {
+                  Row: {
+                    "content_type": string | null,"created_at": string | null,"data": string | null,"file_name": string,"file_size": number | null,"id": number,"order_id": string,"order_type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "content_type"?: string | null,"created_at"?: string | null,"data"?: string | null,"file_name": string,"file_size"?: number | null,"id"?: number,"order_id": string,"order_type": string
+                  }
+                  Update: {
+                    "content_type"?: string | null,"created_at"?: string | null,"data"?: string | null,"file_name"?: string,"file_size"?: number | null,"id"?: number,"order_id"?: string,"order_type"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"production_jobs": {
                   Row: {
@@ -387,24 +489,127 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"thank_you_migration_map": {
+                  Row: {
+                    "migrated_at": string,"new_id": string,"old_id": string,"old_row": NonNullable<Json>,"old_table": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "migrated_at"?: string,"new_id": string,"old_id": string,"old_row": NonNullable<Json>,"old_table": string
+                  }
+                  Update: {
+                    "migrated_at"?: string,"new_id"?: string,"old_id"?: string,"old_row"?: NonNullable<Json>,"old_table"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"thank_you_orders": {
+                  Row: {
+                    "cong_no_khach": number,"cong_no_ncc": number,"ctv": string | null,"customer_id": string | null,"da_giao": boolean,"da_gui_email": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string | null,"don_gia_ban": number,"don_gia_von": number,"ghi_chu": string | null,"hoa_hong": number,"id": string,"is_quote": boolean,"kich_thuoc": string | null,"loi_nhuan": number,"loi_nhuan_rong": number,"mau_sac": string | null,"ngay_du_kien": string,"sdt_khach_hang": string | null,"so_luong": number,"ten_hang": string,"ten_khach_hang": string | null,"thanh_tien_ban": number,"thanh_tien_von": number,"thoi_gian": string,"tien_coc": number,"tien_hoa_hong": number,"tien_ship": number,"vat": number,"vat_percent": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cong_no_khach"?: number,"cong_no_ncc"?: number,"ctv"?: string | null,"customer_id"?: string | null,"da_giao"?: boolean,"da_gui_email"?: boolean,"da_tat_toan"?: boolean,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number,"don_gia_von"?: number,"ghi_chu"?: string | null,"hoa_hong"?: number,"id": string,"is_quote"?: boolean,"kich_thuoc"?: string | null,"loi_nhuan"?: number,"loi_nhuan_rong"?: number,"mau_sac"?: string | null,"ngay_du_kien": string,"sdt_khach_hang"?: string | null,"so_luong"?: number,"ten_hang": string,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number,"thanh_tien_von"?: number,"thoi_gian"?: string,"tien_coc"?: number,"tien_hoa_hong"?: number,"tien_ship"?: number,"vat"?: number,"vat_percent"?: number
+                  }
+                  Update: {
+                    "cong_no_khach"?: number,"cong_no_ncc"?: number,"ctv"?: string | null,"customer_id"?: string | null,"da_giao"?: boolean,"da_gui_email"?: boolean,"da_tat_toan"?: boolean,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number,"don_gia_von"?: number,"ghi_chu"?: string | null,"hoa_hong"?: number,"id"?: string,"is_quote"?: boolean,"kich_thuoc"?: string | null,"loi_nhuan"?: number,"loi_nhuan_rong"?: number,"mau_sac"?: string | null,"ngay_du_kien"?: string,"sdt_khach_hang"?: string | null,"so_luong"?: number,"ten_hang"?: string,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number,"thanh_tien_von"?: number,"thoi_gian"?: string,"tien_coc"?: number,"tien_hoa_hong"?: number,"tien_ship"?: number,"vat"?: number,"vat_percent"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "thank_you_orders_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"truc_in_orders": {
+                  Row: {
+                    "cong_no_khach": number | null,"cong_no_ncc": number | null,"ctv": string | null,"customer_id": string | null,"da_giao": boolean | null,"da_gui_email": boolean | null,"da_tat_toan": boolean | null,"dia_chi_khach_hang": string | null,"don_gia_ban": number | null,"don_gia_goc": number | null,"hoa_hong": number | null,"id": string,"is_quote": boolean | null,"loi_nhuan": number | null,"loi_nhuan_rong": number | null,"mau_keo": string | null,"mau_sac": string | null,"ngay_du_kien": string,"quote_items": Json | null,"quy_cach": string | null,"sdt_khach_hang": string | null,"so_luong": number | null,"ten_hang": string | null,"ten_khach_hang": string | null,"thanh_tien_ban": number | null,"thanh_tien_goc": number | null,"thoi_gian": string | null,"tien_hoa_hong": number | null,"tien_ship": number | null,"vat": number | null,"vat_percent": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"customer_id"?: string | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"hoa_hong"?: number | null,"id": string,"is_quote"?: boolean | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien": string,"quote_items"?: Json | null,"quy_cach"?: string | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                  }
+                  Update: {
+                    "cong_no_khach"?: number | null,"cong_no_ncc"?: number | null,"ctv"?: string | null,"customer_id"?: string | null,"da_giao"?: boolean | null,"da_gui_email"?: boolean | null,"da_tat_toan"?: boolean | null,"dia_chi_khach_hang"?: string | null,"don_gia_ban"?: number | null,"don_gia_goc"?: number | null,"hoa_hong"?: number | null,"id"?: string,"is_quote"?: boolean | null,"loi_nhuan"?: number | null,"loi_nhuan_rong"?: number | null,"mau_keo"?: string | null,"mau_sac"?: string | null,"ngay_du_kien"?: string,"quote_items"?: Json | null,"quy_cach"?: string | null,"sdt_khach_hang"?: string | null,"so_luong"?: number | null,"ten_hang"?: string | null,"ten_khach_hang"?: string | null,"thanh_tien_ban"?: number | null,"thanh_tien_goc"?: number | null,"thoi_gian"?: string | null,"tien_hoa_hong"?: number | null,"tien_ship"?: number | null,"vat"?: number | null,"vat_percent"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "truc_in_orders_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
             [_ in never]: never
           }
           Functions: {
-            "admin_order_create":
-{ Args: { "p_payload": Json }; Returns: {
+            "admin_customer_create":
+{ Args: { "p_payload": Json }; Returns: string
+                           },
+"admin_customer_get":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"admin_customer_merge":
+{ Args: { "p_sources": (string)[],"p_target": string }; Returns: number
+                           },
+"admin_customer_review_list":
+{ Args: { "p_limit"?: number,"p_offset"?: number }; Returns: {
+              "dia_chi_khach_hang": string,"order_type": string,"reason": string,"sdt_khach_hang": string,"source_id": string,"source_table": string,"suggestions": Json,"ten_khach_hang": string,"thoi_gian": string,"total_count": number
+            }[]
+                           },
+"admin_customer_review_resolve":
+{ Args: { "p_customer_id"?: string,"p_source_id": string,"p_source_table": string }; Returns: undefined
+                           },
+"admin_customer_update":
+{ Args: { "p_id": string,"p_payload": Json }; Returns: Json
+                           },
+"admin_customers_list":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_q"?: string }; Returns: {
+              "address": string,"company": string,"cong_no_khach": number,"created_at": string,"id": string,"last_order_at": string,"name": string,"note": string,"order_count": number,"phone": string,"phone_norm": string,"quote_count": number,"sum_cong_no_khach": number,"tong_tien": number,"total_count": number,"updated_at": string
+            }[]
+                           },
+"admin_dashboard":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"admin_order_create":
+{ Args: { "p_is_quote"?: boolean,"p_payload": Json,"p_type"?: string }; Returns: {
               "job_id": string,"order_id": string
             }[]
                            },
+"admin_order_delete":
+{ Args: { "p_ids": (string)[],"p_quote_only"?: boolean,"p_type": string }; Returns: number
+                           },
 "admin_order_get":
-{ Args: { "p_id": string }; Returns: Json
+{ Args: { "p_id": string,"p_type"?: string }; Returns: Json
+                           },
+"admin_order_latest_by_name":
+{ Args: { "p_name": string,"p_type": string }; Returns: Json
+                           },
+"admin_order_name_suggest":
+{ Args: { "p_q": string,"p_type": string }; Returns: string[]
+                           },
+"admin_order_send_to_workshop":
+{ Args: { "p_id": string,"p_workshop_user_id"?: string }; Returns: string
+                           },
+"admin_order_set_status":
+{ Args: { "p_da_giao"?: boolean,"p_da_tat_toan"?: boolean,"p_ids": (string)[],"p_type": string }; Returns: number
+                           },
+"admin_order_update":
+{ Args: { "p_id": string,"p_payload": Json,"p_type": string }; Returns: Json
                            },
 "admin_orders_list":
-{ Args: { "p_filter"?: Json }; Returns: {
-              "cong_no_khach": number,"da_giao": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"id": string,"job_id": string,"lead_id": string,"loi_nhuan_rong": number,"ngay_du_kien": string,"sdt_khach_hang": string,"so_luong": number,"step": Database["public"]['Enums']["production_step"],"ten_hang": string,"ten_khach_hang": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"tong_tien": number,"total_count": number,"vat": number,"workshop_user_id": string,"workshop_user_name": string
+{ Args: { "p_filter"?: Json,"p_type"?: string }; Returns: {
+              "cong_no_khach": number,"cong_no_ncc": number,"count_due_soon": number,"count_overdue": number,"ctv": string,"da_giao": boolean,"da_gui_email": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"don_gia_ban": number,"has_quote_items": boolean,"id": string,"is_quote": boolean,"job_id": string,"lead_id": string,"loi_nhuan_rong": number,"mau_sac": string,"ngay_du_kien": string,"quy_cach": string,"sdt_khach_hang": string,"so_luong": number,"step": Database["public"]['Enums']["production_step"],"sum_cong_no_khach": number,"sum_cong_no_ncc": number,"sum_loi_nhuan_rong": number,"sum_tong_tien": number,"ten_hang": string,"ten_khach_hang": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"tien_von": number,"tong_tien": number,"total_count": number,"type": string,"vat": number,"workshop_user_id": string,"workshop_user_name": string
             }[]
+                           },
+"admin_quote_convert":
+{ Args: { "p_id": string,"p_ngay_du_kien": string,"p_type": string }; Returns: string
                            },
 "advance_production_step":
 { Args: { "p_job_id": string,"p_note"?: string,"p_to": Database["public"]['Enums']["production_step"] }; Returns: {
@@ -435,6 +640,7 @@ isOneToOne: false
 "code": string,
 "company": string | null,
 "created_at": string,
+"customer_id": string | null,
 "customer_name": string,
 "customer_note": string | null,
 "email": string | null,
@@ -510,6 +716,7 @@ isOneToOne: false
 "code": string,
 "company": string | null,
 "created_at": string,
+"customer_id": string | null,
 "customer_name": string,
 "customer_note": string | null,
 "email": string | null,
@@ -547,6 +754,27 @@ isOneToOne: false
 "current_app_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["app_role"]
                            },
+"customer_backfill_apply":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "customers_created": number,"rows_linked": number
+            }[]
+                           },
+"customer_backfill_dry_run":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "decision": string,"n": number,"reason": string
+            }[]
+                           },
+"customer_clean_payload":
+{ Args: { "p_payload": Json }; Returns: Json
+                           },
+"customer_find_or_create":
+{ Args: { "p_address"?: string,"p_company"?: string,"p_name": string,"p_phone": string }; Returns: string
+                           },
+"customer_order_rows":
+{ Args: { "p_customer_id"?: string }; Returns: {
+              "cong_no_khach": number,"customer_id": string,"da_giao": boolean,"da_tat_toan": boolean,"id": string,"is_quote": boolean,"ngay_du_kien": string,"so_luong": number,"ten_hang": string,"thoi_gian": string,"tong_tien": number,"type": string
+            }[]
+                           },
 "delivery_note_by_token":
 { Args: { "p_token_hash": string }; Returns: {
               "confirmed_at": string,"created_at": string,"job_id": string,"job_step": Database["public"]['Enums']["production_step"],"note_id": string,"order_name": string,"quantity": number,"recipient_name": string,"status": string
@@ -554,6 +782,14 @@ isOneToOne: false
                            },
 "electron_app_purge_large_objects":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"electron_customer_create":
+{ Args: { "p_address"?: string,"p_company"?: string,"p_name": string,"p_phone"?: string }; Returns: string
+                           },
+"electron_customer_search":
+{ Args: { "p_id"?: string,"p_limit"?: number,"p_q"?: string }; Returns: {
+              "address": string,"company": string,"id": string,"name": string,"phone": string
+            }[]
                            },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -582,11 +818,39 @@ isOneToOne: false
 "next_bang_keo_in_order_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"next_order_id":
+{ Args: { "p_at"?: string,"p_quote"?: boolean,"p_type": string }; Returns: string
+                           },
+"normalize_customer_name":
+{ Args: { "p_name": string }; Returns: string
+                           },
+"normalize_vn_phone":
+{ Args: { "p_phone": string }; Returns: string
+                           },
+"order_clean_payload":
+{ Args: { "p_extra"?: (string)[],"p_payload": Json,"p_type": string }; Returns: Json
+                           },
+"order_compute":
+{ Args: { "p_type": string,"r": Json }; Returns: Json
+                           },
+"order_fields":
+{ Args: { "p_type": string }; Returns: {
+              "kind": string,"max_len": number,"name": string
+            }[]
+                           },
 "order_payload_num":
 { Args: { "p_key": string,"p_payload": Json }; Returns: number
                            },
 "order_payload_text":
 { Args: { "p_key": string,"p_max": number,"p_payload": Json }; Returns: string
+                           },
+"order_type_meta":
+{ Args: { "p_type": string }; Returns: {
+              "customer_debt": string,"prefix": string,"supplier_debt": string,"tbl": string
+            }[]
+                           },
+"order_write":
+{ Args: { "p_id"?: string,"p_row": Json,"p_type": string }; Returns: number
                            },
 "production_apply_step":
 { Args: { "p_by_name"?: string,"p_job_id": string,"p_note"?: string,"p_to": Database["public"]['Enums']["production_step"] }; Returns: {
@@ -621,6 +885,9 @@ isOneToOne: false
                            },
 "quotes_recalc_totals":
 { Args: { "p_quote_id": string }; Returns: undefined
+                           },
+"thank_you_move_legacy":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "workshop_jobs":
 { Args: { "p_job_id"?: string }; Returns: {

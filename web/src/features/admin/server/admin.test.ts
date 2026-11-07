@@ -3,7 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
 import { DEACTIVATED_BAN, inviteUser, updateUser } from "./users";
 import { savePreset } from "./presets";
-import { countByStatus } from "./queries";
 
 type Db = SupabaseClient<Database>;
 const USER = "0b0c0d0e-1111-4222-8333-444455556666";
@@ -68,19 +67,12 @@ describe("updateUser", () => {
   });
 });
 
-describe("presets / overview", () => {
+describe("presets", () => {
   const preset = { id: null, label: "48mm", widthMm: 48, lengthM: 100, thicknessMic: 45, sortOrder: 0, isActive: true };
 
   it("maps unique violation to duplicate", async () => {
     const db = { from: () => ({ insert: vi.fn().mockResolvedValue({ error: { code: "23505" } }) }) } as unknown as Db;
     expect(await savePreset(db, preset)).toEqual({ ok: false, reason: "duplicate" });
-  });
-
-  it("counts statuses", () => {
-    const c = countByStatus([{ status: "new" }, { status: "new" }, { status: "done" }]);
-    expect(c.new).toBe(2);
-    expect(c.done).toBe(1);
-    expect(c.cancelled).toBe(0);
   });
 });
 

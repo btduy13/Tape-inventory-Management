@@ -5,10 +5,11 @@ const vm = require('node:vm');
 const path = require('node:path');
 const orderMath = require('../js/orderMath');
 const { toStatement, toTransaction } = require('./helpers/ipcDb');
+const utils = require('../js/utils');
 
 function loadImport() {
   const calls = [];
-  const context = vm.createContext({ Date, orderMath, window: { electronAPI: {
+  const context = vm.createContext({ Date, orderMath, utils, window: { electronAPI: {
     dbRun: async (action, params) => { calls.push(toStatement(action, params, 'write')); return { ok: true }; }
   } } });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/modules/excelImport.js'), 'utf8'), context);
@@ -33,8 +34,8 @@ test('simple Excel import preserves cost and VAT through SQL insert', async () =
     assert.equal(data.cong_no_khach, 432);
     assert.equal(data.thanh_tien, 200);
     assert.equal(data.tien_hoa_hong, 20);
-    await c.insertSimpleImport('test', data, type);
-    const { sql, params } = calls.at(-1);
+    const statement = c.buildSimpleImportStatement('test', data, type);
+    const { sql, params } = toStatement(statement.action, statement.params, 'write');
     assert.equal(Number([...sql.matchAll(/\$(\d+)/g)].at(-1)[1]), params.length);
     assert.deepEqual(Array.from(params.slice(-2)), [32, 8]);
     assert.ok(!params.includes(undefined));
@@ -49,8 +50,8 @@ test('BKI import adds product and axis VAT and rejects report child rows', async
   assert.equal(data.vat, 32);
   assert.equal(data.truc_vat, 30);
   assert.equal(data.cong_no_khach, 712);
-  await c.insertBangKeoInImport('test', data);
-  const { sql, params } = calls[0];
+  const statement = c.buildBangKeoInImportStatement('test', data);
+  const { sql, params } = toStatement(statement.action, statement.params, 'write');
   assert.equal(Number([...sql.matchAll(/\$(\d+)/g)].at(-1)[1]), params.length);
   assert.deepEqual(Array.from(params.slice(-4)), [32, 8, 30, 10]);
   assert.ok(!params.includes(undefined));
@@ -77,7 +78,6 @@ test('Excel dates: overflow or unparseable values return null instead of tomorro
   tomorrow.setDate(tomorrow.getDate() + 1);
   const empty = c.parseImportDate('');
   assert.equal(empty.getDate(), tomorrow.getDate());
-  assert.match(c.nextDateString(), /^\d{4}-\d{2}-\d{2}$/);
 });
 
 test('Excel validation flags invalid dates, negative amounts and out-of-range percents', () => {
@@ -145,6 +145,7 @@ test('Excel import is all-or-nothing through dbTransaction and cannot run twice 
     Date, orderMath,
     XLSX: { read: () => ({ SheetNames: ['S'], Sheets: { S: {} } }), utils: { sheet_to_json: () => rows } },
     utils: {
+      tomorrowDateInputValue: () => '2026-10-11',
       showToast: (message, type) => toasts.push({ message, type }),
       confirmAction: () => new Promise(resolve => { releaseConfirm = resolve; })
     },

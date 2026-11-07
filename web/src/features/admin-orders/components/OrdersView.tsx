@@ -1,93 +1,94 @@
-// /admin/don-hang body. The page calls requireRole(admin) first; rows come from
-// rpc('admin_orders_list') (admin-only in SQL), filtered and paged in SQL from whitelisted URL params.
+// /admin/don-hang body. The page calls requireRole(admin) first; rows and totals come from
+// rpc('admin_orders_list') (admin-only in SQL), filtered, sorted and paged in SQL from whitelisted
+// URL params. Tabs: the 4 order types + app quotes.
 import Link from "next/link";
+import { formatVnd, getDictionary } from "@/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
-import { DataTable, type Column } from "@/features/portal-ui/components/DataTable";
-import { FilterBar } from "@/features/portal-ui/components/FilterBar";
-import { PageHeader, Section } from "@/features/portal-ui/components/Section";
-import { ToneBadge } from "@/features/portal-ui/components/StatusBadge";
+import { FilterBar, type FilterControl } from "@/features/portal-ui/components/FilterBar";
+import { PageHeader, Section, StatCard, StatGrid } from "@/features/portal-ui/components/Section";
 import { buttonClass } from "@/features/portal-ui/components/styles";
-import { parseListParams, type RawParams } from "@/features/portal-ui/lib/list-params";
-import { STEP_LABEL, ordersCopy as c } from "../lib/copy";
-import { dateTimeVn, dateVn, money, plain, toNumber } from "../lib/format";
-import { ORDERS_SPEC, toOrdersFilter } from "../lib/list-spec";
-import { ORDER_STEPS } from "../lib/types";
-import { listOrders, type OrdersPage } from "../server/queries";
-import { OrderStepBadge, OriginBadge } from "./badges";
+import { listHref, parseListParams, patchListState, type RawParams } from "@/features/portal-ui/lib/list-params";
+import { vnToday } from "@/features/workshop/lib/dates";
+import { BOARD_STEPS } from "@/features/workshop/lib/steps";
+import { listWorkshopUsers } from "@/features/workshop/server/queries";
+import { TAB_LABEL, TYPE_LABEL, ordersCopy as c } from "../lib/copy";
+import { vndShort } from "../lib/format";
+import { ORDERS_SPEC, ORDER_TABS, tabOf, toOrdersQuery } from "../lib/list-spec";
+import { newOrderHref, tabHref } from "../lib/paths";
+import { listOrders } from "../server/queries";
+import { OrdersAutoRefresh } from "./OrdersAutoRefresh";
+import { OrdersTable } from "./OrdersTable";
+import { PillNav } from "./badges";
 
+const t = getDictionary();
 const BASE = ROUTES.adminOrders;
-type Row = OrdersPage["rows"][number];
-
-const columns: Column<Row>[] = [
-  { key: "order", header: c.colOrder, mobile: "title", cell: (o) => (
-    <span className="flex min-w-0 flex-col">
-      <span className="font-semibold">{o.ten_hang || "—"}</span>
-      <span className="text-xs font-normal text-pt-muted">{o.id}</span>
-    </span>
-  ) },
-  { key: "step", header: c.colStep, mobile: "badge", cell: (o) => (
-    <span className="flex flex-col items-start gap-1">
-      <OrderStepBadge step={o.step} />
-      {o.job_id && !o.workshop_user_id && o.step !== "da_giao" && o.step !== "huy" && (
-        <span className="text-xs text-pt-amber-ink">{c.unassigned}</span>
-      )}
-    </span>
-  ) },
-  { key: "customer", header: c.colCustomer, cell: (o) => (
-    <span className="flex min-w-0 flex-col">
-      <span>{o.ten_khach_hang || "—"}</span>
-      {o.sdt_khach_hang && <span className="text-xs text-pt-muted">{o.sdt_khach_hang}</span>}
-    </span>
-  ) },
-  { key: "date", header: c.colDate, className: "hidden lg:table-cell whitespace-nowrap", cell: (o) => dateTimeVn(o.thoi_gian) },
-  { key: "due", header: c.colDue, className: "whitespace-nowrap", cell: (o) => dateVn(o.ngay_du_kien) },
-  { key: "qty", header: c.colQty, align: "end", className: "hidden xl:table-cell", cell: (o) => plain(o.so_luong) },
-  { key: "total", header: c.colTotal, align: "end", className: "whitespace-nowrap", cell: (o) => money(o.tong_tien) },
-  { key: "debt", header: c.colDebt, align: "end", className: "whitespace-nowrap", cell: (o) =>
-    o.da_tat_toan ? <ToneBadge tone="green">{c.settled}</ToneBadge> : money(o.cong_no_khach) },
-  { key: "profit", header: c.colProfit, align: "end", className: "hidden xl:table-cell whitespace-nowrap", cell: (o) => (
-    <span className={(toNumber(o.loi_nhuan_rong) ?? 0) < 0 ? "text-pt-red-ink" : ""}>{money(o.loi_nhuan_rong)}</span>
-  ) },
-  { key: "origin", header: c.colOrigin, className: "hidden lg:table-cell", cell: (o) => <OriginBadge origin={o.origin} /> },
-];
 
 export async function OrdersView({ searchParams }: { searchParams: RawParams }) {
   const state = parseListParams(ORDERS_SPEC, searchParams);
-  const { rows, total, failed } = await listOrders(await createClient(), toOrdersFilter(state));
-  const filtered = !!state.q || Object.keys(state.filters).length > 0 || !!state.from || !!state.to;
-  const newButton = <Link href={ROUTES.adminOrderNew} className={buttonClass("primary")}>{c.newButton}</Link>;
+  const tab = tabOf(state);
+  const quotes = tab === "quote";
+  const db = await createClient();
+  const [{ rows, totals, failed }, workshopUsers] = await Promise.all([listOrders(db, toOrdersQuery(state)), listWorkshopUsers(db)]);
+  const filtered = !!state.q || Object.keys(state.filters).some((k) => k !== "type") || !!state.from || !!state.to;
+  const newType = quotes || tab === "all" ? "bang_keo_in" : tab;
+  const newButton = (
+    <Link href={newOrderHref(newType, quotes)} className={buttonClass("primary")}>
+      {quotes ? c.newQuoteButton : `${c.newButton} · ${TYPE_LABEL[newType]}`}
+    </Link>
+  );
+  // Big amounts are shortened on the card ("25,4 tr"); the exact amount goes under it.
+  const moneyCard = (n: number) => ({ value: vndShort(n), hint: Math.abs(n) >= 1e6 ? formatVnd(n) : undefined });
+  const withDue = (due: "overdue" | "soon") => listHref(BASE, ORDERS_SPEC, patchListState(state, { filters: { ...state.filters, due: [due] } }));
+
+  const controls: FilterControl[] = quotes ? [] : [
+    ...(tab === "bang_keo_in" ? [{ kind: "select" as const, name: "step", label: c.filterStep, options: [
+      ...BOARD_STEPS.map((s) => ({ value: s, label: t.productionStep[s] })),
+      { value: "none", label: c.stepNone },
+    ] }] : []),
+    { kind: "select", name: "delivered", label: c.filterDelivered, options: [{ value: "1", label: c.delivered }, { value: "0", label: c.notDelivered }] },
+    { kind: "select", name: "settled", label: c.filterSettled, options: [{ value: "1", label: c.settled }, { value: "0", label: c.notSettled }] },
+    { kind: "select", name: "due", label: c.filterDue, options: [{ value: "overdue", label: c.dueOverdue }, { value: "soon", label: c.dueSoon }] },
+  ];
 
   return (
     <>
+      <OrdersAutoRefresh />
       <PageHeader title={c.title} description={c.intro} breadcrumbs={[{ label: c.title }]} actions={newButton} />
+      <PillNav label={c.tabsLabel} current={tab} items={ORDER_TABS.map((k) => [k, TAB_LABEL[k], tabHref(k)] as const)} />
+      {!failed && (
+        <StatGrid>
+          <StatCard label={c.sumCount} value={totals.count} />
+          <StatCard label={c.sumTotal} {...moneyCard(totals.tongTien)} />
+          {!quotes && <StatCard label={c.sumDebt} {...moneyCard(totals.congNoKhach)} tone="amber" />}
+          {!quotes && <StatCard label={c.sumSupplier} {...moneyCard(totals.congNoNcc)} />}
+          <StatCard label={c.sumProfit} {...moneyCard(totals.loiNhuanRong)} tone={totals.loiNhuanRong < 0 ? "red" : "green"} />
+          {!quotes && <StatCard label={c.sumOverdue} value={totals.overdue} tone="red" href={withDue("overdue")} />}
+          {!quotes && <StatCard label={c.sumSoon} value={totals.dueSoon} tone="amber" href={withDue("soon")} />}
+        </StatGrid>
+      )}
       <Section variant="plain">
         <FilterBar
           basePath={BASE}
           spec={ORDERS_SPEC}
           state={state}
+          pinned={["type"]}
           searchPlaceholder={c.searchPlaceholder}
           dateRange
           dateLabel={c.dateLabel}
-          controls={[
-            { kind: "select", name: "step", label: c.filterStep, options: [
-              ...ORDER_STEPS.map((s) => ({ value: s, label: STEP_LABEL[s] })),
-              { value: "none", label: c.stepNone },
-            ] },
-            { kind: "select", name: "delivered", label: c.filterDelivered, options: [{ value: "1", label: c.delivered }, { value: "0", label: c.notDelivered }] },
-            { kind: "select", name: "settled", label: c.filterSettled, options: [{ value: "1", label: c.settled }, { value: "0", label: c.notSettled }] },
-          ]}
+          controls={controls}
         />
-        <DataTable
-          caption={c.caption}
-          columns={columns}
+        <OrdersTable
+          tab={tab}
           rows={rows}
-          rowKey={(o) => o.id}
-          rowHref={(o) => ROUTES.adminOrder(o.id)}
-          list={{ basePath: BASE, spec: ORDERS_SPEC, state, total }}
+          state={state}
+          total={totals.count}
+          basePath={BASE}
+          today={vnToday()}
+          workshopUsers={workshopUsers}
           filtered={filtered}
-          empty={{ title: c.empty, body: c.emptyBody, action: newButton }}
-          error={failed ? c.loadError : null}
+          failed={failed}
+          empty={{ title: quotes ? c.emptyQuotes : c.empty, body: c.emptyBody, action: newButton }}
         />
       </Section>
     </>

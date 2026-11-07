@@ -48,7 +48,7 @@ async function openEmailDialog(orderId, orderType) {
     activeEmailOrderId = orderId;
     activeEmailOrderType = orderType;
     emailAttachments = loadedAttachments;
-    const typeLabel = orderType === 'bang_keo_in' ? 'Băng Keo In' : (orderType === 'truc_in' ? 'Trục In' : 'Băng Keo');
+    const typeLabel = { bang_keo_in: 'Băng Keo In', truc_in: 'Trục In', thank_you: 'Băng Keo Thank you' }[orderType] || 'Băng Keo';
     const formattedTitle = `${typeLabel} ${order.ten_hang || ''}`.replace(/[\r\n]+/g, ' ').trim();
     
     // Đặt Tiêu đề gốc
@@ -66,6 +66,8 @@ async function openEmailDialog(orderId, orderType) {
       specText = `Quy cách: ${order.quy_cach_mm || 0}mm * ${order.quy_cach_m || 0}m * ${order.quy_cach_mic || 0}mic\nLõi giấy: ${order.loi_giay || 'Mặc định'}\nThùng bao: ${order.thung_bao || 'Mặc định'}`;
     } else if (orderType === 'truc_in') {
       specText = `Quy cách: ${order.quy_cach || 'Mặc định'}`;
+    } else if (orderType === 'thank_you') {
+      specText = `Kích thước: ${order.kich_thuoc || 'Mặc định'}${order.ghi_chu ? `\nGhi chú: ${order.ghi_chu}` : ''}`;
     } else {
       specText = `Quy cách: ${formatBangKeoEmailSpec(order.quy_cach)}`;
     }

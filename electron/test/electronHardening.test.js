@@ -81,7 +81,17 @@ test('electron_app DB role migration is least-privilege and limited to the five 
   const sql = fs.readFileSync(migrationPath, 'utf8');
   const code = sql.replace(/--.*$/gm, '');
   const { ALLOWED_TABLES } = require('../dbPolicy');
-  for (const table of ALLOWED_TABLES) assert.ok(code.includes(`'${table}'`), table);
+  // Granted later: thank_you_orders by 0027, electron_customer_search (EXECUTE only) by 0028.
+  const later = {
+    thank_you_orders: ['0027_thank_you_orders.sql', /grant select, insert, update, delete on table public\.thank_you_orders to electron_app/],
+    electron_customer_search: ['0028_customers.sql', /grant execute on function public\.electron_customer_search\(text, uuid, integer\) to electron_app/]
+  };
+  for (const [table, [file, grant]] of Object.entries(later)) {
+    assert.ok(ALLOWED_TABLES.has(table), table);
+    assert.match(fs.readFileSync(path.join(root, '..', 'supabase', 'migrations', file), 'utf8'), grant);
+  }
+  const base = [...ALLOWED_TABLES].filter(table => !later[table]);
+  for (const table of base) assert.ok(code.includes(`'${table}'`), table);
   assert.match(code, /nobypassrls/);
   assert.match(code, /nosuperuser/);
   assert.match(code, /nocreaterole/);
@@ -95,7 +105,7 @@ test('electron_app DB role migration is least-privilege and limited to the five 
   const loop = /foreach t in array array\[([^\]]+)\]/.exec(code);
   assert.ok(loop);
   const tables = loop[1].match(/'([a-z_]+)'/g).map(name => name.slice(1, -1)).sort();
-  assert.deepEqual(tables, [...ALLOWED_TABLES].sort());
+  assert.deepEqual(tables, base.sort());
 });
 
 test('index.html CSP blocks workers, media, plugins and remote scripts', () => {

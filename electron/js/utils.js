@@ -106,16 +106,11 @@ const utils = {
 
   normalizeOrderType: function(orderType) {
     const normalized = String(orderType || '').replace(/-/g, '_');
-    if (normalized === 'truc_in') return 'truc_in';
-    if (normalized === 'bang_keo') return 'bang_keo';
-    return 'bang_keo_in';
+    return ['truc_in', 'bang_keo', 'thank_you'].includes(normalized) ? normalized : 'bang_keo_in';
   },
 
   getOrderTableName: function(orderType) {
-    const normalized = utils.normalizeOrderType(orderType);
-    if (normalized === 'truc_in') return 'truc_in_orders';
-    if (normalized === 'bang_keo') return 'bang_keo_orders';
-    return 'bang_keo_in_orders';
+    return `${utils.normalizeOrderType(orderType)}_orders`;
   },
 
   beginFormSubmit: function(event, fallbackFormId = '') {
@@ -165,6 +160,15 @@ const utils = {
     const accept = document.getElementById('confirm-action-accept');
     if (title) title.textContent = options.title || 'Xác nhận thao tác';
     if (body) body.textContent = String(message || '');
+    // options.date: hiện ô ngày (giá trị mặc định); Xác nhận trả về ngày đã chọn thay vì true
+    const date = document.getElementById('confirm-action-date');
+    const dateLabel = document.getElementById('confirm-action-date-label');
+    if (date) {
+      date.hidden = !options.date;
+      date.value = options.date || '';
+    }
+    if (dateLabel) dateLabel.hidden = !options.date;
+    utils._confirmWantsDate = Boolean(options.date && date);
     if (accept) {
       accept.textContent = options.confirmText || 'Xác nhận';
       accept.classList.toggle('btn-danger', options.danger === true);
@@ -181,7 +185,8 @@ const utils = {
     const modal = document.getElementById('modal-confirm-action');
     const resolve = utils._confirmResolver;
     utils._confirmResolver = null;
-    if (resolve) resolve(Boolean(accepted));
+    const date = document.getElementById('confirm-action-date');
+    if (resolve) resolve(accepted && utils._confirmWantsDate ? (date.value || false) : Boolean(accepted));
 
     // Còn yêu cầu đang chờ: hiển thị tiếp, giữ modal mở.
     const next = utils._confirmQueue.shift();
@@ -305,20 +310,11 @@ const utils = {
     if (!suggestionsElement.id) suggestionsElement.id = listId;
     suggestionsElement.setAttribute('role', 'listbox');
 
-    function escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
     function highlightMatch(item, query) {
       const label = String(item);
       const index = label.toLocaleLowerCase('vi').indexOf(String(query).toLocaleLowerCase('vi'));
-      if (index < 0) return escapeHtml(label);
-      return `${escapeHtml(label.slice(0, index))}<strong>${escapeHtml(label.slice(index, index + query.length))}</strong>${escapeHtml(label.slice(index + query.length))}`;
+      if (index < 0) return utils.escapeHtml(label);
+      return `${utils.escapeHtml(label.slice(0, index))}<strong>${utils.escapeHtml(label.slice(index, index + query.length))}</strong>${utils.escapeHtml(label.slice(index + query.length))}`;
     }
 
     inputElement.addEventListener('input', function() {

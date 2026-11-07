@@ -14,7 +14,6 @@ export const quoteLineInputSchema = z.object({
   quantity: money.gt(0).max(1_000_000_000),
   unitPrice: money.min(0).max(1_000_000_000_000),
 });
-export type QuoteLineInput = z.infer<typeof quoteLineInputSchema>;
 
 const isoDate = z
   .string()
@@ -29,7 +28,6 @@ export const saveDraftSchema = z.object({
   lines: z.array(quoteLineInputSchema).min(1).max(50),
 });
 export type SaveDraftInput = z.input<typeof saveDraftSchema>;
-export type SaveDraftData = z.output<typeof saveDraftSchema>;
 
 export const RESPONSE_NOTE_MAX = 2000;
 
@@ -43,4 +41,3 @@ export const respondSchema = z.discriminatedUnion("action", [
     note: z.string().trim().min(3).max(RESPONSE_NOTE_MAX),
   }),
 ]);
-export type RespondInput = z.output<typeof respondSchema>;
