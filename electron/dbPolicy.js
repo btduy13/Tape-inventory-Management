@@ -7,7 +7,10 @@ const ALLOWED_TABLES = new Set([
   'bang_keo_orders',
   'truc_in_orders',
   'order_attachments',
-  'email_history'
+  'email_history',
+  'thank_you_orders', // 0027
+  // Hàm trả về bảng (0028): electron_app chỉ có EXECUTE, không có quyền trên bảng customers
+  'electron_customer_search'
 ]);
 
 // Định danh/hàm nguy hiểm (so khớp chữ thường, ngoài chuỗi ký tự)

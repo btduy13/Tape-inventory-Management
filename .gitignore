@@ -48,3 +48,6 @@ tmp/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local secrets
+electron/API key.txt
