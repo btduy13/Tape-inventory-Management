@@ -10,7 +10,8 @@
 --
 -- Rules (customer_backfill_dry_run): exact normalized phone = auto; everything else = review,
 -- rows without a phone included (a name alone such as 'Chị Lan' is not proof of one customer; the
--- queue suggests the customers with that name). Review rows wait for an admin in /admin/khach-hang/gop
+-- queue suggests the customers with that name). Phone-less rows with the same normalized name form one
+-- group (name:<norm>) that the admin links / skips in one decision. Review rows wait in /admin/khach-hang/gop
 -- (admin_customer_review_list / admin_customer_review_resolve).
 -- Undo: update <source_table> set customer_id = null where id = source_id, for the log rows;
 -- then delete the customers with customer_created = true that have no other links.
@@ -26,6 +27,13 @@ select group_key, min(customer_id::text) as existing_customer, count(*) as rows,
        string_agg(distinct ten_khach_hang, ' | ') as names
   from public.customer_match_candidates
  where status = 'pending' and decision = 'auto'
+ group by group_key
+ order by count(*) desc, group_key;
+
+\echo '== Review groups by name (one admin decision each)'
+select group_key, count(*) as rows, string_agg(distinct ten_khach_hang, ' | ') as names
+  from public.customer_match_candidates
+ where status = 'pending' and decision = 'review' and group_key like 'name:%'
  group by group_key
  order by count(*) desc, group_key;
 

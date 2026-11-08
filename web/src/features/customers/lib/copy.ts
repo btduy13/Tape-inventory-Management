@@ -67,7 +67,7 @@ export const customersCopy = {
   settled: "Đã tất toán",
   // Review
   reviewTitle: "Duyệt ghép đơn cũ",
-  reviewIntro: "Đơn cũ chưa chắc thuộc khách nào. Ghép vào khách gợi ý, chọn khách khác, tạo khách mới hoặc bỏ qua.",
+  reviewIntro: "Đơn cũ chưa chắc thuộc khách nào. Đơn cùng tên, không SĐT được gom thành một nhóm. Ghép vào khách gợi ý, chọn khách khác, tạo khách mới hoặc bỏ qua.",
   reviewCaption: "Đơn chờ duyệt",
   reviewEmpty: "Không còn đơn nào chờ duyệt.",
   reviewLoadError: "Không tải được danh sách chờ duyệt.",
@@ -82,4 +82,5 @@ export const customersCopy = {
   reviewNoPick: "Chọn một khách trước khi ghép.",
   reviewDone: "Đã xử lý.",
   reviewReason: "Lý do",
+  reviewGroup: "{n} đơn cùng tên, duyệt một lần cho cả nhóm",
 } as const;

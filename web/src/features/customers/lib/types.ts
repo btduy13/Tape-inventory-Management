@@ -64,5 +64,8 @@ export type ReviewRow = {
   thoi_gian: string | null;
   reason: string;
   suggestions: Suggestion[];
+  /** Rows decided together (same name, no phone); group_ids oldest first. */
+  group_size: number;
+  group_ids: string[];
   total_count: number;
 };

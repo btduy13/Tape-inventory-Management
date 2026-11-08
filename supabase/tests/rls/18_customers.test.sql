@@ -4,7 +4,7 @@
 -- Run: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(93);
+select plan(98);
 
 -- helpers -------------------------------------------------------------------------------------
 create function pg_temp.login(p_uid uuid) returns void language plpgsql as $$
@@ -411,8 +411,11 @@ select pg_temp.login('00000000-0000-0000-0000-00000000a001');
 select is(
   (select string_agg(source_id || ':' || order_type, ', ' order by source_id)
      from public.admin_customer_review_list() where source_id like '%-BF-%'),
-  'B-BF-003:bang_keo, B-BF-004:bang_keo, B-BF-005:bang_keo, B-BF-006:bang_keo, B-BF-007:bang_keo',
-  'review list: pending review rows with the order type');
+  'B-BF-003:bang_keo, B-BF-005:bang_keo, B-BF-006:bang_keo, B-BF-007:bang_keo',
+  'review list: one item per name group (newest row), others alone, with the order type');
+select is(
+  (select row(group_size, group_ids)::text from public.admin_customer_review_list() where source_id = 'B-BF-005'),
+  row(2, '{B-BF-004,B-BF-005}'::text[])::text, 'name group lists its size and ids');
 select is(
   (select jsonb_array_length(suggestions) from public.admin_customer_review_list() where source_id = 'B-BF-007'),
   2, 'review row suggests the customers that share the phone');
@@ -435,11 +438,22 @@ select pg_temp.login('00000000-0000-0000-0000-00000000a001');
 select throws_ok(
   format($$select public.admin_customer_review_resolve('bang_keo_orders', 'B-BF-004', %L)$$, (select v from t18 where k = 'vp_a')),
   'P0002', null, 'review link refused when the order changed since the dry run');
+-- Picking the unchanged row of the group links it; the changed one stays pending.
+select lives_ok(
+  format($$select public.admin_customer_review_resolve('bang_keo_orders', 'B-BF-005', %L)$$, (select v from t18 where k = 'vp_a')),
+  'admin links a name group');
 select pg_temp.logout();
 select ok((select customer_id is null from public.bang_keo_orders where id = 'B-BF-004'), 'changed order stays unlinked');
+select is((select customer_id::text from public.bang_keo_orders where id = 'B-BF-005'), (select v from t18 where k = 'vp_a'),
+  'group link lands on the unchanged row');
+select is((select status from public.customer_match_candidates where source_id = 'B-BF-004'), 'pending',
+  'changed group row stays pending');
 select is(
   (select row(status, resolved_by)::text from public.customer_match_candidates where source_id = 'B-BF-006'),
   row('skipped', '00000000-0000-0000-0000-00000000a001'::uuid)::text, 'skip is recorded with the admin');
+
+select is((select group_key from public.customer_match_candidates where source_id = 'B-BF-004'), 'name:khach le',
+  'phone-less same-name rows share a name group');
 
 select * from finish();
 rollback;

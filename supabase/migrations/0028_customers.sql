@@ -1007,6 +1007,8 @@ revoke all on sequence public.customer_backfill_log_id_seq from anon, authentica
 --   no phone, name                                      -> review ('name matches a customer' /
 --                                                          'same name, no phone')
 --   no phone, no name                                   -> review
+-- Phone-less rows with a name share group_key name:<norm>; the review queue shows and resolves them
+-- as one item (one admin decision per name).
 -- Leads only join phone groups that have orders or a customer; they never start a customer.
 -- Returns the pending counts per decision / reason.
 create or replace function public.customer_backfill_dry_run()
@@ -1088,7 +1090,9 @@ begin
       left join cust_name cn on cn.nn = e.nn and e.ep is null and not e.has_p
   )
   select k.source_table, k.source_id, k.n, k.p, k.a, k.t, k.pn, k.nn,
-         case when k.reason in ('phone matches a customer', 'same phone') then 'phone:' || k.ep end,
+         case when k.reason in ('phone matches a customer', 'same phone') then 'phone:' || k.ep
+              when k.reason in ('same name, no phone', 'name matches a customer', 'several customers with this name')
+                then 'name:' || k.nn end,
          case when k.reason in ('phone matches a customer', 'same phone') then 'auto' else 'review' end,
          k.reason,
          case when k.reason in ('phone matches a customer', 'same phone') then k.cp_cid end
@@ -1194,6 +1198,8 @@ returns table (
   thoi_gian          timestamp,
   reason             text,
   suggestions        jsonb,
+  group_size         integer,
+  group_ids          text[],
   total_count        bigint
 )
 language plpgsql
@@ -1206,7 +1212,20 @@ begin
   if not public.is_admin() then
     raise exception 'admin only' using errcode = '42501';
   end if;
+  -- One item per group_key (rows without one stand alone), shown by its newest row.
   return query
+    with q as (
+      select m.*,
+             row_number() over w as rn,
+             count(*) over (partition by coalesce(m.group_key, m.source_table || ':' || m.source_id)) as gsize,
+             array_agg(m.source_id) over (partition by coalesce(m.group_key, m.source_table || ':' || m.source_id)
+                                          order by m.thoi_gian nulls last, m.source_id
+                                          rows between unbounded preceding and unbounded following) as gids
+        from public.customer_match_candidates m
+       where m.decision = 'review' and m.status = 'pending'
+      window w as (partition by coalesce(m.group_key, m.source_table || ':' || m.source_id)
+                   order by m.thoi_gian desc nulls last, m.source_id desc)
+    )
     select m.source_table,
            case m.source_table when 'leads' then 'lead' else replace(m.source_table, '_orders', '') end,
            m.source_id, m.ten_khach_hang, m.sdt_khach_hang, m.dia_chi_khach_hang, m.thoi_gian, m.reason,
@@ -1217,19 +1236,21 @@ begin
                       where (m.phone_norm is not null and cu.phone_norm = m.phone_norm)
                          or (m.name_norm is not null and public.normalize_customer_name(cu.name) = m.name_norm)
                       order by cu.updated_at desc limit 5) x), '[]'::jsonb),
+           m.gsize::integer, m.gids,
            count(*) over ()
-      from public.customer_match_candidates m
-     where m.decision = 'review' and m.status = 'pending'
-     order by m.thoi_gian nulls last, m.source_table, m.source_id
+      from q m
+     where m.rn = 1
+     order by m.gsize desc, m.thoi_gian nulls last, m.source_table, m.source_id
      limit least(greatest(coalesce(p_limit, 50), 1), 200)
     offset greatest(coalesce(p_offset, 0), 0);
 end;
 $$;
 
--- Admin decision on one review row: p_customer_id links the order / lead (logged), null leaves it
--- unlinked ('skipped'). Only pending review rows (else P0002). The link only lands on the row the
--- dry run saw (still no customer, same name and phone): ids are reused after a delete / quote
--- conversion, so a changed row raises P0002 and the admin can only skip it (or re-run the dry run).
+-- Admin decision on one review item: p_customer_id links the row and every pending review row of
+-- its group (logged), null leaves them unlinked ('skipped'). Only pending review rows (else P0002).
+-- A link only lands on rows the dry run saw (still no customer, same name and phone): ids are reused
+-- after a delete / quote conversion. The picked row changed -> P0002 (nothing linked); another
+-- group row changed -> it stays pending for its own decision.
 create or replace function public.admin_customer_review_resolve(p_source_table text, p_source_id text,
                                                                 p_customer_id uuid default null)
 returns void
@@ -1238,8 +1259,8 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_tbl text;
   v_m   public.customer_match_candidates;
+  r     public.customer_match_candidates;
   v_n   integer;
 begin
   if not public.is_admin() then
@@ -1249,31 +1270,42 @@ begin
    where m.source_table = p_source_table and m.source_id = p_source_id
      and m.decision = 'review' and m.status = 'pending'
    for update;
-  v_tbl := v_m.source_table;
-  if v_tbl is null then
+  if v_m.source_table is null then
     raise exception 'review row not found' using errcode = 'P0002';
   end if;
-  if p_customer_id is not null then
-    if not exists (select 1 from public.customers where id = p_customer_id) then
-      raise exception 'customer not found' using errcode = '22023';
-    end if;
-    -- v_tbl comes from the table's check constraint list, never from input text directly.
-    execute format('update public.%I set customer_id = $1 where id::text = $2 and customer_id is null'
-                   ' and %I is not distinct from $3 and %I is not distinct from $4', v_tbl,
-                   case v_tbl when 'leads' then 'customer_name' else 'ten_khach_hang' end,
-                   case v_tbl when 'leads' then 'phone' else 'sdt_khach_hang' end)
-      using p_customer_id, p_source_id, v_m.ten_khach_hang, v_m.sdt_khach_hang;
-    get diagnostics v_n = row_count;
-    if v_n = 0 then
-      raise exception 'order changed since the review' using errcode = 'P0002';
-    end if;
-    insert into public.customer_backfill_log (source_table, source_id, customer_id, applied_by)
-    values (v_tbl, p_source_id, p_customer_id, auth.uid());
+  if p_customer_id is not null and not exists (select 1 from public.customers where id = p_customer_id) then
+    raise exception 'customer not found' using errcode = '22023';
   end if;
-  update public.customer_match_candidates
-     set status = case when p_customer_id is null then 'skipped' else 'linked' end,
-         customer_id = p_customer_id, resolved_by = auth.uid(), resolved_at = now()
-   where source_table = v_tbl and source_id = p_source_id;
+  for r in
+    select m.* from public.customer_match_candidates m
+     where m.decision = 'review' and m.status = 'pending'
+       and ((m.source_table = v_m.source_table and m.source_id = v_m.source_id)
+            or (v_m.group_key is not null and m.group_key = v_m.group_key))
+     order by (m.source_table = v_m.source_table and m.source_id = v_m.source_id) desc
+     for update
+  loop
+    if p_customer_id is not null then
+      -- r.source_table comes from the table's check constraint list, never from input text directly.
+      execute format('update public.%I set customer_id = $1 where id::text = $2 and customer_id is null'
+                     ' and %I is not distinct from $3 and %I is not distinct from $4', r.source_table,
+                     case r.source_table when 'leads' then 'customer_name' else 'ten_khach_hang' end,
+                     case r.source_table when 'leads' then 'phone' else 'sdt_khach_hang' end)
+        using p_customer_id, r.source_id, r.ten_khach_hang, r.sdt_khach_hang;
+      get diagnostics v_n = row_count;
+      if v_n = 0 then
+        if r.source_table = v_m.source_table and r.source_id = v_m.source_id then
+          raise exception 'order changed since the review' using errcode = 'P0002';
+        end if;
+        continue;
+      end if;
+      insert into public.customer_backfill_log (source_table, source_id, customer_id, group_key, applied_by)
+      values (r.source_table, r.source_id, p_customer_id, r.group_key, auth.uid());
+    end if;
+    update public.customer_match_candidates
+       set status = case when p_customer_id is null then 'skipped' else 'linked' end,
+           customer_id = p_customer_id, resolved_by = auth.uid(), resolved_at = now()
+     where source_table = r.source_table and source_id = r.source_id;
+  end loop;
 end;
 $$;
 

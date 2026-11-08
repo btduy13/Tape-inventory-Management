@@ -10,6 +10,7 @@ import { ToneBadge } from "@/features/portal-ui/components/StatusBadge";
 import { surfaceClass } from "@/features/portal-ui/components/styles";
 import { parseListParams, type RawParams } from "@/features/portal-ui/lib/list-params";
 import { dateTimeVn } from "@/features/admin-orders/lib/format";
+import { format } from "@/i18n";
 import { TYPE_LABEL, customersCopy as c } from "../lib/copy";
 import { CUSTOMERS_SPEC, pageArgs } from "../lib/list-spec";
 import { listCustomers, listReview } from "../server/queries";
@@ -48,6 +49,11 @@ export async function ReviewView({ searchParams }: { searchParams: RawParams }) 
                   <span className="break-words">{[r.ten_khach_hang, r.sdt_khach_hang].filter(Boolean).join(" · ") || "—"}</span>
                   {r.dia_chi_khach_hang && <span className="break-words text-pt-muted">{r.dia_chi_khach_hang}</span>}
                   <span className="text-pt-muted">{c.reviewReason}: {r.reason}</span>
+                  {r.group_size > 1 && (
+                    <span className="break-words font-medium">
+                      {format(c.reviewGroup, { n: r.group_size })}: {r.group_ids.join(", ")}
+                    </span>
+                  )}
                 </div>
                 <ReviewRowForm row={r} found={found?.rows ?? []} />
               </li>
