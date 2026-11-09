@@ -6,12 +6,9 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
 import type { AppRole, Profile } from "@/lib/types";
 import { hasRole } from "@/lib/auth/roles";
-import { canSeeTab, hasPerm, type NavTab, type Perm } from "@/lib/auth/permissions";
+import { canSeeTab, hasPerm, homePathFor, type NavTab, type Perm } from "@/lib/auth/permissions";
 
-/** Landing page of a role: workshop users live in /portal/xuong, everyone else in /portal. */
-export function homePathFor(profile: Pick<Profile, "role">): string {
-  return profile.role === "workshop" ? ROUTES.workshop : ROUTES.portal;
-}
+export { homePathFor };
 
 /** For pages: redirects to /login (anonymous) or the role's home page (wrong role). */
 export async function requireRole(allowed: readonly AppRole[]): Promise<Profile> {

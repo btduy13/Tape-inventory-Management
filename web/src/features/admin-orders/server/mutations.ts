@@ -43,6 +43,15 @@ export async function setStatus(db: Db, type: OrderType, ids: string[], daGiao: 
   return error ? fail(error) : { ok: true, count: Number(data ?? 0) };
 }
 
+/** Excel import (0033 admin_orders_import): every row or none. `row` = 1-based index of the failed row. */
+export async function importOrders(db: Db, type: OrderType, rows: { payload: Payload; delivered: boolean; settled: boolean }[]): Promise<{ ok: true; count: number } | (Fail & { row: number | null })> {
+  // shortcut: admin_orders_import is newer than lib/database.generated.ts (untyped call until regenerated).
+  const { data, error } = await (db as unknown as SupabaseClient).rpc("admin_orders_import", { p_type: type, p_rows: rows });
+  if (!error) return { ok: true, count: Number(data ?? 0) };
+  const row = /^row (\d+):/.exec(error.message ?? "")?.[1];
+  return { ...fail(error), row: row ? Number(row) : null };
+}
+
 export async function deleteOrders(db: Db, type: OrderType, ids: string[], quoteOnly: boolean): Promise<CountResult> {
   const { data, error } = await gen(db).rpc("admin_order_delete", { p_type: type, p_ids: ids, p_quote_only: quoteOnly });
   return error ? fail(error) : { ok: true, count: Number(data ?? 0) };

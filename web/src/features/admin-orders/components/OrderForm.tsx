@@ -11,7 +11,7 @@ import { ActionStatus, InlineStatus } from "@/features/portal-ui/components/Stat
 import { buttonClass, inputClass, surfaceClass } from "@/features/portal-ui/components/styles";
 import type { WorkshopUser } from "@/features/workshop/server/queries";
 import { fieldLabel as f, ordersCopy as c } from "../lib/copy";
-import { AXIS_FIELDS, AXIS_REQUIRED, BASIC_FIELDS, PRICE_FIELDS, requiredFor, visibleFields, type FieldSpec } from "../lib/form-layout";
+import { AXIS_FIELDS, AXIS_REQUIRED, BASIC_FIELDS, COST_INPUTS, PRICE_FIELDS, requiredFor, visibleFields, type FieldSpec } from "../lib/form-layout";
 import { formatMoneyInput } from "../lib/form-money";
 import { formCalc, orderTotals } from "../lib/form-totals";
 import type { CustomerHit, OrderType } from "../lib/types";
@@ -89,7 +89,7 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
       );
     }
     // Without orders.money the stored cost is hidden (null): empty keeps it (updateOrderAction + SQL).
-    const keepsCost = mode === "edit" && !money && (key === "don_gia_goc" || key === "truc_gia_goc");
+    const keepsCost = mode === "edit" && !money && (COST_INPUTS as readonly string[]).includes(key);
     const props = {
       name: key, label: f[key], required: !keepsCost && (required.has(key) || (axis && AXIS_REQUIRED.has(key))), error: errorOf(key),
       ...(keepsCost ? { hint: c.costKeptHint } : {}),

@@ -2,10 +2,9 @@
 // "Kích thước và giá": one tab per size (× closes, min 1), "+ Thêm kích thước", fields of the open size.
 import { inputClass } from "@/features/portal-ui/components/styles";
 import { fieldLabel, type FieldKey } from "@/features/admin-orders/lib/copy";
-import type { Fields, QuoteType, SizeDraft } from "../lib/bundle";
+import { TEXT_KEYS, type Fields, type QuoteType, type SizeDraft } from "../lib/bundle";
 import { SIZE_KEYS } from "../lib/schema";
 
-const TEXT = new Set(["quy_cach", "mau_sac", "mau_keo", "loi_giay", "thung_bao", "ctv"]);
 
 export const labelOf = (key: string) => (key === "vat_percent" ? "VAT tổng báo giá (%)" : fieldLabel[key as FieldKey] ?? key);
 
@@ -51,7 +50,7 @@ export function SizeFields({ type, sizes, active, onSelect, onAdd, onRemove, onC
             <input
               className={inputClass}
               value={f[key] ?? ""}
-              inputMode={TEXT.has(key) ? undefined : "decimal"}
+              inputMode={TEXT_KEYS.has(key) ? undefined : "decimal"}
               onChange={(e) => onChange(key, e.target.value)}
             />
           </label>

@@ -26,7 +26,7 @@ type Props = {
 
 const xlsx = () => import("xlsx");
 const toast = (message: string, tone: ToastMessage["tone"]): ToastMessage => ({ id: Date.now(), message, tone });
-const REQUIRED = ["ten_hang", "ten_khach_hang", "ngay_du_kien"] as const;
+const REQUIRED = ["ten_hang", "ten_khach_hang"] as const;
 
 async function writeBook(sheets: [string, (string | number)[][], { wch: number }[]?][], name: string) {
   const X = await xlsx();
@@ -77,7 +77,7 @@ export function OrdersExcel({ tab, selected, query, perms, onResult }: Props) {
         const wb = X.read(await file.arrayBuffer(), { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]!];
         const aoa = ws ? X.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: "" }) : [];
-        const { rows, detailLines } = parseImportSheet(importType, aoa);
+        const { rows, detailLines } = parseImportSheet(importType, aoa, vnToday());
         if (detailLines.length > 0) {
           return onResult(toast(detailLines.slice(0, 5).map((line) => format(l.importLine, { line, reason: l.importDetailRow })).join(" · "), "error"));
         }
@@ -119,7 +119,7 @@ export function OrdersExcel({ tab, selected, query, perms, onResult }: Props) {
         <>
           <button type="button" disabled={busy} onClick={() => template(importType)} className={buttonClass("secondary", "sm")}>{l.excelTemplate}</button>
           <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={buttonClass("secondary", "sm")}>{l.excelImport}</button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="sr-only" tabIndex={-1} aria-hidden onChange={onPick} />
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" className="sr-only" tabIndex={-1} aria-hidden onChange={onPick} />
         </>
       )}
       <ConfirmDialog

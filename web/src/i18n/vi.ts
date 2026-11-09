@@ -883,6 +883,8 @@ export const vi = {
     nextPage: "Trang sau",
     pagination: "Phân trang",
     emptyTitle: "Chưa có dữ liệu",
+    noTabsTitle: "Chưa được cấp quyền xem trang nào",
+    noTabsBody: "Liên hệ quản trị viên để được cấp tab.",
     emptyFiltered: "Không có kết quả khớp bộ lọc.",
     errorTitle: "Không tải được dữ liệu",
     errorRetry: "Tải lại trang",

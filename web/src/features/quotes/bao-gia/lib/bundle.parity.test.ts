@@ -153,6 +153,12 @@ describe("toQuotePayload", () => {
     expect(bki?.items).toEqual([{ so_luong: 2, axes: [{ ten_truc: "T", truc_so_luong: 3 }] }]);
   });
 
+  it("reads dot thousands like the app (\"15.000\" = 15000)", () => {
+    const sizes = [{ fields: { so_luong: "1.200", don_gia_ban: "15.000", don_gia_goc: "1.500.000" }, axes: [] }];
+    expect(toQuotePayload({ type: "bang_keo", id: null, header, sizes })?.items).toEqual([{ so_luong: 1200, don_gia_ban: 15000, don_gia_goc: 1500000 }]);
+    expect(buildItem("bang_keo", { fields: { so_luong: "2", don_gia_ban: "15.000" }, axes: [] }).total).toBe(30000);
+  });
+
   it("rejects a bad number", () => {
     expect(toQuotePayload({ type: "truc_in", id: null, header, sizes: [{ fields: { so_luong: "abc" }, axes: [] }] })).toBeNull();
     expect(toQuotePayload({ type: "truc_in", id: null, header, sizes: [{ fields: { so_luong: "-1" }, axes: [] }] })).toBeNull();

@@ -2,6 +2,7 @@
 // profiles.nav_tabs (null = role default), profiles.permissions, public.has_perm().
 // Display + page gates only: the order / customer RPCs re-check has_perm() in SQL.
 import type { AppRole, Profile } from "@/lib/types";
+import { ROUTES } from "@/lib/routes";
 import { ROLE_GROUPS } from "./roles";
 
 export const NAV_TABS = ["overview", "leads", "orders", "quotes", "customers", "workshop", "users", "settings"] as const;
@@ -37,6 +38,17 @@ const TAB_ROLES: Readonly<Record<NavTab, readonly AppRole[]>> = {
 
 /** Order data tabs also need orders.view (the RPCs behind them do). */
 const TAB_PERM: Partial<Record<NavTab, Perm>> = { orders: "orders.view", quotes: "orders.view", customers: "orders.view" };
+
+/** Landing page of each tab, in menu order (homePathFor picks the first one the user may see). */
+const TAB_HOME: readonly (readonly [NavTab, string])[] = [
+  ["overview", ROUTES.admin], ["leads", ROUTES.portal], ["workshop", ROUTES.workshop], ["orders", ROUTES.adminOrders],
+  ["quotes", ROUTES.adminQuotes], ["customers", ROUTES.adminCustomers], ["users", ROUTES.adminUsers], ["settings", ROUTES.adminTapeSpecs],
+];
+
+/** First page the user may open; /portal when no tab is left (it then shows "no tab" instead of redirecting). */
+export function homePathFor(profile: AccessProfile): string {
+  return TAB_HOME.find(([tab]) => canSeeTab(profile, tab))?.[1] ?? ROUTES.portal;
+}
 
 /** Same rule as SQL has_perm(): active admin always, others when the code is ticked. */
 export function hasPerm(profile: AccessProfile | null, perm: Perm): boolean {

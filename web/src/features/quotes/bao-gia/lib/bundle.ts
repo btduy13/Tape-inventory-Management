@@ -2,6 +2,7 @@
 // bundle totals. TS port of electron/js/modules/quotations.js buildQuoteItem / axisFromFields and
 // orderMath.calculateQuoteBundle (bundle.parity.test.ts compares with the JS). Live totals only:
 // admin_quote_save (0032) recomputes and stores every amount.
+import { moneyValue } from "@/features/admin-orders/lib/form-money";
 import { calculateLine, calculatePrintedTape, calculateStandardOrder, money, number, percent, vatAmount } from "@/features/admin-orders/lib/order-math";
 
 export const QUOTE_TYPES = ["bang_keo_in", "bang_keo", "truc_in"] as const;
@@ -9,6 +10,13 @@ export type QuoteType = (typeof QUOTE_TYPES)[number];
 
 /** Form strings keyed by order column (same keys as the RPC payload). */
 export type Fields = Record<string, string>;
+
+export const TEXT_KEYS: ReadonlySet<string> = new Set(["quy_cach", "mau_sac", "mau_keo", "loi_giay", "thung_bao", "ctv", "ten_truc", "truc_ctv"]);
+
+/** Typed numbers as the app reads them (utils.parseCurrency): "15.000" = 15000, "1,5" = 1.5. */
+export function numericFields(f: Fields): Fields {
+  return Object.fromEntries(Object.entries(f).map(([k, v]) => [k, TEXT_KEYS.has(k) ? v : moneyValue(v ?? "")]));
+}
 export type SizeDraft = { fields: Fields; axes: Fields[] };
 
 export type QuoteAxis = {
@@ -30,7 +38,8 @@ export function specification(type: QuoteType | string, f: Record<string, unknow
   return String(f.quy_cach || f.kich_thuoc || "-");
 }
 
-export function buildAxis(a: Fields): QuoteAxis {
+export function buildAxis(typed: Fields): QuoteAxis {
+  const a = numericFields(typed);
   const r = calculateLine({ quantity: a.truc_so_luong, costPrice: a.truc_gia_goc, salePrice: a.truc_gia_ban, commissionPercent: a.truc_hoa_hong });
   return {
     name: (a.ten_truc ?? "").trim(), circumference: number(a.truc_chu_vi) || null,
@@ -42,7 +51,7 @@ export function buildAxis(a: Fields): QuoteAxis {
 }
 
 export function buildItem(type: QuoteType, size: SizeDraft): QuoteItem {
-  const f = size.fields;
+  const f = numericFields(size.fields);
   if (type === "bang_keo_in") {
     const r = calculatePrintedTape({
       quantity: f.so_luong, baseCost: f.don_gia_von, quantityFee: f.phi_sl, glueFee: f.phi_keo, colorFee: f.phi_mau,
@@ -103,7 +112,7 @@ export function quoteBundle(items: readonly Partial<QuoteItem>[]): QuoteBundle {
 
 /** quotations.js prepareQuoteItems checks; null when the sizes can be saved. */
 export function quoteError(type: QuoteType, items: readonly QuoteItem[], sizes: readonly SizeDraft[]): string | null {
-  if (type === "bang_keo_in" && sizes.some((s) => !(number(s.fields.quy_cach_m) > 0) || !(number(s.fields.cuon_cay) > 0)))
+  if (type === "bang_keo_in" && sizes.some((s) => !(number(moneyValue(s.fields.quy_cach_m ?? "")) > 0) || !(number(moneyValue(s.fields.cuon_cay ?? "")) > 0)))
     return "Mỗi tab kích thước cần Quy cách (m) và Số cuộn/cây lớn hơn 0 để tính giá gốc";
   if (items.some((i) => i.quantity <= 0 || i.unitPrice <= 0)) return "Mỗi tab kích thước cần có số lượng và đơn giá bán lớn hơn 0";
   if (items.some((i) => i.axes.some((a) => !a.name || a.quantity <= 0 || !(number(a.costPrice) > 0) || a.unitPrice <= 0)))

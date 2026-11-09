@@ -3,6 +3,7 @@
 // the form schema (schemas.ts) and the RPC recomputes money, exactly like a form save.
 import { addDays } from "@/features/workshop/lib/dates";
 import { parseMoney } from "./form-money";
+import { money, number, percent } from "./order-math";
 import type { OrderType } from "./types";
 
 export const IMPORT_TYPES = ["bang_keo_in", "truc_in", "bang_keo"] as const satisfies readonly OrderType[];
@@ -36,6 +37,8 @@ const ALIASES: Readonly<Record<string, string>> = {
   "khach hang": "ten_khach_hang", "ngay giao": "ngay_du_kien", "ngay giao du kien": "ngay_du_kien",
   "sdt": "sdt_khach_hang", "sdt khach": "sdt_khach_hang", "dia chi": "dia_chi_khach_hang", "dia chi giao": "dia_chi_khach_hang",
   "gia ban": "don_gia_ban", "gia goc": "don_gia_goc", "gia von": "don_gia_von", "cuon cay": "cuon_cay",
+  // Old app files: VAT as an amount (excelImport.js FIELD_ALIASES); turned into a percent below.
+  "vat": "vat", "tien vat": "vat", "vat truc": "truc_vat", "tien vat truc": "truc_vat", "vat tong percent": "vat_percent",
 };
 
 const SAMPLE: Readonly<Record<string, string | number>> = {
@@ -44,10 +47,11 @@ const SAMPLE: Readonly<Record<string, string | number>> = {
   don_gia_ban: 15000, ctv: "", hoa_hong: 0, tien_ship: 0, loai_truc: "Trục cũ", da_giao: "Chưa", da_tat_toan: "Chưa", vat_percent: 8,
 };
 
-/** Accent- and case-insensitive key: "Hoa hồng (%)" -> "hoa hong". */
+/** Accent- and case-insensitive key: "Hoa hồng (%)" -> "hoa hong percent" ("%" kept, as the app's
+ *  normalizeExcelKey: "VAT" is an amount, "VAT (%)" a rate). */
 export function fold(s: unknown): string {
   return String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ").trim();
+    .replace(/%/g, " percent ").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 /** Template sheets: headers + one sample row, and a short guide. */
@@ -67,12 +71,12 @@ const isoToVn = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 
 
 const TRUE_WORDS = new Set(["1", "true", "yes", "y", "x", "roi", "xong", "da giao", "da tat toan", "co"]);
 
-/** Excel serial day, dd/mm/yyyy or yyyy-mm-dd -> yyyy-mm-dd; anything else as typed (the schema rejects it). */
+/** Excel serial day, dd/mm/yy(yy) or yyyy-mm-dd -> yyyy-mm-dd; anything else as typed (the schema rejects it). */
 export function toIsoDate(v: unknown): string {
   if (typeof v === "number" && v > 0) return new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0, 10);
   const s = String(v ?? "").trim();
-  const vn = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
-  if (vn) return `${vn[3]}-${vn[2]!.padStart(2, "0")}-${vn[1]!.padStart(2, "0")}`;
+  const vn = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(s);
+  if (vn) return `${vn[3]!.length === 2 ? `20${vn[3]}` : vn[3]}-${vn[2]!.padStart(2, "0")}-${vn[1]!.padStart(2, "0")}`;
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
@@ -90,9 +94,19 @@ const TEXT_KEYS = new Set(["ten_hang", "ten_khach_hang", "sdt_khach_hang", "dia_
 export type ImportRow = { line: number; fields: Record<string, string>; delivered: boolean; settled: boolean };
 export type ParsedSheet = { rows: ImportRow[]; detailLines: number[] };
 
+/** A VAT amount column without a rate -> the rate, from quantity x unit price (excelImport.js importVat). */
+function vatFromAmount(f: Record<string, string>, amount: string, rate: string, qty: string, price: string) {
+  const vat = f[amount];
+  delete f[amount];
+  if (vat === undefined || f[rate] !== undefined) return;
+  const subtotal = money(number(f[qty]) * number(f[price]));
+  if (subtotal > 0) f[rate] = String(Math.round(percent((number(vat) / subtotal) * 100) * 100) / 100);
+}
+
 /** Sheet (first row = headers) -> form strings per order row. Blank rows are skipped; the app's "↳"
- *  detail rows (from an export) are reported by line number, never imported. */
-export function parseImportSheet(type: ImportType, aoa: readonly (readonly unknown[])[]): ParsedSheet {
+ *  detail rows (from an export) are reported by line number, never imported. A blank due date is
+ *  tomorrow (`today` + 1), as in the app. */
+export function parseImportSheet(type: ImportType, aoa: readonly (readonly unknown[])[], today: string): ParsedSheet {
   const byHeader = new Map<string, string>([...IMPORT_COLUMNS[type].map(([h, k]) => [fold(h), k] as const), ...Object.entries(ALIASES)]);
   const keys = (aoa[0] ?? []).map((h) => byHeader.get(fold(h)) ?? null);
   const rows: ImportRow[] = [];
@@ -114,6 +128,9 @@ export function parseImportSheet(type: ImportType, aoa: readonly (readonly unkno
       else if (k === "ngay_du_kien") row.fields.ngay_du_kien = toIsoDate(v);
       else row.fields[k] = TEXT_KEYS.has(k) ? String(v).trim() : toNumberText(v);
     });
+    row.fields.ngay_du_kien ??= addDays(today, 1);
+    vatFromAmount(row.fields, "vat", "vat_percent", "so_luong", "don_gia_ban");
+    vatFromAmount(row.fields, "truc_vat", "truc_vat_percent", "truc_so_luong", "truc_gia_ban");
     rows.push(row);
   });
   return { rows, detailLines };

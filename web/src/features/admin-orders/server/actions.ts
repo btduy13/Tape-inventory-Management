@@ -10,6 +10,7 @@ import { ROUTES } from "@/lib/routes";
 import { ordersCopy as c } from "../lib/copy";
 import { normalizeVnPhone } from "../lib/format";
 import { orderHref } from "../lib/paths";
+import { COST_INPUTS } from "../lib/form-layout";
 import {
   ORDER_SCHEMAS, WORKSHOP_KEYS, customerCreateSchema, frozenOrderSchema, groupByType, isoDateSchema, orderIdSchema,
   orderItemsSchema, orderTypeSchema, optionalUuidSchema, statusSchema, toOrderPayload, type OrderItem,
@@ -32,8 +33,6 @@ async function canCreateOrEdit(): Promise<boolean> {
   return hasPerm(profile, "orders.create") || hasPerm(profile, "orders.edit");
 }
 
-/** Costs a user without orders.money cannot see on edit: left empty, SQL keeps the stored value. */
-const HIDDEN_COSTS = ["don_gia_goc", "truc_gia_goc"] as const;
 
 const err = (message: string): OrderActionState => ({ status: "error", message });
 const done = (message: string): OrderActionState => ({ status: "success", message });
@@ -93,8 +92,8 @@ export async function updateOrderAction(_prev: OrderActionState, form: FormData)
   const id = orderIdSchema.safeParse(raw.id);
   if (!type.success || !id.success) return err(c.errorValidation);
   const money = await can("orders.money");
-  if (!money) for (const k of HIDDEN_COSTS) if (!raw[k]?.trim()) delete raw[k];
-  const parsed = parseOrderForm(type.data, raw, raw.frozen === "1", money ? [] : HIDDEN_COSTS);
+  if (!money) for (const k of COST_INPUTS) if (!raw[k]?.trim()) delete raw[k];
+  const parsed = parseOrderForm(type.data, raw, raw.frozen === "1", money ? [] : COST_INPUTS);
   if (!parsed.ok) return parsed.state;
   const payload = toOrderPayload(parsed.data, true);
   // A field the form did not show (no orders.money: costs, CTV, ship) keeps its stored value, not null.

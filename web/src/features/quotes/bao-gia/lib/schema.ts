@@ -1,9 +1,8 @@
 // Editor state -> admin_quote_save payload (0032). Only the input keys of each type; empty size inputs
 // are left out (empty header text is sent: SQL stores null), numbers must be finite and >= 0. SQL re-validates and recomputes every amount.
 import { z } from "zod";
-import { QUOTE_TYPES, type QuoteType } from "./bundle";
-
-const TEXT = new Set(["quy_cach", "mau_sac", "mau_keo", "loi_giay", "thung_bao", "ctv", "ten_truc", "truc_ctv"]);
+import { parseMoney } from "@/features/admin-orders/lib/form-money";
+import { QUOTE_TYPES, TEXT_KEYS, type QuoteType } from "./bundle";
 
 export const SIZE_KEYS: Readonly<Record<QuoteType, readonly string[]>> = {
   bang_keo_in: [
@@ -33,16 +32,17 @@ export type QuoteInput = z.infer<typeof quoteInputSchema>;
 
 type Json = Record<string, string | number>;
 
-/** Picks `keys` of `src`: text trimmed, numbers parsed ("1,5" ok); empty left out. Null = bad number. */
+/** Picks `keys` of `src`: text trimmed, numbers parsed like the app ("15.000" = 15000, "1,5" = 1.5);
+ *  empty left out. Null = bad number. */
 function pick(src: Record<string, string>, keys: readonly string[]): Json | null {
   const out: Json = {};
   for (const key of keys) {
     const raw = (src[key] ?? "").trim();
     if (!raw) continue;
-    if (TEXT.has(key)) out[key] = raw;
+    if (TEXT_KEYS.has(key)) out[key] = raw;
     else {
-      const n = Number(raw.replace(",", "."));
-      if (!Number.isFinite(n) || n < 0) return null;
+      const n = parseMoney(raw);
+      if (n === null || n < 0) return null;
       out[key] = n;
     }
   }

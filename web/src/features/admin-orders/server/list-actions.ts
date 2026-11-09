@@ -12,7 +12,7 @@ import { fieldLabel, ordersCopy as c } from "../lib/copy";
 import { IMPORT_TYPES } from "../lib/excel-import";
 import { listCopy as l } from "../lib/list-copy";
 import { ORDER_SCHEMAS, WORKSHOP_KEYS, toOrderPayload } from "../lib/schemas";
-import { createOrder, setStatus } from "./mutations";
+import { importOrders } from "./mutations";
 
 export type ImportResult = { ok: true; message: string } | { ok: false; message: string; errors?: string[] };
 
@@ -28,14 +28,16 @@ const inputSchema = z.object({
 
 const label = (k: string) => (fieldLabel as Record<string, string>)[k]?.replace(/ \(.*\)$/, "") ?? k;
 
-/** Like the app: every row is checked first and nothing is saved while one is wrong. Rows are then
- *  created one by one (no cross-RPC transaction on the web): a failure stops and says how far it got. */
+/** Like the app: every row is checked first, then all rows are saved in one transaction
+ *  (admin_orders_import): an error saves nothing, so fixing the file and importing again is safe. */
 export async function importOrdersAction(input: unknown): Promise<ImportResult> {
   const profile = await getCurrentProfile();
   if (!hasPerm(profile, "orders.create")) return { ok: false, message: c.errorForbidden };
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: c.errorValidation };
   const { type, rows } = parsed.data;
+  // Đã giao / Đã tất toán use the status RPC: say so before anything, not after.
+  if (rows.some((r) => r.delivered || r.settled) && !hasPerm(profile, "orders.status")) return { ok: false, message: l.importNeedsStatus };
 
   const errors: string[] = [];
   const payloads = rows.map((r) => {
@@ -49,29 +51,16 @@ export async function importOrdersAction(input: unknown): Promise<ImportResult> 
   });
   if (errors.length > 0) return { ok: false, message: l.importErrors, errors: errors.slice(0, 50) };
 
-  const db = await createClient();
-  const delivered: string[] = [];
-  const settled: string[] = [];
-  let done = 0;
-  for (const [i, payload] of payloads.entries()) {
-    const r = await createOrder(db, payload!, type, false);
-    if (!r.ok) {
-      if (done > 0) revalidatePath(ROUTES.adminOrders, "layout");
-      const reason = r.reason === "forbidden" ? c.errorForbidden : c.errorGeneric;
-      return { ok: false, message: format(l.importStopped, { line: rows[i]!.line, reason, done, count: rows.length }) };
-    }
-    done++;
-    if (rows[i]!.delivered) delivered.push(r.orderId);
-    if (rows[i]!.settled) settled.push(r.orderId);
+  const r = await importOrders(await createClient(), type, payloads.map((payload, i) => ({ payload: payload!, delivered: rows[i]!.delivered, settled: rows[i]!.settled })));
+  if (!r.ok) {
+    const reason = reasonMessage(r.reason);
+    return { ok: false, message: r.row ? format(l.importStopped, { line: rows[r.row - 1]?.line ?? r.row, reason }) : reason };
   }
-  // Same RPC as the bulk status dialog (needs orders.status).
-  const flagsOk = (await Promise.all([
-    delivered.length ? setStatus(db, type, delivered, true, null) : { ok: true },
-    settled.length ? setStatus(db, type, settled, null, true) : { ok: true },
-  ])).every((r) => r.ok);
   revalidatePath(ROUTES.adminOrders, "layout");
   revalidatePath(ROUTES.workshop);
-  return flagsOk
-    ? { ok: true, message: format(l.importDone, { done, count: rows.length }) }
-    : { ok: false, message: format(l.importStatusFailed, { done }) };
+  return { ok: true, message: format(l.importDone, { done: r.count, count: rows.length }) };
+}
+
+function reasonMessage(reason: "forbidden" | "invalid" | "notFound" | "generic"): string {
+  return { forbidden: c.errorForbidden, invalid: c.errorValidation, notFound: c.errorNotFound, generic: c.errorGeneric }[reason];
 }

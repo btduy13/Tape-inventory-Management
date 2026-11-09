@@ -14,14 +14,16 @@ describe("form layout", () => {
     }
   });
 
-  it("without orders.money hides costs, CTV and profit but keeps required cost inputs", () => {
+  it("without orders.money hides computed costs, CTV and profit but keeps the cost inputs", () => {
     const bk = visibleFields(PRICE_FIELDS.bang_keo, false).map(([k]) => k);
     expect(bk).toContain("don_gia_goc");
     expect(bk).not.toContain("loi_nhuan_rong");
     expect(bk).not.toContain("ctv");
     const bki = visibleFields(PRICE_FIELDS.bang_keo_in, false).map(([k]) => k);
     expect(bki).not.toContain("don_gia_goc");
-    expect(bki).not.toContain("phi_sl");
+    expect(bki).toContain("phi_sl");
+    expect(bki).toContain("don_gia_von");
+    expect(bki).not.toContain("thanh_tien_goc");
     expect(bki).toContain("cong_no_khach");
     expect(visibleFields(AXIS_FIELDS, false).map(([k]) => k)).toContain("truc_gia_goc");
   });

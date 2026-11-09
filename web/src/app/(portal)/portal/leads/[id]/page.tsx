@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth/require-role";
-import { ROLE_GROUPS } from "@/lib/auth/roles";
+import { requireTab } from "@/lib/auth/require-role";
 import { LeadDetailView, ProductionSlot, loadLeadDetail } from "@/features/orders";
 import { AssignPanel } from "@/features/assignment";
 import { ProductionHandoffPanel } from "@/features/workshop";
 import { QuotePanel } from "@/features/quotes";
 
 export default async function PortalLeadPage({ params }: { params: Promise<{ id: string }> }) {
-  const profile = await requireRole(ROLE_GROUPS.internal);
+  const profile = await requireTab("leads");
   const detail = await loadLeadDetail((await params).id);
   if (!detail) notFound();
   const { lead } = detail;

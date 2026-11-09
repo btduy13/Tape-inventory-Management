@@ -9,7 +9,7 @@ import { InlineStatus } from "@/features/portal-ui/components/States";
 import { buttonClass, inputClass } from "@/features/portal-ui/components/styles";
 import { money } from "@/features/admin-orders/lib/format";
 import { number } from "@/features/admin-orders/lib/order-math";
-import { buildItem, quoteBundle, quoteError, type Fields, type QuoteType, type SizeDraft } from "../lib/bundle";
+import { buildItem, numericFields, quoteBundle, quoteError, type Fields, type QuoteType, type SizeDraft } from "../lib/bundle";
 import type { QuoteInput } from "../lib/schema";
 import { saveQuoteAction } from "../server/actions";
 import { quotePrintHref } from "../lib/paths";
@@ -26,8 +26,10 @@ const HEADER: [keyof EditorHeader, string, boolean][] = [
 const AXIS_FIELDS = ["ten_truc", "truc_chu_vi", "truc_so_luong", "truc_gia_goc", "truc_gia_ban", "truc_vat_percent", "truc_ctv", "truc_hoa_hong"];
 const emptyAxis = (): Fields => ({ truc_gia_goc: "", truc_gia_ban: "", truc_vat_percent: "" });
 const axisFilled = (a: Fields) => AXIS_FIELDS.some((k) => (a[k] ?? "").trim() !== "");
-const axisComplete = (a: Fields) =>
-  !!a.ten_truc?.trim() && number(a.truc_so_luong) > 0 && number(a.truc_gia_goc) > 0 && number(a.truc_gia_ban) > 0;
+const axisComplete = (typed: Fields) => {
+  const a = numericFields(typed);
+  return !!a.ten_truc?.trim() && number(a.truc_so_luong) > 0 && number(a.truc_gia_goc) > 0 && number(a.truc_gia_ban) > 0;
+};
 
 export function QuoteEditor({ type, id, header: initialHeader, sizes: initialSizes, money: showMoney }: Props) {
   const router = useRouter();

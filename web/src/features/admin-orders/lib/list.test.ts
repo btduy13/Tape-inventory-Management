@@ -137,6 +137,7 @@ describe("Excel import", () => {
   it("values: Excel dates, thousands, booleans, axis type, accent-free headers", () => {
     expect(toIsoDate(46336)).toBe("2026-11-10"); // serial 25569 = 1970-01-01
     expect(toIsoDate("5/11/2026")).toBe("2026-11-05");
+    expect(toIsoDate("10/11/26")).toBe("2026-11-10");
     expect(toNumberText("15.000")).toBe("15000");
     expect(toNumberText("1,5")).toBe("1.5");
     expect(toNumberText("0,500")).toBe("0.5");
@@ -146,12 +147,20 @@ describe("Excel import", () => {
       ["Băng keo", "Anh Nam", "10/11/2026", "15.000", "Trục mới", "Rồi", "", "0901", "bỏ qua"],
       ["", "", "", "", "", "", "", "", ""],
       ["↳ Trục kèm BKI: X", "", "", "", "Trục kèm BKI", "", "", "", ""],
-    ]);
+    ], "2026-11-09");
     expect(detailLines).toEqual([4]);
     expect(rows).toEqual([{
       line: 2, delivered: true, settled: false,
       fields: { ten_hang: "Băng keo", ten_khach_hang: "Anh Nam", ngay_du_kien: "2026-11-10", don_gia_ban: "15000", loai_truc: "moi", sdt_khach_hang: "0901" },
     }]);
+  });
+
+  it("blank due date = tomorrow; a VAT amount column becomes a rate, VAT (%) wins", () => {
+    const head = ["Tên hàng", "Tên khách hàng", "Số lượng", "Đơn giá bán", "VAT", "VAT (%)"];
+    const { rows } = parseImportSheet("bang_keo", [head, ["A", "K", 10, 100000, 80000, ""], ["B", "K", 10, 100000, 80000, 10]], "2026-11-09");
+    expect(rows[0]!.fields).toMatchObject({ ngay_du_kien: "2026-11-10", vat_percent: "8" });
+    expect(rows[0]!.fields).not.toHaveProperty("vat");
+    expect(rows[1]!.fields.vat_percent).toBe("10");
   });
 });
 

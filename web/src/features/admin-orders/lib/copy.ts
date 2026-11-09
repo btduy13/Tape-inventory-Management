@@ -145,7 +145,7 @@ export const ordersCopy = {
   saving: "Đang lưu…",
   errorValidation: "Thông tin chưa đúng. Kiểm tra các ô có dấu * và số lớn hơn 0.",
   errorAxis: "Trục mới cần tên trục, số lượng, giá gốc và giá bán lớn hơn 0.",
-  costKeptHint: "Để trống để giữ giá gốc đã lưu.",
+  costKeptHint: "Để trống để giữ giá trị đã lưu.",
   errorForbidden: "Bạn không có quyền làm việc này.",
   errorNotFound: "Không tìm thấy đơn. Có thể đơn vừa bị xóa trong app.",
   errorGeneric: "Không lưu được. Thử lại sau ít phút.",

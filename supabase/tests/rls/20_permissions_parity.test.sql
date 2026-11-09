@@ -216,7 +216,7 @@ select throws_ok($$select public.admin_customer_merge(gen_random_uuid(), array[g
   'customers.edit: merge stays admin only');
 
 -- Export ------------------------------------------------------------------------------------------------
-select pg_temp.perms(array['orders.view']);
+select pg_temp.perms(array['orders.view', 'orders.export']);
 select is((select array_agg(id::text) from public.admin_orders_for_export(array['BG-TY-T20-Q', 'BK-T20-A', 'nope'])),
   array['BK-T20-A'], 'export: real orders only, unknown ids skipped');
 select is(

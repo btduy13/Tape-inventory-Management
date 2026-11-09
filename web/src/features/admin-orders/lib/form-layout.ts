@@ -58,10 +58,13 @@ export function requiredFor(type: OrderType): ReadonlySet<FieldKey> {
   return new Set(base);
 }
 
-/** Hidden without orders.money (the RPCs return them as null): costs, fees, ship, CTV, commission,
- *  profit. A required cost input (don_gia_goc of plain tape / axis, truc_gia_goc) stays: SQL needs it. */
+/** Cost inputs a user without orders.money still types (else the order is saved at cost 0). The
+ *  RPCs return them as null, so on edit an empty one keeps the stored value (SQL admin_order_update). */
+export const COST_INPUTS = ["don_gia_goc", "truc_gia_goc", "don_gia_von", "phi_sl", "phi_keo", "phi_mau", "phi_size", "phi_cat"] as const;
+
+/** Hidden without orders.money: computed costs, ship, CTV, commission, profit. */
 const MONEY_ONLY: ReadonlySet<FieldKey> = new Set([
-  "phi_sl", "phi_keo", "phi_mau", "phi_size", "phi_cat", "don_gia_von", "thanh_tien_goc", "thanh_tien", "thanh_tien_von",
+  "thanh_tien_goc", "thanh_tien", "thanh_tien_von",
   "tien_ship", "ctv", "hoa_hong", "tien_hoa_hong", "loi_nhuan", "loi_nhuan_rong", "truc_thanh_tien_goc", "truc_ctv",
   "truc_hoa_hong", "truc_tien_hoa_hong", "truc_loi_nhuan", "truc_loi_nhuan_rong",
 ]);

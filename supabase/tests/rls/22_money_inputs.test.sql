@@ -77,13 +77,13 @@ select is((select row(truc_chu_vi, truc_ctv, truc_hoa_hong)::text from public.ba
   row(320::numeric, 'Lan', 10::numeric)::text, 'single axis copied to the row');
 
 -- admin_orders_rows: full rows, money hidden without orders.money.
-select pg_temp.perms('{orders.view}');
+select pg_temp.perms('{orders.view,orders.export}');
 select is((select r -> 'ctv' from jsonb_array_elements(public.admin_orders_rows('bang_keo', array['B-T22-A'])) r),
   'null'::jsonb, 'rows hide CTV without money');
 select is((select r ->> 'ten_hang' from jsonb_array_elements(public.admin_orders_rows('bang_keo', array['B-T22-A'])) r),
   'T22 sửa', 'rows return the order');
 select pg_temp.perms('{}');
-select throws_ok($$select public.admin_orders_rows('bang_keo', array['B-T22-A'])$$, '42501', null, 'rows need orders.view');
+select throws_ok($$select public.admin_orders_rows('bang_keo', array['B-T22-A'])$$, '42501', null, 'rows need orders.view + orders.export');
 
 -- Attachments: at most 20 per order.
 select pg_temp.login('00000000-0000-0000-0000-00000000a001');
