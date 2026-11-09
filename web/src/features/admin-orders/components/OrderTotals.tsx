@@ -1,24 +1,20 @@
 "use client";
-// Live totals of the order form (TS port of orderMath.js). Display only: the RPC recomputes and
+// Live totals of the order form (TS port of orderMath.js), next to the save button. Display only: the RPC recomputes and
 // stores the real numbers.
 import { formatVnd } from "@/i18n";
 import { fieldLabel as f, ordersCopy as c } from "../lib/copy";
 import type { OrderSummary } from "../lib/form-totals";
 
-export function OrderTotals({ totals: t }: { totals: OrderSummary }) {
+export function OrderTotals({ totals: t, money = true }: { totals: OrderSummary; money?: boolean }) {
+  // Line amounts are shown inline in the form cards; this keeps what the customer pays and the result.
   const rows: [string, number | null, boolean?][] = [
-    [f.don_gia_goc, t.costPrice],
-    [f.thanh_tien_goc, t.costTotal],
     [f.thanh_tien_ban, t.saleTotal],
-    [f.vat, t.vat],
     [f.truc_thanh_tien_ban, t.axisSaleTotal],
-    [f.truc_vat, t.axisVat],
+    [f.vat, t.vat + (t.axisVat ?? 0)],
     [f.tong_cong, t.payable, true],
     [f.tien_coc, t.deposit],
     [f.cong_no_khach, t.outstanding, true],
-    [f.tien_hoa_hong, t.commission],
-    [f.loi_nhuan, t.profit],
-    [f.loi_nhuan_rong, t.netProfit, true],
+    [f.loi_nhuan_rong, money ? t.netProfit : null, true],
   ];
   return (
     <section aria-labelledby="order-totals-title" className="flex flex-col gap-3 rounded-xl border border-pt-line bg-pt-surface p-4">

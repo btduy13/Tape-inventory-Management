@@ -48,6 +48,9 @@ export function applyListInMemory<T extends Row>(rows: readonly T[], spec: ListS
     if (def.kind === "bool") {
       const want = values[0] === "1";
       out = out.filter((r) => Boolean(r[def.column]) === want);
+    } else if (def.kind === "text") {
+      const want = foldText(values[0]!);
+      out = out.filter((r) => foldText(asText(r[def.column])).includes(want));
     } else {
       const set = new Set(values.filter((v) => def.values.includes(v)));
       out = out.filter((r) => set.has(asText(r[def.column])));

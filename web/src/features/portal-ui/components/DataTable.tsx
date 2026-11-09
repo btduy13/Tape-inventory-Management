@@ -1,6 +1,7 @@
 // Universal (server or client) list: table on >= md, stacked cards on phones, from one column
 // definition. Sorting is links (URL params, see lib/list-params.ts); a row link covers the row.
 import Link from "next/link";
+import { Fragment } from "react";
 import { format, getDictionary } from "@/i18n";
 import { listHref, toggleSort, type ListSpec, type ListState } from "../lib/list-params";
 import { Icon } from "./Icon";
@@ -37,6 +38,8 @@ type Props<T> = {
   rowHref?: (row: T) => string;
   /** Extra classes per row (e.g. highlight unread). */
   rowClassName?: (row: T) => string;
+  /** Child line under a row (full-width row on desktop, bottom of the phone card); null = none. */
+  subRow?: (row: T) => React.ReactNode;
   list?: DataTableList;
   /** Empty: shown when rows is empty. Use `filtered` to say "no match" instead of "nothing yet". */
   empty?: { title?: string; body?: string; action?: React.ReactNode };
@@ -60,7 +63,7 @@ function SortHeader<T>({ col, list }: { col: Column<T>; list: DataTableList }) {
 
 const ariaSort = (on: boolean, dir: string) => (on ? (dir === "asc" ? "ascending" : "descending") : undefined);
 
-export function DataTable<T>({ caption, columns, rows, rowKey, rowHref, rowClassName, list, empty, filtered, error }: Props<T>) {
+export function DataTable<T>({ caption, columns, rows, rowKey, rowHref, rowClassName, subRow, list, empty, filtered, error }: Props<T>) {
   if (error) return <ErrorState body={error} />;
   const body = rows.length === 0 ? (
     <EmptyState title={filtered ? p.emptyFiltered : empty?.title} body={empty?.body} action={empty?.action} />
@@ -74,7 +77,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, rowHref, rowClass
               {columns.map((c) => {
                 const on = !!list && !!c.sortKey && list.state.sort === c.sortKey;
                 return (
-                  <th key={c.key} scope="col" aria-sort={list ? ariaSort(on, list.state.dir) : undefined} className={`whitespace-nowrap px-4 py-1 font-semibold ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
+                  <th key={c.key} scope="col" aria-sort={list ? ariaSort(on, list.state.dir) : undefined} className={`whitespace-nowrap px-3 py-1 font-semibold ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
                     {list && c.sortKey ? <SortHeader col={c} list={list} /> : <span className="inline-flex min-h-11 items-center">{c.header}</span>}
                   </th>
                 );
@@ -82,21 +85,31 @@ export function DataTable<T>({ caption, columns, rows, rowKey, rowHref, rowClass
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={rowKey(r)} className={`pt-row border-t border-pt-line first:border-t-0 ${rowHref ? "hover:bg-pt-blue-tint/50" : ""} ${rowClassName?.(r) ?? ""}`}>
+            {rows.map((r) => {
+              const sub = subRow?.(r);
+              return (
+              <Fragment key={rowKey(r)}>
+              <tr className={`pt-row border-t border-pt-line first:border-t-0 ${rowHref ? "hover:bg-pt-blue-tint/50" : ""} ${rowClassName?.(r) ?? ""}`}>
                 {columns.map((c, i) => (
-                  <td key={c.key} className={`px-4 py-3 align-middle ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
+                  <td key={c.key} className={`px-3 py-3 align-middle ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
                     {i === 0 && rowHref ? <Link href={rowHref(r)} className="pt-row-link font-semibold text-vt-blue hover:underline">{c.cell(r)}</Link> : c.cell(r)}
                   </td>
                 ))}
               </tr>
-            ))}
+              {sub && (
+                <tr className={rowClassName?.(r) ?? ""}>
+                  <td colSpan={columns.length} className="px-3 pb-3 pt-0">{sub}</td>
+                </tr>
+              )}
+              </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
       {list && <MobileSort columns={columns} list={list} />}
       <ul aria-label={caption} className="flex flex-col gap-2 md:hidden">
-        {rows.map((r) => <MobileCard key={rowKey(r)} row={r} columns={columns} href={rowHref?.(r)} extra={rowClassName?.(r)} />)}
+        {rows.map((r) => <MobileCard key={rowKey(r)} row={r} columns={columns} href={rowHref?.(r)} extra={rowClassName?.(r)} sub={subRow?.(r)} />)}
       </ul>
     </>
   );
@@ -135,7 +148,7 @@ function MobileSort<T>({ columns, list }: { columns: readonly Column<T>[]; list:
   );
 }
 
-function MobileCard<T>({ row, columns, href, extra = "" }: { row: T; columns: readonly Column<T>[]; href?: string; extra?: string }) {
+function MobileCard<T>({ row, columns, href, extra = "", sub }: { row: T; columns: readonly Column<T>[]; href?: string; extra?: string; sub?: React.ReactNode }) {
   const titleCols = columns.filter((c, i) => c.mobile === "title" || (i === 0 && !c.mobile));
   const badges = columns.filter((c) => c.mobile === "badge");
   const meta = columns.filter((c, i) => !titleCols.includes(c) && (c.mobile ?? (i === 0 ? "title" : "meta")) === "meta");
@@ -158,6 +171,7 @@ function MobileCard<T>({ row, columns, href, extra = "" }: { row: T; columns: re
           ))}
         </dl>
       )}
+      {sub}
     </li>
   );
 }

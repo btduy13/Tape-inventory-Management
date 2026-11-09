@@ -4,7 +4,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDictionary } from "@/i18n";
-import { createClient } from "@/lib/supabase/server";
+import { hasPerm } from "@/lib/auth/permissions";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
 import { PageHeader, Section } from "@/features/portal-ui/components/Section";
 import { ErrorState } from "@/features/portal-ui/components/States";
@@ -16,9 +17,10 @@ import { vnToday } from "@/features/workshop/lib/dates";
 import { listWorkshopUsers } from "@/features/workshop/server/queries";
 import { TYPE_LABEL, fieldLabel as f, ordersCopy as c, type FieldKey } from "../lib/copy";
 import { dateTimeVn, dateVn, instantVn, plain, toNumber, money } from "../lib/format";
-import { orderEditHref, tabHref } from "../lib/paths";
+import { emailHref, exportHref, orderEditHref, tabHref } from "../lib/paths";
+import { listCopy as l } from "../lib/list-copy";
 import { hasQuoteItems, type AdminDeliveryNote, type OrderRecord, type OrderType } from "../lib/types";
-import { getCustomerName, getOrder, originOfDetail, photoUrls } from "../server/queries";
+import { getOrder, originOfDetail, photoUrls } from "../server/queries";
 import { OrderActions } from "./OrderActions";
 import { OrdersAutoRefresh } from "./OrdersAutoRefresh";
 import { OrderStatusBadges, OrderStepBadge, OriginBadge } from "./badges";
@@ -67,10 +69,11 @@ function value(order: OrderRecord, key: string, kind: Kind): string {
   return typeof v === "string" && v.trim() ? v : "—";
 }
 
-function FactList({ order, items }: { order: OrderRecord; items: Facts }) {
+/** Without orders.money the RPC returns costs, CTV, commission and profit as null: those rows are dropped. */
+function FactList({ order, items, money = true }: { order: OrderRecord; items: Facts; money?: boolean }) {
   return (
     <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      {items.map(([key, kind]) => (
+      {items.filter(([key]) => money || order[key] !== null).map(([key, kind]) => (
         <div key={key} className="flex flex-col">
           <dt className="text-pt-muted">{f[key]}</dt>
           <dd className={`whitespace-pre-line break-words text-pt-text ${kind === "money" ? "tabular-nums" : ""}`}>{value(order, key, kind)}</dd>
@@ -94,12 +97,14 @@ export async function OrderDetailView({ id, type }: { id: string; type: OrderTyp
   if (!load.ok && load.reason === "not_found") notFound();
   if (!load.ok) return <ErrorState body={c.loadError} />;
   const { order, job, steps, delivery_notes: notes } = load.detail;
-  const customerId = typeof order.customer_id === "string" ? order.customer_id : null;
-  const [photos, workshopUsers, customerName] = await Promise.all([
+  const customerId = load.detail.customer?.id ?? null;
+  const customerName = load.detail.customer?.name ?? null;
+  const [photos, workshopUsers, profile] = await Promise.all([
     photoUrls(db, notes.flatMap((n) => (n.photo_path ? [n.photo_path] : []))),
     listWorkshopUsers(db),
-    customerId ? getCustomerName(db, customerId) : Promise.resolve(null),
+    getCurrentProfile(),
   ]);
+  const canMoney = hasPerm(profile, "orders.money");
   const printed = type === "bang_keo_in";
   const isQuote = order.is_quote === true;
   const axis = printed && order.loai_truc === "moi";
@@ -114,7 +119,11 @@ export async function OrderDetailView({ id, type }: { id: string; type: OrderTyp
 
   const actions = (
     <>
-      <Link href={orderEditHref(type, order.id)} className={buttonClass("secondary")}>{c.actEdit}</Link>
+      {hasPerm(profile, "orders.edit") && <Link href={orderEditHref(type, order.id)} className={buttonClass("secondary")}>{c.actEdit}</Link>}
+      {!isQuote && hasPerm(profile, "orders.export") && (
+        <Link href={exportHref([order.id], "phieu_giao_hang")} className={buttonClass("secondary")}>{l.printNote}</Link>
+      )}
+      {!isQuote && hasPerm(profile, "orders.edit") && <Link href={emailHref(type, order.id)} className={buttonClass("secondary")}>{l.email}</Link>}
       {job && <Link href={ROUTES.workshopJob(job.id)} className={buttonClass("secondary")}>{c.openWorkshop}</Link>}
     </>
   );
@@ -152,7 +161,7 @@ export async function OrderDetailView({ id, type }: { id: string; type: OrderTyp
             [f.tong_cong, money(payable)],
             ...(hasDeposit ? [[f.tien_coc, money(order.tien_coc)]] : []),
             [f.cong_no_khach, order.da_tat_toan ? c.settled : money(order.cong_no_khach)],
-            [f.loi_nhuan_rong, money(net)],
+            ...(canMoney ? [[f.loi_nhuan_rong, money(net)]] : []),
           ].map(([label, v]) => (
             <div key={label} className="flex flex-col gap-1 rounded-lg bg-pt-canvas p-3">
               <dt className="text-pt-muted">{label}</dt>
@@ -186,15 +195,15 @@ export async function OrderDetailView({ id, type }: { id: string; type: OrderTyp
         </Section>
       )}
 
-      <Section title={c.secMoney}>
-        <FactList order={order} items={MONEY[type]} />
-      </Section>
-
       {axis && (
         <Section title={c.secAxis}>
-          <FactList order={order} items={AXIS} />
+          <FactList order={order} items={AXIS} money={canMoney} />
         </Section>
       )}
+
+      <Section title={c.secMoney}>
+        <FactList order={order} items={MONEY[type]} money={canMoney} />
+      </Section>
 
       {printed && !isQuote && (
         <Section title={c.secWorkshop}>

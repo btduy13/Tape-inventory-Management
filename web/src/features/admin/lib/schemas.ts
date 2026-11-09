@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ROLES, type AppRole, type Profile } from "@/lib/types";
+import { NAV_TABS, PERMS } from "@/lib/auth/permissions";
 
 const role = z.enum(ROLES as unknown as [AppRole, ...AppRole[]]);
 const uuid = z.guid();
@@ -16,10 +17,18 @@ export const inviteSchema = z.object({
 });
 export type InviteInput = z.infer<typeof inviteSchema>;
 
+const unique = <T,>(v: T[]) => [...new Set(v)];
+
+/** Lock / unlock sends only userId, role, isActive; the edit dialog also sends the optional fields
+ *  (undefined = keep the stored value). */
 export const updateUserSchema = z.object({
   userId: uuid,
   role,
   isActive: checkbox,
+  fullName: z.string().trim().min(1).max(120).optional(),
+  phone: z.string().trim().max(30).transform((v) => v || null).optional(),
+  navTabs: z.array(z.enum(NAV_TABS)).max(NAV_TABS.length).transform(unique).optional(),
+  permissions: z.array(z.enum(PERMS)).max(PERMS.length).transform(unique).optional(),
 });
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 

@@ -1,9 +1,8 @@
-import { requireRole } from "@/lib/auth/require-role";
-import { ROLE_GROUPS } from "@/lib/auth/roles";
+import { requireTab } from "@/lib/auth/require-role";
 
-// Customers show sales and debt: admin only (the parent admin layout also lets managers in).
-// Each page re-checks, and the customer RPCs are admin-only in SQL.
+// Customers tab + orders.view (0030). Each page re-checks (/gop stays admin only), and the customer
+// RPCs check has_perm() in SQL.
 export default async function AdminCustomersLayout({ children }: { children: React.ReactNode }) {
-  await requireRole(ROLE_GROUPS.admin);
+  await requireTab("customers");
   return children;
 }

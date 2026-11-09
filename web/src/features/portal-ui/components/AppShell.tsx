@@ -1,5 +1,5 @@
 // Portal frame for every role: navy sidebar (lg+) or top bar + drawer (phones / tablets).
-// Display only: the layout calls requireRole() and every page re-checks its own role.
+// Display only: the layout calls requireRole() and every page re-checks its own role / tab.
 import Link from "next/link";
 import { getDictionary } from "@/i18n";
 import type { Profile } from "@/lib/types";
@@ -43,6 +43,8 @@ function UserBlock({ profile }: { profile: Profile }) {
 
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const home = homeFor(profile.role);
+  // Only what the menu needs crosses to the client components.
+  const nav = { role: profile.role, is_active: profile.is_active, nav_tabs: profile.nav_tabs, permissions: profile.permissions };
   return (
     <div className="pt-root flex min-h-dvh flex-1 flex-col">
       <a href="#pt-main" className="sr-only z-50 rounded-lg bg-vt-yellow px-4 py-3 font-semibold text-vt-ink focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
@@ -53,7 +55,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       <aside className="pt-on-dark fixed inset-y-0 left-0 hidden w-64 flex-col gap-6 bg-vt-navy-deep p-4 lg:flex">
         <BrandTile href={home} />
         <nav aria-label={p.navMain} className="flex-1 overflow-y-auto">
-          <NavLinks role={profile.role} />
+          <NavLinks profile={nav} />
         </nav>
         <UserBlock profile={profile} />
       </aside>
@@ -65,7 +67,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           <img src="/brand/vinh-thinh-logo.png" alt="" width={478} height={632} className="h-9 w-auto" />
           {p.brand}
         </Link>
-        <MobileNav role={profile.role} userBlock={<UserBlock profile={profile} />} />
+        <MobileNav profile={nav} userBlock={<UserBlock profile={profile} />} />
       </header>
 
       <main id="pt-main" tabIndex={-1} className="flex-1 lg:pl-64">

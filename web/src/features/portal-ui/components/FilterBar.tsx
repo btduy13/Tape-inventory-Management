@@ -14,8 +14,11 @@ const p = getDictionary().portalUi;
 
 export type FilterOption = { value: string; label: string };
 
-/** One filter of the spec as a select. For a multi enum an option value may join several values with ",". */
-export type FilterControl = { name: string; label: string; kind: "select"; options: readonly FilterOption[] };
+/** One filter of the spec as a select (for a multi enum an option value may join several values
+ *  with ","), or a text box for a "text" filter (submits on Enter, like the search). */
+export type FilterControl =
+  | { name: string; label: string; kind: "select"; options: readonly FilterOption[] }
+  | { name: string; label: string; kind: "text"; placeholder?: string };
 
 type Props = {
   basePath: string;
@@ -58,15 +61,19 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
           {selects.map((c) => (
             <label key={c.name} className="flex min-w-36 flex-col gap-1 text-xs font-medium text-pt-muted">
               {c.label}
-              <FilterSelect control={c} values={state.filters[c.name] ?? []} />
+              {c.kind === "text" ? (
+                <input type="search" name={c.name} defaultValue={state.filters[c.name]?.[0] ?? ""} placeholder={c.placeholder} maxLength={80} className={inputClass} />
+              ) : (
+                <FilterSelect control={c} values={state.filters[c.name] ?? []} />
+              )}
             </label>
           ))}
           {showDates && (
-            <fieldset className="col-span-2 flex flex-col gap-1">
-              {dateLabel && <legend className="mb-1 text-xs font-medium text-pt-muted">{dateLabel}</legend>}
+            <fieldset className="col-span-2 flex flex-col gap-1 sm:col-span-1">
+              {dateLabel && <legend className="sr-only">{dateLabel}</legend>}
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted">
-                  {p.fromDate}
+                  {dateLabel ? `${dateLabel}: ${p.fromDate.toLowerCase()}` : p.fromDate}
                   <input type="date" name="from" defaultValue={state.from ?? ""} className={inputClass} />
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted">
@@ -91,7 +98,7 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
 }
 
 /** The URL may hold a combination no option names (a stat card link, a hand-edited URL): keep it as an extra option. */
-function FilterSelect({ control: c, values }: { control: FilterControl; values: readonly string[] }) {
+function FilterSelect({ control: c, values }: { control: Extract<FilterControl, { kind: "select" }>; values: readonly string[] }) {
   const current = values.join(",");
   const known = current === "" || c.options.some((o) => o.value === current);
   const labels = values.map((v) => c.options.find((o) => o.value === v)?.label ?? v);

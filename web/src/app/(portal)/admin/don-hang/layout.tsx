@@ -1,9 +1,8 @@
-import { requireRole } from "@/lib/auth/require-role";
-import { ROLE_GROUPS } from "@/lib/auth/roles";
+import { requireTab } from "@/lib/auth/require-role";
 
-// Orders show costs, profit and customer debt: admin only (the parent admin layout also lets
-// managers in). Each page re-checks, and the order RPCs are admin-only in SQL.
+// Orders tab + orders.view (0030). Each page re-checks (create / edit need their own permission),
+// and the order RPCs check has_perm() in SQL; money columns come back null without orders.money.
 export default async function AdminOrdersLayout({ children }: { children: React.ReactNode }) {
-  await requireRole(ROLE_GROUPS.admin);
+  await requireTab("orders");
   return children;
 }

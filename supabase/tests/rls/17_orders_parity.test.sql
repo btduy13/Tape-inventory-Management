@@ -270,20 +270,14 @@ select is((select array_agg(type order by type) from public.admin_orders_list('{
 -- bk: 272160 total / debt 272160 / supplier 186000; ty (60 rolls): 330000 / 230000 / 180000;
 -- bki: 150000 / 150000 / round(10 * 900000 / 90 * 100 / 60) = 166667.
 select is(
-  (select row(max(total_count), max(sum_tong_tien), max(sum_cong_no_khach), max(sum_cong_no_ncc),
-              max(sum_loi_nhuan_rong), max(count_overdue))::text
-     from public.admin_orders_list('{"q":"Khách T17","limit":1}', 'all')),
+  (select row(total_count, sum_tong_tien, sum_cong_no_khach, sum_cong_no_ncc,
+              sum_loi_nhuan_rong, count_overdue)::text
+     from public.admin_orders_totals('{"q":"Khách T17","limit":1}', 'all')),
   row(3, 752160, 652160, 532667, 29400 + 120000 - 16667, 0)::text,
   'totals cover the whole filtered set, not just the page');
 select is((select array_agg(l.type order by l.n)
-             from public.admin_orders_list('{"q":"Khách T17","sort":"tong_tien","dir":"asc"}', 'all')
-                  with ordinality l(type, id, thoi_gian, ngay_du_kien, ten_hang, quy_cach, mau_sac, ten_khach_hang,
-                                   sdt_khach_hang, dia_chi_khach_hang, so_luong, don_gia_ban, thanh_tien_ban, vat,
-                                   tong_tien, tien_coc, cong_no_khach, cong_no_ncc, tien_von, loi_nhuan_rong, ctv,
-                                   da_giao, da_tat_toan, da_gui_email, is_quote, has_quote_items, job_id, step,
-                                   workshop_user_id, workshop_user_name, lead_id, total_count, sum_tong_tien,
-                                   sum_cong_no_khach, sum_cong_no_ncc, sum_loi_nhuan_rong, count_due_soon,
-                                   count_overdue, n)),
+             from (select type, row_number() over () as n
+                     from public.admin_orders_list('{"q":"Khách T17","sort":"tong_tien","dir":"asc"}', 'all')) l),
   array['bang_keo_in', 'bang_keo', 'thank_you'], 'sort by tong_tien ascending');
 select is((select count(*)::int from public.admin_orders_list('{"q":"Khách T17"}', 'thank_you')), 1, 'list one type');
 select is((select count(*)::int from public.admin_orders_list('{"q":"Khách T17","delivered":false,"settled":false}', 'all')), 1,

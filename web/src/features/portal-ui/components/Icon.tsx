@@ -14,6 +14,7 @@ const PATHS: Record<IconName, string> = {
   users: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0",
   ruler: "M3 17 17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2",
   layers: "m12 3 9 5-9 5-9-5zM3 13l9 5 9-5",
+  quotes: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h4",
   menu: "M4 6h16M4 12h16M4 18h16",
   close: "M6 6l12 12M18 6 6 18",
   logout: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",

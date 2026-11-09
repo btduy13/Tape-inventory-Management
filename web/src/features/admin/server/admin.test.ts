@@ -59,6 +59,16 @@ describe("updateUser", () => {
     expect(authAdmin.updateUserById).toHaveBeenCalledWith(USER, { app_metadata: { role: "ctv" }, ban_duration: DEACTIVATED_BAN });
   });
 
+  it("saves dialog fields; ticked tabs equal to the role default are stored as null", async () => {
+    const { db, update } = userDb({ data: { id: USER }, error: null });
+    const { db: admin } = adminMock();
+    const base = { userId: USER, role: "staff" as const, isActive: true, fullName: "An", phone: null, permissions: ["orders.view" as const] };
+    await updateUser(db, admin, { ...base, navTabs: ["leads"] });
+    expect(update).toHaveBeenLastCalledWith({ role: "staff", is_active: true, full_name: "An", phone: null, nav_tabs: null, permissions: ["orders.view"] });
+    await updateUser(db, admin, { ...base, navTabs: ["leads", "orders"] });
+    expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ nav_tabs: ["leads", "orders"] }));
+  });
+
   it("does not touch Auth when the guarded update fails", async () => {
     const { db } = userDb({ data: null, error: { code: "42501" } });
     const { db: admin, authAdmin } = adminMock();

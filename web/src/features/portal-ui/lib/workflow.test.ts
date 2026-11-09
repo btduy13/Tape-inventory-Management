@@ -6,6 +6,8 @@ import { LEAD_TONE, STEP_TONE } from "./status-tones";
 import { LEAD_PIPELINE, nextActionFor, pipelineIndex, stageStates, stepIndex } from "./workflow";
 
 const t = getDictionary().portalUi;
+/** Role default profile (nav_tabs null, no permissions), as before 0030. */
+const as = (role: (typeof ROLES)[number]) => ({ role, is_active: true, nav_tabs: null, permissions: [] });
 
 describe("workflow", () => {
   it("pipeline covers every status except cancelled, in order", () => {
@@ -45,24 +47,24 @@ describe("workflow", () => {
 describe("nav", () => {
   it("gives every role at least one item with copy", () => {
     for (const r of ROLES) {
-      const items = navFor(r).flatMap((g) => g.items);
+      const items = navFor(as(r)).flatMap((g) => g.items);
       expect(items.length).toBeGreaterThan(0);
       for (const i of items) expect(t[i.labelKey]).toBeTruthy();
     }
   });
 
   it("shows settings to admin only and the workshop only to admin / workshop", () => {
-    const hrefs = (r: (typeof ROLES)[number]) => navFor(r).flatMap((g) => g.items.map((i) => i.href));
+    const hrefs = (r: (typeof ROLES)[number]) => navFor(as(r)).flatMap((g) => g.items.map((i) => i.href));
     expect(hrefs("admin")).toContain("/admin/users");
     const admin = hrefs("admin");
-    expect(admin.indexOf("/admin/khach-hang")).toBe(admin.indexOf("/admin/don-hang") + 1);
+    expect(admin.slice(admin.indexOf("/admin/don-hang"))).toEqual(expect.arrayContaining(["/admin/bao-gia", "/admin/khach-hang"]));
     for (const r of ["manager", "staff", "ctv", "workshop"] as const) expect(hrefs(r).some((h) => h.startsWith("/admin"))).toBe(false);
     expect(hrefs("staff")).not.toContain("/portal/xuong");
     expect(hrefs("workshop")).toEqual(["/portal/xuong"]);
   });
 
   it("matches the active item", () => {
-    const [work] = navFor("admin");
+    const [work] = navFor(as("admin"));
     const leads = work!.items.find((i) => i.labelKey === "navLeads")!;
     const shop = work!.items.find((i) => i.labelKey === "navWorkshop")!;
     expect(isNavActive("/portal", leads)).toBe(true);

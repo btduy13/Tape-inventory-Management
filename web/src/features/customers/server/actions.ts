@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { format } from "@/i18n";
 import { assertRole, ForbiddenError } from "@/lib/auth/require-role";
 import { ROLE_GROUPS } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { hasPerm } from "@/lib/auth/permissions";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
 import { customersCopy as c } from "../lib/copy";
 import { customerFormSchema, customerIdSchema, mergeSchema, reviewKeySchema } from "../lib/schemas";
@@ -35,7 +36,8 @@ function str(form: FormData, key: string): string | undefined {
 
 /** Create (no id: opens the new customer) or update (id) one customer. */
 export async function saveCustomerAction(_prev: CustomerActionState, form: FormData): Promise<CustomerActionState> {
-  if (!(await isAdmin())) return err("forbidden");
+  // Same rule as SQL admin_customer_create / _update (0030); merge and review stay admin-only.
+  if (!hasPerm(await getCurrentProfile(), "customers.edit")) return err("forbidden");
   const parsed = customerFormSchema.safeParse({
     name: str(form, "name"), phone: str(form, "phone"), address: str(form, "address"), company: str(form, "company"), note: str(form, "note"),
   });

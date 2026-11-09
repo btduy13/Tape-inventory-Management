@@ -2,15 +2,15 @@
 // Phone / tablet navigation: a menu button opening a left drawer (native modal <dialog>).
 import { useRef } from "react";
 import { getDictionary } from "@/i18n";
-import type { AppRole } from "@/lib/types";
+import type { AccessProfile } from "@/lib/auth/permissions";
 import { Icon } from "./Icon";
 import { NavLinks } from "./NavLinks";
 
 const p = getDictionary().portalUi;
 
-type Props = { role: AppRole; userBlock: React.ReactNode };
+type Props = { profile: AccessProfile; userBlock: React.ReactNode };
 
-export function MobileNav({ role, userBlock }: Props) {
+export function MobileNav({ profile, userBlock }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const close = () => ref.current?.close();
   return (
@@ -39,7 +39,7 @@ export function MobileNav({ role, userBlock }: Props) {
             </button>
           </div>
           <nav aria-label={p.navMain} className="flex-1 overflow-y-auto">
-            <NavLinks role={role} onNavigate={close} />
+            <NavLinks profile={profile} onNavigate={close} />
           </nav>
           {userBlock}
         </div>

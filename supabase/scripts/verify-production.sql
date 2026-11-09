@@ -7,7 +7,12 @@
 --
 -- Output: one row per check with status PASS or FAIL and the offending objects in `detail`.
 -- Any FAIL needs action. The allow-lists below describe the intended state of migrations
--- 0001-0018; update them together with the migrations.
+-- 0001-0032; update them together with the migrations. (0030: has_perm, admin_orders_totals,
+-- admin_orders_for_export, admin_orders_rows and the admin_order_attachment* RPCs are
+-- authenticated-only SECURITY DEFINER functions, so no allow-list entry; order_hide_money,
+-- order_strip_money_input and admin_orders_filtered are internal. 0031: admin_order_mark_emailed,
+-- admin_email_suggestions; 0032: admin_quote_save, admin_quotes_list are authenticated-only too,
+-- quote_item_build is internal.)
 
 \set ON_ERROR_STOP 1
 begin transaction read only;

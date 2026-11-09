@@ -18,6 +18,7 @@ export const RATE_LIMITS = {
   quoteView: { name: "quote-view", windowSeconds: 300, maxHits: 60 },
   quoteRespond: { name: "quote-respond", windowSeconds: 3600, maxHits: 10 },
   logoUpload: { name: "logo-upload", windowSeconds: 3600, maxHits: 20 },
+  orderEmail: { name: "order-email", windowSeconds: 3600, maxHits: 30 },
 } as const satisfies Record<string, RateLimitRule>;
 
 // Spoof-resistant IP derivation lives in client-ip.ts (pure + unit-tested).
@@ -52,4 +53,14 @@ export async function checkRateLimit(headers: Headers, rule: RateLimitRule): Pro
   });
   if (error) return false;
   return data === true;
+}
+
+/** Per signed-in user (not per IP): same table and fail-closed rule as checkRateLimit. */
+export async function checkUserRateLimit(userId: string, rule: RateLimitRule): Promise<boolean> {
+  const { data, error } = await createAdminClient().rpc("check_rate_limit", {
+    p_key: `${rule.name}:user:${userId}`,
+    p_window_seconds: rule.windowSeconds,
+    p_max_hits: rule.maxHits,
+  });
+  return !error && data === true;
 }

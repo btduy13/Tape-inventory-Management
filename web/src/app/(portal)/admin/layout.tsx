@@ -7,8 +7,9 @@ import { AppShell } from "@/features/portal-ui";
 const t = getDictionary();
 export const metadata: Metadata = { title: t.nav.admin, robots: { index: false } };
 
-// Managers may open /admin/leads/[id]; overview, users and presets pages require admin themselves.
+// Any portal user may enter: orders / quotes / customers gate on tab + permission (requireTab),
+// /admin/leads/[id] on pricing, and overview, users, quy cách and presets on admin, each in its own page.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const profile = await requireRole(ROLE_GROUPS.pricing);
+  const profile = await requireRole(ROLE_GROUPS.portal);
   return <AppShell profile={profile}>{children}</AppShell>;
 }

@@ -10,7 +10,9 @@ export type FilterDef =
   /** One or many values out of a fixed list (`?status=new,quoted`). */
   | { kind: "enum"; column: string; values: readonly string[]; multi?: boolean }
   /** Yes / no (`?active=1` or `?active=0`). */
-  | { kind: "bool"; column: string };
+  | { kind: "bool"; column: string }
+  /** Free text, contains match (`?ctv=lan`), cleaned like the search box. */
+  | { kind: "text"; column: string; maxLength?: number };
 
 export type ListSpec = {
   sort: { keys: Readonly<Record<string, SortKeyDef>>; default: { key: string; dir: SortDir }; tiebreak?: string };
@@ -82,6 +84,10 @@ export function isValidDate(s: string | undefined | null): s is string {
 function parseFilter(def: FilterDef, raw: string | undefined): string[] {
   if (!raw) return [];
   if (def.kind === "bool") return raw === "1" || raw === "0" ? [raw] : [];
+  if (def.kind === "text") {
+    const s = sanitizeSearch(raw, def.maxLength);
+    return s ? [s] : [];
+  }
   const wanted = new Set(raw.split(",").map((s) => s.trim()));
   const picked = def.values.filter((v) => wanted.has(v)); // spec order, deduped
   return def.multi ? picked : picked.slice(0, 1);

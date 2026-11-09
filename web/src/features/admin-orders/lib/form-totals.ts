@@ -57,3 +57,22 @@ export function orderTotals(type: OrderType, v: FormValues): OrderSummary {
     commission: t.commission, profit: t.profit, netProfit: t.netProfit, errors: [],
   };
 }
+
+/** Read-only fields shown inside the form cards (same ids as the app's readonly inputs), by column. */
+export function formCalc(type: OrderType, v: FormValues): Readonly<Record<string, number>> {
+  if (type === "bang_keo_in") {
+    const { product: p, axis: a, vat, outstanding } = formTotals(v);
+    return {
+      don_gia_goc: Math.round(p.costPrice), thanh_tien_ban: p.saleTotal, thanh_tien_goc: p.costTotal, vat,
+      cong_no_khach: outstanding, tien_hoa_hong: p.commission, loi_nhuan: p.profit, loi_nhuan_rong: p.netProfit,
+      truc_vat: a.vat, truc_thanh_tien_goc: a.costTotal, truc_thanh_tien_ban: a.saleTotal,
+      truc_tien_hoa_hong: a.commission, truc_loi_nhuan: a.profit, truc_loi_nhuan_rong: a.netProfit,
+    };
+  }
+  const t = orderTotals(type, v);
+  // Cost total column: thanh_tien (bang_keo), thanh_tien_goc (truc_in), thanh_tien_von (thank_you).
+  return {
+    thanh_tien: t.costTotal, thanh_tien_goc: t.costTotal, thanh_tien_von: t.costTotal, thanh_tien_ban: t.saleTotal,
+    vat: t.vat, cong_no_khach: t.outstanding, tien_hoa_hong: t.commission, loi_nhuan: t.profit, loi_nhuan_rong: t.netProfit,
+  };
+}

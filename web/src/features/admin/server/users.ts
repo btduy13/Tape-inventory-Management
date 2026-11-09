@@ -4,6 +4,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
+import { DEFAULT_TABS } from "@/lib/auth/permissions";
 import type { InviteInput, UpdateUserInput } from "../lib/schemas";
 
 type Db = SupabaseClient<Database>;
@@ -48,14 +49,29 @@ export type UpdateUserResult =
   | { ok: true; authSynced: boolean }
   | { ok: false; reason: "forbidden" | "notFound" | "generic" };
 
+/** Saves null (follow the role default) when the ticked tabs are exactly that default. */
+function navTabsFor(input: UpdateUserInput): string[] | null | undefined {
+  if (!input.navTabs) return undefined;
+  const def = DEFAULT_TABS[input.role];
+  const same = input.navTabs.length === def.length && def.every((tab) => input.navTabs!.includes(tab));
+  return same ? null : input.navTabs;
+}
+
 /**
- * Role / active flag change. The profile update runs through RLS + profiles_guard_columns
- * (admin only, no self-lockout). Auth metadata + ban are synced afterwards (best effort).
+ * Role / active flag change, plus name, phone, tabs and permissions from the edit dialog.
+ * The profile update runs through RLS + profiles_guard_columns (admin only, no self-lockout). Auth metadata + ban are synced afterwards (best effort).
  */
 export async function updateUser(db: Db, admin: Db, input: UpdateUserInput): Promise<UpdateUserResult> {
   const { data, error } = await db
     .from("profiles")
-    .update({ role: input.role, is_active: input.isActive })
+    .update({
+      role: input.role,
+      is_active: input.isActive,
+      ...(input.fullName !== undefined && { full_name: input.fullName }),
+      ...(input.phone !== undefined && { phone: input.phone }),
+      ...(input.navTabs && { nav_tabs: navTabsFor(input) }),
+      ...(input.permissions && { permissions: input.permissions }),
+    })
     .eq("id", input.userId)
     .select("id")
     .maybeSingle();

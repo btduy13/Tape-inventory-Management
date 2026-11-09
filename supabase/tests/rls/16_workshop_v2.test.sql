@@ -520,7 +520,7 @@ select is((select count(*)::int from public.admin_orders_list('{"q":"keo web"}')
 select is((select count(*)::int from public.admin_orders_list('{"q":"0911222333","step":"cho_san_xuat"}')), 2,
   'list: search by phone + step filter');
 select is((select count(*)::int from public.admin_orders_list('{"q":"BG-BK"}')), 0, 'list: quotes are excluded');
-select is((select max(total_count)::int from public.admin_orders_list('{"q":"web","limit":1}')), 2,
+select is((select total_count::int from public.admin_orders_totals('{"q":"web","limit":1}')), 2,
   'list: total_count ignores the page size');
 select is(
   (select row(tong_tien, loi_nhuan_rong, step)::text from public.admin_orders_list('{"q":"trục"}')),

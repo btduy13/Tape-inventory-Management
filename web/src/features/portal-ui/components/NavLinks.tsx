@@ -1,17 +1,17 @@
 "use client";
-// Role-aware nav list (sidebar + drawer). Active item: yellow tape strip on the left.
+// Tab-aware nav list (sidebar + drawer). Active item: yellow tape strip on the left.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getDictionary } from "@/i18n";
-import type { AppRole } from "@/lib/types";
+import type { AccessProfile } from "@/lib/auth/permissions";
 import { isNavActive, navFor } from "../lib/nav";
 import { Icon } from "./Icon";
 
 const p = getDictionary().portalUi;
 
-export function NavLinks({ role, onNavigate }: { role: AppRole; onNavigate?: () => void }) {
+export function NavLinks({ profile, onNavigate }: { profile: AccessProfile; onNavigate?: () => void }) {
   const pathname = usePathname() ?? "";
-  const groups = navFor(role);
+  const groups = navFor(profile);
   return (
     <div className="flex flex-col gap-6">
       {groups.map((g) => (

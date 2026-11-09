@@ -42,6 +42,8 @@ type Uuid = string;
 export type Profile = {
   id: Uuid; email: string | null; full_name: string; phone: string | null;
   role: AppRole; is_active: boolean; created_at: Timestamp; updated_at: Timestamp;
+  /** 0030: visible tabs (null = role default) and permission codes; admin-only to change. */
+  nav_tabs: string[] | null; permissions: string[];
 };
 
 export type TapePreset = {
@@ -184,7 +186,7 @@ type Opt<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type Database = {
   public: {
     Tables: {
-      profiles: Table<Profile, Opt<Profile, "email" | "full_name" | "phone" | "role" | "is_active" | "created_at" | "updated_at">>;
+      profiles: Table<Profile, Opt<Profile, "email" | "full_name" | "phone" | "role" | "is_active" | "created_at" | "updated_at" | "nav_tabs" | "permissions">>;
       tape_presets: Table<TapePreset, Opt<TapePreset, "id" | "sort_order" | "is_active" | "created_at" | "updated_at">>;
       tape_widths: Table<TapeWidth, Opt<TapeWidth, "id" | "sort_order" | "is_active" | "created_at" | "updated_at">>;
       tape_spec_settings: Table<TapeSpecSettings, Opt<TapeSpecSettings, "id" | "thickness_mic" | "updated_at">>;

@@ -355,14 +355,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"email": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
+                    "created_at": string,"email": string | null,"full_name": string,"id": string,"is_active": boolean,"nav_tabs": (string)[] | null,"permissions": (string)[],"phone": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id": string,"is_active"?: boolean,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
+                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id": string,"is_active"?: boolean,"nav_tabs"?: (string)[] | null,"permissions"?: (string)[],"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
+                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id"?: string,"is_active"?: boolean,"nav_tabs"?: (string)[] | null,"permissions"?: (string)[],"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -560,7 +560,7 @@ isOneToOne: false
                            },
 "admin_customer_review_list":
 { Args: { "p_limit"?: number,"p_offset"?: number }; Returns: {
-              "dia_chi_khach_hang": string,"order_type": string,"reason": string,"sdt_khach_hang": string,"source_id": string,"source_table": string,"suggestions": Json,"ten_khach_hang": string,"thoi_gian": string,"total_count": number
+              "dia_chi_khach_hang": string,"group_ids": (string)[],"group_size": number,"order_type": string,"reason": string,"sdt_khach_hang": string,"source_id": string,"source_table": string,"suggestions": Json,"ten_khach_hang": string,"thoi_gian": string,"total_count": number
             }[]
                            },
 "admin_customer_review_resolve":
@@ -576,6 +576,22 @@ isOneToOne: false
                            },
 "admin_dashboard":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"admin_order_attachment_add":
+{ Args: { "p_base64": string,"p_content_type": string,"p_file_name": string,"p_id": string,"p_type": string }; Returns: number
+                           },
+"admin_order_attachment_delete":
+{ Args: { "p_attachment_id": number }; Returns: number
+                           },
+"admin_order_attachment_get":
+{ Args: { "p_attachment_id": number }; Returns: {
+              "base64_data": string,"content_type": string,"file_name": string,"file_size": number,"id": number,"order_id": string,"order_type": string
+            }[]
+                           },
+"admin_order_attachments":
+{ Args: { "p_id": string,"p_type": string }; Returns: {
+              "content_type": string,"created_at": string,"file_name": string,"file_size": number,"id": number
+            }[]
                            },
 "admin_order_create":
 { Args: { "p_is_quote"?: boolean,"p_payload": Json,"p_type"?: string }; Returns: {
@@ -603,9 +619,24 @@ isOneToOne: false
 "admin_order_update":
 { Args: { "p_id": string,"p_payload": Json,"p_type": string }; Returns: Json
                            },
+"admin_orders_filtered":
+{ Args: { "p_filter": Json,"p_type": string }; Returns: {
+              "cong_no_khach": number,"cong_no_ncc": number,"ctv": string,"customer_id": string,"da_giao": boolean,"da_gui_email": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"don_gia_ban": number,"has_quote_items": boolean,"id": string,"is_quote": boolean,"job_id": string,"lead_id": string,"loai_truc": string,"loi_nhuan_rong": number,"mau_sac": string,"ngay_du_kien": string,"quy_cach": string,"sdt_khach_hang": string,"so_luong": number,"step": Database["public"]['Enums']["production_step"],"ten_hang": string,"ten_khach_hang": string,"ten_truc": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"tien_von": number,"tong_tien": number,"truc_chu_vi": number,"truc_ctv": string,"truc_hoa_hong": number,"truc_loi_nhuan_rong": number,"truc_so_luong": number,"truc_thanh_tien_ban": number,"truc_tien_hoa_hong": number,"type": string,"vat": number,"workshop_user_id": string,"workshop_user_name": string
+            }[]
+                           },
+"admin_orders_for_export":
+{ Args: { "p_ids": (string)[] }; Returns: {
+              "cong_no_khach": number,"customer_id": string,"customer_name": string,"da_giao": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"don_gia_ban": number,"id": string,"loai_truc": string,"mau_keo": string,"mau_sac": string,"ngay_du_kien": string,"quote_items": Json,"quy_cach": string,"quy_cach_m": number,"quy_cach_mic": number,"quy_cach_mm": number,"sdt_khach_hang": string,"so_luong": number,"ten_hang": string,"ten_khach_hang": string,"ten_truc": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"truc_chu_vi": number,"truc_gia_ban": number,"truc_so_luong": number,"truc_thanh_tien_ban": number,"truc_vat": number,"truc_vat_percent": number,"type": string,"vat": number,"vat_percent": number
+            }[]
+                           },
 "admin_orders_list":
 { Args: { "p_filter"?: Json,"p_type"?: string }; Returns: {
-              "cong_no_khach": number,"cong_no_ncc": number,"count_due_soon": number,"count_overdue": number,"ctv": string,"da_giao": boolean,"da_gui_email": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"don_gia_ban": number,"has_quote_items": boolean,"id": string,"is_quote": boolean,"job_id": string,"lead_id": string,"loi_nhuan_rong": number,"mau_sac": string,"ngay_du_kien": string,"quy_cach": string,"sdt_khach_hang": string,"so_luong": number,"step": Database["public"]['Enums']["production_step"],"sum_cong_no_khach": number,"sum_cong_no_ncc": number,"sum_loi_nhuan_rong": number,"sum_tong_tien": number,"ten_hang": string,"ten_khach_hang": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"tien_von": number,"tong_tien": number,"total_count": number,"type": string,"vat": number,"workshop_user_id": string,"workshop_user_name": string
+              "cong_no_khach": number,"cong_no_ncc": number,"ctv": string,"customer_id": string,"da_giao": boolean,"da_gui_email": boolean,"da_tat_toan": boolean,"dia_chi_khach_hang": string,"don_gia_ban": number,"has_quote_items": boolean,"id": string,"is_quote": boolean,"job_id": string,"lead_id": string,"loai_truc": string,"loi_nhuan_rong": number,"mau_sac": string,"ngay_du_kien": string,"quy_cach": string,"sdt_khach_hang": string,"so_luong": number,"step": Database["public"]['Enums']["production_step"],"ten_hang": string,"ten_khach_hang": string,"ten_truc": string,"thanh_tien_ban": number,"thoi_gian": string,"tien_coc": number,"tien_von": number,"tong_tien": number,"truc_chu_vi": number,"truc_ctv": string,"truc_hoa_hong": number,"truc_loi_nhuan_rong": number,"truc_so_luong": number,"truc_thanh_tien_ban": number,"truc_tien_hoa_hong": number,"type": string,"vat": number,"workshop_user_id": string,"workshop_user_name": string
+            }[]
+                           },
+"admin_orders_totals":
+{ Args: { "p_filter"?: Json,"p_type"?: string }; Returns: {
+              "count_due_soon": number,"count_overdue": number,"count_settled": number,"count_unsettled": number,"sum_cong_no_khach": number,"sum_cong_no_ncc": number,"sum_loi_nhuan_rong": number,"sum_tong_tien": number,"total_count": number
             }[]
                            },
 "admin_quote_convert":
@@ -791,6 +822,9 @@ isOneToOne: false
               "address": string,"company": string,"id": string,"name": string,"phone": string
             }[]
                            },
+"has_perm":
+{ Args: { "p": string }; Returns: boolean
+                           },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -837,6 +871,9 @@ isOneToOne: false
 { Args: { "p_type": string }; Returns: {
               "kind": string,"max_len": number,"name": string
             }[]
+                           },
+"order_hide_money":
+{ Args: { "p_row": Json }; Returns: Json
                            },
 "order_payload_num":
 { Args: { "p_key": string,"p_payload": Json }; Returns: number

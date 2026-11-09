@@ -6,30 +6,38 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { STORAGE_BUCKETS, type Database, type GeneratedDatabase } from "@/lib/types";
 import { originOf } from "../lib/format";
 import type { OrdersFilter } from "../lib/list-spec";
-import type { AdminOrderDetail, AdminOrderRow, CustomerHit, OrderOrigin, OrderRecord, OrderType, OrdersTotals } from "../lib/types";
+import type { AdminOrderDetail, AdminOrderRow, AdminOrdersTotalsRow, CustomerHit, OrderOrigin, OrderRecord, OrderType, OrdersTotals } from "../lib/types";
 
 type Db = SupabaseClient<Database>;
 export const gen = (db: Db) => db as unknown as SupabaseClient<GeneratedDatabase>;
 
 export const PHOTO_URL_TTL_SECONDS = 600;
-/** CSV export cap: 25 pages of 200 rows. */
-export const EXPORT_MAX_ROWS = 5000;
 
 export type OrdersQuery = { type: OrderType | "all"; filter: OrdersFilter };
-export type ListedOrder = AdminOrderRow & { origin: OrderOrigin };
+export type ListedOrder = AdminOrderRow;
 export type OrdersPage = { rows: ListedOrder[]; totals: OrdersTotals; failed: boolean };
 
-const NO_TOTALS: OrdersTotals = { count: 0, tongTien: 0, congNoKhach: 0, congNoNcc: 0, loiNhuanRong: 0, dueSoon: 0, overdue: 0 };
+const NO_TOTALS: OrdersTotals = {
+  count: 0, tongTien: 0, congNoKhach: 0, congNoNcc: 0, loiNhuanRong: 0, dueSoon: 0, overdue: 0, unsettled: 0, settled: 0,
+  money: false,
+};
 
-/** The SQL repeats the whole-set totals on every row; an empty page has none. */
-export function totalsOf(rows: readonly AdminOrderRow[]): OrdersTotals {
-  const r = rows[0];
+/** rpc('admin_orders_totals') row -> OrdersTotals. Null money sums = no orders.money (money: false). */
+export function totalsOf(r: AdminOrdersTotalsRow | undefined): OrdersTotals {
   if (!r) return NO_TOTALS;
   return {
     count: Number(r.total_count), tongTien: Number(r.sum_tong_tien), congNoKhach: Number(r.sum_cong_no_khach),
-    congNoNcc: Number(r.sum_cong_no_ncc), loiNhuanRong: Number(r.sum_loi_nhuan_rong),
+    congNoNcc: Number(r.sum_cong_no_ncc ?? 0), loiNhuanRong: Number(r.sum_loi_nhuan_rong ?? 0),
     dueSoon: Number(r.count_due_soon), overdue: Number(r.count_overdue),
+    unsettled: Number(r.count_unsettled), settled: Number(r.count_settled),
+    money: r.sum_loi_nhuan_rong != null,
   };
+}
+
+/** Whole-set counts and sums of the filter (separate RPC, so the page itself stays cheap). */
+export async function getOrdersTotals(db: Db, { type, filter }: OrdersQuery): Promise<OrdersTotals | null> {
+  const { data, error } = await gen(db).rpc("admin_orders_totals", { p_filter: filter, p_type: type });
+  return error || !Array.isArray(data) ? null : totalsOf(data[0] as unknown as AdminOrdersTotalsRow | undefined);
 }
 
 async function fetchRows(db: Db, { type, filter }: OrdersQuery): Promise<AdminOrderRow[] | null> {
@@ -38,40 +46,8 @@ async function fetchRows(db: Db, { type, filter }: OrdersQuery): Promise<AdminOr
 }
 
 export async function listOrders(db: Db, query: OrdersQuery): Promise<OrdersPage> {
-  const rows = await fetchRows(db, query);
-  if (!rows) return { rows: [], totals: NO_TOTALS, failed: true };
-  const origins = await firstNotes(db, rows.flatMap((r) => (r.job_id && !r.lead_id ? [r.job_id] : [])));
-  return {
-    rows: rows.map((r) => ({ ...r, origin: originOf(r.lead_id, r.job_id ? origins.get(r.job_id) : null) })),
-    totals: totalsOf(rows),
-    failed: false,
-  };
-}
-
-/** Every row of the filter (CSV), 200 per call. null = load error or more than EXPORT_MAX_ROWS. */
-export async function listAllOrders(db: Db, query: OrdersQuery): Promise<AdminOrderRow[] | null> {
-  const out: AdminOrderRow[] = [];
-  for (let offset = 0; ; offset += 200) {
-    const rows = await fetchRows(db, { ...query, filter: { ...query.filter, limit: 200, offset } });
-    if (!rows) return null;
-    out.push(...rows);
-    const total = Number(rows[0]?.total_count ?? 0);
-    if (total > EXPORT_MAX_ROWS) return null;
-    if (rows.length < 200 || out.length >= total) return out;
-  }
-}
-
-/** First log note (from_step null) per job: written by the order trigger, says app or web. */
-async function firstNotes(db: Db, jobIds: string[]): Promise<Map<string, string | null>> {
-  const out = new Map<string, string | null>();
-  if (jobIds.length === 0) return out;
-  const { data } = await db
-    .from("production_step_log")
-    .select("job_id, note")
-    .in("job_id", jobIds)
-    .is("from_step", null);
-  for (const row of data ?? []) if (!out.has(row.job_id)) out.set(row.job_id, row.note);
-  return out;
+  const [rows, totals] = await Promise.all([fetchRows(db, query), getOrdersTotals(db, query)]);
+  return !rows || !totals ? { rows: [], totals: NO_TOTALS, failed: true } : { rows, totals, failed: false };
 }
 
 export type OrderLoad = { ok: true; detail: AdminOrderDetail } | { ok: false; reason: "not_found" | "error" };

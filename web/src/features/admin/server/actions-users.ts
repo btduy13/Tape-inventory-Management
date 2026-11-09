@@ -30,7 +30,9 @@ export async function inviteUserAction(_prev: AdminActionState, form: FormData):
 export async function updateUserAction(_prev: AdminActionState, form: FormData): Promise<AdminActionState> {
   const actor = await adminOrNull();
   if (!actor) return fail(t.common.errorForbidden);
-  const parsed = updateUserSchema.safeParse(formToObject(form));
+  // Ticked boxes repeat their name; "access" marks a form that carries them (unticked = none).
+  const access = form.has("access") ? { navTabs: form.getAll("navTabs"), permissions: form.getAll("permissions") } : {};
+  const parsed = updateUserSchema.safeParse({ ...formToObject(form), ...access });
   if (!parsed.success) return fail(t.common.errorValidation);
   if (isSelfLockout(actor, parsed.data)) return fail(t.admin.cannotChangeSelf);
 

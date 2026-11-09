@@ -33,7 +33,11 @@ type Props = {
   /** Detail page: after delete go back to the list. */
   afterDeleteHref?: string;
   size?: "sm" | "md";
+  /** Buttons the user may use (orders.status / edit / create / delete); default all. */
+  can?: { status: boolean; edit: boolean; create: boolean; delete: boolean };
 };
+
+const ALL = { status: true, edit: true, create: true, delete: true };
 
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
   return (
@@ -46,7 +50,7 @@ function Select({ label, value, onChange, options }: { label: string; value: str
   );
 }
 
-export function OrderActions({ items, workshopUsers, today, onDone, onResult, afterDeleteHref, size = "sm" }: Props) {
+export function OrderActions({ items, workshopUsers, today, onDone, onResult, afterDeleteHref, size = "sm", can = ALL }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState<Dialog>(null);
   const [pending, start] = useTransition();
@@ -82,16 +86,16 @@ export function OrderActions({ items, workshopUsers, today, onDone, onResult, af
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {orders.length > 0 && (
+        {can.status && orders.length > 0 && (
           <button type="button" disabled={pending} onClick={() => setOpen("status")} className={btn}>{c.actStatus}</button>
         )}
-        {toWorkshop.length > 0 && (
+        {can.edit && toWorkshop.length > 0 && (
           <button type="button" disabled={pending} onClick={() => setOpen("workshop")} className={btn}>{c.actWorkshop}</button>
         )}
-        {quotes.length > 0 && (
+        {can.create && quotes.length > 0 && (
           <button type="button" disabled={pending} onClick={() => setOpen("convert")} className={buttonClass("primary", size)}>{c.actConvert}</button>
         )}
-        {items.length > 0 && (
+        {can.delete && items.length > 0 && (
           <button type="button" disabled={pending} onClick={() => setOpen("delete")} className={buttonClass("danger", size)}>{c.actDelete}</button>
         )}
       </div>

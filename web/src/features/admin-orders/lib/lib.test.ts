@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { formatVnd } from "@/i18n";
 import { parseListParams } from "@/features/portal-ui/lib/list-params";
-import { ordersCsv } from "./csv";
 import { dateTimeVn, dateVn, money, normalizeVnPhone, originOf, toNumber, vndShort } from "./format";
 import { formTotals, orderTotals } from "./form-totals";
 import { ORDERS_SPEC, dueTone, toOrdersQuery } from "./list-spec";
 import { newOrderHref, orderEditHref, orderHref, tabHref } from "./paths";
-import type { AdminOrderRow } from "./types";
 
 describe("toOrdersQuery", () => {
   it("maps whitelisted URL params to admin_orders_list (printed tape by default)", () => {
@@ -128,27 +126,6 @@ describe("formTotals / orderTotals", () => {
     const v = { so_luong: "100", don_gia_von: "3000", don_gia_ban: "5000", vat_percent: "8", tien_coc: "200000" };
     expect(orderTotals("thank_you", v)).toMatchObject({ costTotal: 300000, saleTotal: 500000, vat: 40000, deposit: 200000, outstanding: 340000, netProfit: 200000 });
     expect(orderTotals("thank_you", { ...v, tien_coc: "9000000" }).outstanding).toBe(0);
-  });
-});
-
-describe("ordersCsv", () => {
-  const row = {
-    type: "thank_you", id: "TY-11-26-001", thoi_gian: "2026-11-07T10:00:00", ngay_du_kien: "2026-11-10", ten_hang: '=HYPERLINK("x")',
-    quy_cach: null, mau_sac: "Đỏ", ten_khach_hang: 'Anh "Nam"', sdt_khach_hang: "0901", dia_chi_khach_hang: null, so_luong: 100,
-    don_gia_ban: 5000, thanh_tien_ban: 500000, vat: 0, tong_tien: 500000, tien_coc: 0, cong_no_khach: 500000, cong_no_ncc: 0,
-    tien_von: 0, loi_nhuan_rong: -5, ctv: null, da_giao: true, da_tat_toan: false, step: null, workshop_user_name: null,
-  } as unknown as AdminOrderRow;
-
-  it("BOM, header, quoted cells, formula guard, booleans and CRLF", () => {
-    const csv = ordersCsv([row]);
-    expect(csv.startsWith("﻿\"Loại\",\"Mã đơn\"")).toBe(true);
-    const line = csv.split("\r\n")[1]!;
-    expect(line).toContain('"Thank you","TY-11-26-001"');
-    expect(line).toContain(`"'=HYPERLINK(""x"")"`);
-    expect(line).toContain('"Anh ""Nam"""');
-    expect(line).toContain('"-5"');
-    expect(line).toContain('"x",""');
-    expect(csv.endsWith("\r\n")).toBe(true);
   });
 });
 

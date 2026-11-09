@@ -1,18 +1,14 @@
 "use server";
-// Server Actions of /admin/don-hang. Admin gate + zod here, real enforcement in SQL (admin-only RPCs).
+// Server Actions of /admin/don-hang. Permission gate + zod here, real enforcement in SQL (has_perm RPCs).
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { format } from "@/i18n";
-import { assertRole, ForbiddenError } from "@/lib/auth/require-role";
-import { ROLE_GROUPS } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { hasPerm, type Perm } from "@/lib/auth/permissions";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
-import { parseListParams } from "@/features/portal-ui/lib/list-params";
 import { ordersCopy as c } from "../lib/copy";
-import { ordersCsv } from "../lib/csv";
 import { normalizeVnPhone } from "../lib/format";
-import { ORDERS_SPEC, toOrdersQuery } from "../lib/list-spec";
 import { orderHref } from "../lib/paths";
 import {
   ORDER_SCHEMAS, WORKSHOP_KEYS, customerCreateSchema, frozenOrderSchema, groupByType, isoDateSchema, orderIdSchema,
@@ -22,19 +18,22 @@ import type { CustomerHit, OrderType } from "../lib/types";
 import {
   convertQuote, createCustomer, createOrder, deleteOrders, sendToWorkshop, setStatus, updateOrder, type Fail,
 } from "./mutations";
-import { latestByName, listAllOrders, searchCustomers, suggestNames } from "./queries";
+import { latestByName, searchCustomers, suggestNames } from "./queries";
 
 export type OrderActionState = { status: "idle" | "error" | "success"; message?: string; fields?: string[] };
 
-async function isAdmin(): Promise<boolean> {
-  try {
-    await assertRole(ROLE_GROUPS.admin);
-    return true;
-  } catch (e) {
-    if (e instanceof ForbiddenError) return false;
-    throw e;
-  }
+/** The matching order permission (same rule as SQL has_perm, which re-checks every RPC). */
+async function can(perm: Perm): Promise<boolean> {
+  return hasPerm(await getCurrentProfile(), perm);
 }
+
+async function canCreateOrEdit(): Promise<boolean> {
+  const profile = await getCurrentProfile();
+  return hasPerm(profile, "orders.create") || hasPerm(profile, "orders.edit");
+}
+
+/** Costs a user without orders.money cannot see on edit: left empty, SQL keeps the stored value. */
+const HIDDEN_COSTS = ["don_gia_goc", "truc_gia_goc"] as const;
 
 const err = (message: string): OrderActionState => ({ status: "error", message });
 const done = (message: string): OrderActionState => ({ status: "success", message });
@@ -56,9 +55,11 @@ function refresh() {
 }
 
 /** Fields of the order form; `type`, `id`, `is_quote`, `frozen` are routing fields. */
-function parseOrderForm(type: OrderType, raw: Record<string, string>, frozen: boolean) {
+function parseOrderForm(type: OrderType, raw: Record<string, string>, frozen: boolean, assumed: readonly string[] = []) {
   const fields = { ...raw };
   for (const k of ["type", "id", "is_quote", "frozen"]) delete fields[k];
+  // A cost left out on purpose passes the > 0 check; it is not in `raw`, so it is never sent.
+  for (const k of assumed) fields[k] ??= "1";
   const parsed = (frozen ? frozenOrderSchema : ORDER_SCHEMAS[type]).safeParse(fields);
   if (parsed.success) return { ok: true as const, data: parsed.data as Record<string, unknown> };
   const fieldsBad = [...new Set(parsed.error.issues.map((i) => String(i.path[0])))];
@@ -68,7 +69,7 @@ function parseOrderForm(type: OrderType, raw: Record<string, string>, frozen: bo
 
 /** Create an order or a quote of any type; on success opens its detail page. */
 export async function createOrderAction(_prev: OrderActionState, form: FormData): Promise<OrderActionState> {
-  if (!(await isAdmin())) return FORBIDDEN;
+  if (!(await can("orders.create"))) return FORBIDDEN;
   const raw = formStrings(form);
   const type = orderTypeSchema.safeParse(raw.type ?? "bang_keo_in");
   if (!type.success) return err(c.errorValidation);
@@ -86,14 +87,19 @@ export async function createOrderAction(_prev: OrderActionState, form: FormData)
 
 /** Edit: every field of the form is sent (empty = cleared); SQL recomputes money and debt. */
 export async function updateOrderAction(_prev: OrderActionState, form: FormData): Promise<OrderActionState> {
-  if (!(await isAdmin())) return FORBIDDEN;
+  if (!(await can("orders.edit"))) return FORBIDDEN;
   const raw = formStrings(form);
   const type = orderTypeSchema.safeParse(raw.type);
   const id = orderIdSchema.safeParse(raw.id);
   if (!type.success || !id.success) return err(c.errorValidation);
-  const parsed = parseOrderForm(type.data, raw, raw.frozen === "1");
+  const money = await can("orders.money");
+  if (!money) for (const k of HIDDEN_COSTS) if (!raw[k]?.trim()) delete raw[k];
+  const parsed = parseOrderForm(type.data, raw, raw.frozen === "1", money ? [] : HIDDEN_COSTS);
   if (!parsed.ok) return parsed.state;
-  const result = await updateOrder(await createClient(), type.data, id.data, toOrderPayload(parsed.data, true));
+  const payload = toOrderPayload(parsed.data, true);
+  // A field the form did not show (no orders.money: costs, CTV, ship) keeps its stored value, not null.
+  for (const key of Object.keys(payload)) if (!(key in raw)) delete payload[key];
+  const result = await updateOrder(await createClient(), type.data, id.data, payload);
   if (!result.ok) return err(reasonMessage(result));
   refresh();
   redirect(orderHref(type.data, id.data));
@@ -117,7 +123,7 @@ async function perType(items: unknown, run: (type: OrderType, ids: string[]) => 
 }
 
 export async function setStatusAction(items: OrderItem[], flags: { da_giao: boolean | null; da_tat_toan: boolean | null }): Promise<OrderActionState> {
-  if (!(await isAdmin())) return FORBIDDEN;
+  if (!(await can("orders.status"))) return FORBIDDEN;
   const f = statusSchema.safeParse(flags);
   if (!f.success) return err(c.errorValidation);
   const db = await createClient();
@@ -126,7 +132,7 @@ export async function setStatusAction(items: OrderItem[], flags: { da_giao: bool
 }
 
 export async function deleteOrdersAction(items: OrderItem[], quoteOnly: boolean): Promise<OrderActionState> {
-  if (!(await isAdmin())) return FORBIDDEN;
+  if (!(await can("orders.delete"))) return FORBIDDEN;
   const db = await createClient();
   const r = await perType(items, (type, ids) => deleteOrders(db, type, ids, quoteOnly === true));
   return r.ok ? done(format(c.doneDelete, { count: r.count })) : r.state;
@@ -134,7 +140,7 @@ export async function deleteOrdersAction(items: OrderItem[], quoteOnly: boolean)
 
 /** Converts each quote; one quote opens the new order. */
 export async function convertQuotesAction(items: OrderItem[], due: string): Promise<OrderActionState> {
-  if (!(await isAdmin())) return FORBIDDEN;
+  if (!(await can("orders.create"))) return FORBIDDEN;
   const list = orderItemsSchema.safeParse(items);
   const date = isoDateSchema.safeParse(due);
   if (!list.success || !date.success) return err(c.errorValidation);
@@ -155,7 +161,7 @@ export async function convertQuotesAction(items: OrderItem[], due: string): Prom
 
 /** Printed-tape orders without a job (the old "Chưa vào xưởng" orders). */
 export async function sendToWorkshopAction(ids: string[], userId: string | null): Promise<OrderActionState> {
-  if (!(await isAdmin())) return FORBIDDEN;
+  if (!(await can("orders.edit"))) return FORBIDDEN;
   const list = orderItemsSchema.safeParse((Array.isArray(ids) ? ids : []).map((id) => ({ type: "bang_keo_in", id })));
   const user = optionalUuidSchema.safeParse(userId);
   if (!list.success || !user.success) return err(c.errorValidation);
@@ -173,14 +179,6 @@ export async function sendToWorkshopAction(ids: string[], userId: string | null)
   return done(format(c.doneWorkshop, { count }));
 }
 
-/** CSV of every row of the current list URL (same whitelist as the page). */
-export async function exportCsvAction(search: string): Promise<{ ok: true; csv: string } | { ok: false; message: string }> {
-  if (!(await isAdmin())) return { ok: false, message: c.errorForbidden };
-  const state = parseListParams(ORDERS_SPEC, new URLSearchParams(typeof search === "string" ? search.slice(0, 2000) : ""));
-  const rows = await listAllOrders(await createClient(), toOrdersQuery(state));
-  return rows ? { ok: true, csv: ordersCsv(rows) } : { ok: false, message: c.csvTooMany };
-}
-
 const typeAndText = (type: unknown, text: unknown) => {
   const t = orderTypeSchema.safeParse(type);
   const s = typeof text === "string" ? text.trim().slice(0, 255) : "";
@@ -189,7 +187,7 @@ const typeAndText = (type: unknown, text: unknown) => {
 
 export async function suggestNamesAction(type: OrderType, q: string): Promise<string[]> {
   const input = typeAndText(type, q);
-  if (!input || !(await isAdmin())) return [];
+  if (!input || !(await canCreateOrEdit())) return [];
   return suggestNames(await createClient(), input.type, input.text);
 }
 
@@ -197,7 +195,7 @@ export async function suggestNamesAction(type: OrderType, q: string): Promise<st
  *  the due date and the workshop fields. null when there is none. */
 export async function latestOrderAction(type: OrderType, name: string): Promise<{ id: string; values: Record<string, string> } | null> {
   const input = typeAndText(type, name);
-  if (!input || !(await isAdmin())) return null;
+  if (!input || !(await canCreateOrEdit())) return null;
   const row = await latestByName(await createClient(), input.type, input.text);
   if (!row) return null;
   const values: Record<string, string> = {};
@@ -210,12 +208,12 @@ export async function latestOrderAction(type: OrderType, name: string): Promise<
 }
 
 export async function searchCustomersAction(q: string): Promise<CustomerHit[]> {
-  if (typeof q !== "string" || !(await isAdmin())) return [];
+  if (typeof q !== "string" || !(await canCreateOrEdit())) return [];
   return searchCustomers(await createClient(), q.trim().slice(0, 100));
 }
 
 export async function createCustomerAction(input: { name: string; phone?: string; address?: string }): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  if (!(await isAdmin())) return { ok: false, message: c.errorForbidden };
+  if (!(await can("customers.edit"))) return { ok: false, message: c.errorForbidden };
   const parsed = customerCreateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: c.customerNeedName };
   const payload = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined)) as Record<string, string>;

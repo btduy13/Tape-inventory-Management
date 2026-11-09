@@ -47,6 +47,11 @@ export function applyListQuery<Q extends ListQuery<Q>>(query: Q, spec: ListSpec,
       if (values[0] === "1" || values[0] === "0") q = q.eq(def.column, values[0] === "1");
       continue;
     }
+    if (def.kind === "text") {
+      // Same operand shape as the search: sanitized term (no quotes / commas / wildcards left), double-quoted.
+      q = q.or(`${def.column}.ilike."*${values[0]!}*"`);
+      continue;
+    }
     const allowed = values.filter((v) => def.values.includes(v));
     if (allowed.length === 1) q = q.eq(def.column, allowed[0]!);
     else if (allowed.length > 1) q = q.in(def.column, allowed);

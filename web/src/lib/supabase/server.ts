@@ -1,6 +1,7 @@
 // Server Supabase client for Server Components, Server Actions and Route Handlers.
 // Acts AS THE LOGGED-IN USER (anon key + session cookie) so RLS applies.
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,12 +35,13 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
 /**
  * Current user + profile, verified with the Auth server (getUser, not getSession).
  * Returns null when not logged in or profile inactive.
+ * cache(): layout, page and actions in one request share one getUser + profile read.
  */
-export async function getCurrentProfile(): Promise<Profile | null> {
+export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
   const { data } = await supabase.from("profiles").select("*").eq("id", auth.user.id).maybeSingle();
   if (!data || !data.is_active) return null;
   return data;
-}
+});

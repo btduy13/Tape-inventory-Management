@@ -2,7 +2,8 @@
 // multi-size quote (quote_items) only edit name, customer and due date (admin_order_update rule).
 import { notFound } from "next/navigation";
 import { format } from "@/i18n";
-import { createClient } from "@/lib/supabase/server";
+import { hasPerm } from "@/lib/auth/permissions";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { PageHeader } from "@/features/portal-ui/components/Section";
 import { ErrorState } from "@/features/portal-ui/components/States";
 import { ordersCopy as c } from "../lib/copy";
@@ -10,12 +11,12 @@ import { orderHref, tabHref } from "../lib/paths";
 import { vatPercentFromAmount } from "../lib/order-math";
 import { ORDER_SCHEMAS } from "../lib/schemas";
 import { hasQuoteItems, type OrderType } from "../lib/types";
-import { getCustomerName, getOrder } from "../server/queries";
+import { getOrder } from "../server/queries";
 import { OrderForm } from "./OrderForm";
 
 export async function EditOrderView({ id, type }: { id: string; type: OrderType }) {
   const db = await createClient();
-  const load = await getOrder(db, id, type);
+  const [load, profile] = await Promise.all([getOrder(db, id, type), getCurrentProfile()]);
   if (!load.ok && load.reason === "not_found") notFound();
   if (!load.ok) return <ErrorState body={c.loadError} />;
   const { order } = load.detail;
@@ -31,8 +32,7 @@ export async function EditOrderView({ id, type }: { id: string; type: OrderType 
     const derived = vatPercentFromAmount(order[vat] as number | string | null, order[base] as number | string | null, order[pct] as number | string | null);
     initial[pct] = derived > 0 ? String(derived) : "";
   }
-  const customerId = typeof order.customer_id === "string" ? order.customer_id : null;
-  const customerName = customerId ? await getCustomerName(db, customerId) : null;
+  const customer = load.detail.customer ?? null;
   const title = format(c.editTitle, { id: order.id });
   return (
     <>
@@ -52,7 +52,8 @@ export async function EditOrderView({ id, type }: { id: string; type: OrderType 
         isQuote={order.is_quote === true}
         frozen={hasQuoteItems(order)}
         initial={initial}
-        initialCustomer={customerId ? { id: customerId, name: customerName ?? String(order.ten_khach_hang ?? "") } : null}
+        money={hasPerm(profile, "orders.money")}
+        initialCustomer={customer ? { id: customer.id, name: customer.name } : null}
         workshopUsers={[]}
       />
     </>
