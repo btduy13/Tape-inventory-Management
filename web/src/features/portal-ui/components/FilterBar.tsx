@@ -42,14 +42,30 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
   for (const name of pinned) if (state.filters[name]) cleared.filters[name] = state.filters[name];
   const active = hasActiveFilters({ ...state, filters: Object.fromEntries(Object.entries(state.filters).filter(([k]) => !pinned.includes(k))) });
   const showDates = dateRange && !!spec.dateRange;
+  // One toolbar row: search + the first filters + buttons. The rest sits under "Lọc thêm",
+  // open while one of them is set so an active filter is never hidden.
+  const main = selects.slice(0, MAIN_CONTROLS);
+  const extra = selects.slice(MAIN_CONTROLS);
+  const hasExtra = extra.length > 0 || showDates;
+  const extraOn = extra.filter((c) => state.filters[c.name]?.length).length + (showDates && (state.from || state.to) ? 1 : 0);
+  const control = (c: FilterControl) => (
+    <label key={c.name} className="flex min-w-0 flex-col gap-1 text-xs font-medium text-pt-muted lg:w-40">
+      {c.label}
+      {c.kind === "text" ? (
+        <input type="search" name={c.name} defaultValue={state.filters[c.name]?.[0] ?? ""} placeholder={c.placeholder} maxLength={80} className={inputClass} />
+      ) : (
+        <FilterSelect control={c} values={state.filters[c.name] ?? []} />
+      )}
+    </label>
+  );
 
   return (
-    <div className="flex flex-col gap-3">
-      <form method="get" action={basePath} role="search" aria-label={p.filters} className={`${surfaceClass} grid grid-cols-2 items-end gap-3 p-3 sm:grid-cols-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-6`}>
-        <AutoSubmit />
-        {hidden.map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+    <form method="get" action={basePath} role="search" aria-label={p.filters} className={`${surfaceClass} flex flex-col gap-3 p-3`}>
+      <AutoSubmit />
+      {hidden.map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+      <div className="grid grid-cols-2 items-end gap-3 lg:flex lg:flex-wrap">
         {spec.search && (
-          <label className="col-span-full flex min-w-0 flex-col gap-1 text-sm font-medium">
+          <label className="col-span-2 flex min-w-0 flex-col gap-1 text-sm font-medium lg:min-w-64 lg:flex-1">
             <span className="sr-only">{p.search}</span>
             <span className="relative">
               <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-pt-muted" />
@@ -57,32 +73,8 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
             </span>
           </label>
         )}
-          {selects.map((c) => (
-            <label key={c.name} className="flex min-w-0 flex-col gap-1 text-xs font-medium text-pt-muted">
-              {c.label}
-              {c.kind === "text" ? (
-                <input type="search" name={c.name} defaultValue={state.filters[c.name]?.[0] ?? ""} placeholder={c.placeholder} maxLength={80} className={inputClass} />
-              ) : (
-                <FilterSelect control={c} values={state.filters[c.name] ?? []} />
-              )}
-            </label>
-          ))}
-          {showDates && (
-            <fieldset className="col-span-2 flex min-w-0 flex-col gap-1">
-              {dateLabel && <legend className="sr-only">{dateLabel}</legend>}
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted">
-                  {dateLabel ? `${dateLabel}: ${p.fromDate.toLowerCase()}` : p.fromDate}
-                  <input type="date" name="from" defaultValue={state.from ?? ""} className={inputClass} />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted">
-                  {p.toDate}
-                  <input type="date" name="to" defaultValue={state.to ?? ""} className={inputClass} />
-                </label>
-              </div>
-            </fieldset>
-          )}
-        <div className="col-span-full flex gap-2 sm:col-span-1 sm:col-start-auto xl:justify-self-start">
+        {main.map(control)}
+        <div className="col-span-2 flex gap-2">
           <button type="submit" className={buttonClass("primary", "md", "flex-1 lg:flex-none")}>{p.applyFilters}</button>
           {active && (
             <Link href={listHref(basePath, spec, cleared)} className={buttonClass("ghost", "md", "flex-1 lg:flex-none")}>
@@ -90,10 +82,39 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
             </Link>
           )}
         </div>
-      </form>
-    </div>
+      </div>
+      {hasExtra && (
+        <details open={extraOn > 0} className="group border-t border-pt-line pt-1">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-pt-blue-ink hover:underline [&::-webkit-details-marker]:hidden">
+            <Icon name="chevronRight" className="size-3.5 transition-transform group-open:rotate-90" />
+            {p.moreFilters}{extraOn > 0 ? ` (${extraOn})` : ""}
+          </summary>
+          <div className="grid grid-cols-2 items-end gap-3 pt-1 lg:flex lg:flex-wrap">
+            {extra.map(control)}
+            {showDates && (
+              <fieldset className="col-span-2 min-w-0">
+                {dateLabel && <legend className="sr-only">{dateLabel}</legend>}
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted lg:w-40">
+                    {dateLabel ? `${dateLabel}: ${p.fromDate.toLowerCase()}` : p.fromDate}
+                    <input type="date" name="from" defaultValue={state.from ?? ""} className={inputClass} />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted lg:w-40">
+                    {p.toDate}
+                    <input type="date" name="to" defaultValue={state.to ?? ""} className={inputClass} />
+                  </label>
+                </div>
+              </fieldset>
+            )}
+          </div>
+        </details>
+      )}
+    </form>
   );
 }
+
+/** Filters shown in the toolbar row; the others go under "Lọc thêm". */
+const MAIN_CONTROLS = 3;
 
 /** The URL may hold a combination no option names (a stat card link, a hand-edited URL): keep it as an extra option. */
 function FilterSelect({ control: c, values }: { control: Extract<FilterControl, { kind: "select" }>; values: readonly string[] }) {

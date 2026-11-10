@@ -25,10 +25,10 @@ export function OrderStatusBadges({ delivered, settled, isQuote }: { delivered: 
   );
 }
 
-/** Pill links: the list tabs and the type switch of the new-order page. */
+/** Underline tabs: the list tabs and the type switch of the new-order page. */
 export function PillNav({ label, current, items }: { label: string; current: string; items: readonly (readonly [string, string, string])[] }) {
   return (
-    <nav aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+    <nav aria-label={label} className="flex gap-1 overflow-x-auto border-b border-pt-line">
       {items.map(([key, text, href]) => {
         const on = key === current;
         return (
@@ -36,7 +36,7 @@ export function PillNav({ label, current, items }: { label: string; current: str
             key={key}
             href={href}
             aria-current={on ? "page" : undefined}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm ${on ? "border-vt-blue bg-pt-blue-tint font-semibold text-vt-blue" : "border-pt-line-strong text-pt-text hover:bg-pt-grey-tint"}`}
+            className={`-mb-px inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-sm transition-colors ${on ? "border-vt-blue font-semibold text-pt-blue-ink" : "border-transparent font-medium text-pt-muted hover:border-pt-line-strong hover:text-pt-text"}`}
           >
             {text}
           </Link>

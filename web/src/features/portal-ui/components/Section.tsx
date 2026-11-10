@@ -106,21 +106,22 @@ export function StatCard({ label, value, href, tone, hint }: StatCardProps) {
         {tone && <span aria-hidden className={`size-2 rounded-full ${TONE_DOT[tone]}`} />}
         {label}
       </span>
-      <span className="text-2xl font-bold leading-none tracking-tight text-pt-text sm:text-3xl">{typeof value === "number" ? value.toLocaleString("vi-VN") : value}</span>
-      {hint && <span className="text-xs text-pt-muted">{hint}</span>}
+      <span className="text-xl font-bold leading-none tracking-tight text-pt-text sm:text-2xl">{typeof value === "number" ? value.toLocaleString("vi-VN") : value}</span>
+      {hint && <span className="truncate text-xs text-pt-muted" title={hint}>{hint}</span>}
     </>
   );
-  const cls = `${surfaceClass} flex min-h-24 flex-col justify-between gap-2 p-4`;
+  const cls = "flex min-w-0 flex-col gap-1.5 bg-pt-surface px-4 py-3";
   return href ? (
-    <Link href={href} className={`${cls} transition-colors hover:border-vt-blue`}>{body}</Link>
+    <Link href={href} className={`${cls} transition-colors hover:bg-pt-blue-tint`}>{body}</Link>
   ) : (
     <div className={cls}>{body}</div>
   );
 }
 
+/** One strip of stat cells (hairlines between them); cells grow to fill the last row. */
 export function StatGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5 [&>*]:min-w-0">
+    <div className="flex flex-wrap gap-px overflow-hidden rounded-2xl border border-pt-line bg-pt-line shadow-sm [&>*]:min-w-36 [&>*]:flex-1 sm:[&>*]:min-w-44">
       {children}
     </div>
   );

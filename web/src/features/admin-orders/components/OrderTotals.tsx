@@ -1,12 +1,13 @@
 "use client";
-// Live totals of the order form (TS port of orderMath.js), next to the save button. Display only: the RPC recomputes and
-// stores the real numbers.
+// Live totals of the order form (TS port of orderMath.js), in the bottom bar next to the save button.
+// Display only: the RPC recomputes and stores the real numbers.
 import { formatVnd } from "@/i18n";
 import { fieldLabel as f, ordersCopy as c } from "../lib/copy";
 import type { OrderSummary } from "../lib/form-totals";
 
 export function OrderTotals({ totals: t, money = true }: { totals: OrderSummary; money?: boolean }) {
   // Line amounts are shown inline in the form cards; this keeps what the customer pays and the result.
+  // Phones show only the strong ones (total, debt, profit).
   const rows: [string, number | null, boolean?][] = [
     [f.thanh_tien_ban, t.saleTotal],
     [f.truc_thanh_tien_ban, t.axisSaleTotal],
@@ -17,16 +18,13 @@ export function OrderTotals({ totals: t, money = true }: { totals: OrderSummary;
     [f.loi_nhuan_rong, money ? t.netProfit : null, true],
   ];
   return (
-    <section aria-labelledby="order-totals-title" className="flex flex-col gap-3 rounded-xl border border-pt-line bg-pt-surface p-4">
-      <div className="flex flex-col gap-0.5">
-        <h2 id="order-totals-title" className="text-base font-semibold text-pt-text">{c.secTotals}</h2>
-        <p className="text-xs text-pt-muted">{c.totalsHint}</p>
-      </div>
-      <dl aria-live="polite" className="flex flex-col gap-1.5 text-sm">
+    <section aria-labelledby="order-totals-title" className="flex min-w-0 flex-col gap-1">
+      <h2 id="order-totals-title" className="sr-only">{c.secTotals}</h2>
+      <dl aria-live="polite" title={c.totalsHint} className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         {rows.flatMap(([label, value, strong]) => value === null ? [] : [(
-          <div key={label} className={`flex items-baseline justify-between gap-3 ${strong ? "border-t border-pt-line pt-1.5 font-semibold" : ""}`}>
-            <dt className={strong ? "text-pt-text" : "text-pt-muted"}>{label}</dt>
-            <dd className={`tabular-nums ${value < 0 ? "text-pt-red-ink" : "text-pt-text"}`}>{formatVnd(value)}</dd>
+          <div key={label} className={`flex-col gap-0.5 ${strong ? "flex" : "hidden lg:flex"}`}>
+            <dt className="text-xs text-pt-muted">{label}</dt>
+            <dd className={`tabular-nums ${strong ? "text-base font-bold" : "font-medium"} ${value < 0 ? "text-pt-red-ink" : "text-pt-text"}`}>{formatVnd(value)}</dd>
           </div>
         )])}
       </dl>

@@ -888,6 +888,7 @@ export const vi = {
     searchPlaceholder: "Tìm theo tên, mã, số điện thoại",
     applyFilters: "Lọc",
     clearFilters: "Xóa bộ lọc",
+    moreFilters: "Lọc thêm",
     filters: "Bộ lọc",
     fromDate: "Từ ngày",
     toDate: "Đến ngày",

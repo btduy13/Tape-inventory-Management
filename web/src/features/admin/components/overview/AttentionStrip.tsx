@@ -1,7 +1,7 @@
 // "Cần xử lý hôm nay": counts linking to the pre-filtered lists. Zero stays calm (muted outline),
 // non-zero gets its tone tint so red keeps meaning "act now".
 import Link from "next/link";
-import { TONE_CLASS, type Tone } from "@/features/portal-ui";
+import { TONE_CLASS, surfaceClass, type Tone } from "@/features/portal-ui";
 import { dashboardCopy as c } from "../../lib/copy";
 import { leadsHref, ordersHref, type Overview } from "../../lib/overview";
 
@@ -19,19 +19,17 @@ export function AttentionStrip({ a }: { a: Overview["attention"] }) {
     { label: c.leadsQuoted, value: a.leadsQuoted, href: leadsHref({ status: "quoted" }), tone: "blue" },
   ];
   return (
-    <section aria-labelledby="can-xu-ly-title" className="flex flex-col gap-3">
+    <section aria-labelledby="can-xu-ly-title" className={`${surfaceClass} flex flex-col gap-2 p-4`}>
       <h2 id="can-xu-ly-title" className="text-base font-semibold text-pt-text">{c.attentionTitle}</h2>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {/* A to-do list: label left, count right. 2 columns on phones / tablets, 1 in the rail. */}
+      <ul className="grid grid-cols-1 gap-x-4 sm:grid-cols-2 xl:grid-cols-1">
         {items.map((it) => {
           const on = it.value > 0;
           return (
-            <li key={it.label} className="min-w-0">
-              <Link href={it.href}
-                className={`flex h-full min-h-20 flex-col justify-between gap-1 rounded-xl border p-3 transition-colors ${
-                  on ? `${TONE_CLASS[it.tone]} border-transparent hover:brightness-95` : "border-pt-line bg-pt-surface text-pt-muted hover:border-pt-line-strong"
-                }`}>
-                <span className={`text-2xl font-bold leading-none ${on ? "" : "text-pt-line-strong"}`}>{it.value}</span>
-                <span className="text-sm leading-snug">{it.label}</span>
+            <li key={it.label} className="min-w-0 border-t border-pt-line">
+              <Link href={it.href} className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-1 py-1.5 text-sm transition-colors hover:bg-pt-grey-tint">
+                <span className={`leading-snug ${on ? "font-medium text-pt-text" : "text-pt-muted"}`}>{it.label}</span>
+                <span className={`min-w-9 shrink-0 rounded-full px-2 py-0.5 text-center text-sm font-bold ${on ? TONE_CLASS[it.tone] : "text-pt-line-strong"}`}>{it.value}</span>
               </Link>
             </li>
           );

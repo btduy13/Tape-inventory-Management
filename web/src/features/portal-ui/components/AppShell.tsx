@@ -1,38 +1,35 @@
-// Portal frame for every role: light sidebar (lg+) or top bar + drawer (phones / tablets).
+// Portal frame for every role: one top bar. lg+: tabs in the bar, settings and account as dropdowns;
+// below lg: logo + drawer. Content uses the full width.
 // Display only: the layout calls requireRole() and every page re-checks its own role / tab.
 import Link from "next/link";
 import { getDictionary } from "@/i18n";
 import type { Profile } from "@/lib/types";
 import { LogoutButton } from "@/features/auth";
 import { homeFor } from "../lib/nav";
+import { Dropdown } from "./Dropdown";
+import { Icon } from "./Icon";
 import { MobileNav } from "./MobileNav";
 import { NavLinks } from "./NavLinks";
 
 const t = getDictionary();
 const p = t.portalUi;
 
-/** Logo + name at the top of the sidebar. */
-function BrandTile({ href }: { href: string }) {
+const initialOf = (profile: Profile) => (profile.full_name || profile.email || "?").trim().charAt(0);
+
+function Avatar({ profile }: { profile: Profile }) {
   return (
-    <Link href={href} className="flex items-center gap-3 rounded-xl px-2 py-1 text-vt-ink hover:bg-pt-canvas">
-      {/* eslint-disable-next-line @next/next/no-img-element -- next/image writes a style attribute (blocked by CSP) */}
-      <img src="/brand/vinh-thinh-logo.png" alt="" width={478} height={632} className="h-10 w-auto" />
-      <span className="flex flex-col leading-tight">
-        <span className="font-bold">{p.brand}</span>
-        <span className="text-xs text-pt-muted">{p.brandSub}</span>
-      </span>
-    </Link>
+    <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-vt-blue text-sm font-bold uppercase text-white">
+      {initialOf(profile)}
+    </span>
   );
 }
 
-function UserBlock({ profile }: { profile: Profile }) {
+function UserBlock({ profile, bare = false }: { profile: Profile; bare?: boolean }) {
   return (
-    <div className="flex flex-col gap-2 border-t border-pt-line pt-3">
+    <div className={`flex flex-col gap-2 ${bare ? "" : "border-t border-pt-line pt-3"}`}>
       <p className="sr-only">{p.signedInAs}</p>
       <div className="flex items-center gap-3 px-1">
-        <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-vt-blue text-sm font-bold uppercase text-white">
-          {(profile.full_name || profile.email || "?").trim().charAt(0)}
-        </span>
+        <Avatar profile={profile} />
         <div className="flex min-w-0 flex-col leading-tight">
           <span className="truncate text-sm font-semibold text-pt-text">{profile.full_name || profile.email}</span>
           <span className="truncate text-xs text-pt-muted">{t.roles[profile.role]} · {profile.email}</span>
@@ -55,27 +52,40 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
         {p.skipToContent}
       </a>
 
-      {/* lg+: fixed sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col gap-5 border-r border-pt-line bg-pt-surface px-3 py-4 lg:flex">
-        <BrandTile href={home} />
-        <nav aria-label={p.navMain} className="flex-1 overflow-y-auto">
-          <NavLinks profile={nav} />
-        </nav>
-        <UserBlock profile={profile} />
-      </aside>
-
-      {/* < lg: top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-pt-line bg-pt-surface px-4 py-1.5 lg:hidden">
-        <Link href={home} className="flex min-h-11 items-center gap-2 font-bold text-vt-ink">
-          {/* eslint-disable-next-line @next/next/no-img-element -- see BrandTile */}
-          <img src="/brand/vinh-thinh-logo.png" alt="" width={478} height={632} className="h-9 w-auto" />
-          {p.brand}
-        </Link>
-        <MobileNav profile={nav} userBlock={<UserBlock profile={profile} />} />
+      <header className="sticky top-0 z-30 border-b border-pt-line bg-pt-surface">
+        <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center gap-3 px-4 sm:px-6 xl:gap-5">
+          <Link href={home} className="flex min-h-11 shrink-0 items-center gap-2 font-bold text-vt-ink">
+            {/* eslint-disable-next-line @next/next/no-img-element -- next/image writes a style attribute (blocked by CSP) */}
+            <img src="/brand/vinh-thinh-logo.png" alt="" width={478} height={632} className="h-9 w-auto" />
+            {p.brand}
+          </Link>
+          <nav aria-label={p.navMain} className="hidden min-w-0 flex-1 lg:block">
+            <NavLinks profile={nav} variant="bar" />
+          </nav>
+          <div className="ml-auto hidden lg:block">
+            <Dropdown
+              align="end"
+              summaryClass="min-h-11 gap-2 rounded-full pr-1 text-sm font-medium text-pt-text hover:bg-pt-grey-tint"
+              summary={
+                <>
+                  <Avatar profile={profile} />
+                  <span className="hidden max-w-40 truncate xl:block">{profile.full_name || profile.email}</span>
+                  <span className="sr-only xl:hidden">{p.signedInAs}</span>
+                  <Icon name="chevronRight" className="size-3.5 rotate-90 text-pt-muted" />
+                </>
+              }
+            >
+              <div className="w-64 p-1"><UserBlock profile={profile} bare /></div>
+            </Dropdown>
+          </div>
+          <div className="ml-auto lg:hidden">
+            <MobileNav profile={nav} userBlock={<UserBlock profile={profile} />} />
+          </div>
+        </div>
       </header>
 
-      <main id="pt-main" tabIndex={-1} className="flex-1 lg:pl-60">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+      <main id="pt-main" tabIndex={-1} className="flex-1">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-5 sm:px-6 lg:py-6">{children}</div>
       </main>
     </div>
   );

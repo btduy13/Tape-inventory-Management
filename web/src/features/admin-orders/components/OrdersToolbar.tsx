@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { format, formatVnd } from "@/i18n";
 import type { ToastMessage } from "@/features/portal-ui/components/Toast";
-import { buttonClass, checkboxClass, surfaceClass } from "@/features/portal-ui/components/styles";
+import { buttonClass, checkboxClass } from "@/features/portal-ui/components/styles";
 import type { WorkshopUser } from "@/features/workshop/server/queries";
 import type { ListQuery } from "../lib/browser-rpc";
 import { ordersCopy as c } from "../lib/copy";
@@ -30,7 +30,7 @@ const refOf = (o: AdminOrderRow): OrderRef => ({
 export function OrdersToolbar({ tab, rows, selected, query, perms, today, workshopUsers, allOnPage, onSelectPage, onClear, onResult }: Props) {
   const exportIds = selected.filter((o) => !o.is_quote).map((o) => o.id);
   return (
-    <div className={`${surfaceClass} flex flex-col gap-3 p-3 lg:flex-row lg:flex-wrap lg:items-center`}>
+    <div className="flex flex-col gap-x-4 gap-y-2 px-1 lg:flex-row lg:flex-wrap lg:items-center">
       {rows.length > 0 && (
         <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-medium text-pt-text">
           <input type="checkbox" className={checkboxClass} checked={allOnPage} onChange={onSelectPage} />

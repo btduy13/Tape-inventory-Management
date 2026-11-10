@@ -13,7 +13,8 @@ export type Segment = {
   dot: string;
 };
 
-export function SegmentBar({ segments, label }: { segments: readonly Segment[]; label: string }) {
+/** stacked: legend as one column (narrow rail) instead of a row of 4. */
+export function SegmentBar({ segments, label, stacked = false }: { segments: readonly Segment[]; label: string; stacked?: boolean }) {
   const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0);
   let acc = 0;
   return (
@@ -32,7 +33,7 @@ export function SegmentBar({ segments, label }: { segments: readonly Segment[]; 
           );
         })}
       </svg>
-      <ul className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <ul className={`grid grid-cols-2 gap-x-2 ${stacked ? "xl:grid-cols-1" : "gap-y-2 lg:grid-cols-4"}`}>
         {segments.map((s) => (
           <li key={s.key}>
             <Link href={s.href}

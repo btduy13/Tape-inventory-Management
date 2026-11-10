@@ -59,7 +59,8 @@ export async function OrdersView({ searchParams, perms }: { searchParams: RawPar
 
   return (
     <>
-      <PageHeader title={c.title} breadcrumbs={[{ label: c.title }]} actions={newButton} />
+      <PageHeader title={c.title} actions={newButton} />
+      <PillNav label={c.tabsLabel} current={tab} items={LIST_TABS.map((k) => [k, TAB_LABEL[k], tabHref(k)] as const)} />
       {kpi && (
         <StatGrid>
           <StatCard label={l.kpiWarn} value={kpi.dueSoon + kpi.overdue} tone="red" hint={format(l.kpiWarnHint, { soon: kpi.dueSoon, overdue: kpi.overdue })} />
@@ -73,8 +74,7 @@ export async function OrdersView({ searchParams, perms }: { searchParams: RawPar
           )}
         </StatGrid>
       )}
-      <PillNav label={c.tabsLabel} current={tab} items={LIST_TABS.map((k) => [k, TAB_LABEL[k], tabHref(k)] as const)} />
-      <Section variant="plain">
+      <Section variant="plain" className="gap-3!">
         <FilterBar
           basePath={BASE}
           spec={ORDERS_SPEC}

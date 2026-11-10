@@ -126,13 +126,15 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
   const withWorkshop = mode === "create" && !isQuote && type === "bang_keo_in";
 
   return (
-    <form action={action} className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+    <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="type" value={type} />
       {isQuote && <input type="hidden" name="is_quote" value="1" />}
       {orderId && <input type="hidden" name="id" value={orderId} />}
       {frozen && <input type="hidden" name="frozen" value="1" />}
-      <div className="flex min-w-0 flex-col gap-4">
-        {frozen && <InlineStatus tone="info">{c.frozenNote}</InlineStatus>}
+      {frozen && <InlineStatus tone="info">{c.frozenNote}</InlineStatus>}
+      {/* xl: who / what on the left, price and cost on the right. Totals + save stay in the bottom bar. */}
+      <div className={`grid grid-cols-1 gap-4 xl:items-start [&>*]:min-w-0 ${frozen ? "" : "xl:grid-cols-2"}`}>
+       <div className="flex flex-col gap-4">
         <Card title={c.secFormBasic}>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <TextField
@@ -191,19 +193,6 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
 
         {!frozen && axis && <Card title={c.secFormNewAxis}>{visibleFields(AXIS_FIELDS, money).map(field)}</Card>}
 
-        {!frozen && (
-          <Card title={c.secFormPrice}>
-            {priceGroups(visibleFields(PRICE_FIELDS[type], money)).map(([group, fields]) => (
-              <Fragment key={group}>
-                <p className="col-span-full border-t border-pt-line pt-4 text-xs font-semibold uppercase tracking-wide text-pt-muted first:border-t-0 first:pt-0">
-                  {c.priceGroup[group]}
-                </p>
-                {fields.map(field)}
-              </Fragment>
-            ))}
-          </Card>
-        )}
-
         {withWorkshop && (
           <Card title={c.secFormWorkshop}>
             <SelectField
@@ -216,14 +205,30 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
             />
           </Card>
         )}
+       </div>
+
+        {!frozen && (
+          <Card title={c.secFormPrice}>
+            {priceGroups(visibleFields(PRICE_FIELDS[type], money)).map(([group, fields]) => (
+              <Fragment key={group}>
+                <p className="col-span-full border-t border-pt-line pt-4 text-xs font-semibold uppercase tracking-wide text-pt-muted first:border-t-0 first:pt-0">
+                  {c.priceGroup[group]}
+                </p>
+                {fields.map(field)}
+              </Fragment>
+            ))}
+          </Card>
+        )}
       </div>
 
-      <div className="flex flex-col gap-3 lg:sticky lg:top-4">
-        {!frozen && <OrderTotals totals={totals} money={money} />}
+      <div className="sticky bottom-0 z-20 -mx-4 flex flex-col gap-2 border-t border-pt-line bg-pt-surface px-4 py-3 shadow-[0_-6px_16px_-10px_rgb(22_23_58/0.25)] sm:-mx-6 sm:px-6">
         <ActionStatus state={state} />
-        <button type="submit" disabled={pending} className={buttonClass("primary", "md", "w-full")}>
-          {pending ? c.saving : submitLabel}
-        </button>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          {!frozen && <OrderTotals totals={totals} money={money} />}
+          <button type="submit" disabled={pending} className={buttonClass("primary", "md", "ml-auto w-full sm:w-auto sm:min-w-44")}>
+            {pending ? c.saving : submitLabel}
+          </button>
+        </div>
       </div>
     </form>
   );
