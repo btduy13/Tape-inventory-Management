@@ -39,6 +39,18 @@ export const listCopy = {
   axisCommission: "HH {pct}% • {amount}",
   axisProfit: "Lãi ròng {amount}",
   // Row + selection actions
+  // Quick status icons in the row: green = done, red = not yet. Click flips it.
+  quickDelivered: "Đã giao – bấm để đổi thành chưa giao",
+  quickNotDelivered: "Chưa giao – bấm để đánh dấu đã giao",
+  quickSettled: "Đã tất toán – bấm để đổi thành chưa tất toán",
+  quickNotSettled: "Chưa tất toán – bấm để đánh dấu đã tất toán",
+  quickEmailed: "Đã gửi email",
+  quickStepOf: "Công đoạn xưởng của đơn {id}",
+  quickConfirmGiao: "Đánh dấu đơn {id} là đã giao?",
+  quickConfirmGiaoBody: "Việc xưởng của đơn này cũng chuyển sang Đã giao.",
+  quickConfirmUndo: "Đổi đơn {id} thành “{label}”?",
+  quickConfirmStep: "Chuyển đơn {id} sang “{label}”?",
+  quickSave: "Đổi",
   printNote: "In",
   printNoteOf: "In phiếu giao đơn {id}",
   edit: "Sửa",

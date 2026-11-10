@@ -7,7 +7,7 @@ import { useRef, useState, useTransition } from "react";
 import { format } from "@/i18n";
 import { ConfirmDialog } from "@/features/portal-ui/components/ConfirmDialog";
 import type { ToastMessage } from "@/features/portal-ui/components/Toast";
-import { buttonClass } from "@/features/portal-ui/components/styles";
+import { IconButton } from "@/features/portal-ui/components/IconButton";
 import { vnToday } from "@/features/workshop/lib/dates";
 import { fetchAllRows, fetchFullRows, saveBlob, type ListQuery } from "../lib/browser-rpc";
 import { fieldLabel, TYPE_LABEL } from "../lib/copy";
@@ -111,14 +111,13 @@ export function OrdersExcel({ tab, selected, query, perms, onResult }: Props) {
   return (
     <>
       {perms.export && (
-        <button type="button" disabled={busy} onClick={exportExcel} className={buttonClass("secondary", "sm")}>
-          {busy ? l.excelBusy : selected.length > 0 ? l.excelExportSelected : l.excelExport}
-        </button>
+        <IconButton icon="download" size="sm" disabled={busy} onClick={exportExcel}
+          label={busy ? l.excelBusy : selected.length > 0 ? l.excelExportSelected : l.excelExport} />
       )}
       {perms.create && importType && (
         <>
-          <button type="button" disabled={busy} onClick={() => template(importType)} className={buttonClass("secondary", "sm")}>{l.excelTemplate}</button>
-          <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={buttonClass("secondary", "sm")}>{l.excelImport}</button>
+          <IconButton icon="fileDown" size="sm" disabled={busy} onClick={() => template(importType)} label={l.excelTemplate} />
+          <IconButton icon="upload" size="sm" disabled={busy} onClick={() => fileRef.current?.click()} label={l.excelImport} />
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="sr-only" tabIndex={-1} aria-hidden onChange={onPick} />
         </>
       )}

@@ -8,7 +8,8 @@ import { useState, useTransition } from "react";
 import { format } from "@/i18n";
 import { ConfirmDialog } from "@/features/portal-ui/components/ConfirmDialog";
 import { Toast, type ToastMessage } from "@/features/portal-ui/components/Toast";
-import { buttonClass, inputClass } from "@/features/portal-ui/components/styles";
+import { IconButton } from "@/features/portal-ui/components/IconButton";
+import { inputClass } from "@/features/portal-ui/components/styles";
 import { addDays } from "@/features/workshop/lib/dates";
 import type { WorkshopUser } from "@/features/workshop/server/queries";
 import { fieldLabel as f, ordersCopy as c } from "../lib/copy";
@@ -80,23 +81,22 @@ export function OrderActions({ items, workshopUsers, today, onDone, onResult, af
     });
   };
 
-  const btn = buttonClass("secondary", size);
   const count = (n: number) => ({ count: n });
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {can.status && orders.length > 0 && (
-          <button type="button" disabled={pending} onClick={() => setOpen("status")} className={btn}>{c.actStatus}</button>
+          <IconButton icon="swap" size={size} disabled={pending} onClick={() => setOpen("status")} label={c.actStatus} />
         )}
         {can.edit && toWorkshop.length > 0 && (
-          <button type="button" disabled={pending} onClick={() => setOpen("workshop")} className={btn}>{c.actWorkshop}</button>
+          <IconButton icon="workshop" size={size} disabled={pending} onClick={() => setOpen("workshop")} label={c.actWorkshop} />
         )}
         {can.create && quotes.length > 0 && (
-          <button type="button" disabled={pending} onClick={() => setOpen("convert")} className={buttonClass("primary", size)}>{c.actConvert}</button>
+          <IconButton icon="check" size={size} tone="primary" disabled={pending} onClick={() => setOpen("convert")} label={c.actConvert} />
         )}
         {can.delete && items.length > 0 && (
-          <button type="button" disabled={pending} onClick={() => setOpen("delete")} className={buttonClass("danger", size)}>{c.actDelete}</button>
+          <IconButton icon="trash" size={size} tone="danger" disabled={pending} onClick={() => setOpen("delete")} label={c.actDelete} />
         )}
       </div>
 

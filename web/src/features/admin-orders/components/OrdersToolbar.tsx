@@ -1,10 +1,10 @@
 "use client";
 // Toolbar over the list: "Chọn cả trang", "Đã chọn: N đơn · Tổng CN", the bulk actions the user may use
 // (Cập nhật trạng thái, Đưa vào xưởng, Xóa), Xuất đơn (export page with the selected ids) and Excel.
-import Link from "next/link";
 import { format, formatVnd } from "@/i18n";
+import { IconButton, IconLink } from "@/features/portal-ui/components/IconButton";
 import type { ToastMessage } from "@/features/portal-ui/components/Toast";
-import { buttonClass, checkboxClass } from "@/features/portal-ui/components/styles";
+import { checkboxClass } from "@/features/portal-ui/components/styles";
 import type { WorkshopUser } from "@/features/workshop/server/queries";
 import type { ListQuery } from "../lib/browser-rpc";
 import { ordersCopy as c } from "../lib/copy";
@@ -43,19 +43,18 @@ export function OrdersToolbar({ tab, rows, selected, query, perms, today, worksh
           <span className="tabular-nums text-pt-muted">{format(l.selectedDebt, { debt: formatVnd(selectedDebt(selected)) })}</span>
         </p>
       )}
-      <div className="flex flex-wrap gap-2 lg:ml-auto">
+      <div className="flex flex-wrap items-center gap-1.5 lg:ml-auto">
         {selected.length > 0 && (
           <>
             <OrderActions
               items={selected.map(refOf)} workshopUsers={workshopUsers} today={today} onDone={onClear} onResult={onResult}
               can={{ status: perms.status, edit: perms.edit, create: perms.create, delete: perms.delete }}
             />
-            <button type="button" onClick={onClear} className={buttonClass("ghost", "sm")}>{c.clearSelection}</button>
+            <IconButton icon="close" size="sm" onClick={onClear} label={c.clearSelection} />
+            <span aria-hidden className="mx-1 h-6 w-px bg-pt-line-strong" />
           </>
         )}
-        {perms.export && (
-          <Link href={exportHref(exportIds)} className={buttonClass("secondary", "sm")}>{l.exportDocs}</Link>
-        )}
+        {perms.export && <IconLink icon="fileOut" size="sm" href={exportHref(exportIds)} label={l.exportDocs} />}
         <OrdersExcel tab={tab} selected={selected} query={query} perms={perms} onResult={onResult} />
       </div>
     </div>

@@ -29,7 +29,7 @@ describe("listPerms", () => {
   it("admin has all; others only the ticked codes", () => {
     expect(Object.values(listPerms({ role: "admin", is_active: true, nav_tabs: null, permissions: [] })).every(Boolean)).toBe(true);
     expect(listPerms({ role: "staff", is_active: true, nav_tabs: null, permissions: ["orders.export", "orders.status"] })).toEqual({
-      money: false, create: false, edit: false, status: true, delete: false, export: true,
+      money: false, create: false, edit: false, status: true, delete: false, export: true, steps: false,
     });
   });
 });

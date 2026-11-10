@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { format, formatVnd } from "@/i18n";
 import { DataTable, type Column } from "@/features/portal-ui/components/DataTable";
+import { IconButton, IconLink } from "@/features/portal-ui/components/IconButton";
 import { ToneBadge } from "@/features/portal-ui/components/StatusBadge";
 import { Toast, type ToastMessage } from "@/features/portal-ui/components/Toast";
 import { checkboxClass } from "@/features/portal-ui/components/styles";
@@ -16,7 +17,7 @@ import { fetchRows, type ListQuery } from "../lib/browser-rpc";
 import { ordersCopy as c } from "../lib/copy";
 import { dateVn, money } from "../lib/format";
 import { listCopy as l } from "../lib/list-copy";
-import { axisLine, statusBadges } from "../lib/list-row";
+import { axisLine } from "../lib/list-row";
 import { ORDERS_SPEC, dueTone, type OrderTab } from "../lib/list-spec";
 import { exportHref, orderEditHref, orderHref } from "../lib/paths";
 import type { ListPerms } from "../lib/perms";
@@ -24,6 +25,7 @@ import type { AdminOrderRow, OrderType } from "../lib/types";
 import { AttachmentsDialog } from "./AttachmentsDialog";
 import { OrdersAutoRefresh } from "./OrdersAutoRefresh";
 import { OrdersToolbar } from "./OrdersToolbar";
+import { QuickStatus, useQuickStatus } from "./QuickStatus";
 
 type Props = {
   tab: OrderTab;
@@ -41,7 +43,6 @@ type Props = {
 };
 
 const key = (o: AdminOrderRow) => `${o.type}:${o.id}`;
-const rowLink = "whitespace-nowrap font-medium text-vt-blue underline-offset-2 hover:underline";
 
 export function OrdersTable({ tab, rows, state, query, total, basePath, today, perms, workshopUsers, filtered, failed, empty }: Props) {
   // Server rows win whenever a new render arrives (filter, page, after an action); polling replaces them in between.
@@ -59,6 +60,7 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
     [query],
   );
 
+  const quick = useQuickStatus(setToast, () => { void poll(); });
   const shown = live.rows;
   const selected = shown.filter((o) => picked.has(key(o)));
   const allOnPage = shown.length > 0 && selected.length === shown.length;
@@ -93,18 +95,18 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
       );
     } },
     { key: "debt", header: l.colDebt, sortKey: "cong_no_khach", align: "end", className: "whitespace-nowrap tabular-nums", cell: (o) =>
-      o.da_tat_toan && !o.is_quote ? <ToneBadge tone="green">{c.settled}</ToneBadge> : money(o.cong_no_khach) },
+      <span className={o.da_tat_toan && !o.is_quote ? "text-pt-muted" : ""}>{money(o.cong_no_khach)}</span> },
     ...(perms.money ? [{ key: "supplier", header: l.colSupplier, align: "end", className: "whitespace-nowrap tabular-nums",
       cell: (o: AdminOrderRow) => money(o.cong_no_ncc) } satisfies Column<AdminOrderRow>] : []),
     { key: "status", header: l.colStatus, className: "whitespace-nowrap", cell: (o) =>
-      statusBadges(o).map((b) => <ToneBadge key={b.label} tone={b.tone}>{b.label}</ToneBadge>) },
+      <QuickStatus o={o} perms={perms} busy={quick.busy} onChange={quick.change} /> },
     { key: "actions", header: l.colActions, className: "whitespace-nowrap", cell: (o) => (
-      <span className="flex gap-3 text-sm">
+      <span className="flex gap-1.5">
         {perms.export && !o.is_quote && (
-          <Link href={exportHref([o.id], "phieu_giao_hang")} aria-label={format(l.printNoteOf, { id: o.id })} className={rowLink}>{l.printNote}</Link>
+          <IconLink icon="printer" size="sm" href={exportHref([o.id], "phieu_giao_hang")} label={format(l.printNoteOf, { id: o.id })} />
         )}
-        {perms.edit && <Link href={orderEditHref(o.type, o.id)} aria-label={format(l.editOf, { id: o.id })} className={rowLink}>{l.edit}</Link>}
-        <button type="button" onClick={() => setFiles({ type: o.type, id: o.id })} aria-label={format(l.filesOf, { id: o.id })} className={rowLink}>{l.files}</button>
+        {perms.edit && <IconLink icon="pencil" size="sm" href={orderEditHref(o.type, o.id)} label={format(l.editOf, { id: o.id })} />}
+        <IconButton icon="paperclip" size="sm" onClick={() => setFiles({ type: o.type, id: o.id })} label={format(l.filesOf, { id: o.id })} />
       </span>
     ) },
   ];
@@ -149,6 +151,7 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
         empty={empty}
         error={failed ? c.loadError : null}
       />
+      {quick.dialog}
       <AttachmentsDialog order={files} canEdit={perms.edit} onClose={() => setFiles(null)} />
       {/* Import errors can list several rows: give them time to be read. */}
       <Toast toast={toast} durationMs={toast?.tone === "error" ? 12000 : 4000} />
