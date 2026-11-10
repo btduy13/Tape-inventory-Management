@@ -6,7 +6,7 @@ Admin area: users & roles (invite via auth.admin with app_metadata.role, incl. t
 
 ## Routes
 
-- /admin (`AdminDashboard`: month KPIs from rpc `admin_dashboard` (0029, admin only), links into /admin/don-hang filters; then the lead overview from features/orders)
+- /admin (`AdminDashboard`: rpc `admin_overview` (0034, orders.view; cost side null without orders.money): attention strip linking to filtered lists, 4 money KPIs vs last month, workshop pipeline bar, 12-month SVG chart, overdue + top debtor tables)
 - /admin/users (`UsersView`: role stats, FilterBar role/status/search, DataTable with role change + lock behind ConfirmSubmit, invite dialog, permission matrix)
 - /admin/quy-cach (`TapeSpecsView`: widths table with add / up-down / on-off / delete, length range + default thickness)
 - /admin/presets (`PresetsView`: table, add / edit dialog, show-hide; presets are never deleted)

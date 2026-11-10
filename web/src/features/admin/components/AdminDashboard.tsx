@@ -1,44 +1,57 @@
-// /admin KPI overview (server component): month sales, debt, deadlines, workshop pipeline.
-// Admin pages only: shows revenue, profit and debt.
-import { formatVnd, getDictionary } from "@/i18n";
-import { ErrorState, Section, StatCard, StatGrid } from "@/features/portal-ui";
-import { vndShort } from "@/features/admin-orders/lib/format";
+// /admin overview (server component), read top to bottom on every width: what needs action today,
+// 4 money KPIs of the month, workshop pipeline, 12-month chart, two short tables.
+// Money (KPIs, chart, debtors) only with orders.money; the RPC nulls the cost side otherwise.
+import { getDictionary } from "@/i18n";
+import { ErrorState, Section } from "@/features/portal-ui";
+import { SegmentBar, type Segment } from "@/features/portal-ui/components/SegmentBar";
 import { dashboardCopy as c } from "../lib/copy";
-import { OPEN_STEPS, ordersHref, type AdminDashboard as Data } from "../lib/dashboard";
+import { PIPE_STEPS, pipelineHref, type Overview, type PipeStep } from "../lib/overview";
+import { AttentionStrip } from "./overview/AttentionStrip";
+import { MoneyKpis } from "./overview/MoneyKpis";
+import { RevenueChart } from "./overview/RevenueChart";
+import { DebtorsTable, OverdueTable } from "./overview/OverviewTables";
 
 const t = getDictionary();
 
-export function AdminDashboard({ data }: { data: Data | null }) {
+const PIPE_COLOR: Record<PipeStep, { fill: string; dot: string }> = {
+  none: { fill: "fill-pt-red-ink", dot: "bg-pt-red-ink" },
+  cho_san_xuat: { fill: "fill-pt-line-strong", dot: "bg-pt-line-strong" },
+  dang_san_xuat: { fill: "fill-vt-blue", dot: "bg-vt-blue" },
+  san_sang_giao: { fill: "fill-pt-green-ink", dot: "bg-pt-green-ink" },
+};
+
+export function AdminDashboard({ data }: { data: Overview | null }) {
   if (!data) return <ErrorState body={c.loadError} />;
-  const month: Record<string, string> = data.monthStart ? { from: data.monthStart } : {};
-  // Same as OrdersView: short amount on the card ("125 tr"), the exact one in the hint (fits 375px).
-  const moneyCard = (n: number, hint?: string) => {
-    const exact = Math.abs(n) >= 1e6 ? formatVnd(n) : undefined;
-    return { value: vndShort(n), hint: [exact, hint].filter(Boolean).join(" · ") || undefined };
-  };
+  const segments: Segment[] = PIPE_STEPS.map((s) => ({
+    key: s, label: s === "none" ? c.notInWorkshopStep : t.productionStep[s], value: data.pipeline[s], href: pipelineHref(s), ...PIPE_COLOR[s],
+  }));
+  const pipeTotal = segments.reduce((sum, s) => sum + s.value, 0);
   return (
-    <div className="flex flex-col gap-6">
-      <Section id="kinh-doanh" title={c.title} description={c.description} variant="plain">
-        <StatGrid>
-          <StatCard label={c.orders} value={data.orders} href={ordersHref({ type: "all", ...month })} />
-          <StatCard label={c.revenue} {...moneyCard(data.revenue, c.revenueHint)} href={ordersHref({ type: "all", ...month })} />
-          <StatCard label={c.profit} {...moneyCard(data.profit)} tone={data.profit < 0 ? "red" : "green"} href={ordersHref({ type: "all", ...month })} />
-          <StatCard label={c.openDebt} {...moneyCard(data.openDebt, c.debtHint)} tone="amber" href={ordersHref({ type: "all", settled: "0" })} />
-          <StatCard label={c.supplierDebt} {...moneyCard(data.supplierDebt, c.debtHint)} href={ordersHref({ type: "all", settled: "0" })} />
-          <StatCard label={c.overdue} value={data.overdue} tone={data.overdue > 0 ? "red" : undefined} hint={c.overdueHint} href={ordersHref({ type: "all", due: "overdue" })} />
-          <StatCard label={c.dueSoon} value={data.dueSoon} tone={data.dueSoon > 0 ? "yellow" : undefined} hint={c.dueSoonHint} href={ordersHref({ type: "all", due: "soon" })} />
-          <StatCard label={c.pendingQuotes} value={data.pendingQuotes} />
-          <StatCard label={c.newLeads} value={data.newLeads} tone="blue" />
-        </StatGrid>
+    <div className="flex flex-col gap-8">
+      <AttentionStrip a={data.attention} />
+      {data.money && (
+        <section aria-labelledby="kinh-doanh-title" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 id="kinh-doanh-title" className="text-base font-semibold text-pt-text">{c.kpiTitle(`${Number(data.monthStart.slice(5, 7))}/${data.monthStart.slice(0, 4)}`)}</h2>
+            <p className="text-xs text-pt-muted">{c.kpiNote}</p>
+          </div>
+          <MoneyKpis data={data} />
+        </section>
+      )}
+      <Section id="xuong" title={c.pipelineTitle}>
+        {pipeTotal === 0 ? <p className="text-sm text-pt-muted">{c.pipelineEmpty}</p> : (
+          <SegmentBar segments={segments} label={c.pipelineLabel(segments.map((s) => `${s.label} ${s.value}`).join(", "))} />
+        )}
       </Section>
-      <Section id="xuong" title={c.pipelineTitle} variant="plain">
-        <StatGrid>
-          <StatCard label={c.notInWorkshop} value={data.notInWorkshop} tone={data.notInWorkshop > 0 ? "red" : undefined} hint={c.notInWorkshopHint} href={ordersHref({ step: "none", delivered: "0" })} />
-          {OPEN_STEPS.map((s) => (
-            <StatCard key={s} label={t.productionStep[s]} value={data.steps[s]} href={ordersHref({ step: s })} />
-          ))}
-        </StatGrid>
-      </Section>
+      {data.money && (
+        <Section id="doanh-thu" title={c.chartTitle} description={c.chartDesc}>
+          <RevenueChart months={data.months} money={data.money} />
+        </Section>
+      )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
+        <OverdueTable rows={data.overdueList} />
+        {data.money && <DebtorsTable rows={data.topDebtors} />}
+      </div>
     </div>
   );
 }

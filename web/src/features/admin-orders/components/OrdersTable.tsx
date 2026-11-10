@@ -51,11 +51,13 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
   const [files, setFiles] = useState<{ type: OrderType; id: string } | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
-  const poll = useCallback(() => {
-    void fetchRows(query).then((next) => {
-      if (next) setLive((s) => ({ src: s.src, rows: next }));
-    });
-  }, [query]);
+  const poll = useCallback(
+    () =>
+      fetchRows(query).then((next) => {
+        if (next) setLive((s) => ({ src: s.src, rows: next }));
+      }),
+    [query],
+  );
 
   const shown = live.rows;
   const selected = shown.filter((o) => picked.has(key(o)));

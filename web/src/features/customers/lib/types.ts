@@ -68,4 +68,25 @@ export type ReviewRow = {
   group_size: number;
   group_ids: string[];
   total_count: number;
+  /** 0036: every row of the group, newest first. */
+  members: ReviewMember[];
+  /** 0036: other groups whose name only differs by legal form / title (suggestions to merge). */
+  similar_groups: SimilarGroup[];
+  /** 0036: rows in every pending group (summary). */
+  total_rows: number;
 };
+
+export type ReviewMember = {
+  source_table: string;
+  order_type: OrderType | "lead";
+  source_id: string;
+  thoi_gian: string | null;
+  ten_khach_hang: string | null;
+  sdt_khach_hang: string | null;
+  tong_tien: number | null;
+};
+
+export type SimilarGroup = { source_table: string; source_id: string; ten_khach_hang: string | null; group_size: number };
+
+/** rpc('admin_customer_review_bulk_create'). batch_id null when nothing was created. */
+export type BulkResult = { batch_id: string | null; customers_created: number; rows_linked: number; skipped: number };

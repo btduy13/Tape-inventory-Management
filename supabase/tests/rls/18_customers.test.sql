@@ -61,7 +61,7 @@ select is(public.normalize_vn_phone('(028) 3812 3456'), '02838123456', 'landline
 select is(public.normalize_vn_phone('0901234567 / 0912345678'), null, 'two numbers -> null');
 select is(public.normalize_vn_phone('12345'), null, 'too short -> null');
 select is(public.normalize_vn_phone(null), null, 'null -> null');
-select is(public.normalize_customer_name('  Anh   TUẤN '), 'anh tuấn', 'name: trim, collapse spaces, lower');
+select is(public.normalize_customer_name('  Anh   TUẤN '), 'anh tuan', 'name: trim, collapse spaces, lower (accents dropped since 0036)');
 
 -- Schema and privileges -----------------------------------------------------------------------
 select ok(

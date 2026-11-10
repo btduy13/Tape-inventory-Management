@@ -39,7 +39,10 @@ export async function updateSession(
     },
   });
 
-  // Do not put code between createServerClient and getUser (Supabase SSR guidance).
-  const { data } = await supabase.auth.getUser();
-  return { response, userId: data.user?.id ?? null };
+  // Do not put code between createServerClient and getClaims (Supabase SSR guidance).
+  // getClaims refreshes an expiring session (writes the cookie via setAll) and verifies the JWT
+  // locally with the cached JWKS when the project uses asymmetric signing keys; with a legacy
+  // symmetric secret it falls back to an Auth server call, like getUser.
+  const { data } = await supabase.auth.getClaims();
+  return { response, userId: data?.claims.sub ?? null };
 }

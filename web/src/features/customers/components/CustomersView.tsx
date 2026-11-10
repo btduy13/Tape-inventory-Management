@@ -9,10 +9,11 @@ import { PageHeader, Section } from "@/features/portal-ui/components/Section";
 import { buttonClass } from "@/features/portal-ui/components/styles";
 import { parseListParams, type RawParams } from "@/features/portal-ui/lib/list-params";
 import { dateTimeVn, money, plain, toNumber } from "@/features/admin-orders/lib/format";
+import { format } from "@/i18n";
 import { customersCopy as c } from "../lib/copy";
 import { CUSTOMERS_SPEC, pageArgs } from "../lib/list-spec";
 import type { CustomerRow } from "../lib/types";
-import { listCustomers } from "../server/queries";
+import { listCustomers, listReview } from "../server/queries";
 import { CustomerForm } from "./CustomerForm";
 
 const BASE = ROUTES.adminCustomers;
@@ -35,8 +36,12 @@ const columns: Column<CustomerRow>[] = [
 
 export async function CustomersView({ searchParams }: { searchParams: RawParams }) {
   const state = parseListParams(CUSTOMERS_SPEC, searchParams);
-  const { rows, total, sumDebt, failed } = await listCustomers(await createClient(), state.q, pageArgs(state));
+  const db = await createClient();
+  const { rows, total, sumDebt, failed } = await listCustomers(db, state.q, pageArgs(state));
   const review = <Link href={ROUTES.adminCustomerReview} className={buttonClass("secondary")}>{c.reviewButton}</Link>;
+  // No customer yet: point at the review queue (customers are only created from there or by hand).
+  const queue = !failed && total === 0 && !state.q ? await listReview(db, { p_limit: 1, p_offset: 0 }) : null;
+  const pending = queue && !queue.failed && queue.total > 0 ? { groups: queue.total, rows: queue.totalRows } : null;
 
   return (
     <>
@@ -56,7 +61,11 @@ export async function CustomersView({ searchParams }: { searchParams: RawParams 
           rowHref={(r) => ROUTES.adminCustomer(r.id)}
           list={{ basePath: BASE, spec: CUSTOMERS_SPEC, state, total }}
           filtered={!!state.q}
-          empty={{ title: c.empty, body: c.emptyBody }}
+          empty={pending ? {
+            title: format(c.pendingTitle, pending),
+            body: format(c.pendingBody, pending),
+            action: <Link href={ROUTES.adminCustomerReview} className={buttonClass("primary")}>{format(c.pendingAction, pending)}</Link>,
+          } : { title: c.empty, body: c.emptyBody }}
           error={failed ? c.loadError : null}
         />
       </Section>

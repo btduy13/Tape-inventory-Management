@@ -1,116 +1,107 @@
-// "Các đơn báo giá": filters (từ khóa, loại, tháng) and the tree quote -> Kích thước -> Trục
-// (quotations.js:905-1026). Server component; the table scrolls inside its own box on phones.
+// "Báo giá" list: status tabs (?tab=), search + type + month (admin_quotes_list, 0032), then one
+// row per quote (table on >= md, cards on phones). Sizes / axes are a summary chip here; the tree
+// is on the detail page. Server component.
 import Link from "next/link";
+import { format, getDictionary } from "@/i18n";
 import { createClient } from "@/lib/supabase/server";
-import { ErrorState, EmptyState } from "@/features/portal-ui/components/States";
-import { buttonClass, inputClass, surfaceClass } from "@/features/portal-ui/components/styles";
-import { dateVn, money, plain } from "@/features/admin-orders/lib/format";
-import { grandTotal, listPriceSummary, monthRange, normalizeItems } from "../lib/stored";
-import { TYPE_LABEL } from "../lib/paths";
+import { ROUTES } from "@/lib/routes";
+import { DataTable, type Column } from "@/features/portal-ui/components/DataTable";
+import { FilterBar, type FilterControl } from "@/features/portal-ui/components/FilterBar";
+import { buttonClass } from "@/features/portal-ui/components/styles";
+import { listHref, pageSlice, parseListParams, patchListState, type ListState, type RawParams } from "@/features/portal-ui/lib/list-params";
+import { PillNav } from "@/features/admin-orders/components/badges";
+import { dateVn, money } from "@/features/admin-orders/lib/format";
+import { MONTHS, QUOTE_LIST_TYPES, QUOTES_SPEC, quoteStatus, sizeSummary, splitByTab, type QuoteStatus } from "../lib/list";
+import { newQuoteHref, quotePrintHref } from "../lib/paths";
+import { grandTotal, monthRange, normalizeItems, type QuoteRow } from "../lib/stored";
 import { listQuotes } from "../server/queries";
 import { QuoteRowActions, type QuoteCan } from "./QuoteRowActions";
+import { QuoteStatusBadge, STATUS_LABEL, typeShort } from "./QuoteStatusBadge";
 
-type Props = { searchParams: Record<string, string | string[] | undefined>; can: QuoteCan };
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-const TYPES = ["all", "bang_keo_in", "bang_keo", "truc_in", "thank_you"];
+const c = getDictionary().baoGia;
+const BASE = ROUTES.adminQuotes;
 
-export async function QuotesView({ searchParams, can }: Props) {
-  const q = one(searchParams.q).trim().slice(0, 100);
-  const type = TYPES.includes(one(searchParams.type)) ? one(searchParams.type) : "all";
-  const month = Number(one(searchParams.month));
-  const [from, to] = month >= 1 && month <= 12 ? monthRange(month) : [null, null];
-  const rows = await listQuotes(await createClient(), { type, q, from, to });
+type Row = { key: string; type: string; id: string; quote: QuoteRow; summary: string; total: number; status: QuoteStatus };
+
+const text = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+
+export async function QuotesView({ searchParams, can }: { searchParams: RawParams; can: QuoteCan }) {
+  const state = parseListParams(QUOTES_SPEC, searchParams);
+  const type = state.filters.type?.[0] ?? "all";
+  const month = Number(state.filters.month?.[0] ?? 0);
+  const [from, to] = month ? monthRange(month) : [null, null];
+  const listed = await listQuotes(await createClient(), { type, q: state.q, from, to });
+
+  const rows: Row[] = (listed ?? []).map(({ type: t, quote }) => {
+    const items = normalizeItems(quote, t);
+    const id = text(quote.id);
+    return { key: `${t}:${id}`, type: t, id, quote, summary: sizeSummary(items), total: grandTotal(items), status: quoteStatus(quote) };
+  });
+  const { counts, tab, shown } = splitByTab(rows, state);
+  const tabHref = (k: string) =>
+    listHref(BASE, QUOTES_SPEC, patchListState(state, { filters: { ...state.filters, tab: k === "all" ? [] : [k] } }));
+  const filtered = !!state.q || type !== "all" || month > 0;
+  const anyQuote = counts.all > 0 || filtered;
+
+  const controls: FilterControl[] = [
+    { kind: "select", name: "type", label: c.filterType, options: QUOTE_LIST_TYPES.map((t) => ({ value: t, label: typeShort(t) })) },
+    { kind: "select", name: "month", label: c.filterMonth, options: MONTHS.map((m) => ({ value: m, label: format(c.month, { n: m }) })) },
+  ];
+
+  const columns: Column<Row>[] = [
+    {
+      key: "customer", header: c.colCustomer, mobile: "title", cell: (r) => (
+        <span className="inline-flex flex-wrap items-baseline gap-x-2 lg:flex-nowrap lg:whitespace-nowrap">
+          <span>{text(r.quote.ten_khach_hang) || c.noCustomer}</span>
+          {text(r.quote.sdt_khach_hang) && <span className="text-xs font-normal text-pt-muted tabular-nums">{text(r.quote.sdt_khach_hang)}</span>}
+        </span>
+      ),
+    },
+    { key: "product", header: c.colProduct, className: "lg:whitespace-nowrap", cell: (r) => text(r.quote.ten_hang) || "—" },
+    { key: "type", header: c.colType, className: "whitespace-nowrap", cell: (r) => typeShort(r.type) },
+    {
+      key: "scope", header: c.colScope, className: "whitespace-nowrap", cell: (r) => (
+        <span className="inline-flex rounded-md bg-pt-grey-tint px-2 py-0.5 text-xs font-medium text-pt-grey-ink tabular-nums">{r.summary}</span>
+      ),
+    },
+    { key: "total", header: c.colTotal, align: "end", className: "whitespace-nowrap tabular-nums font-semibold", cell: (r) => money(r.total) },
+    { key: "created", header: c.colCreated, className: "whitespace-nowrap tabular-nums text-pt-muted", cell: (r) => dateVn(r.quote.thoi_gian) },
+    { key: "code", header: c.colCode, className: "hidden whitespace-nowrap text-xs text-pt-muted 2xl:table-cell", cell: (r) => r.id },
+    { key: "status", header: c.colStatus, mobile: "badge", cell: (r) => <QuoteStatusBadge status={r.status} /> },
+    { key: "actions", header: c.colActions, className: "whitespace-nowrap", cell: (r) => <QuoteRowActions type={r.type} id={r.id} can={can} /> },
+  ];
+
+  const create = can.convert ? <Link href={newQuoteHref("bang_keo_in")} className={buttonClass("primary")}>{c.create}</Link> : undefined;
+  const clear = <Link href={tab === "all" ? BASE : tabHref(tab)} className={buttonClass("secondary")}>{getDictionary().portalUi.clearFilters}</Link>;
 
   return (
     <div className="flex flex-col gap-4">
-      <form method="get" className={`${surfaceClass} grid grid-cols-1 gap-3 p-4 sm:grid-cols-4 sm:items-end`}>
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-pt-text">
-          Tìm kiếm từ khóa
-          <input name="q" defaultValue={q} placeholder="Mã, tên hàng, khách" className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-pt-text">
-          Loại báo giá
-          <select name="type" defaultValue={type} className={inputClass}>
-            {TYPES.map((t) => <option key={t} value={t}>{t === "all" ? "Tất cả" : TYPE_LABEL[t]}</option>)}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-pt-text">
-          Tháng lọc
-          <select name="month" defaultValue={month >= 1 && month <= 12 ? String(month) : ""} className={inputClass}>
-            <option value="">Tất cả</option>
-            {Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>Tháng {i + 1}</option>)}
-          </select>
-        </label>
-        <button type="submit" className={buttonClass("secondary")}>Làm mới</button>
-      </form>
-
-      {rows === null ? (
-        <ErrorState body="Không tải được danh sách báo giá." />
-      ) : rows.length === 0 ? (
-        <EmptyState title="Chưa có báo giá" />
-      ) : (
-        <div className={`${surfaceClass} overflow-x-auto`}>
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-pt-grey-tint text-left text-xs uppercase text-pt-muted">
-              <tr>
-                <th className="px-3 py-2">Mã báo giá</th><th className="px-3 py-2">Ngày tạo</th><th className="px-3 py-2">Tên hàng</th>
-                <th className="px-3 py-2">Tên khách hàng</th><th className="px-3 py-2 text-right">Số lượng</th>
-                <th className="px-3 py-2 text-right">Đơn giá bán</th><th className="px-3 py-2 text-right">Thành tiền</th>
-                <th className="px-3 py-2 text-right">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ type: t, quote }) => {
-                const id = String(quote.id);
-                const items = normalizeItems(quote, t);
-                const price = listPriceSummary(quote, items);
-                const axes = items.reduce((n, i) => n + i.axes.length, 0);
-                return [
-                  <tr key={`${t}:${id}`} className="border-t border-pt-line bg-pt-surface align-top">
-                    <td className="px-3 py-2 font-semibold">{id}</td>
-                    <td className="px-3 py-2">{dateVn(quote.thoi_gian)}</td>
-                    <td className="px-3 py-2">
-                      <span className="font-semibold">{String(quote.ten_hang ?? "")}</span> <span className="text-pt-muted">({TYPE_LABEL[t]})</span>
-                      <small className="block text-pt-muted">{items.length} kích thước{axes ? ` · ${axes} trục` : ""}</small>
-                    </td>
-                    <td className="px-3 py-2">{String(quote.ten_khach_hang ?? "")}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{plain(price.quantity)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{price.multiple ? `Nhiều kích thước / TB ${money(price.unitPrice)}` : money(price.unitPrice)}</td>
-                    <td className="px-3 py-2 text-right font-bold tabular-nums">{money(grandTotal(items))}</td>
-                    <td className="px-3 py-2"><QuoteRowActions type={t} id={id} can={can} /></td>
-                  </tr>,
-                  ...items.flatMap((item, i) => [
-                    <tr key={`${t}:${id}:${i}`} className="border-t border-pt-line text-pt-text">
-                      <td className="px-3 py-1.5 pl-6 text-pt-muted" colSpan={2}>{i === items.length - 1 ? "└─" : "├─"} Kích thước {i + 1}</td>
-                      <td className="px-3 py-1.5" colSpan={2}>
-                        <span className="font-semibold">{item.specification}</span>
-                        {item.details?.printColor ? <small className="block text-pt-muted">Màu in: {String(item.details.printColor)}</small> : null}
-                      </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{plain(item.quantity)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{money(item.unitPrice)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{money(item.total)}</td>
-                      <td />
-                    </tr>,
-                    ...item.axes.map((a, j) => (
-                      <tr key={`${t}:${id}:${i}:${j}`} className="text-pt-muted">
-                        <td className="px-3 py-1 pl-10" colSpan={2}>└─ Trục {j + 1}</td>
-                        <td className="px-3 py-1" colSpan={2}>{a.name}{a.circumference ? ` · Chu vi ${plain(a.circumference)}` : ""}</td>
-                        <td className="px-3 py-1 text-right tabular-nums">{plain(a.quantity)}</td>
-                        <td className="px-3 py-1 text-right tabular-nums">{money(a.unitPrice)}</td>
-                        <td className="px-3 py-1 text-right tabular-nums">
-                          {money(a.total)}<small className="block">VAT {plain(a.vatPercent)}% = {money(a.vat)}</small>
-                        </td>
-                        <td />
-                      </tr>
-                    )),
-                  ]),
-                ];
-              })}
-            </tbody>
-          </table>
-        </div>
+      {anyQuote && (
+        <>
+          <PillNav
+            label={c.tabsLabel}
+            current={tab}
+            items={(["all", "chua_gui", "da_gui"] as const).map((k) => [k, `${k === "all" ? c.tabAll : STATUS_LABEL[k]} · ${counts[k]}`, tabHref(k)] as const)}
+          />
+          <FilterBar basePath={BASE} spec={QUOTES_SPEC} state={state} controls={controls} searchPlaceholder={c.searchPlaceholder} pinned={["tab"]} />
+        </>
       )}
-      {rows && rows.length > 0 && <p className="text-xs text-pt-muted">{rows.length} báo giá · <Link href="?" className="underline">Bỏ lọc</Link></p>}
+      <DataTable
+        caption={c.caption}
+        columns={columns}
+        rows={pageSlice(shown, state)}
+        rowKey={(r) => r.key}
+        rowHref={(r) => quotePrintHref(r.type, r.id)}
+        list={shown.length > state.pageSize ? { basePath: BASE, spec: QUOTES_SPEC, state: state as ListState, total: shown.length } : undefined}
+        error={listed === null ? c.loadError : null}
+        filtered={filtered}
+        empty={
+          filtered ? { action: clear }
+          : counts.all > 0 ? { title: c.emptyTab }
+          : { title: c.emptyTitle, body: c.emptyBody, action: create }
+        }
+      />
+      {shown.length > 0 && <p className="text-xs text-pt-muted">{format(c.count, { count: shown.length })}</p>}
     </div>
   );
 }

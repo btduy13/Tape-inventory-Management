@@ -9,10 +9,14 @@ import { hasPerm } from "@/lib/auth/permissions";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
 import { customersCopy as c } from "../lib/copy";
-import { customerFormSchema, customerIdSchema, mergeSchema, reviewKeySchema } from "../lib/schemas";
-import { createCustomer, mergeCustomers, resolveReview, updateCustomer, type FailReason } from "./mutations";
+import { batchIdSchema, bulkRowsSchema, customerFormSchema, customerIdSchema, mergeSchema, reviewKeySchema } from "../lib/schemas";
+import {
+  bulkCreateFromReview, createCustomer, mergeCustomers, regroupReview, resolveReview, undoReviewBatch, updateCustomer, type FailReason,
+} from "./mutations";
 
 export type CustomerActionState = { status: "idle" | "ok" | "error"; message?: string };
+/** Bulk create result: batchId set when customers were created (undo button). */
+export type BulkActionState = CustomerActionState & { batchId?: string };
 
 const ERROR: Record<FailReason, string> = {
   forbidden: c.errorForbidden, invalid: c.errorValidation, not_found: c.errorNotFound, generic: c.errorGeneric,
@@ -101,4 +105,48 @@ export async function resolveReviewAction(_prev: CustomerActionState, form: Form
   revalidatePath(ROUTES.adminCustomerReview);
   revalidatePath(ROUTES.adminCustomers);
   return { status: "ok", message: c.reviewDone };
+}
+
+function revalidateReview() {
+  revalidatePath(ROUTES.adminCustomerReview);
+  revalidatePath(ROUTES.adminCustomers);
+}
+
+/** One new customer per checked group (form field `row`, repeated). */
+export async function bulkCreateAction(_prev: BulkActionState, form: FormData): Promise<BulkActionState> {
+  if (!(await isAdmin())) return err("forbidden");
+  const rows = [...new Set(form.getAll("row").filter((v): v is string => typeof v === "string"))];
+  if (rows.length === 0) return { status: "error", message: c.bulkPickOne };
+  const parsed = bulkRowsSchema.safeParse(rows);
+  if (!parsed.success) return err("invalid");
+  const r = await bulkCreateFromReview(await createClient(), parsed.data);
+  if (!r.ok) return err(r.reason);
+  revalidateReview();
+  const { customers_created: created, rows_linked: linked, skipped, batch_id } = r.result;
+  const message = format(c.bulkDone, { created, linked }) + (skipped > 0 ? ` ${format(c.bulkSkipped, { n: skipped })}` : "");
+  return { status: created > 0 ? "ok" : "error", message: created > 0 ? message : c.bulkNothing, batchId: batch_id ?? undefined };
+}
+
+export async function undoBatchAction(_prev: CustomerActionState, form: FormData): Promise<CustomerActionState> {
+  if (!(await isAdmin())) return err("forbidden");
+  const id = batchIdSchema.safeParse(str(form, "batch_id"));
+  if (!id.success) return err("invalid");
+  const r = await undoReviewBatch(await createClient(), id.data);
+  if (!r.ok) return err(r.reason);
+  revalidateReview();
+  return { status: "ok", message: format(c.undoDone, { unlinked: r.unlinked, deleted: r.deleted }) };
+}
+
+/** "Gộp vào nhóm khác": target = 'source_table:source_id' of a row of the other group. */
+export async function regroupAction(_prev: CustomerActionState, form: FormData): Promise<CustomerActionState> {
+  if (!(await isAdmin())) return err("forbidden");
+  const [tt, ...rest] = (str(form, "target") ?? "").split(":");
+  const source = reviewKeySchema.safeParse({ source_table: str(form, "source_table"), source_id: str(form, "source_id") });
+  const target = reviewKeySchema.safeParse({ source_table: tt, source_id: rest.join(":") });
+  if (!source.success) return err("invalid");
+  if (!target.success) return { status: "error", message: c.regroupPick };
+  const r = await regroupReview(await createClient(), source.data, target.data);
+  if (!r.ok) return err(r.reason);
+  revalidateReview();
+  return { status: "ok", message: c.regroupDone };
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
-import { customerFormSchema, mergeSchema, reviewKeySchema } from "../lib/schemas";
-import { createCustomer, mergeCustomers, resolveReview, updateCustomer } from "./mutations";
+import { bulkRowsSchema, customerFormSchema, mergeSchema, reviewKeySchema } from "../lib/schemas";
+import { bulkCreateFromReview, createCustomer, mergeCustomers, regroupReview, resolveReview, undoReviewBatch, updateCustomer } from "./mutations";
 
 function db(result: { data?: unknown; error?: { code: string } | null }) {
   const rpc = vi.fn().mockResolvedValue({ data: result.data ?? null, error: result.error ?? null });
@@ -36,6 +36,24 @@ describe("customer mutations", () => {
     expect(r.rpc).toHaveBeenLastCalledWith("admin_customer_review_resolve", { p_source_table: "leads", p_source_id: "x" });
   });
 
+  it("call the 0036 bulk RPCs", async () => {
+    const result = { batch_id: ID, customers_created: 2, rows_linked: 6, skipped: 0 };
+    const b = db({ data: result });
+    expect(await bulkCreateFromReview(b.client, ["bang_keo_orders:B-1"])).toEqual({ ok: true, result });
+    expect(b.rpc).toHaveBeenCalledWith("admin_customer_review_bulk_create", { p_rows: ["bang_keo_orders:B-1"] });
+
+    const u = db({ data: { rows_unlinked: 6, customers_deleted: 2 } });
+    expect(await undoReviewBatch(u.client, ID)).toEqual({ ok: true, unlinked: 6, deleted: 2 });
+    expect(u.rpc).toHaveBeenCalledWith("admin_customer_review_bulk_undo", { p_batch: ID });
+
+    const g = db({ data: 1 });
+    await regroupReview(g.client, { source_table: "leads", source_id: "a" }, { source_table: "bang_keo_orders", source_id: "B-1" });
+    expect(g.rpc).toHaveBeenCalledWith("admin_customer_review_regroup", {
+      p_source_table: "leads", p_source_id: "a", p_target_table: "bang_keo_orders", p_target_id: "B-1",
+    });
+    expect(await bulkCreateFromReview(db({ error: { code: "42501" } }).client, ["leads:a"])).toEqual({ ok: false, reason: "forbidden" });
+  });
+
   it("map SQL errors", async () => {
     expect(await createCustomer(db({ error: { code: "42501" } }).client, payload)).toEqual({ ok: false, reason: "forbidden" });
     expect(await updateCustomer(db({ error: { code: "22023" } }).client, ID, payload)).toEqual({ ok: false, reason: "invalid" });
@@ -56,6 +74,12 @@ describe("customer schemas", () => {
     expect(mergeSchema.safeParse({ target: ID, sources: [ID2] }).success).toBe(true);
     expect(mergeSchema.safeParse({ target: ID, sources: [] }).success).toBe(false);
     expect(mergeSchema.safeParse({ target: ID, sources: [ID] }).success).toBe(false);
+  });
+
+  it("bulk picks: 1-500 'table:id' of the queue's tables", () => {
+    expect(bulkRowsSchema.safeParse(["thank_you_orders:TY-1", "leads:x:y"]).success).toBe(true);
+    expect(bulkRowsSchema.safeParse([]).success).toBe(false);
+    expect(bulkRowsSchema.safeParse(["customers:x"]).success).toBe(false);
   });
 
   it("review key accepts only the queue's tables", () => {

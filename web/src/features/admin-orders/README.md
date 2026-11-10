@@ -4,7 +4,7 @@ Admin-only order pages for the 4 order types (`bang_keo_in`, `bang_keo`, `truc_i
 
 ## Routes
 
-- /admin/don-hang?type= (`OrdersView`): tabs per type + Báo giá, totals bar, sortable columns, overdue / due-soon highlight, multi-select with selection total, bulk actions (status, Đưa vào xưởng, Chuyển thành đơn, Xóa), CSV export. Everything filtered, sorted, totalled and paged in SQL (`admin_orders_list`). Auto refresh every 30 s and on focus (`OrdersAutoRefresh`).
+- /admin/don-hang?type= (`OrdersView`): tabs per type + Báo giá, totals bar, sortable columns, overdue / due-soon highlight, multi-select with selection total, bulk actions (status, Đưa vào xưởng, Chuyển thành đơn, Xóa), CSV export. Everything filtered, sorted, totalled and paged in SQL (`admin_orders_list`). Auto refresh every 60 s while the tab is visible, plus once when it is shown again (`OrdersAutoRefresh`).
 - /admin/don-hang/moi?type=&quote=1 (`NewOrderView`): the desktop form of that type with live totals, customer picker, product-name suggestions and "Chép đơn gần nhất". Saves through `admin_order_create`.
 - /admin/don-hang/[id]?type= (`OrderDetailView`): `admin_order_get`. Money, customer link, actions; for printed tape the job (assignee, step move via the workshop forms), step history and delivery notes.
 - /admin/don-hang/[id]/sua?type= (`EditOrderView`): same form, `admin_order_update`. Orders from a multi-size quote only edit name, customer and due date.

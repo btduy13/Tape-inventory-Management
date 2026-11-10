@@ -264,6 +264,11 @@ body {
   --pt-amber-ink: #7a3b00;
   --pt-grey-tint: #eceef3;
   --pt-grey-ink: #4a4e63;
+  /* one fixed colour per order type (Carbon categorical 1-4): charts, legends */
+  --pt-cat-bki: #6929c4;
+  --pt-cat-truc: #1192e8;
+  --pt-cat-bk: #005d5d;
+  --pt-cat-ty: #9f1853;
 }
 @theme inline {
   --color-pt-canvas: var(--pt-canvas);
@@ -284,6 +289,10 @@ body {
   --color-pt-amber-ink: var(--pt-amber-ink);
   --color-pt-grey-tint: var(--pt-grey-tint);
   --color-pt-grey-ink: var(--pt-grey-ink);
+  --color-pt-cat-bki: var(--pt-cat-bki);
+  --color-pt-cat-truc: var(--pt-cat-truc);
+  --color-pt-cat-bk: var(--pt-cat-bk);
+  --color-pt-cat-ty: var(--pt-cat-ty);
 }
 
 .pt-root { background: var(--pt-canvas); color: var(--pt-text); font-variant-numeric: tabular-nums; }

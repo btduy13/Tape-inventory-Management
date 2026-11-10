@@ -4,6 +4,7 @@ export { QuotesView } from "./components/QuotesView";
 export { QuoteEditor } from "./components/QuoteEditor";
 export { QuoteSheet } from "./components/QuoteSheet";
 export { PrintButton } from "./components/PrintButton";
+export { QuoteDetail } from "./components/QuoteDetail";
 export { draftsFromQuote } from "./lib/stored";
 export { QUOTE_TYPES, type QuoteType, type SizeDraft } from "./lib/bundle";
 export { TYPE_LABEL, newQuoteHref, parseQuoteType, quoteEditHref } from "./lib/paths";

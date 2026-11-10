@@ -7,8 +7,9 @@ import { ProductionHandoffPanel } from "@/features/workshop";
 import { QuotePanel } from "@/features/quotes";
 
 export default async function AdminLeadPage({ params }: { params: Promise<{ id: string }> }) {
-  const profile = await requireRole(ROLE_GROUPS.pricing);
-  const detail = await loadLeadDetail((await params).id);
+  // Gate and lead read run together (one round trip less); a failed gate redirects before
+  // anything renders, and the lead read itself is RLS-scoped.
+  const [profile, detail] = await Promise.all([requireRole(ROLE_GROUPS.pricing), params.then((p) => loadLeadDetail(p.id))]);
   if (!detail) notFound();
   const { lead } = detail;
   return (

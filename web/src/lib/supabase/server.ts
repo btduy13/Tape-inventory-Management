@@ -33,15 +33,17 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
 }
 
 /**
- * Current user + profile, verified with the Auth server (getUser, not getSession).
+ * Current user + profile. The JWT is verified with getClaims (signature + expiry, locally with
+ * asymmetric signing keys; never getSession, which does not verify). A revoked session stays
+ * valid until the access token expires, so the profile row (is_active) and RLS are the gate.
  * Returns null when not logged in or profile inactive.
- * cache(): layout, page and actions in one request share one getUser + profile read.
+ * cache(): layout, page and actions in one request share one claims check + profile read.
  */
 export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data } = await supabase.from("profiles").select("*").eq("id", auth.user.id).maybeSingle();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims.sub) return null;
+  const { data } = await supabase.from("profiles").select("*").eq("id", auth.claims.sub).maybeSingle();
   if (!data || !data.is_active) return null;
   return data;
 });

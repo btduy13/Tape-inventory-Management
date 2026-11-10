@@ -27,11 +27,16 @@ export async function getCustomer(db: Db, id: string): Promise<CustomerLoad> {
   return { ok: true, detail: { ...d, orders: d.orders ?? [], leads: d.leads ?? [] } };
 }
 
-export type ReviewPage = { rows: ReviewRow[]; total: number; failed: boolean };
+/** total = groups, totalRows = orders / leads in them (whole queue, not just this page). */
+export type ReviewPage = { rows: ReviewRow[]; total: number; totalRows: number; failed: boolean };
+
+const arr = <T>(v: T[] | null | undefined): T[] => (Array.isArray(v) ? v : []);
 
 export async function listReview(db: Db, page: Page): Promise<ReviewPage> {
   const { data, error } = await db.rpc("admin_customer_review_list", page);
-  if (error || !Array.isArray(data)) return { rows: [], total: 0, failed: true };
-  const rows = (data as unknown as ReviewRow[]).map((r) => ({ ...r, suggestions: Array.isArray(r.suggestions) ? r.suggestions : [] }));
-  return { rows, total: Number(rows[0]?.total_count ?? 0), failed: false };
+  if (error || !Array.isArray(data)) return { rows: [], total: 0, totalRows: 0, failed: true };
+  const rows = (data as unknown as ReviewRow[]).map((r) => ({
+    ...r, suggestions: arr(r.suggestions), members: arr(r.members), similar_groups: arr(r.similar_groups),
+  }));
+  return { rows, total: Number(rows[0]?.total_count ?? 0), totalRows: Number(rows[0]?.total_rows ?? 0), failed: false };
 }

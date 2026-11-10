@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getDictionary } from "@/i18n";
 import { requireTab } from "@/lib/auth/require-role";
 import { hasPerm } from "@/lib/auth/permissions";
 import { PageHeader } from "@/features/portal-ui";
@@ -7,6 +8,8 @@ import { buttonClass } from "@/features/portal-ui/components/styles";
 import { QuotesView, newQuoteHref } from "@/features/quotes/bao-gia";
 
 export const metadata: Metadata = { title: "Báo giá" };
+
+const c = getDictionary().baoGia;
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -20,8 +23,9 @@ export default async function QuotesPage({ searchParams }: Props) {
   return (
     <>
       <PageHeader
-        title="Các đơn báo giá"
-        actions={can.convert ? <Link href={newQuoteHref("bang_keo_in")} className={buttonClass("primary")}>+ Tạo báo giá</Link> : undefined}
+        title={c.listTitle}
+        description={c.listDescription}
+        actions={can.convert ? <Link href={newQuoteHref("bang_keo_in")} className={buttonClass("primary")}>{c.create}</Link> : undefined}
       />
       <QuotesView searchParams={await searchParams} can={can} />
     </>
