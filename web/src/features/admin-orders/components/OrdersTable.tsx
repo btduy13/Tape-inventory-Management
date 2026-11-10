@@ -81,7 +81,7 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
     { key: "id", header: l.colId, sortKey: "id", mobile: "title", className: "whitespace-nowrap", cell: (o) => (
       <Link href={orderHref(o.type, o.id)} className="font-bold text-vt-blue hover:underline">{o.id}</Link>
     ) },
-    { key: "date", header: l.colDate, sortKey: "thoi_gian", className: "whitespace-nowrap", cell: (o) => dateVn(o.thoi_gian) },
+    { key: "date", header: l.colDate, sortKey: "thoi_gian", className: "hidden whitespace-nowrap 2xl:table-cell", cell: (o) => dateVn(o.thoi_gian) },
     { key: "name", header: l.colName, sortKey: "ten_hang", mobile: "title", className: "min-w-40", cell: (o) => <span className="font-medium">{o.ten_hang || "—"}</span> },
     { key: "customer", header: l.colCustomer, sortKey: "ten_khach_hang", className: "min-w-32", cell: (o) => o.ten_khach_hang || "—" },
     { key: "due", header: l.colDue, sortKey: "ngay_du_kien", className: "whitespace-nowrap", cell: (o) => {
@@ -111,11 +111,19 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
     ) },
   ];
 
+  // One background per order (main row + its axis line), alternating, so orders read as separate blocks.
+  // Selected wins, then overdue, then the stripe.
+  const position = new Map(shown.map((o, i) => [key(o), i]));
+  const rowTone = (o: AdminOrderRow) =>
+    picked.has(key(o)) ? "bg-pt-blue-tint/70"
+    : dueTone(o.ngay_du_kien, o.da_giao, o.is_quote, today) === "overdue" ? "bg-pt-red-tint/45"
+    : (position.get(key(o)) ?? 0) % 2 ? "bg-pt-canvas" : "bg-pt-surface";
+
   const subRow = (o: AdminOrderRow) => {
     const a = axisLine(o, perms.money);
     if (!a) return null;
     return (
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-pt-line-strong pl-3 text-sm text-pt-muted">
+      <p className="ml-9 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-pt-line bg-pt-surface/80 px-3 py-1.5 text-sm text-pt-muted">
         <span aria-hidden className="font-mono text-vt-blue">└─</span>
         <ToneBadge tone="blue">{l.axisBadge.toUpperCase()}</ToneBadge>
         <span className="font-semibold text-pt-text">{a.name}</span>
@@ -146,6 +154,7 @@ export function OrdersTable({ tab, rows, state, query, total, basePath, today, p
         rows={shown}
         rowKey={key}
         subRow={subRow}
+        rowClassName={rowTone}
         list={{ basePath, spec: ORDERS_SPEC, state, total }}
         filtered={filtered}
         empty={empty}
