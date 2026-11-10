@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { AXIS_FIELDS, BASIC_FIELDS, PRICE_FIELDS, visibleFields } from "./form-layout";
+import { AXIS_FIELDS, BASIC_FIELDS, PRICE_FIELDS, priceGroups, visibleFields } from "./form-layout";
 import { formCalc } from "./form-totals";
 import { ORDER_SCHEMAS, WORKSHOP_KEYS } from "./schemas";
 import { ORDER_TYPES } from "./types";
 
 describe("form layout", () => {
+  it("price groups keep every field once and drop empty groups", () => {
+    for (const type of ORDER_TYPES) {
+      const groups = priceGroups(PRICE_FIELDS[type]);
+      expect(groups.flatMap(([, fields]) => fields.map(([k]) => k)).sort()).toEqual(PRICE_FIELDS[type].map(([k]) => k).sort());
+      expect(groups.every(([, fields]) => fields.length > 0)).toBe(true);
+    }
+    expect(priceGroups(PRICE_FIELDS.bang_keo).map(([g]) => g)).toEqual(["price", "pay", "profit"]);
+  });
+
   it("draws every editable field of the zod schema (the update action keeps fields it does not get)", () => {
     const drawn = new Set(["ten_hang", "ngay_du_kien", "ten_khach_hang", "sdt_khach_hang", "dia_chi_khach_hang", "customer_id", "loai_truc"]);
     for (const type of ORDER_TYPES) {

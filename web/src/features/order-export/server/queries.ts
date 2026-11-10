@@ -47,7 +47,7 @@ export async function loadExportOrders(db: Db, ids: string[]): Promise<ExportLoa
 
 export type AttachmentInfo = { id: number; file_name: string; file_size: number };
 
-export type EmailContext = { order: OrderRecord; attachments: AttachmentInfo[]; suggestions: string[] };
+export type EmailContext = { order: OrderRecord; attachments: AttachmentInfo[] | null; suggestions: string[] };
 
 export async function loadEmailContext(db: Db, type: OrderType, id: string): Promise<EmailContext | null> {
   const [order, atts, sugg] = await Promise.all([
@@ -59,7 +59,7 @@ export async function loadEmailContext(db: Db, type: OrderType, id: string): Pro
   if (order.error || !detail?.order) return null;
   return {
     order: detail.order,
-    attachments: Array.isArray(atts.data) ? (atts.data as unknown as AttachmentInfo[]) : [],
+    attachments: !atts.error && Array.isArray(atts.data) ? atts.data : null,
     suggestions: Array.isArray(sugg.data) ? (sugg.data as unknown[]).map(String) : [],
   };
 }
@@ -70,7 +70,7 @@ export async function loadAttachments(db: Db, type: OrderType, id: string, ids: 
   for (const attId of ids) {
     const { data, error } = await gen(db).rpc("admin_order_attachment_get", { p_attachment_id: attId });
     const row = Array.isArray(data) ? (data[0] as { order_type: string; order_id: string; file_name: string; content_type: string | null; base64_data: string } | undefined) : undefined;
-    if (error || !row || row.order_type !== type || row.order_id !== id) return null;
+    if (error || !row || row.order_type !== type || row.order_id !== id || typeof row.base64_data !== "string") return null;
     out.push({ filename: row.file_name, contentType: row.content_type || "application/octet-stream", content: Buffer.from(row.base64_data, "base64") });
   }
   return out;

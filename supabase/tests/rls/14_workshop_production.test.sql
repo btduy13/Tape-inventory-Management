@@ -71,7 +71,7 @@ select pg_temp.accepted_lead('00000000-0000-0000-0000-0000000c0023', '00000000-0
 -- Schema ----------------------------------------------------------------------------------------
 select ok('workshop' = any (enum_range(null::public.app_role)::text[]), 'app_role has workshop');
 select is(enum_range(null::public.production_step)::text[],
-  array['cho_san_xuat','dang_san_xuat','dang_in','dang_cat_cuon','dong_goi','san_sang_giao','da_giao','huy'],
+  array['cho_san_xuat','dang_san_xuat','dang_in','dang_cat_cuon','dong_goi','da_san_xuat','san_sang_giao','da_giao','huy'],
   'production steps in order (dang_in / dang_cat_cuon / dong_goi retired)');
 select ok(not has_table_privilege('authenticated', 'public.production_jobs', 'INSERT')
       and not has_table_privilege('authenticated', 'public.production_jobs', 'UPDATE')
@@ -410,8 +410,8 @@ select is(
   (select array_agg(tgname::text order by tgname) from pg_trigger
     where tgrelid = 'public.bang_keo_in_orders'::regclass and not tgisinternal),
   array['bang_keo_in_orders_production_sync', 'trg_sync_customer_debt', 'trg_sync_supplier_debt',
-        'zz_resolve_customer'],  -- 0028: links the customer by phone, never raises
-  'bang_keo_in_orders has the production sync trigger and the production debt triggers only');
+        'zz_resolve_customer', 'zzz_save_customer_contact'],
+  'bang_keo_in_orders has production, debt and customer triggers');
 select lives_ok(
   format($$set local role electron_app;
            update public.bang_keo_in_orders set ngay_du_kien = ngay_du_kien + 1, da_giao = true, tien_coc = 5000 where id = %L;

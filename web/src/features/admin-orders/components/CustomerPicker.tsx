@@ -17,30 +17,32 @@ export type PickedCustomer = { id: string; name: string };
 type Props = {
   value: PickedCustomer | null;
   onPick: (customer: CustomerHit) => void;
+  onCreate: (customer: PickedCustomer) => void;
   onUnlink: () => void;
   /** Contact typed in the form, used by "Lưu thành khách mới". */
   contact: { name: string; phone: string; address: string };
 };
 
-export function CustomerPicker({ value, onPick, onUnlink, contact }: Props) {
+export function CustomerPicker({ value, onPick, onCreate, onUnlink, contact }: Props) {
   const id = useId();
   const [q, setQ] = useState("");
-  const [hits, setHits] = useState<CustomerHit[] | null>(null);
+  const [result, setResult] = useState<{ term: string; rows: CustomerHit[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const term = (q.trim() || contact.name.trim()).slice(0, 100);
+  const hits = !value && result?.term === term ? result.rows : null;
 
   useEffect(() => {
-    const term = q.trim();
-    if (term.length < 2) return;
+    if (value || term.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
-      void searchCustomersAction(term).then((r) => live && setHits(r));
+      void searchCustomersAction(term).then((rows) => { if (live) setResult({ term, rows }); });
     }, 300);
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [q]);
+  }, [term, value]);
 
   const create = () => {
     setError(null);
@@ -48,7 +50,7 @@ export function CustomerPicker({ value, onPick, onUnlink, contact }: Props) {
     start(async () => {
       const r = await createCustomerAction({ name: contact.name, phone: contact.phone, address: contact.address });
       if (!r.ok) return setError(r.message);
-      onPick({ id: r.id, name: contact.name.trim(), phone: null, address: null, company: null });
+      onCreate({ id: r.id, name: contact.name.trim() });
     });
   };
 
@@ -67,13 +69,13 @@ export function CustomerPicker({ value, onPick, onUnlink, contact }: Props) {
           <div className="flex flex-col gap-2 sm:flex-row">
             <label htmlFor={id} className="sr-only">{c.customerSearch}</label>
             <input
-              id={id} type="search" value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value.trim().length < 2) setHits(null); }}
+              id={id} type="search" value={q} onChange={(e) => setQ(e.target.value)}
               placeholder={c.customerSearch} autoComplete="off" maxLength={100} className={inputClass} aria-describedby={`${id}-hint`}
               // Enter would submit the whole order form; with a single hit it picks that customer.
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
                 e.preventDefault();
-                if (hits?.length === 1) { onPick(hits[0]); setQ(""); setHits(null); }
+                if (hits?.length === 1) { onPick(hits[0]); setQ(""); }
               }}
             />
             <button type="button" onClick={create} disabled={pending} className={buttonClass("secondary", "md", "shrink-0")} title={c.customerCreateHint}>
@@ -89,7 +91,7 @@ export function CustomerPicker({ value, onPick, onUnlink, contact }: Props) {
                   <li key={h.id}>
                     <button
                       type="button"
-                      onClick={() => { onPick(h); setQ(""); setHits(null); }}
+                      onClick={() => { onPick(h); setQ(""); }}
                       className="flex min-h-11 w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-pt-blue-tint/50"
                     >
                       <span className="font-semibold text-pt-text">{h.name}{h.company ? ` · ${h.company}` : ""}</span>

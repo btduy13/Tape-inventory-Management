@@ -12,10 +12,10 @@ import type { AppRole, Profile } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
 import { deliveryConfirmUrl, toPrintableNote, type PrintableNote } from "../lib/delivery";
 import {
-  advanceSchema, assignJobSchema, assignSchema, convertSchema, deliveryNoteSchema, fail, formToObject, ok,
+  advanceSchema, assignJobSchema, assignSchema, convertSchema, deliveryNoteSchema, fail, formToObject, ok, tableStepSchema,
   type WorkshopActionState,
 } from "../lib/schemas";
-import { advanceStep, assignJob, assignWorkshop, convertLeadToProduction, createDeliveryNote, type MutationResult } from "./mutations";
+import { advanceStep, assignJob, assignWorkshop, convertLeadToProduction, createDeliveryNote, setTableSteps, type MutationResult } from "./mutations";
 import { qrSvg } from "./qr";
 
 const t = getDictionary();
@@ -56,6 +56,24 @@ export async function advanceStepAction(_prev: WorkshopActionState, form: FormDa
   if (!result.ok) return fail(mutationMessage(result));
   refresh(undefined, parsed.data.jobId);
   return ok(format(t.workshop.stepDone, { step: t.productionStep[parsed.data.to] }));
+}
+
+export async function setTableStepsAction(input: unknown): Promise<WorkshopActionState> {
+  if (!(await actorOrNull(ROLE_GROUPS.admin))) return fail(t.common.errorForbidden);
+  const parsed = tableStepSchema.safeParse(input);
+  if (!parsed.success) return fail(t.common.errorValidation);
+
+  const result = await setTableSteps(await createClient(), parsed.data);
+  if (!result.ok) {
+    if (result.reason !== "stale") return fail(mutationMessage(result));
+    revalidatePath(ROUTES.workshop);
+    return fail("Công đoạn đã thay đổi. Kiểm tra danh sách rồi thử lại.");
+  }
+  refresh();
+  revalidatePath(`${ROUTES.workshop}/[id]`, "layout");
+  revalidatePath(ROUTES.adminOrders, "layout");
+  revalidatePath(ROUTES.admin);
+  return ok(`Đã cập nhật ${result.count} đơn.`);
 }
 
 export async function convertToProductionAction(_prev: WorkshopActionState, form: FormData): Promise<WorkshopActionState> {

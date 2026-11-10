@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ROUTES } from "@/lib/routes";
 import { escapeMultiline, getEmailSender, normalizeRecipients } from "@/features/email";
 import { orderIdSchema, orderTypeSchema } from "@/features/admin-orders/lib/schemas";
-import { MAX_ATTACHMENT_BYTES, splitRecipients } from "../lib/email-template";
+import { MAX_ATTACHMENT_BYTES, MAX_EMAIL_ATTACHMENTS, splitRecipients } from "../lib/email-template";
 import { checkUserRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
 import { loadAttachments, loadEmailContext, markEmailed } from "./queries";
 
@@ -21,7 +21,7 @@ const schema = z.object({
   to: z.string().max(2000),
   subject: z.string().trim().min(1).max(200),
   body: z.string().trim().min(1).max(20000),
-  att: z.array(z.coerce.number().int().positive()).max(20),
+  att: z.array(z.coerce.number().int().positive()).max(MAX_EMAIL_ATTACHMENTS),
 });
 
 const err = (message: string): EmailActionState => ({ status: "error", message });
@@ -49,6 +49,7 @@ export async function sendOrderEmailAction(_prev: EmailActionState, form: FormDa
   // The order must exist (and be readable) before anything is sent; sizes are checked before download.
   const ctx = await loadEmailContext(db, type, id);
   if (!ctx) return err("Không tìm thấy đơn hàng.");
+  if (!ctx.attachments) return err("Không tải được danh sách tệp đính kèm của đơn.");
   const wantedAtt = [...new Set(att)];
   const picked = ctx.attachments.filter((a) => wantedAtt.includes(a.id));
   if (picked.length !== wantedAtt.length) return err("Không tải được tệp đính kèm của đơn.");

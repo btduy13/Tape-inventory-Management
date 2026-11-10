@@ -21,14 +21,13 @@ export type QuoteStatus =
 
 export const ROLES: readonly AppRole[] = ["admin", "manager", "staff", "ctv", "workshop"] as const;
 
-/** Production (workshop) steps. `huy` (cancelled) is admin only. Since 0024 jobs use only
- *  cho_san_xuat -> dang_san_xuat -> san_sang_giao -> da_giao; dang_in / dang_cat_cuon / dong_goi
- *  remain in the enum as history in production_step_log. */
+/** Production steps. `da_san_xuat` is optional and `huy` is admin only.
+ *  dang_in / dang_cat_cuon / dong_goi remain in production_step_log history. */
 export type ProductionStep =
-  | "cho_san_xuat" | "dang_san_xuat" | "dang_in" | "dang_cat_cuon" | "dong_goi" | "san_sang_giao" | "da_giao" | "huy";
+  | "cho_san_xuat" | "dang_san_xuat" | "dang_in" | "dang_cat_cuon" | "dong_goi" | "da_san_xuat" | "san_sang_giao" | "da_giao" | "huy";
 
 export const PRODUCTION_STEPS: readonly ProductionStep[] = [
-  "cho_san_xuat", "dang_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy",
+  "cho_san_xuat", "dang_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "da_san_xuat", "san_sang_giao", "da_giao", "huy",
 ] as const;
 
 /** Postgres numeric comes back from PostgREST as number (or string for huge values). */
@@ -224,6 +223,10 @@ export type Database = {
         Args: { p_job_id: Uuid; p_to: ProductionStep; p_note?: string | null };
         Returns: ProductionJob;
       };
+      admin_workshop_set_steps: {
+        Args: { p_jobs: Json; p_to: ProductionStep };
+        Returns: number;
+      };
       // Workshop v2 (0024): admin assigns any job; admin / assigned workshop user creates a delivery note.
       assign_workshop_job: { Args: { p_job_id: Uuid; p_user_id: Uuid | null }; Returns: ProductionJob };
       create_delivery_note: { Args: { p_job_id: Uuid }; Returns: DeliveryNoteCreated[] };
@@ -263,7 +266,7 @@ export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKET
 // Schema drift check against the generated types (compile-time only)
 // ---------------------------------------------------------------------------
 export type { Database as GeneratedDatabase } from "./database.generated";
-import type { Database as GeneratedDatabase } from "./database.generated";
+import type { Database as GeneratedDatabase, Json } from "./database.generated";
 
 type GenTables = GeneratedDatabase["public"]["Tables"];
 type AppTables = Database["public"]["Tables"];

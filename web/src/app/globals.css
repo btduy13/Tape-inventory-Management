@@ -246,9 +246,9 @@ body {
 /* pair >= 7:1, white on blue 11.2:1, yellow on navy-deep 14:1.        */
 /* ------------------------------------------------------------------ */
 :root {
-  --pt-canvas: #f3f4f9;
+  --pt-canvas: #f5f6fa;
   --pt-surface: #ffffff;
-  --pt-line: #dde0ec;
+  --pt-line: #e3e6f0;
   --pt-line-strong: #b9bed3;
   --pt-text: #16173a;
   --pt-muted: #555a78;

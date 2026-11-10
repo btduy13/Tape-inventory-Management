@@ -4,7 +4,7 @@ import { ROUTES } from "@/lib/routes";
 import { isOrderType, type OrderType } from "@/features/admin-orders/lib/types";
 
 /** Undelivered printed-tape orders per workshop step; none = no job yet (0024 live steps). */
-export const PIPE_STEPS = ["none", "cho_san_xuat", "dang_san_xuat", "san_sang_giao"] as const;
+export const PIPE_STEPS = ["none", "cho_san_xuat", "dang_san_xuat", "da_san_xuat", "san_sang_giao"] as const;
 export type PipeStep = (typeof PIPE_STEPS)[number];
 /** Chart stack order (bottom up). */
 export const CHART_TYPES = ["bang_keo_in", "truc_in", "bang_keo", "thank_you"] as const satisfies readonly OrderType[];

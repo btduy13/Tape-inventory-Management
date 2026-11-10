@@ -134,6 +134,7 @@ export const ordersCopy = {
   secFormBasic: "Thông tin cơ bản",
   secFormNewAxis: "Thông tin Trục mới",
   secFormPrice: "Giá và Chi phí",
+  priceGroup: { qty: "Số lượng và phụ phí", price: "Đơn giá và thành tiền", pay: "Thanh toán", profit: "CTV, ship và lợi nhuận" },
   secFormWorkshop: "Giao xưởng",
   axisSwitch: "Có trục mới",
   axisSwitchHint: "Bật khi đơn làm trục in mới (tính tiền trục riêng).",

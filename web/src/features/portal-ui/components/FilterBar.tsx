@@ -8,7 +8,7 @@ import {
 } from "../lib/list-params";
 import { AutoSubmit } from "./AutoSubmit";
 import { Icon } from "./Icon";
-import { buttonClass, inputClass } from "./styles";
+import { buttonClass, inputClass, surfaceClass } from "./styles";
 
 const p = getDictionary().portalUi;
 
@@ -45,11 +45,11 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
 
   return (
     <div className="flex flex-col gap-3">
-      <form method="get" action={basePath} role="search" aria-label={p.filters} className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+      <form method="get" action={basePath} role="search" aria-label={p.filters} className={`${surfaceClass} grid grid-cols-2 items-end gap-3 p-3 sm:grid-cols-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-6`}>
         <AutoSubmit />
         {hidden.map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
         {spec.search && (
-          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium lg:min-w-64">
+          <label className="col-span-full flex min-w-0 flex-col gap-1 text-sm font-medium">
             <span className="sr-only">{p.search}</span>
             <span className="relative">
               <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-pt-muted" />
@@ -57,9 +57,8 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
             </span>
           </label>
         )}
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
           {selects.map((c) => (
-            <label key={c.name} className="flex min-w-36 flex-col gap-1 text-xs font-medium text-pt-muted">
+            <label key={c.name} className="flex min-w-0 flex-col gap-1 text-xs font-medium text-pt-muted">
               {c.label}
               {c.kind === "text" ? (
                 <input type="search" name={c.name} defaultValue={state.filters[c.name]?.[0] ?? ""} placeholder={c.placeholder} maxLength={80} className={inputClass} />
@@ -69,7 +68,7 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
             </label>
           ))}
           {showDates && (
-            <fieldset className="col-span-2 flex flex-col gap-1 sm:col-span-1">
+            <fieldset className="col-span-2 flex min-w-0 flex-col gap-1">
               {dateLabel && <legend className="sr-only">{dateLabel}</legend>}
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1 text-xs font-medium text-pt-muted">
@@ -83,8 +82,7 @@ export function FilterBar({ basePath, spec, state, controls = [], searchPlacehol
               </div>
             </fieldset>
           )}
-        </div>
-        <div className="flex gap-2">
+        <div className="col-span-full flex gap-2 sm:col-span-1 sm:col-start-auto xl:justify-self-start">
           <button type="submit" className={buttonClass("primary", "md", "flex-1 lg:flex-none")}>{p.applyFilters}</button>
           {active && (
             <Link href={listHref(basePath, spec, cleared)} className={buttonClass("ghost", "md", "flex-1 lg:flex-none")}>

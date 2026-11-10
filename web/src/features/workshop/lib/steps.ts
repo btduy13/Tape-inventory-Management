@@ -3,11 +3,9 @@
 // never huy and never da_giao (delivery is confirmed by scanning the delivery note QR);
 // admin = any step including `huy` (moving back asks for confirmation in the UI).
 import type { AppRole, ProductionStep } from "@/lib/types";
+import { PRODUCTION_FLOW, stepIndex } from "@/features/portal-ui/lib/workflow";
 
-/** Normal flow (without `huy`), in order. 4 steps since 0024. */
-export const FLOW_STEPS: readonly ProductionStep[] = [
-  "cho_san_xuat", "dang_san_xuat", "san_sang_giao", "da_giao",
-] as const;
+export const FLOW_STEPS = PRODUCTION_FLOW;
 
 /** Board columns: every live step, cancelled last. */
 export const BOARD_STEPS: readonly ProductionStep[] = [...FLOW_STEPS, "huy"] as const;
@@ -17,11 +15,12 @@ const LEGACY_RANK: Partial<Record<ProductionStep, number>> = { dang_in: 1, dang_
 
 /** Position on the flow; huy = -1. */
 export function stepRank(step: ProductionStep): number {
-  return LEGACY_RANK[step] ?? FLOW_STEPS.indexOf(step);
+  return LEGACY_RANK[step] ?? stepIndex(step);
 }
 
 export function nextStep(step: ProductionStep): ProductionStep | null {
   const i = stepRank(step);
+  if (i === stepRank("dang_san_xuat")) return "san_sang_giao";
   return i >= 0 && i < FLOW_STEPS.length - 1 ? FLOW_STEPS[i + 1]! : null;
 }
 

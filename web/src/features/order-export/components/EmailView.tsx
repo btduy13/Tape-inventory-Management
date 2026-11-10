@@ -15,6 +15,7 @@ export async function EmailView({ type, id }: { type: OrderType; id: string }) {
       breadcrumbs={[{ label: "Đơn hàng", href: ROUTES.adminOrders }, { label: id, href: orderHref(type, id) }, { label: "Email" }]} />
   );
   if (!ctx) return <>{header}<ErrorState body="Không tìm thấy dữ liệu đơn hàng" /></>;
+  if (!ctx.attachments) return <>{header}<ErrorState body="Không tải được danh sách tệp đính kèm. Vui lòng tải lại trang." /></>;
   return (
     <>
       {header}

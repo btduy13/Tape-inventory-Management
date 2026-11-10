@@ -1,5 +1,5 @@
 "use client";
-// Tab-aware nav list (sidebar + drawer). Active item: yellow tape strip on the left.
+// Tab-aware nav list (sidebar + drawer). Active item: blue tint pill.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getDictionary } from "@/i18n";
@@ -16,7 +16,7 @@ export function NavLinks({ profile, onNavigate }: { profile: AccessProfile; onNa
     <div className="flex flex-col gap-6">
       {groups.map((g) => (
         <div key={g.labelKey} className="flex flex-col gap-1">
-          {groups.length > 1 && <p className="px-3 text-xs font-medium text-white/65">{p[g.labelKey]}</p>}
+          {groups.length > 1 && <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-pt-muted">{p[g.labelKey]}</p>}
           <ul className="flex flex-col gap-0.5">
             {g.items.map((item) => {
               const active = isNavActive(pathname, item);
@@ -26,11 +26,10 @@ export function NavLinks({ profile, onNavigate }: { profile: AccessProfile; onNa
                     href={item.href}
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
-                    className={`relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium ${
-                      active ? "bg-white/12 text-white" : "text-white/80 hover:bg-white/8 hover:text-white"
+                    className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors lg:min-h-10 ${
+                      active ? "bg-pt-blue-tint font-semibold text-pt-blue-ink" : "font-medium text-pt-muted hover:bg-pt-grey-tint hover:text-pt-text"
                     }`}
                   >
-                    {active && <span aria-hidden className="absolute inset-y-2 left-0 w-1.5 -translate-x-1 rounded-sm bg-vt-yellow" />}
                     <Icon name={item.icon} />
                     {p[item.labelKey]}
                   </Link>

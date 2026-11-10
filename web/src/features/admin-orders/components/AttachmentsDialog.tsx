@@ -16,6 +16,16 @@ type Props = { order: { type: OrderType; id: string } | null; canEdit: boolean; 
 
 const kb = (bytes: number) => `${(bytes / 1024).toFixed(1)} KB`;
 
+export function OrderAttachmentsButton({ type, id, canEdit }: { type: OrderType; id: string; canEdit: boolean }) {
+  const [order, setOrder] = useState<Props["order"]>(null);
+  return (
+    <>
+      <button type="button" onClick={() => setOrder({ type, id })} className={buttonClass("secondary")}>Tệp đính kèm</button>
+      <AttachmentsDialog order={order} canEdit={canEdit} onClose={() => setOrder(null)} />
+    </>
+  );
+}
+
 export function AttachmentsDialog({ order, canEdit, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -66,7 +76,7 @@ export function AttachmentsDialog({ order, canEdit, onClose }: Props) {
     e.target.value = "";
     if (!file || !order) return;
     if (file.size > MAX_FILE_BYTES) return setError(l.filesTooBig);
-    void run(() => addAttachment(order.type, order.id, file), true);
+    void run(async () => (await addAttachment(order.type, order.id, file)) !== null, true);
   };
 
   return (

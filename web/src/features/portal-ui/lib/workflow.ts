@@ -57,13 +57,13 @@ export function nextActionFor(status: LeadStatus, role: AppRole): NextAction | n
   return { actor: stage.actor, actionKey: stage.actionKey, mine: actorIncludes(stage.actor, role) };
 }
 
-/** Production steps on the main road (huy is a side exit, admin only). 4 steps since 0024. */
-export const PRODUCTION_FLOW: readonly ProductionStep[] = [
-  "cho_san_xuat", "dang_san_xuat", "san_sang_giao", "da_giao",
-] as const;
+/** Display order, including the optional completion step. */
+export const PRODUCTION_FLOW = [
+  "cho_san_xuat", "dang_san_xuat", "da_san_xuat", "san_sang_giao", "da_giao",
+] as const satisfies readonly ProductionStep[];
 
 export function stepIndex(step: ProductionStep): number {
-  return PRODUCTION_FLOW.indexOf(step);
+  return PRODUCTION_FLOW.findIndex((value) => value === step);
 }
 
 export type StageState = "done" | "current" | "todo";

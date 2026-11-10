@@ -69,6 +69,21 @@ const MONEY_ONLY: ReadonlySet<FieldKey> = new Set([
   "truc_hoa_hong", "truc_tien_hoa_hong", "truc_loi_nhuan", "truc_loi_nhuan_rong",
 ]);
 
+export type PriceGroup = "qty" | "price" | "pay" | "profit";
+const GROUP_OF: Partial<Record<FieldKey, PriceGroup>> = {
+  so_luong: "qty", phi_sl: "qty", mau_keo: "qty", phi_keo: "qty", mau_sac: "qty", phi_mau: "qty", phi_size: "qty",
+  phi_cat: "qty", loi_giay: "qty", thung_bao: "qty",
+  tien_coc: "pay", vat_percent: "pay", vat: "pay", cong_no_khach: "pay",
+  tien_ship: "profit", ctv: "profit", hoa_hong: "profit", tien_hoa_hong: "profit", loi_nhuan: "profit", loi_nhuan_rong: "profit",
+};
+
+/** Price card fields split into labelled groups (field order inside a group as in the app); empty groups dropped. */
+export function priceGroups(specs: readonly FieldSpec[]): readonly (readonly [PriceGroup, readonly FieldSpec[]])[] {
+  return (["qty", "price", "pay", "profit"] as const)
+    .map((g) => [g, specs.filter(([key]) => (GROUP_OF[key] ?? "price") === g)] as const)
+    .filter(([, fields]) => fields.length > 0);
+}
+
 export function visibleFields(specs: readonly FieldSpec[], money: boolean): readonly FieldSpec[] {
   if (money) return specs;
   // The printed-tape unit cost (calc don_gia_goc) is a cost too; plain tape's don_gia_goc input is required.

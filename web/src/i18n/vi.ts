@@ -55,6 +55,7 @@ export const vi = {
     dang_in: "Đang in",
     dang_cat_cuon: "Đang cắt cuộn",
     dong_goi: "Đóng gói",
+    da_san_xuat: "Đã xong",
     san_sang_giao: "Sẵn sàng giao",
     da_giao: "Đã giao",
     huy: "Đã hủy",

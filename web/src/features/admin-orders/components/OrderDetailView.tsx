@@ -18,6 +18,7 @@ import { listWorkshopUsers } from "@/features/workshop/server/queries";
 import { TYPE_LABEL, fieldLabel as f, ordersCopy as c, type FieldKey } from "../lib/copy";
 import { dateTimeVn, dateVn, instantVn, plain, toNumber, money } from "../lib/format";
 import { emailHref, exportHref, orderEditHref, tabHref } from "../lib/paths";
+import { OrderAttachmentsButton } from "./AttachmentsDialog";
 import { listCopy as l } from "../lib/list-copy";
 import { hasQuoteItems, type AdminDeliveryNote, type OrderRecord, type OrderType } from "../lib/types";
 import { getOrder, originOfDetail, photoUrls } from "../server/queries";
@@ -119,6 +120,7 @@ export async function OrderDetailView({ id, type }: { id: string; type: OrderTyp
 
   const actions = (
     <>
+      <OrderAttachmentsButton key={`${type}:${order.id}`} type={type} id={order.id} canEdit={hasPerm(profile, "orders.edit")} />
       {hasPerm(profile, "orders.edit") && <Link href={orderEditHref(type, order.id)} className={buttonClass("secondary")}>{c.actEdit}</Link>}
       {!isQuote && hasPerm(profile, "orders.export") && (
         <Link href={exportHref([order.id], "phieu_giao_hang")} className={buttonClass("secondary")}>{l.printNote}</Link>

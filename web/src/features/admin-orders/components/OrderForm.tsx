@@ -4,14 +4,14 @@
 // "Giá và Chi phí" with the computed values inline (read-only). Create (order or quote) and edit.
 // Inputs are controlled so a failed save keeps what was typed. The server action validates with
 // zod; SQL recomputes every amount.
-import { useActionState, useEffect, useId, useMemo, useState, useTransition } from "react";
+import { Fragment, useActionState, useEffect, useId, useMemo, useState, useTransition } from "react";
 import { format } from "@/i18n";
 import { Field, SelectField, TextareaField, TextField } from "@/features/portal-ui/components/Field";
 import { ActionStatus, InlineStatus } from "@/features/portal-ui/components/States";
 import { buttonClass, inputClass, surfaceClass } from "@/features/portal-ui/components/styles";
 import type { WorkshopUser } from "@/features/workshop/server/queries";
 import { fieldLabel as f, ordersCopy as c } from "../lib/copy";
-import { AXIS_FIELDS, AXIS_REQUIRED, BASIC_FIELDS, COST_INPUTS, PRICE_FIELDS, requiredFor, visibleFields, type FieldSpec } from "../lib/form-layout";
+import { AXIS_FIELDS, AXIS_REQUIRED, BASIC_FIELDS, COST_INPUTS, PRICE_FIELDS, priceGroups, requiredFor, visibleFields, type FieldSpec } from "../lib/form-layout";
 import { formatMoneyInput } from "../lib/form-money";
 import { formCalc, orderTotals } from "../lib/form-totals";
 import type { CustomerHit, OrderType } from "../lib/types";
@@ -117,8 +117,8 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
     setValues((v) => ({
       ...v,
       ten_khach_hang: h.name,
-      sdt_khach_hang: h.phone ?? v.sdt_khach_hang ?? "",
-      dia_chi_khach_hang: h.address ?? v.dia_chi_khach_hang ?? "",
+      sdt_khach_hang: h.phone ?? "",
+      dia_chi_khach_hang: h.address ?? "",
     }));
   };
 
@@ -156,6 +156,7 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
           <CustomerPicker
             value={customer}
             onPick={pick}
+            onCreate={setCustomer}
             onUnlink={() => setCustomer(null)}
             contact={{ name: values.ten_khach_hang ?? "", phone: values.sdt_khach_hang ?? "", address: values.dia_chi_khach_hang ?? "" }}
           />
@@ -190,7 +191,18 @@ export function OrderForm({ type, mode, isQuote = false, orderId, frozen = false
 
         {!frozen && axis && <Card title={c.secFormNewAxis}>{visibleFields(AXIS_FIELDS, money).map(field)}</Card>}
 
-        {!frozen && <Card title={c.secFormPrice}>{visibleFields(PRICE_FIELDS[type], money).map(field)}</Card>}
+        {!frozen && (
+          <Card title={c.secFormPrice}>
+            {priceGroups(visibleFields(PRICE_FIELDS[type], money)).map(([group, fields]) => (
+              <Fragment key={group}>
+                <p className="col-span-full border-t border-pt-line pt-4 text-xs font-semibold uppercase tracking-wide text-pt-muted first:border-t-0 first:pt-0">
+                  {c.priceGroup[group]}
+                </p>
+                {fields.map(field)}
+              </Fragment>
+            ))}
+          </Card>
+        )}
 
         {withWorkshop && (
           <Card title={c.secFormWorkshop}>

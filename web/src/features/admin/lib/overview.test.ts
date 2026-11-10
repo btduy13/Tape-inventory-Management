@@ -20,7 +20,7 @@ describe("toOverview", () => {
     expect(o.kpi.profit).toBeNull();
     expect(o.kpi.supplierDebt).toBeNull();
     expect(o.kpi.customerDebt).toBe(19500.5);
-    expect(o.pipeline).toEqual({ none: 1, cho_san_xuat: 4, dang_san_xuat: 0, san_sang_giao: 0 });
+    expect(o.pipeline).toEqual({ none: 1, cho_san_xuat: 4, dang_san_xuat: 0, da_san_xuat: 0, san_sang_giao: 0 });
     expect(o.months).toEqual([{ month: "2026-11", bang_keo_in: 12000, truc_in: 0, bang_keo: 0, thank_you: 5000, profit: null }]);
     expect(o.overdueList).toEqual([{ type: "truc_in", id: "TI-1", customer: "A", due: "2026-11-01", daysLate: 8 }]);
     expect(o.topDebtors).toEqual([{ name: "Khách A", debt: 120000000, orders: 3 }]);

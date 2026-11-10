@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { PRODUCTION_STEPS, type ProductionStep } from "@/lib/types";
 import { isIsoDate, vnToday } from "./dates";
+import { FLOW_STEPS } from "./steps";
 
 const uuid = z.guid();
 const optionalText = (max: number) =>
@@ -24,6 +25,13 @@ export const advanceSchema = z.object({
   note: optionalText(1000),
 });
 export type AdvanceInput = z.infer<typeof advanceSchema>;
+
+export const tableStepSchema = z.object({
+  jobs: z.array(z.object({ job_id: uuid, from_step: z.enum(PRODUCTION_STEPS) })).min(1).max(100)
+    .refine((jobs) => new Set(jobs.map((job) => job.job_id.toLowerCase())).size === jobs.length),
+  to: z.enum(FLOW_STEPS),
+});
+export type TableStepInput = z.infer<typeof tableStepSchema>;
 
 /** Due date must be a real YYYY-MM-DD date and not before today (Vietnam). */
 export function convertSchema(now: Date = new Date()) {

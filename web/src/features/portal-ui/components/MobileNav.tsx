@@ -28,12 +28,12 @@ export function MobileNav({ profile, userBlock }: Props) {
         ref={ref}
         aria-label={p.navMain}
         onClick={(e) => e.target === ref.current && close()} // click on the backdrop
-        className="pt-dialog pt-drawer pt-on-dark m-0 h-dvh max-h-dvh w-[min(20rem,85vw)] max-w-none bg-vt-navy-deep p-0 text-white"
+        className="pt-dialog pt-drawer m-0 h-dvh max-h-dvh w-[min(20rem,85vw)] max-w-none bg-pt-surface p-0 text-pt-text"
       >
         <div className="flex h-full flex-col gap-6 p-4">
           <div className="flex items-center justify-between">
             <span className="font-semibold">{p.brand}</span>
-            <button type="button" onClick={close} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-white/10">
+            <button type="button" onClick={close} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-pt-grey-tint">
               <Icon name="close" className="size-6" />
               <span className="sr-only">{p.closeMenu}</span>
             </button>

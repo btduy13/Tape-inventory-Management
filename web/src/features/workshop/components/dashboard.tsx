@@ -100,7 +100,7 @@ export async function WorkshopDashboard({ profile, searchParams }: { profile: Pr
         {view === "board" && <BoardSort basePath={BASE} spec={spec} state={state} />}
       </div>
       {view === "table" ? (
-        <JobsTable rows={rows} role={profile.role} list={{ basePath: BASE, spec, state, total }} filtered={filtered} />
+        <JobsTable key={listHref(BASE, spec, state)} rows={rows} role={profile.role} list={{ basePath: BASE, spec, state, total }} filtered={filtered} />
       ) : rows.length === 0 ? (
         <EmptyState
           title={filtered ? t.portalUi.emptyFiltered : isAdmin ? wsCopy.emptyAll : wsCopy.emptyMine}

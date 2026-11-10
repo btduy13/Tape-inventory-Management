@@ -46,6 +46,7 @@ export const STEP_TONE: Readonly<Record<ProductionStep, Tone>> = {
   dang_in: "amber",
   dang_cat_cuon: "amber",
   dong_goi: "amber",
+  da_san_xuat: "blue",
   san_sang_giao: "yellow",
   da_giao: "green",
   huy: "grey",

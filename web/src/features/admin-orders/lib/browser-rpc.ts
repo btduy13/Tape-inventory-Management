@@ -61,7 +61,7 @@ export async function listAttachments(type: OrderType, id: string): Promise<Atta
 export async function downloadAttachment(id: number): Promise<boolean> {
   const { data, error } = await db().rpc("admin_order_attachment_get", { p_attachment_id: id });
   const f = Array.isArray(data) ? data[0] : null;
-  if (error || !f) return false;
+  if (error || !f || typeof f.base64_data !== "string") return false;
   const bin = atob(f.base64_data);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -69,13 +69,13 @@ export async function downloadAttachment(id: number): Promise<boolean> {
   return true;
 }
 
-export async function addAttachment(type: OrderType, id: string, file: File): Promise<boolean> {
-  if (file.size > MAX_FILE_BYTES) return false;
-  const { error } = await db().rpc("admin_order_attachment_add", {
+export async function addAttachment(type: OrderType, id: string, file: File): Promise<number | null> {
+  if (file.size > MAX_FILE_BYTES) return null;
+  const { data, error } = await db().rpc("admin_order_attachment_add", {
     p_type: type, p_id: id, p_file_name: file.name.slice(0, 255), p_content_type: file.type || "application/octet-stream",
     p_base64: await toBase64(file),
   });
-  return !error;
+  return error || typeof data !== "number" ? null : data;
 }
 
 export async function deleteAttachment(id: number): Promise<boolean> {

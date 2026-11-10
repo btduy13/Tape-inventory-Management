@@ -88,8 +88,8 @@ select ok(
 select is(
   (select array_agg(tgname::text order by tgname) from pg_trigger
     where tgrelid = 'public.thank_you_orders'::regclass and not tgisinternal),
-  array['trg_sync_thank_you_debt', 'zz_resolve_customer'],
-  'thank_you_orders has only its debt trigger and the 0028 customer link (never the workshop)');
+  array['trg_sync_thank_you_debt', 'zz_resolve_customer', 'zzz_save_customer_contact'],
+  'thank_you_orders has debt and customer triggers and no workshop trigger');
 
 -- 0025 debt triggers = orderMath customerDebtSqlExpression / supplierDebtSqlExpression ----------
 insert into public.bang_keo_orders (id, ngay_du_kien, ten_hang, thanh_tien_ban, vat, thanh_tien)

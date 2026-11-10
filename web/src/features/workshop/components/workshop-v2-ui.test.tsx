@@ -31,7 +31,7 @@ describe("<AdvanceStepForm> (xưởng v2: 4 steps, no going back)", () => {
   it("admin: any step; moving back asks in red, forward does not", () => {
     render(<AdvanceStepForm jobId={JOB} code="BK-1" step="san_sang_giao" role="admin" />);
     const select = screen.getByRole("combobox");
-    expect(within(select).getAllByRole("option").map((o) => o.getAttribute("value"))).toEqual(["cho_san_xuat", "dang_san_xuat", "da_giao", "huy"]);
+    expect(within(select).getAllByRole("option").map((o) => o.getAttribute("value"))).toEqual(["cho_san_xuat", "dang_san_xuat", "da_san_xuat", "da_giao", "huy"]);
     expect(screen.getByRole("link", { name: "Tạo phiếu giao hàng" })).toBeInTheDocument();
 
     fireEvent.change(select, { target: { value: "cho_san_xuat" } });

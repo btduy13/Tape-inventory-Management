@@ -17,6 +17,7 @@ const PIPE_COLOR: Record<PipeStep, { fill: string; dot: string }> = {
   none: { fill: "fill-pt-red-ink", dot: "bg-pt-red-ink" },
   cho_san_xuat: { fill: "fill-pt-line-strong", dot: "bg-pt-line-strong" },
   dang_san_xuat: { fill: "fill-vt-blue", dot: "bg-vt-blue" },
+  da_san_xuat: { fill: "fill-pt-yellow-ink", dot: "bg-pt-yellow-ink" },
   san_sang_giao: { fill: "fill-pt-green-ink", dot: "bg-pt-green-ink" },
 };
 

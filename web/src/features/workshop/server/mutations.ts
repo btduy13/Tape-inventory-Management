@@ -3,7 +3,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, DeliveryNoteCreated } from "@/lib/types";
-import type { AdvanceInput, AssignInput, AssignJobInput, ConvertInput } from "../lib/schemas";
+import type { AdvanceInput, AssignInput, AssignJobInput, ConvertInput, TableStepInput } from "../lib/schemas";
 
 type Db = SupabaseClient<Database>;
 type PgError = { code?: string; message?: string } | null;
@@ -52,6 +52,16 @@ export async function advanceStep(db: Db, input: AdvanceInput): Promise<Mutation
     p_note: input.note,
   });
   return mapError(error);
+}
+
+export async function setTableSteps(db: Db, input: TableStepInput) {
+  const { data, error } = await db.rpc("admin_workshop_set_steps", { p_jobs: input.jobs, p_to: input.to });
+  if (error?.code === "40001") return { ok: false as const, reason: "stale" as const };
+  if (error || typeof data !== "number") {
+    const result = mapError(error);
+    return result.ok ? { ok: false as const, reason: "generic" as const } : result;
+  }
+  return { ok: true as const, count: data };
 }
 
 export async function assignWorkshop(db: Db, input: AssignInput): Promise<MutationResult> {

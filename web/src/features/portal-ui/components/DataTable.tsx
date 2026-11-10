@@ -53,7 +53,7 @@ function SortHeader<T>({ col, list }: { col: Column<T>; list: DataTableList }) {
   const dir = on ? list.state.dir : null;
   const href = listHref(list.basePath, list.spec, toggleSort(list.spec, list.state, col.sortKey!));
   return (
-    <Link href={href} scroll={false} className="inline-flex min-h-11 items-center gap-1 hover:text-vt-blue">
+    <Link href={href} scroll={false} className="inline-flex min-h-10 items-center gap-1 hover:text-vt-blue">
       {col.header}
       <Icon name={dir === "asc" ? "sortAsc" : dir === "desc" ? "sortDesc" : "sort"} className={`size-4 ${on ? "text-vt-blue" : "opacity-50"}`} />
       <span className="sr-only">{format(p.sortBy, { column: col.header })}</span>
@@ -72,13 +72,13 @@ export function DataTable<T>({ caption, columns, rows, rowKey, rowHref, rowClass
       <div className={`${surfaceClass} hidden overflow-x-auto md:block`}>
         <table className="w-full text-left text-sm">
           <caption className="sr-only">{caption}</caption>
-          <thead className="border-b border-pt-line text-xs text-pt-muted">
+          <thead className="border-b border-pt-line bg-pt-canvas text-xs text-pt-muted">
             <tr>
               {columns.map((c) => {
                 const on = !!list && !!c.sortKey && list.state.sort === c.sortKey;
                 return (
-                  <th key={c.key} scope="col" aria-sort={list ? ariaSort(on, list.state.dir) : undefined} className={`whitespace-nowrap px-3 py-1 font-semibold ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
-                    {list && c.sortKey ? <SortHeader col={c} list={list} /> : <span className="inline-flex min-h-11 items-center">{c.header}</span>}
+                  <th key={c.key} scope="col" aria-sort={list ? ariaSort(on, list.state.dir) : undefined} className={`whitespace-nowrap px-3 py-0.5 font-semibold first:pl-4 last:pr-4 ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
+                    {list && c.sortKey ? <SortHeader col={c} list={list} /> : <span className="inline-flex min-h-10 items-center">{c.header}</span>}
                   </th>
                 );
               })}
@@ -89,9 +89,9 @@ export function DataTable<T>({ caption, columns, rows, rowKey, rowHref, rowClass
               const sub = subRow?.(r);
               return (
               <Fragment key={rowKey(r)}>
-              <tr className={`pt-row border-t border-pt-line first:border-t-0 ${rowHref ? "hover:bg-pt-blue-tint/50" : ""} ${rowClassName?.(r) ?? ""}`}>
+              <tr className={`pt-row border-t border-pt-line first:border-t-0 transition-colors ${rowHref ? "hover:bg-pt-blue-tint/50" : "hover:bg-pt-canvas"} ${rowClassName?.(r) ?? ""}`}>
                 {columns.map((c, i) => (
-                  <td key={c.key} className={`px-3 py-3 align-middle ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
+                  <td key={c.key} className={`px-3 py-3 align-middle first:pl-4 last:pr-4 ${c.align === "end" ? "text-right" : ""} ${c.className ?? ""}`}>
                     {i === 0 && rowHref ? <Link href={rowHref(r)} className="pt-row-link font-semibold text-vt-blue hover:underline">{c.cell(r)}</Link> : c.cell(r)}
                   </td>
                 ))}

@@ -6,6 +6,7 @@ import type { OrderType } from "@/features/admin-orders/lib/types";
 export const DEFAULT_EMAIL_TO = "tque197@gmail.com";
 /** Total attachment size, as in the app. */
 export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+export const MAX_EMAIL_ATTACHMENTS = 20;
 
 const TYPE_LABEL: Record<OrderType, string> = {
   bang_keo_in: "Băng Keo In", truc_in: "Trục In", thank_you: "Băng Keo Thank you", bang_keo: "Băng Keo",

@@ -13,6 +13,7 @@ describe("steps (mirror of production_step_next / advance_production_step, 0024)
   it("walks the 4-step flow and stops at da_giao", () => {
     expect(nextStep("cho_san_xuat")).toBe("dang_san_xuat");
     expect(nextStep("dang_san_xuat")).toBe("san_sang_giao");
+    expect(nextStep("da_san_xuat")).toBe("san_sang_giao");
     expect(nextStep("san_sang_giao")).toBe("da_giao");
     expect(nextStep("da_giao")).toBeNull();
     expect(nextStep("huy")).toBeNull();
@@ -33,7 +34,7 @@ describe("steps (mirror of production_step_next / advance_production_step, 0024)
   });
 
   it("admin: any other live step (no legacy steps); backwards is detected", () => {
-    expect(stepOptionsFor("admin", "dang_san_xuat")).toEqual(["cho_san_xuat", "san_sang_giao", "da_giao", "huy"]);
+    expect(stepOptionsFor("admin", "dang_san_xuat")).toEqual(["cho_san_xuat", "da_san_xuat", "san_sang_giao", "da_giao", "huy"]);
     expect(stepOptionsFor("admin", "da_giao")).not.toContain("dong_goi");
     expect(isBackward("san_sang_giao", "cho_san_xuat")).toBe(true);
     expect(isBackward("da_giao", "san_sang_giao")).toBe(true);

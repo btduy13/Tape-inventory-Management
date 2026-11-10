@@ -642,6 +642,9 @@ isOneToOne: false
 "admin_quote_convert":
 { Args: { "p_id": string,"p_ngay_du_kien": string,"p_type": string }; Returns: string
                            },
+"admin_workshop_set_steps":
+{ Args: { "p_jobs": Json,"p_to": Database["public"]['Enums']["production_step"] }; Returns: number
+                           },
 "advance_production_step":
 { Args: { "p_job_id": string,"p_note"?: string,"p_to": Database["public"]['Enums']["production_step"] }; Returns: {
               "assigned_at": string | null,
@@ -933,7 +936,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "app_role": "admin"|"manager"|"staff"|"ctv"|"workshop","lead_status": "new"|"assigned"|"consulting"|"quoted"|"accepted"|"production"|"shipping"|"done"|"cancelled","production_step": "cho_san_xuat"|"dang_san_xuat"|"dang_in"|"dang_cat_cuon"|"dong_goi"|"san_sang_giao"|"da_giao"|"huy","quote_status": "draft"|"sent"|"accepted"|"changes_requested"|"expired"|"cancelled"
+            "app_role": "admin"|"manager"|"staff"|"ctv"|"workshop","lead_status": "new"|"assigned"|"consulting"|"quoted"|"accepted"|"production"|"shipping"|"done"|"cancelled","production_step": "cho_san_xuat"|"dang_san_xuat"|"dang_in"|"dang_cat_cuon"|"dong_goi"|"da_san_xuat"|"san_sang_giao"|"da_giao"|"huy","quote_status": "draft"|"sent"|"accepted"|"changes_requested"|"expired"|"cancelled"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1053,7 +1056,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "app_role": ["admin", "manager", "staff", "ctv", "workshop"],"lead_status": ["new", "assigned", "consulting", "quoted", "accepted", "production", "shipping", "done", "cancelled"],"production_step": ["cho_san_xuat", "dang_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "san_sang_giao", "da_giao", "huy"],"quote_status": ["draft", "sent", "accepted", "changes_requested", "expired", "cancelled"]
+            "app_role": ["admin", "manager", "staff", "ctv", "workshop"],"lead_status": ["new", "assigned", "consulting", "quoted", "accepted", "production", "shipping", "done", "cancelled"],"production_step": ["cho_san_xuat", "dang_san_xuat", "dang_in", "dang_cat_cuon", "dong_goi", "da_san_xuat", "san_sang_giao", "da_giao", "huy"],"quote_status": ["draft", "sent", "accepted", "changes_requested", "expired", "cancelled"]
           }
         }
 } as const
