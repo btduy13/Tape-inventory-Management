@@ -27,6 +27,6 @@ export interface RenderedEmail {
 export type SendResult = { ok: true; id: string } | { ok: false; error: string };
 
 export interface EmailSender {
-  readonly kind: "resend" | "fake";
+  readonly kind: "resend" | "smtp" | "fake";
   send(message: EmailMessage): Promise<SendResult>;
 }

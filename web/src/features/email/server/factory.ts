@@ -5,13 +5,19 @@ import { isProductionRuntime } from "@/lib/env.server";
 import { FakeSender } from "../lib/fake-sender";
 import type { EmailSender } from "../lib/types";
 import { ResendSender } from "./resend-sender";
+import { SmtpSender } from "./smtp-sender";
 
 let current: EmailSender | null = null;
 
 export function getEmailSender(): EmailSender {
   if (current) return current;
   const env = serverEnv();
-  if (env.RESEND_API_KEY) {
+  if (env.SMTP_SERVER) {
+    current = new SmtpSender({
+      server: env.SMTP_SERVER, port: env.SMTP_PORT, username: env.SMTP_USERNAME,
+      password: env.SMTP_PASSWORD, sender: env.SMTP_SENDER,
+    });
+  } else if (env.RESEND_API_KEY) {
     current = new ResendSender(env.RESEND_API_KEY, env.EMAIL_FROM);
   } else if (isProductionRuntime(process.env)) {
     // Fail closed: a fake "sent" in production would mark quotes as sent although the customer

@@ -8,6 +8,10 @@ const base: ServerEnv = {
   TURNSTILE_SECRET_KEY: "0x4AAAAAAArealSecretValue",
   IP_HASH_SALT: "a-long-random-production-salt",
   QUOTE_TOKEN_TTL_DAYS: 14,
+  SMTP_PORT: 587,
+  SMTP_USERNAME: "",
+  SMTP_PASSWORD: "",
+  SMTP_SENDER: "",
 };
 
 describe("isProductionRuntime", () => {

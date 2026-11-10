@@ -5,6 +5,12 @@ import { z } from "zod";
 const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   RESEND_API_KEY: z.string().min(1).optional(),
+  // SMTP, same settings as the desktop app (electron/config.js). When SMTP_SERVER is set it wins over Resend.
+  SMTP_SERVER: z.string().trim().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_USERNAME: z.string().trim().default(""),
+  SMTP_PASSWORD: z.string().default(""),
+  SMTP_SENDER: z.string().trim().default(""),
   EMAIL_FROM: z.string().min(3).default("Băng Keo <no-reply@example.com>"),
   ADMIN_NOTIFY_EMAILS: z
     .string()
