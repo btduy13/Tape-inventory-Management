@@ -1,0 +1,66 @@
+/* Variant E: tape motion graphics. Plain global CSS, prefix ve-.
+   Two kinds of motion:
+   1. hero entrance (one-shot keyframes): tape strips are laid left to right by a travelling roll;
+   2. scroll scrub: ScrubMotion.tsx writes --e-p (0..1) on [data-e-scrub] through CSSOM (CSP-safe),
+      strips unroll and rolls travel with the scroll position. Without JS / with reduced motion the
+      variable is unset and everything rests in its final state (--e-p fallback 1). */
+
+/* left gutter of the shared landing container, for full-bleed strips that start at the viewport edge */
+.ve-g0, .ve-g1, .ve-g2 { --ve-g: 1rem; padding-left: var(--ve-g); }
+@media (min-width: 640px) { .ve-g0, .ve-g1, .ve-g2 { --ve-g: 2rem; } }
+@media (min-width: 1024px) { .ve-g0, .ve-g1, .ve-g2 { --ve-g: max(3rem, calc((100vw - 1440px) / 2 + 3rem)); } }
+.ve-g1 { padding-left: calc(var(--ve-g) + 9vw); }
+.ve-g2 { padding-left: calc(var(--ve-g) + 3vw); }
+
+.ve-hero-type { font-size: clamp(2.6rem, 10vw, 9rem); line-height: 1.16; }
+
+/* ---- hero entrance ---- */
+@keyframes ve-lay {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes ve-travel {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: none; }
+}
+@keyframes ve-rollspin {
+  from { transform: rotate(-900deg); }
+  to { transform: none; }
+}
+@keyframes ve-idle {
+  to { transform: rotate(360deg); }
+}
+.ve-lay { animation: ve-lay 1.15s cubic-bezier(0.65, 0, 0.35, 1) backwards; }
+.ve-travel { animation: ve-travel 1.15s cubic-bezier(0.65, 0, 0.35, 1) backwards; }
+.ve-rollspin { animation: ve-rollspin 1.15s cubic-bezier(0.65, 0, 0.35, 1) backwards; }
+.ve-d1 { animation-delay: 180ms; }
+.ve-d2 { animation-delay: 360ms; }
+.ve-d3 { animation-delay: 540ms; }
+/* slow idle spin for rolls that stay on screen */
+.ve-idle { animation: ve-idle 14s linear infinite; }
+
+/* ---- scroll scrub ---- */
+.ve-clip-r { clip-path: inset(0 calc((1 - var(--e-p, 1)) * 100%) 0 0); }
+.ve-clip-l { clip-path: inset(0 0 0 calc((1 - var(--e-p, 1)) * 100%)); }
+/* the roll runs ahead of the strip and leaves the screen at the end (x1.14) */
+.ve-go-r { transform: translate3d(calc((var(--e-p, 1) * 1.14 - 1) * 100%), 0, 0); }
+.ve-go-l { transform: translate3d(calc((1 - var(--e-p, 1) * 1.14) * 100%), 0, 0); }
+/* the roll stops at the end of the strip */
+.ve-go-end { transform: translate3d(calc((var(--e-p, 1) - 1) * 100%), 0, 0); }
+.ve-turn { transform: rotate(calc(var(--e-p, 1) * 900deg)); }
+.ve-turn-rev { transform: rotate(calc(var(--e-p, 1) * -900deg)); }
+
+/* process steps light up as the tape passes them (desktop: steps sit side by side on the tape) */
+.ve-step, .ve-dot { --t: -1; }
+@media (min-width: 1024px) {
+  .ve-t1 { --t: 0.02; }
+  .ve-t2 { --t: 0.27; }
+  .ve-t3 { --t: 0.52; }
+  .ve-t4 { --t: 0.77; }
+}
+.ve-step { opacity: clamp(0.3, calc((var(--e-p, 1) - var(--t)) * 8 + 0.3), 1); }
+.ve-dot { transform: scale(clamp(0.55, calc((var(--e-p, 1) - var(--t)) * 8 + 0.55), 1)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ve-lay, .ve-travel, .ve-rollspin, .ve-idle { animation: none; }
+}

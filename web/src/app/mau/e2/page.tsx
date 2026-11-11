@@ -1,0 +1,9 @@
+// Design variant E of the landing page, hero option "live" (review route).
+import type { Metadata } from "next";
+import { LandingE } from "@/features/landing-variants/e/LandingE";
+
+export const metadata: Metadata = { title: "Mẫu E: Chữ + 3D" };
+
+export default function MauEPage() {
+  return <LandingE hero="live" />;
+}
