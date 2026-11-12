@@ -3,17 +3,15 @@
 import { z } from "zod";
 import { parseMoney } from "@/features/admin-orders/lib/form-money";
 import { QUOTE_TYPES, TEXT_KEYS, type QuoteType } from "./bundle";
+import { AXIS_GROUPS, SIZE_GROUPS } from "./layout";
 
+/** Input keys of a size / an axis = the form's input groups (layout.ts). */
 export const SIZE_KEYS: Readonly<Record<QuoteType, readonly string[]>> = {
-  bang_keo_in: [
-    "quy_cach_mm", "quy_cach_m", "quy_cach_mic", "cuon_cay", "so_luong", "mau_keo", "mau_sac", "loi_giay", "thung_bao",
-    "don_gia_von", "phi_sl", "phi_keo", "phi_mau", "phi_size", "phi_cat", "don_gia_ban", "vat_percent", "tien_coc",
-    "tien_ship", "ctv", "hoa_hong",
-  ],
-  bang_keo: ["quy_cach", "so_luong", "mau_sac", "don_gia_goc", "don_gia_ban", "vat_percent", "tien_ship", "ctv", "hoa_hong"],
-  truc_in: ["quy_cach", "so_luong", "mau_sac", "mau_keo", "don_gia_goc", "don_gia_ban", "vat_percent", "tien_ship", "ctv", "hoa_hong"],
+  bang_keo_in: SIZE_GROUPS.bang_keo_in.flatMap((g) => g.keys),
+  bang_keo: SIZE_GROUPS.bang_keo.flatMap((g) => g.keys),
+  truc_in: SIZE_GROUPS.truc_in.flatMap((g) => g.keys),
 };
-export const AXIS_KEYS = ["ten_truc", "truc_chu_vi", "truc_so_luong", "truc_gia_goc", "truc_gia_ban", "truc_vat_percent", "truc_ctv", "truc_hoa_hong"] as const;
+export const AXIS_KEYS: readonly string[] = AXIS_GROUPS.flatMap((g) => g.keys);
 
 const strings = z.record(z.string().max(40), z.string().max(255));
 export const quoteInputSchema = z.object({

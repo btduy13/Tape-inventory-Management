@@ -137,6 +137,7 @@ export function draftsFromQuote(type: QuoteType, row: QuoteRow): SizeDraft[] {
           phi_mau: str(shared.phi_mau ?? ""), phi_size: str(shared.phi_size ?? ""), phi_cat: str(shared.phi_cat ?? ""),
           vat_percent: str(vatPercentFromAmount(item.vat, item.total, item.vatPercent)), tien_coc: str(item.deposit),
           tien_ship: str(item.shipping ?? shared.tien_ship ?? ""), ctv: str(shared.ctv), hoa_hong: str(shared.hoa_hong ?? ""),
+          loai_truc: item.axes.length ? "moi" : "cu", // quoteFieldsWithStoredAxes
         }
       : {
           quy_cach: item.specification === "-" ? "" : item.specification, so_luong: str(item.quantity),

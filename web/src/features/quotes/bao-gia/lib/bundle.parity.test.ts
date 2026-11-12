@@ -5,8 +5,8 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildItem, quoteBundle, quoteError, type Fields, type QuoteType, type SizeDraft } from "./bundle";
-import { toQuotePayload } from "./schema";
+import { buildItem, quoteBundle, quoteError, sizeResults, type Fields, type QuoteType, type SizeDraft } from "./bundle";
+import { AXIS_KEYS, SIZE_KEYS, toQuotePayload } from "./schema";
 import { draftsFromQuote, grandTotal, listPriceSummary, monthRange, normalizeItems, parseCurrency } from "./stored";
 
 const jsPath = path.resolve(process.cwd(), "../electron/js/orderMath.js");
@@ -162,5 +162,39 @@ describe("toQuotePayload", () => {
   it("rejects a bad number", () => {
     expect(toQuotePayload({ type: "truc_in", id: null, header, sizes: [{ fields: { so_luong: "abc" }, axes: [] }] })).toBeNull();
     expect(toQuotePayload({ type: "truc_in", id: null, header, sizes: [{ fields: { so_luong: "-1" }, axes: [] }] })).toBeNull();
+  });
+});
+
+describe("quote form layout", () => {
+  it("keeps the payload keys of each type (layout groups = SIZE_KEYS / AXIS_KEYS)", () => {
+    expect([...SIZE_KEYS.bang_keo_in].sort()).toEqual([
+      "quy_cach_mm", "quy_cach_m", "quy_cach_mic", "cuon_cay", "so_luong", "mau_keo", "mau_sac", "loi_giay", "thung_bao",
+      "don_gia_von", "phi_sl", "phi_keo", "phi_mau", "phi_size", "phi_cat", "don_gia_ban", "vat_percent", "tien_coc",
+      "tien_ship", "ctv", "hoa_hong",
+    ].sort());
+    expect([...SIZE_KEYS.bang_keo].sort()).toEqual(["quy_cach", "so_luong", "mau_sac", "don_gia_goc", "don_gia_ban", "vat_percent", "tien_ship", "ctv", "hoa_hong"].sort());
+    expect([...SIZE_KEYS.truc_in].sort()).toEqual(["quy_cach", "so_luong", "mau_sac", "mau_keo", "don_gia_goc", "don_gia_ban", "vat_percent", "tien_ship", "ctv", "hoa_hong"].sort());
+    expect([...AXIS_KEYS].sort()).toEqual(["ten_truc", "truc_chu_vi", "truc_so_luong", "truc_gia_goc", "truc_gia_ban", "truc_vat_percent", "truc_ctv", "truc_hoa_hong"].sort());
+  });
+
+  it("fills Kết quả tính toán like calculateBangKeoIn in quote mode", () => {
+    const fields: Fields = {
+      quy_cach_m: "100", cuon_cay: "1", don_gia_von: "90.000", so_luong: "2", don_gia_ban: "150.000",
+      vat_percent: "10", tien_coc: "50.000", hoa_hong: "10", tien_ship: "10.000", loai_truc: "cu",
+    };
+    const saved = [{ ten_truc: "T", truc_so_luong: "1", truc_gia_goc: "100.000", truc_gia_ban: "200.000" }];
+    const typing = { ten_truc: "T2", truc_so_luong: "1", truc_gia_goc: "10.000", truc_gia_ban: "50.000" };
+    const old = sizeResults("bang_keo_in", { fields, axes: saved }, typing);
+    expect(old).toMatchObject({
+      don_gia_goc: 100000, thanh_tien_ban: 300000, thanh_tien_goc: 200000, loi_nhuan: 100000, tien_hoa_hong: 10000,
+      loi_nhuan_rong: 80000, cong_no_khach: 300000 + 30000 - 50000 + 200000,
+    });
+    // Trục mới: the typed axis is owed too.
+    expect(sizeResults("bang_keo_in", { fields: { ...fields, loai_truc: "moi" }, axes: saved }, typing).cong_no_khach).toBe(old.cong_no_khach + 50000);
+  });
+
+  it("fills Kết quả tính toán of plain tape (cost total in thanh_tien)", () => {
+    const r = sizeResults("bang_keo", { fields: { so_luong: "10", don_gia_goc: "1.000", don_gia_ban: "1.500", vat_percent: "8" }, axes: [] }, {});
+    expect(r).toMatchObject({ thanh_tien: 10000, thanh_tien_ban: 15000, loi_nhuan: 5000, cong_no_khach: 16200 });
   });
 });
