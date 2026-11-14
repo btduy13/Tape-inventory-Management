@@ -51,3 +51,5 @@ Thumbs.db
 
 # Local secrets
 electron/API key.txt
+
+.superpowers/

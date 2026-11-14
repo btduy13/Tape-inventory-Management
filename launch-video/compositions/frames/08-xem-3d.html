@@ -1,0 +1,17 @@
+<template>
+  <style>
+    #root { background: #f3f1ec; }
+    #root{position:absolute;inset:0;overflow:hidden;font-family:Inter}#root .world,#root .bubble{position:absolute;left:0;top:0}.t{position:absolute;left:0;right:0;top:888px;text-align:center;font-family:Inter;font-weight:800;font-size:72px;letter-spacing:-0.02em;line-height:1.1}.cursor{position:absolute;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}.ui{position:absolute;display:block;box-shadow:0 24px 60px rgba(22,23,58,.18)}
+    .strip{position:absolute;left:-200px;right:-200px;display:flex;align-items:center;justify-content:center;gap:150px;box-shadow:0 10px 30px rgba(0,0,0,.18)}.strip .it{display:flex;align-items:center;gap:34px;flex:none}.strip span{font-family:Roboto;font-weight:700;font-size:78px;color:#cf1f27;white-space:nowrap}
+    
+  </style>
+  <div id="root" data-composition-id="s08" data-width="1920" data-height="1080">
+    <img class="ui" src="assets/ui/roll3d-view.png" style="width:1170px;height:616px;left:375px;top:212px;border-radius:16px" alt="">
+    <div class="t" id="s08-title" style="color:#16173a">Xem mô phỏng 3D</div>
+  </div>
+  <script>
+    // Posed still for the storyboard; motion is added once the board is approved.
+    const tl = gsap.timeline({ paused: true });
+    window.__timelines["s08"] = tl;
+  </script>
+</template>
