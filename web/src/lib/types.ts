@@ -108,6 +108,7 @@ export type DesignJson = {
     path: string | null; scale: number; offsetX: number; offsetY: number;
     rotation?: number;              // degrees, clockwise (missing = 0)
     autoClean?: boolean;            // preview used the auto-cleaned logo (white bg removed / trimmed)
+    mono?: { color: string; invert: boolean; level: number } | null; // printed as a one-ink logo
     colorMode?: "original" | "tint";  // legacy (old designs); logos now always print in original colours
   } | null;
   repeatGapPx?: number;

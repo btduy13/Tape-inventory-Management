@@ -33,8 +33,11 @@ function setup(contact?: DesignerContact) {
     </DesignProvider>,
   );
 }
-const upload = (name: string) =>
+/** Upload a logo; by default switch it to its own colours (new logos start as one-ink logos). */
+async function upload(name: string, mode: "original" | "mono" = "original") {
   fireEvent.change(screen.getByTestId("logo-input"), { target: { files: [new File(["x"], name, { type: "image/png" })] } });
+  if (mode === "original") fireEvent.click(await screen.findByRole("radio", { name: /Màu gốc/, hidden: true }));
+}
 const head = (id: string) => document.getElementById(`step-${id}-head`)!;
 
 describe("ink limit (max 3 print inks)", () => {
@@ -42,7 +45,7 @@ describe("ink limit (max 3 print inks)", () => {
     setup();
     fireEvent.click(head("content"));
     fireEvent.change(screen.getByLabelText("Nội dung in"), { target: { value: "ACME" } });
-    upload("two.png");
+    await upload("two.png");
     await waitFor(() => expect(screen.getAllByText("Số màu in: 3/3").length).toBeGreaterThan(0));
     expect(screen.getAllByRole("img", { name: "Màu in 1: #d9c3a0" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -53,7 +56,7 @@ describe("ink limit (max 3 print inks)", () => {
     fireEvent.click(head("content"));
     const input = screen.getByLabelText("Nội dung in");
     input.focus();
-    upload("many.png");
+    await upload("many.png");
     const dialog = await screen.findByRole("dialog", { name: "Thiết kế vượt quá 3 màu in" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(dialog).toHaveTextContent("Logo của bạn có 5 màu");
@@ -66,12 +69,11 @@ describe("ink limit (max 3 print inks)", () => {
     expect(head("colors")).toHaveTextContent("6 màu in, cần tư vấn");
   });
 
-  it("offers 'Liên hệ tư vấn' and 'Đổi logo', never a single-ink option", async () => {
+  it("offers 'Chuyển logo sang 1 màu', 'Liên hệ tư vấn' and 'Đổi logo'", async () => {
     setup();
-    upload("many.png");
-    const dialog = await screen.findByRole("dialog");
-    expect(screen.queryByRole("button", { name: "In một màu" })).not.toBeInTheDocument();
-    expect(dialog).not.toHaveTextContent("In một màu");
+    await upload("many.png");
+    await screen.findByRole("dialog");
+    expect(screen.getByRole("button", { name: "Chuyển logo sang 1 màu" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Liên hệ tư vấn" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Đổi logo" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -82,7 +84,7 @@ describe("ink limit (max 3 print inks)", () => {
     setup();
     fireEvent.click(head("content"));
     fireEvent.change(screen.getByLabelText("Nội dung in"), { target: { value: "ACME" } });
-    upload("two.png");
+    await upload("two.png");
     await waitFor(() => expect(screen.getAllByText("Số màu in: 3/3").length).toBeGreaterThan(0));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     // Text green (not near red / navy / tape): 4 colours, over the limit.
@@ -95,7 +97,7 @@ describe("ink limit (max 3 print inks)", () => {
 
   it("'Liên hệ tư vấn' without a phone opens the quote step with the flag", async () => {
     setup();
-    upload("many.png");
+    await upload("many.png");
     fireEvent.click(await screen.findByRole("button", { name: "Liên hệ tư vấn" }));
     expect(head("quote")).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("note")).toHaveTextContent("6 màu in (tối đa 3)");
@@ -103,7 +105,7 @@ describe("ink limit (max 3 print inks)", () => {
 
   it("with a phone: call + Zalo links; Tab is trapped", async () => {
     setup({ phone: "0901 234 567", phoneHref: "tel:0901234567" });
-    upload("many.png");
+    await upload("many.png");
     const dialog = await screen.findByRole("dialog");
     expect(screen.getByRole("link", { name: "Gọi tư vấn 0901 234 567" })).toHaveAttribute("href", "tel:0901234567");
     expect(screen.getByRole("link", { name: "Nhắn Zalo" })).toHaveAttribute("href", "https://zalo.me/0901234567");
@@ -115,7 +117,7 @@ describe("ink limit (max 3 print inks)", () => {
 
   it("photo / gradient logo: counts above 6 read 'hơn 6', not the raw number", async () => {
     setup();
-    upload("photo.png");
+    await upload("photo.png");
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Logo của bạn có hơn 6 màu");
     expect(dialog).not.toHaveTextContent("26");
@@ -125,6 +127,23 @@ describe("ink limit (max 3 print inks)", () => {
     expect(counter).toHaveTextContent("Logo có hơn 6 màu");
     expect(counter.querySelectorAll("svg")).toHaveLength(6);
     expect(head("colors")).toHaveTextContent("hơn 6 màu in, cần tư vấn");
+  });
+
+  it("'Chuyển logo sang 1 màu' prints the logo in the text ink: back within the limit", async () => {
+    setup();
+    await upload("many.png");
+    fireEvent.click(await screen.findByRole("button", { name: "Chuyển logo sang 1 màu" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // Tape + one logo ink (the text colour).
+    await waitFor(() => expect(screen.getAllByText("Số màu in: 2/3").length).toBeGreaterThan(0));
+    expect(screen.getAllByRole("radio", { name: /1 màu/, hidden: true })[0]).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("a new logo starts as a one-ink logo: even a photo logo fits the limit", async () => {
+    setup();
+    await upload("photo.png", "mono");
+    await waitFor(() => expect(screen.getAllByText("Số màu in: 2/3").length).toBeGreaterThan(0));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("zaloHref accepts VN numbers only", () => {

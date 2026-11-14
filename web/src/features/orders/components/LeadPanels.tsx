@@ -98,6 +98,7 @@ export function DesignPanel({ code, design, previewUrl }: { code: string; design
             {ink.hasLogo ? c.hasLogo : c.noLogo}
             {ink.hasLogo && design.design_json?.logo?.rotation ? ` · ${format(c.logoRotated, { deg: design.design_json.logo.rotation })}` : null}
             {ink.hasLogo && design.design_json?.logo?.autoClean ? ` · ${c.logoAutoCleaned}` : null}
+            {ink.hasLogo && design.design_json?.logo?.mono ? ` · ${format(c.logoMono, { hex: design.design_json.logo.mono.color })}` : null}
           </Row>
           <Row label={c.pattern}>{t.designPattern[designPatternOf(design.design_json)]}</Row>
           <Row label={c.border}>{borderLabel(designBorderOf(design.design_json))}</Row>

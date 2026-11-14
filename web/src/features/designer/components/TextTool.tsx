@@ -1,9 +1,10 @@
 "use client";
-// Print text: content (up to MAX_TEXT_LINES lines, Enter = new line), font (radio tiles previewed in each font via SVG attributes, CSP-safe)
-// and size. Text colour lives in the colour step; repeat gap lives in PatternPicker.
+// Print text: content (up to MAX_TEXT_LINES lines, Enter = new line), font (grouped radio tiles
+// previewed in each font via SVG attributes, CSP-safe; catalog in lib/fonts.ts) and size. Text colour lives in the colour step; repeat gap lives in PatternPicker.
 import { useId } from "react";
 import { format, getDictionary } from "@/i18n";
 import { FONT_FAMILIES, MAX_TEXT_LENGTH, MAX_TEXT_LINES, MIN_FONT_SIZE_PX } from "../lib/constants";
+import { FONT_GROUPS, FONT_META, fontCss, fontWeight } from "../lib/fonts";
 import { maxFontSize } from "../lib/state";
 import { useDesignState } from "./hooks";
 import { RangeField } from "./RangeField";
@@ -42,28 +43,37 @@ export function TextTool() {
       </div>
       <div className="flex min-w-0 flex-col gap-2">
         <span id={`${id}-font`} className="text-sm font-medium text-slate-800">{t.font}</span>
-        <div role="radiogroup" aria-labelledby={`${id}-font`} className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-3 xl:grid-cols-5">
-          {FONT_FAMILIES.map((f) => {
-            const on = s.fontFamily === f;
-            return (
-              <button
-                key={f}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                aria-label={f}
-                onClick={() => dispatch({ type: "setFontFamily", fontFamily: f })}
-                className={`${chip} h-16 flex-col gap-0.5 px-1 ${on ? chipOn : chipOff}`}
-              >
-                <svg width="40" height="22" viewBox="0 0 40 22" aria-hidden="true">
-                  <text x="20" y="17" textAnchor="middle" fontSize="18" fontWeight="bold" fontFamily={f} fill="currentColor">
-                    {t.fontPreview}
-                  </text>
-                </svg>
-                <span className="w-full truncate text-center text-xs leading-4">{f === "Times New Roman" ? "Times" : f}</span>
-              </button>
-            );
-          })}
+        <div role="radiogroup" aria-labelledby={`${id}-font`} className="flex min-w-0 flex-col gap-3">
+          {FONT_GROUPS.map((g) => (
+            <div key={g} className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs font-medium text-slate-600">{t.fontGroups[g]}</span>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+                {FONT_FAMILIES.filter((f) => FONT_META[f].group === g).map((f) => {
+                  const on = s.fontFamily === f;
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={f}
+                      data-font={f}
+                      onClick={() => dispatch({ type: "setFontFamily", fontFamily: f })}
+                      className={`${chip} h-16 flex-col gap-0.5 px-1 ${on ? chipOn : chipOff}`}
+                    >
+                      {/* Sample in the font itself (SVG attributes: CSP-safe); also fetches the web font. */}
+                      <svg width="96" height="26" viewBox="0 0 96 26" className="max-w-full" aria-hidden="true">
+                        <text x="48" y="19" textAnchor="middle" fontSize="17" fontWeight={fontWeight(f)} fontFamily={fontCss(f)} fill="currentColor">
+                          {t.fontPreview}
+                        </text>
+                      </svg>
+                      <span className="w-full truncate text-center text-xs leading-4">{FONT_META[f].label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       <RangeField

@@ -3,7 +3,7 @@
 // live mini tape drawn with the customer's own logo and text (draw-strip.ts); before there is any
 // content it shows a generic SVG sketch (CSP-safe attributes).
 // Tapes under MIN_PATTERN_WIDTH_MM only print the straight pattern: the others are disabled.
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { format, getDictionary } from "@/i18n";
 import { DESIGN_BORDER_STYLES, DESIGN_PATTERNS, type DesignBorderStyle, type DesignPattern } from "@/lib/types";
 import { borderAllowed, maxBorderMm } from "../lib/border";
@@ -12,7 +12,8 @@ import { DIAGONAL_ANGLE, isAllOverPattern, stripSize } from "../lib/pattern";
 import { patternsAllowed, textLines, type DesignState } from "../lib/state";
 import { drawStrip } from "./draw-strip";
 import { layoutForState } from "./stage-layout";
-import { tintCanvas, useLogoCanvas } from "./use-logo-canvas";
+import { usePrintLogo } from "./use-logo-canvas";
+import { useFontReady } from "./use-font-ready";
 import { useDesignState } from "./hooks";
 import { RangeField } from "./RangeField";
 import { chip, chipOff, chipOn, groupLabel, hint } from "./ui";
@@ -76,7 +77,7 @@ const THUMB_W = 120;
 const THUMB_LENGTH_MM = 150;
 
 /** Live mini tape of `pattern` with the current design. */
-function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; s: DesignState; logo: HTMLCanvasElement | null; knockout: HTMLCanvasElement | null }) {
+function PatternThumb({ pattern, s, logo, knockout, fontReady }: { pattern: DesignPattern; s: DesignState; logo: HTMLCanvasElement | null; knockout: HTMLCanvasElement | null; fontReady: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -88,7 +89,7 @@ function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; 
       const scale = (THUMB_W / strip.width) * dpr;
       canvas.width = Math.round(strip.width * scale);
       canvas.height = Math.round(strip.height * scale);
-      const layout = layoutForState({ ...s, pattern }, logo !== null, THUMB_LENGTH_MM);
+      const layout = layoutForState({ ...s, pattern }, logo, THUMB_LENGTH_MM);
       drawStrip(ctx, strip, layout, {
         backgroundColor: s.backgroundColor,
         textColor: s.textColor,
@@ -100,7 +101,7 @@ function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; 
       }, scale);
     });
     return () => cancelAnimationFrame(id);
-  }, [pattern, s, logo, knockout]);
+  }, [pattern, s, logo, knockout, fontReady]);
   return <canvas ref={ref} aria-hidden="true" data-thumb={pattern} className="block h-auto w-full max-w-[120px] rounded-sm" />;
 }
 
@@ -131,9 +132,8 @@ export function PatternPicker() {
   const canPattern = patternsAllowed(widthMm);
   const canBorder = borderAllowed(widthMm);
   const maxBorder = maxBorderMm(widthMm);
-  const logoCanvas = useLogoCanvas(s.logo);
-  // Logo in the filled colour blocks: knocked out in the tape colour (same as the stage).
-  const knockout = useMemo(() => (logoCanvas ? tintCanvas(logoCanvas, s.backgroundColor) : null), [logoCanvas, s.backgroundColor]);
+  const { logo: logoCanvas, knockout } = usePrintLogo(s);
+  const fontReady = useFontReady(s.fontFamily);
   const hasContent = textLines(s.text).length > 0 || logoCanvas !== null;
 
   return (
@@ -161,7 +161,7 @@ export function PatternPicker() {
                 className={`${chip} min-h-16 flex-col gap-1 px-1.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-40 ${on ? chipOn : chipOff}`}
               >
                 {hasContent && !disabled ? (
-                  <PatternThumb pattern={p} s={s} logo={logoCanvas} knockout={p === "blocks" ? knockout : null} />
+                  <PatternThumb pattern={p} s={s} logo={logoCanvas} knockout={p === "blocks" ? knockout : null} fontReady={fontReady} />
                 ) : (
                   <PatternIcon pattern={p} />
                 )}

@@ -31,7 +31,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1
 
 export function InkLimitDialog({ contact, onContactForm, onChangeLogo }: Props) {
   const t = getDictionary().designer;
-  const [s] = useDesignState();
+  const [s, dispatch] = useDesignState();
   const inks = useInks();
   const titleId = useId();
   const bodyId = useId();
@@ -108,8 +108,21 @@ export function InkLimitDialog({ contact, onContactForm, onChangeLogo }: Props) 
           </button>
         </div>
         <div className="flex flex-col gap-2">
+          {s.logo && !s.logoMono.on && (
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                dispatch({ type: "setLogoMono", on: true });
+              }}
+              className={btnBrand}
+              data-autofocus
+            >
+              {t.inkMakeMono}
+            </button>
+          )}
           {contact?.phoneHref ? (
-            <a href={contact.phoneHref} onClick={close} className={btnBrand} data-autofocus>
+            <a href={contact.phoneHref} onClick={close} className={s.logo && !s.logoMono.on ? btnSecondary : btnBrand} data-autofocus={s.logo && !s.logoMono.on ? undefined : true}>
               {format(t.inkContactCall, { phone: contact.phone ?? "" })}
             </a>
           ) : (

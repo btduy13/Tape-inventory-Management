@@ -39,6 +39,13 @@ export type LogoAsset = {
   cleanup?: { bgRemoved: boolean; trimmed: boolean };
 };
 
+/** One-ink logo (logo-mono.ts). `color` null = same ink as the text (no extra ink). */
+export type LogoMono = { on: boolean; color: string | null; invert: boolean; level: number };
+
+/** Every imported logo starts as a one-ink logo in the text colour (owner rule: any logo must
+ *  print in one colour); the customer can switch back to the logo's own colours. */
+export const LOGO_MONO_DEFAULT: LogoMono = { on: true, color: null, invert: false, level: 50 };
+
 export type DesignState = {
   preset: PresetOption;
   backgroundColor: string;
@@ -52,6 +59,8 @@ export type DesignState = {
   logoOffsetY: number;
   /** Logo rotation, degrees in [-180, 180] (clockwise). */
   logoRotation: number;
+  /** One-ink conversion of the logo. */
+  logoMono: LogoMono;
   /** Text position offsets, fraction of strip height (same unit as logo offsets). */
   textOffsetX: number;
   textOffsetY: number;
@@ -81,6 +90,8 @@ export type DesignAction =
   | { type: "setLogoInks"; url: string; inks: LogoInk[] | null }
   /** Show the auto-cleaned logo (true) or the original image (false). */
   | { type: "setLogoCleanup"; on: boolean }
+  /** One-ink logo settings; `color: null` follows the text colour. */
+  | { type: "setLogoMono"; on?: boolean; color?: string | null; invert?: boolean; level?: number }
   | { type: "setTextOffset"; offsetX?: number; offsetY?: number }
   | { type: "applyTemplate"; template: DesignTemplate }
   | { type: "setRepeatGap"; px: number }
@@ -101,6 +112,7 @@ export function createInitialState(preset: PresetOption = DEFAULT_PRESETS[0]): D
     logoOffsetX: 0,
     logoOffsetY: 0,
     logoRotation: 0,
+    logoMono: LOGO_MONO_DEFAULT,
     textOffsetX: 0,
     textOffsetY: 0,
     repeatGapPx: 80,
@@ -164,7 +176,12 @@ function applyColor(state: DesignState, role: ColorRole, raw: string | null): De
   if (!color) return state;
   const other = role === "backgroundColor" ? state.textColor : state.backgroundColor;
   if (color === other) return state; // text must stay visible on background
-  return { ...state, [role]: color };
+  const next = { ...state, [role]: color };
+  // A one-ink logo colour equal to the new tape colour would vanish: follow the text instead.
+  if (role === "backgroundColor" && state.logoMono.color === color) next.logoMono = { ...state.logoMono, color: null };
+  // A logo colour equal to the new text colour is the same ink: follow the text.
+  if (role === "textColor" && state.logoMono.color === color) next.logoMono = { ...state.logoMono, color: null };
+  return next;
 }
 
 function applyTemplate(state: DesignState, tpl: DesignTemplate): DesignState {
@@ -211,9 +228,31 @@ export function designReducer(state: DesignState, action: DesignAction): DesignS
     case "setFontSize":
       return { ...state, fontSizePx: clampFont(action.px) };
     case "setLogo":
+      // A new logo starts again as a one-ink logo in the text colour.
       return action.logo
-        ? { ...state, logo: action.logo }
-        : { ...state, logo: null, logoScale: 1, logoOffsetX: 0, logoOffsetY: 0, logoRotation: 0 };
+        ? { ...state, logo: action.logo, logoMono: state.logo?.url === action.logo.url ? state.logoMono : LOGO_MONO_DEFAULT }
+        : { ...state, logo: null, logoScale: 1, logoOffsetX: 0, logoOffsetY: 0, logoRotation: 0, logoMono: LOGO_MONO_DEFAULT };
+    case "setLogoMono": {
+      const m = state.logoMono;
+      let color = m.color;
+      if (action.color !== undefined) {
+        if (action.color === null) color = null;
+        else {
+          const hex = normalizeHex(action.color);
+          if (!hex || hex === state.backgroundColor) return state; // an ink in the tape colour would not show
+          color = hex === state.textColor ? null : hex;
+        }
+      }
+      const next: LogoMono = {
+        on: action.on ?? m.on,
+        color,
+        invert: action.invert ?? m.invert,
+        level: action.level === undefined ? m.level : Math.round(clamp(action.level, 0, 100)),
+      };
+      return next.on === m.on && next.color === m.color && next.invert === m.invert && next.level === m.level
+        ? state
+        : { ...state, logoMono: next };
+    }
     case "setLogoTransform":
       return {
         ...state,

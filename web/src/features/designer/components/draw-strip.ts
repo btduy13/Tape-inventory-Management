@@ -4,12 +4,14 @@
 // pattern thumbnails. Browser only.
 import { borderShapes } from "../lib/border";
 import { TEXT_LINE_HEIGHT } from "../lib/constants";
+import { fontShorthand } from "../lib/fonts";
 import type { PatternLayout, StripSize } from "../lib/pattern";
 import type { DesignBorderStyle } from "@/lib/types";
 
 export type StripPaint = {
   backgroundColor: string;
   textColor: string;
+  /** Font id (FONT_FAMILIES). */
   fontFamily: string;
   /** Printed text, lines joined with "\n". */
   text: string;
@@ -87,7 +89,7 @@ export function drawStrip(
     }
     if (t.text) {
       ctx.fillStyle = t.fill ? paint.backgroundColor : paint.textColor;
-      ctx.font = `bold ${layout.fontSize}px "${paint.fontFamily}"`;
+      ctx.font = fontShorthand(paint.fontFamily, layout.fontSize);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const cx = t.text.x + t.text.width / 2;

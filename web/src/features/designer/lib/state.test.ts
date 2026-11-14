@@ -168,3 +168,29 @@ describe("logo clean-up toggle", () => {
     expect(designReducer(s, { type: "setLogoCleanup", on: true })).toBe(s);
   });
 });
+
+describe("one-ink logo (setLogoMono)", () => {
+  const logo = { file: new File(["x"], "a.png"), kind: "png" as const, url: "blob:a", width: 10, height: 10 };
+  it("new logos start as one-ink in the text colour; a new logo resets the settings", () => {
+    let s = designReducer(base(), { type: "setLogo", logo });
+    expect(s.logoMono).toEqual({ on: true, color: null, invert: false, level: 50 });
+    s = designReducer(s, { type: "setLogoMono", on: false, level: 80 });
+    expect(s.logoMono).toMatchObject({ on: false, level: 80 });
+    s = designReducer(s, { type: "setLogo", logo: { ...logo, url: "blob:b" } });
+    expect(s.logoMono).toEqual({ on: true, color: null, invert: false, level: 50 });
+  });
+  it("logo ink: the text colour is stored as 'follow the text', the tape colour is refused", () => {
+    const s = designReducer(base(), { type: "setLogo", logo }); // tape #ffffff, text #000000
+    expect(designReducer(s, { type: "setLogoMono", color: "#cf1f27" }).logoMono.color).toBe("#cf1f27");
+    expect(designReducer(s, { type: "setLogoMono", color: "#000000" }).logoMono.color).toBeNull();
+    expect(designReducer(s, { type: "setLogoMono", color: "#FFFFFF" })).toBe(s);
+    expect(designReducer(s, { type: "setLogoMono", level: 150 }).logoMono.level).toBe(100);
+  });
+  it("a tape colour equal to the logo ink makes the logo follow the text again", () => {
+    let s = designReducer(base(), { type: "setLogo", logo });
+    s = designReducer(s, { type: "setLogoMono", color: "#cf1f27" });
+    s = designReducer(s, { type: "setColor", role: "backgroundColor", color: "#cf1f27" });
+    expect(s.backgroundColor).toBe("#cf1f27");
+    expect(s.logoMono.color).toBeNull();
+  });
+});
