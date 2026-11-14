@@ -11,7 +11,11 @@ export const MAX_COLORS = 3;
 /** Above this many inks the exact count means nothing to a customer: show "hơn 6" instead. */
 export const INK_DISPLAY_CAP = 6;
 
-export const MAX_TEXT_LENGTH = 60;
+export const MAX_TEXT_LENGTH = 120;
+/** Print text lines (Enter starts a new line), e.g. name / phone / address. */
+export const MAX_TEXT_LINES = 4;
+/** Line height of multi-line print text, times the font size. */
+export const TEXT_LINE_HEIGHT = 1.15;
 export const MIN_FONT_SIZE_PX = 12;
 export const MAX_FONT_SIZE_PX = 200;
 export const MIN_REPEAT_GAP_PX = 0;

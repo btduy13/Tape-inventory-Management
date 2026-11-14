@@ -6,6 +6,7 @@ import { isLowContrast } from "../lib/palette";
 import { ColorField } from "./ColorField";
 import { useDesignState } from "./hooks";
 import { InkCounter } from "./InkCounter";
+import { LogoColorSuggest } from "./LogoColorSuggest";
 import { hint } from "./ui";
 
 export function PalettePicker() {
@@ -19,6 +20,7 @@ export function PalettePicker() {
       <div className="flex flex-col gap-2">
         <p className={hint}>{t.colorsHint}</p>
         <InkCounter />
+        <LogoColorSuggest />
       </div>
       <ColorField
         label={t.backgroundColor}

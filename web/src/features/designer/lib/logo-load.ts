@@ -1,5 +1,8 @@
-// Browser-side logo intake: validate -> sanitize SVG / re-encode WEBP+GIF to PNG -> object URL -> size.
+// Browser-side logo intake: validate -> sanitize SVG / re-encode WEBP+GIF to PNG -> object URL -> size
+// -> auto clean-up for the preview (white background removed, margins trimmed: logo-clean.ts).
+// `file` stays the customer's (sanitized / re-encoded) original: that is what staff receive.
 import { CONVERT_MAX_SIDE, MAX_LOGO_BYTES } from "./constants";
+import { cleanLogoUrl, type LogoCleaner } from "./logo-clean-dom";
 import { checkConvertibleBytes, checkLogoBytes, logoMime } from "./logo-validate";
 import { sanitizeSvg } from "./svg-sanitize";
 import type { LogoAsset, LogoKind } from "./state";
@@ -58,6 +61,7 @@ export async function loadLogoFile(
   file: File,
   sizer: ImageSizer = decodeImageSize,
   convert: PngConverter = convertToPng,
+  clean: LogoCleaner = cleanLogoUrl,
 ): Promise<LogoLoadResult> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let out: File = file;
@@ -86,7 +90,11 @@ export async function loadLogoFile(
   try {
     const size = await sizer(url);
     if (!(size.width > 0 && size.height > 0)) throw new Error("decode");
-    return { ok: true, logo: { file: out, kind, url, width: size.width, height: size.height } };
+    const original = { url, width: size.width, height: size.height };
+    const cleaned = await clean(url, size.width, size.height).catch(() => null);
+    if (!cleaned) return { ok: true, logo: { file: out, kind, ...original, cleaned: false } };
+    const { bgRemoved, trimmed, ...shown } = cleaned;
+    return { ok: true, logo: { file: out, kind, ...shown, cleaned: true, alt: original, cleanup: { bgRemoved, trimmed } } };
   } catch {
     URL.revokeObjectURL(url);
     return { ok: false, error: "decode" };

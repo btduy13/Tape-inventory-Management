@@ -25,7 +25,7 @@ describe("toDesignJson", () => {
       logo: { file: new File(["x"], "a.png"), kind: "png", url: "blob:x", width: 1, height: 1 },
     });
     // No colorMode: the logo always prints in its own colours.
-    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0, rotation: 0 });
+    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0, rotation: 0, autoClean: false });
   });
 
   it("persists canvas positions and sizes", () => {
@@ -93,6 +93,9 @@ describe("designJsonSchema", () => {
     expect(designJsonSchema.safeParse({ ...ok(), textColor: ok().backgroundColor }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), fontFamily: "evil" }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), text: "a\u0000b" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), text: "a\rb" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), text: "1\n2\n3\n4\n5" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), text: "TÔM GIỐNG\nGIA VIỆT\nĐT: 0906" }).success).toBe(true);
     expect(designJsonSchema.safeParse({ ...ok(), extra: 1 }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), presetId: "not-a-uuid" }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), version: 2 }).success).toBe(false);

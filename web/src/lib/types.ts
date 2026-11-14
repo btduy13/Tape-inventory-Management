@@ -107,6 +107,7 @@ export type DesignJson = {
   logo?: {
     path: string | null; scale: number; offsetX: number; offsetY: number;
     rotation?: number;              // degrees, clockwise (missing = 0)
+    autoClean?: boolean;            // preview used the auto-cleaned logo (white bg removed / trimmed)
     colorMode?: "original" | "tint";  // legacy (old designs); logos now always print in original colours
   } | null;
   repeatGapPx?: number;

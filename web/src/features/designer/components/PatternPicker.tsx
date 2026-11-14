@@ -1,14 +1,18 @@
 "use client";
-// Repeat pattern (pattern.ts), border lines (border.ts) and repeat gap. Options are radio tiles
-// with a mini tape drawn in SVG attributes (CSP-safe), so the customer sees the layout first.
+// Repeat pattern (pattern.ts), border lines (border.ts) and repeat gap. Each pattern tile shows a
+// live mini tape drawn with the customer's own logo and text (draw-strip.ts); before there is any
+// content it shows a generic SVG sketch (CSP-safe attributes).
 // Tapes under MIN_PATTERN_WIDTH_MM only print the straight pattern: the others are disabled.
-import { useId } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { format, getDictionary } from "@/i18n";
 import { DESIGN_BORDER_STYLES, DESIGN_PATTERNS, type DesignBorderStyle, type DesignPattern } from "@/lib/types";
 import { borderAllowed, maxBorderMm } from "../lib/border";
 import { BORDER_MIN_MM, MAX_REPEAT_GAP_PX, MIN_PATTERN_WIDTH_MM } from "../lib/constants";
-import { DIAGONAL_ANGLE, isAllOverPattern } from "../lib/pattern";
-import { patternsAllowed } from "../lib/state";
+import { DIAGONAL_ANGLE, isAllOverPattern, stripSize } from "../lib/pattern";
+import { patternsAllowed, textLines, type DesignState } from "../lib/state";
+import { drawStrip } from "./draw-strip";
+import { layoutForState } from "./stage-layout";
+import { tintCanvas, useLogoCanvas } from "./use-logo-canvas";
 import { useDesignState } from "./hooks";
 import { RangeField } from "./RangeField";
 import { chip, chipOff, chipOn, groupLabel, hint } from "./ui";
@@ -65,6 +69,39 @@ function PatternIcon({ pattern }: { pattern: DesignPattern }) {
   );
 }
 
+/** Thumbnail width (CSS px); the thumbnail shows the first half (150mm) of the strip. */
+const THUMB_W = 120;
+
+/** Live mini tape of `pattern` with the current design. */
+function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; s: DesignState; logo: HTMLCanvasElement | null; knockout: HTMLCanvasElement | null }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const canvas = ref.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) return;
+      const strip = stripSize(s.preset.width_mm);
+      const crop = strip.width / 2;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const scale = (THUMB_W / crop) * dpr;
+      canvas.width = Math.round(crop * scale);
+      canvas.height = Math.round(strip.height * scale);
+      const layout = layoutForState({ ...s, pattern }, logo !== null);
+      drawStrip(ctx, strip, layout, {
+        backgroundColor: s.backgroundColor,
+        textColor: s.textColor,
+        fontFamily: s.fontFamily,
+        text: textLines(s.text).join("\n"),
+        borderStyle: s.border.style,
+        logo,
+        knockout,
+      }, scale, crop);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [pattern, s, logo, knockout]);
+  return <canvas ref={ref} aria-hidden="true" data-thumb={pattern} className="block h-auto w-full max-w-[120px] rounded-sm" />;
+}
+
 function BorderIcon({ style }: { style: DesignBorderStyle }) {
   return (
     <svg width="40" height="20" viewBox="0 0 40 20" aria-hidden="true">
@@ -92,6 +129,10 @@ export function PatternPicker() {
   const canPattern = patternsAllowed(widthMm);
   const canBorder = borderAllowed(widthMm);
   const maxBorder = maxBorderMm(widthMm);
+  const logoCanvas = useLogoCanvas(s.logo);
+  // Logo in the filled colour blocks: knocked out in the tape colour (same as the stage).
+  const knockout = useMemo(() => (logoCanvas ? tintCanvas(logoCanvas, s.backgroundColor) : null), [logoCanvas, s.backgroundColor]);
+  const hasContent = textLines(s.text).length > 0 || logoCanvas !== null;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -115,9 +156,13 @@ export function PatternPicker() {
                 disabled={disabled}
                 data-pattern={p}
                 onClick={() => dispatch({ type: "setPattern", pattern: p })}
-                className={`${chip} h-16 flex-col gap-1 px-1 disabled:cursor-not-allowed disabled:opacity-40 ${on ? chipOn : chipOff}`}
+                className={`${chip} min-h-16 flex-col gap-1 px-1.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-40 ${on ? chipOn : chipOff}`}
               >
-                <PatternIcon pattern={p} />
+                {hasContent && !disabled ? (
+                  <PatternThumb pattern={p} s={s} logo={logoCanvas} knockout={p === "blocks" ? knockout : null} />
+                ) : (
+                  <PatternIcon pattern={p} />
+                )}
                 <span className="w-full truncate text-center text-xs leading-4">{t.designPattern[p]}</span>
               </button>
             );

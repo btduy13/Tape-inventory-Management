@@ -23,8 +23,8 @@ import { TemplatePicker } from "./TemplatePicker";
 import { TextTool } from "./TextTool";
 import { barClearancePb, barClearanceScrollMb, btnPrimary, btnSecondary, card, focusRing, scrollToEl } from "./ui";
 
-type StepId = "spec" | "content" | "colors" | "quote";
-const ORDER: readonly StepId[] = ["spec", "content", "colors", "quote"];
+type StepId = "spec" | "content" | "style" | "colors" | "quote";
+const ORDER: readonly StepId[] = ["spec", "content", "style", "colors", "quote"];
 
 export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?: DesignerContact | null }) {
   const t = getDictionary().designer;
@@ -145,20 +145,19 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
             sum.content,
             <div className="flex flex-col">
               <div className="flex flex-col gap-6">
-                <TemplatePicker />
+                <LogoUpload />
                 <hr className="border-slate-100" />
                 <TextTool />
                 <hr className="border-slate-100" />
-                <LogoUpload />
-                <hr className="border-slate-100" />
-                <PatternPicker />
+                <TemplatePicker />
               </div>
               {nextBtn("content")}
             </div>,
           )}
+          {step("style", 3, t.stepStyle, sum.style, <div className="flex flex-col"><PatternPicker />{nextBtn("style")}</div>)}
           {step(
             "colors",
-            3,
+            4,
             t.stepColors,
             <span className="inline-flex items-center gap-2"><ColorDots colors={sum.colors} />{sum.colorsLabel}</span>,
             <div className="flex flex-col"><PalettePicker />{nextBtn("colors")}</div>,
@@ -166,7 +165,7 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
           )}
           {step(
             "quote",
-            4,
+            5,
             t.stepQuote,
             null,
             <div className="flex flex-col gap-5">

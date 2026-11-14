@@ -31,7 +31,7 @@ describe("<DesignerPanel>", () => {
     // Customers cannot download the design (no PNG / JSON export).
     expect(screen.queryByRole("button", { name: /Tải ảnh PNG|Lưu bản thiết kế/ })).toBeNull();
     expect(head("spec")).toHaveAttribute("aria-expanded", "true");
-    for (const id of ["content", "colors", "quote"]) {
+    for (const id of ["content", "style", "colors", "quote"]) {
       expect(head(id)).toHaveAttribute("aria-expanded", "false");
       expect(panel(id)).not.toBeVisible();
     }
@@ -50,7 +50,11 @@ describe("<DesignerPanel>", () => {
 
     fireEvent.change(screen.getByLabelText("Nội dung in"), { target: { value: "ACME" } });
     fireEvent.click(screen.getAllByRole("button", { name: /Tiếp tục/ }).find((b) => panel("content").contains(b))!);
+    expect(head("style")).toHaveAttribute("aria-expanded", "true");
+    expect(head("content")).toHaveTextContent("“ACME”");
+    fireEvent.click(screen.getAllByRole("button", { name: /Tiếp tục/ }).find((b) => panel("style").contains(b))!);
     expect(head("colors")).toHaveAttribute("aria-expanded", "true");
+    expect(head("style")).toHaveTextContent("Lặp thẳng");
     expect(head("content")).toHaveTextContent("“ACME”");
     // Background + text colour.
     expect(screen.getAllByText("Số màu in: 2/3")[0]).toBeInTheDocument();

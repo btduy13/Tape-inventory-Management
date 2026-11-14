@@ -7,9 +7,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type Konva from "konva";
 import { Group, Image as KImage, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import { format, getDictionary } from "@/i18n";
-import { STRIP_LENGTH_MM } from "../lib/constants";
+import { STRIP_LENGTH_MM, TEXT_LINE_HEIGHT } from "../lib/constants";
 import { borderShapes } from "../lib/border";
 import { stripSize, type TileTransform } from "../lib/pattern";
+import { textLines } from "../lib/state";
 import { Watermark } from "@/features/mockup3d";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
@@ -29,7 +30,7 @@ export default function KonvaTapeStage() {
 
   const strip = stripSize(s.preset.width_mm);
   const logoCanvas = useLogoCanvas(s.logo);
-  const text = s.text.trim();
+  const text = textLines(s.text).join("\n");
   const layout = useMemo(() => layoutForState(s, logoCanvas !== null), [s, logoCanvas]);
   const ui = useStageInteraction(store, layout, logoCanvas !== null);
   const hasFill = layout.tiles.some((tile) => tile.fill);
@@ -156,7 +157,9 @@ export default function KonvaTapeStage() {
                       fontFamily={s.fontFamily}
                       fontStyle="bold"
                       fontSize={layout.fontSize}
-                      lineHeight={1}
+                      lineHeight={layout.textHeightRatio === 1 ? 1 : TEXT_LINE_HEIGHT}
+                      align="center"
+                      width={tile.text.width}
                       fill={tile.fill ? s.backgroundColor : s.textColor}
                       wrap="none"
                       draggable

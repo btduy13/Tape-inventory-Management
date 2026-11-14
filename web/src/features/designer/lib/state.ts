@@ -1,7 +1,7 @@
 // Designer state + pure reducer. All palette / limit rules are enforced here.
 import {
   BORDER_MIN_MM, FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_REPEAT_GAP_PX,
-  MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE, MIN_PATTERN_WIDTH_MM, MIN_REPEAT_GAP_PX,
+  MAX_OFFSET_X, MAX_TEXT_LENGTH, MAX_TEXT_LINES, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE, MIN_PATTERN_WIDTH_MM, MIN_REPEAT_GAP_PX,
   type FontFamily,
 } from "./constants";
 import { DESIGN_BORDER_STYLES, DESIGN_PATTERNS, type DesignPattern } from "@/lib/types";
@@ -31,6 +31,12 @@ export type LogoAsset = {
   height: number;
   /** Ink colours found in the logo (logo-colors.ts). undefined: analysing; null: unknown. */
   inks?: LogoInk[] | null;
+  /** True while the auto-cleaned version (white background removed, margins trimmed) is shown. */
+  cleaned?: boolean;
+  /** The other version (original when cleaned, cleaned when not); absent when nothing to clean. */
+  alt?: { url: string; width: number; height: number };
+  /** What the clean-up changed. */
+  cleanup?: { bgRemoved: boolean; trimmed: boolean };
 };
 
 export type DesignState = {
@@ -73,6 +79,8 @@ export type DesignAction =
   | { type: "setLogoTransform"; scale?: number; offsetX?: number; offsetY?: number; rotation?: number }
   /** Result of the async logo colour analysis; ignored when the logo changed meanwhile. */
   | { type: "setLogoInks"; url: string; inks: LogoInk[] | null }
+  /** Show the auto-cleaned logo (true) or the original image (false). */
+  | { type: "setLogoCleanup"; on: boolean }
   | { type: "setTextOffset"; offsetX?: number; offsetY?: number }
   | { type: "applyTemplate"; template: DesignTemplate }
   | { type: "setRepeatGap"; px: number }
@@ -131,9 +139,18 @@ function fitBorder(b: BorderSpec, widthMm: number): BorderSpec {
   return mm === b.widthMm ? b : { ...b, widthMm: mm };
 }
 
-/** Strip control characters / newlines and cap length. */
+/** Keep up to MAX_TEXT_LINES lines (newline = next line), strip other control characters, cap length. */
 export function sanitizeText(input: string): string {
-  return input.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, MAX_TEXT_LENGTH);
+  const lines = input
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, " ")
+    .split("\n");
+  return lines.slice(0, MAX_TEXT_LINES).join("\n").slice(0, MAX_TEXT_LENGTH);
+}
+
+/** Printed lines of the text: trimmed, empty lines dropped. */
+export function textLines(text: string): string[] {
+  return text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
 }
 
 /** Tape size with a new width / length (custom size: no tape_presets row). */
@@ -206,9 +223,15 @@ export function designReducer(state: DesignState, action: DesignAction): DesignS
         logoRotation: action.rotation === undefined ? state.logoRotation : normAngle(action.rotation),
       };
     case "setLogoInks":
-      return state.logo && state.logo.url === action.url
+      return state.logo && (state.logo.url === action.url || state.logo.alt?.url === action.url)
         ? { ...state, logo: { ...state.logo, inks: action.inks } }
         : state;
+    case "setLogoCleanup": {
+      const l = state.logo;
+      if (!l?.alt || !!l.cleaned === action.on) return state;
+      const shown = { url: l.url, width: l.width, height: l.height };
+      return { ...state, logo: { ...l, ...l.alt, alt: shown, cleaned: action.on } };
+    }
     case "setTextOffset":
       return {
         ...state,

@@ -211,6 +211,20 @@ describe("repeat patterns", () => {
   });
 });
 
+describe("multi-line text", () => {
+  it("text box covers every line and the font shrinks to fit the band", () => {
+    const one = computePatternLayout(input({ fontSize: 80 }));
+    const three = computePatternLayout(input({ fontSize: 80, textLines: 3 }));
+    expect(one.textHeightRatio).toBe(1);
+    expect(three.textHeightRatio).toBeCloseTo(3.45);
+    const box = three.tiles[0].text!;
+    expect(box.height).toBeCloseTo(three.fontSize * three.textHeightRatio);
+    expect(box.y).toBeGreaterThanOrEqual(three.band.top - 1e-6);
+    expect(box.y + box.height).toBeLessThanOrEqual(three.band.bottom + 1e-6);
+    expect(three.fontSize).toBeLessThan(80);
+  });
+});
+
 describe("border lines and logo rotation", () => {
   it("border shrinks the printable band and sets the clip inside the lines", () => {
     const l = computePatternLayout(input({ borderPx: 12, logoAspect: 1 }));

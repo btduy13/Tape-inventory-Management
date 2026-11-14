@@ -18,7 +18,7 @@
 // The logo box is the footprint of the rotated logo (`logoRotation`); the image is drawn rotated
 // around the box centre.
 import type { DesignPattern } from "@/lib/types";
-import { PRINT_MARGIN_RATIO, PX_PER_MM, STRIP_LENGTH_MM } from "./constants";
+import { PRINT_MARGIN_RATIO, PX_PER_MM, STRIP_LENGTH_MM, TEXT_LINE_HEIGHT } from "./constants";
 
 export type StripSize = { width: number; height: number };
 
@@ -29,8 +29,10 @@ export function stripSize(widthMm: number, lengthMm: number = STRIP_LENGTH_MM): 
 
 export type PatternInput = {
   strip: StripSize;
-  /** Text width measured at `fontSize` (0 when there is no text). */
+  /** Text width measured at `fontSize` (widest line; 0 when there is no text). */
   textWidth: number;
+  /** Number of text lines (default 1). */
+  textLines?: number;
   /** Requested font size in logical px (text box height). Defaults to the printable band height. */
   fontSize?: number;
   /** Logo natural aspect ratio (w/h), or null when no logo. */
@@ -83,8 +85,10 @@ export type PatternLayout = {
   logoRotation: number;
   /** Down-scale applied so one tile fits the strip (1 = no shrink). */
   fit: number;
-  /** Rendered font size after `fit`. */
+  /** Rendered font size (one line) after `fit`. */
   fontSize: number;
+  /** Text box height / font size: 1 for one line, lines x TEXT_LINE_HEIGHT for more. */
+  textHeightRatio: number;
   /** Requested-to-rendered font ratio before `fit` (1/2 for all-over patterns). */
   fontScale: number;
   /** Size unit (px) for logo size and offsets: the strip height (halved for all-over patterns). */
@@ -124,6 +128,9 @@ const SPECS: Record<DesignPattern, PatternSpec> = {
   grid: { allOver: true, stagger: false, flip: false, blocks: false, angle: 0, minTiles: 1 },
   diagonal: { allOver: true, stagger: true, flip: false, blocks: false, angle: DIAGONAL_ANGLE, minTiles: 1 },
 };
+
+/** Text box height as a multiple of the font size for `lines` lines. */
+export const textBoxRatio = (lines: number): number => (lines <= 1 ? 1 : lines * TEXT_LINE_HEIGHT);
 
 /** All-over patterns print half-size tiles in many rows (the font / logo halve). */
 export const isAllOverPattern = (p: DesignPattern): boolean => SPECS[p]?.allOver ?? false;
@@ -171,8 +178,10 @@ export function computePatternLayout(input: PatternInput): PatternLayout {
   const logoRotation = Number.isFinite(input.logoRotation) ? (input.logoRotation as number) : 0;
 
   const hasText = textWidth > 0;
-  const requestedFont = input.fontSize ?? bandH;
-  const rawFont = Math.min(requestedFont * fontScale, cap);
+  const lines = Math.max(1, Math.round(input.textLines ?? 1));
+  const textHeightRatio = textBoxRatio(lines);
+  const requestedFont = input.fontSize ?? bandH / textHeightRatio;
+  const rawFont = Math.min(requestedFont * fontScale, cap / textHeightRatio);
   // `textWidth` was measured at the requested size: scale it with the font actually used.
   const rawTextW = hasText && requestedFont > 0 ? textWidth * (rawFont / requestedFont) : 0;
 
@@ -189,7 +198,7 @@ export function computePatternLayout(input: PatternInput): PatternLayout {
   const rawLogoW = 2 * foot.ex;
   const rawLogoH = 2 * foot.ey;
 
-  const base = { pattern, bleed: spec.allOver, fontScale, unit, band, clip, borderPx, logoRotation };
+  const base = { pattern, bleed: spec.allOver, fontScale, textHeightRatio, unit, band, clip, borderPx, logoRotation };
   const empty = { tiles: [], logoSize: null, fit: 1, fontSize: rawFont, effective: { logo: null, text: null } };
   if (!hasText && !hasLogo) return { ...base, period: strip.width, count: 0, ...empty };
 
@@ -197,7 +206,7 @@ export function computePatternLayout(input: PatternInput): PatternLayout {
   const split = spec.blocks && hasText && hasLogo;
   const rawGap = hasText && hasLogo && !split ? unit * 0.15 : 0;
   const rawContent = split ? Math.max(rawLogoW, rawTextW) : rawLogoW + rawGap + rawTextW;
-  const rawHeight = Math.max(rawLogoH, hasText ? rawFont : 0);
+  const rawHeight = Math.max(rawLogoH, hasText ? rawFont * textHeightRatio : 0);
   const turned = rotatedHalf(rawContent, rawHeight, spec.angle);
   const fitW = (strip.width * MAX_CONTENT_SHARE) / spec.minTiles / (2 * turned.ex);
   const fit = Math.min(1, fitW);
@@ -207,6 +216,7 @@ export function computePatternLayout(input: PatternInput): PatternLayout {
   const lh = rawLogoH * fit;
   const textW = rawTextW * fit;
   const fontSize = rawFont * fit;
+  const textH = fontSize * textHeightRatio;
   const gap = rawGap * fit;
 
   const tileWidth = 2 * turned.ex * fit + Math.max(0, input.repeatGapPx);
@@ -247,9 +257,9 @@ export function computePatternLayout(input: PatternInput): PatternLayout {
       const w = (showLogo ? lw : 0) + (showLogo && showText ? gap : 0) + (showText ? textW : 0);
       const start = tile0 + (period - w) / 2;
       const logoBase = showLogo ? { x: start, y: r.cy - lh / 2 } : null;
-      const textBase = showText ? { x: start + (showLogo ? lw + gap : 0), y: r.cy - fontSize / 2 } : null;
+      const textBase = showText ? { x: start + (showLogo ? lw + gap : 0), y: r.cy - textH / 2 } : null;
       const logo = logoBase ? place(tile0, logoBase.x, lw, lh, input.logoOffsetX, input.logoOffsetY) : null;
-      const text = textBase ? place(tile0, textBase.x, textW, fontSize, input.textOffsetX ?? 0, input.textOffsetY ?? 0) : null;
+      const text = textBase ? place(tile0, textBase.x, textW, textH, input.textOffsetX ?? 0, input.textOffsetY ?? 0) : null;
       const rotation = spec.flip && !even ? 180 : spec.angle;
       const tile: PatternTile = {
         logo,

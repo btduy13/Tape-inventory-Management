@@ -46,7 +46,9 @@ export function createDesignStore(preset?: PresetOption, revoke: RevokeFn = defa
       const prev = state;
       const next = designReducer(prev, action);
       if (next === prev) return;
-      if (prev.logo && prev.logo.url !== next.logo?.url) revoke(prev.logo.url);
+      // Revoke object URLs the new state no longer holds (toggling the clean-up keeps both).
+      const held = new Set([next.logo?.url, next.logo?.alt?.url]);
+      for (const u of [prev.logo?.url, prev.logo?.alt?.url]) if (u && !held.has(u)) revoke(u);
       state = next;
       emit(listeners);
     },
@@ -69,6 +71,7 @@ export function createDesignStore(preset?: PresetOption, revoke: RevokeFn = defa
     },
     destroy() {
       if (state.logo) revoke(state.logo.url);
+      if (state.logo?.alt) revoke(state.logo.alt.url);
       listeners.clear();
       textureListeners.clear();
       renderer = null;

@@ -93,10 +93,11 @@ export function DesignPanel({ code, design, previewUrl }: { code: string; design
           <Row label={c.printColors}>
             {ink.inks.length > 0 ? <span className="flex flex-wrap gap-1.5">{ink.inks.map((h) => <Swatch key={h} hex={h} />)}</span> : null}
           </Row>
-          <Row label={c.printText}>{design.print_text}</Row>
+          <Row label={c.printText}><span className="whitespace-pre-line">{design.print_text}</span></Row>
           <Row label={c.logo}>
             {ink.hasLogo ? c.hasLogo : c.noLogo}
             {ink.hasLogo && design.design_json?.logo?.rotation ? ` · ${format(c.logoRotated, { deg: design.design_json.logo.rotation })}` : null}
+            {ink.hasLogo && design.design_json?.logo?.autoClean ? ` · ${c.logoAutoCleaned}` : null}
           </Row>
           <Row label={c.pattern}>{t.designPattern[designPatternOf(design.design_json)]}</Row>
           <Row label={c.border}>{borderLabel(designBorderOf(design.design_json))}</Row>

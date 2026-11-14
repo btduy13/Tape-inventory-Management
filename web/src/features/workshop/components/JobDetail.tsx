@@ -54,7 +54,7 @@ export function JobSpecs({ job, floor = false }: { job: WorkshopJobRow; floor?: 
       <dl>
         <Row label={t.workshop.colors}><ColorSwatches colors={job.colors} size="md" /></Row>
         <Row label={t.workshop.printText}>
-          {job.print_text ? <span className="text-lg font-semibold">“{job.print_text}”</span> : "—"}
+          {job.print_text ? <span className="text-lg font-semibold whitespace-pre-line">“{job.print_text}”</span> : "—"}
         </Row>
         <Row label={t.workshop.pattern}>{t.designPattern[designPatternOf(job.design_json)]}</Row>
         <Row label={t.workshop.border}>{borderText(job.design_json)}</Row>

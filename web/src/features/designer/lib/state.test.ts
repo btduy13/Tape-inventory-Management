@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MAX_TEXT_LENGTH } from "./constants";
 import { paletteColors } from "./palette";
 import { DEFAULT_PRESETS } from "./presets";
-import { createInitialState, designReducer, maxFontSize, sanitizeText, type DesignState } from "./state";
+import { createInitialState, designReducer, maxFontSize, sanitizeText, textLines, type DesignState } from "./state";
 import { DESIGN_TEMPLATES } from "./templates";
 
 const base = (): DesignState => ({ ...createInitialState(), backgroundColor: "#ffffff", textColor: "#000000" });
@@ -33,7 +33,9 @@ describe("designReducer colours (max 3, distinct roles)", () => {
 
 describe("designReducer text + limits", () => {
   it("sanitizes and caps text", () => {
-    expect(sanitizeText("a\nb\u0000c")).toBe("a b c");
+    expect(sanitizeText("a\nb\u0000c")).toBe("a\nb c");
+    expect(sanitizeText("1\r\n2\n3\n4\n5")).toBe("1\n2\n3\n4");
+    expect(textLines("  A \n\n B\n")).toEqual(["A", "B"]);
     const s = designReducer(base(), { type: "setText", text: "x".repeat(200) });
     expect(s.text).toHaveLength(MAX_TEXT_LENGTH);
   });
@@ -134,5 +136,35 @@ describe("designReducer pattern, border, logo rotation", () => {
     expect(s.logoRotation).toBe(170);
     expect(designReducer(s, { type: "setLogoTransform", rotation: Number.NaN }).logoRotation).toBe(0);
     expect(designReducer(s, { type: "setLogo", logo: null }).logoRotation).toBe(0);
+  });
+});
+
+describe("logo clean-up toggle", () => {
+  const logo = {
+    file: new File(["x"], "a.jpg"),
+    kind: "jpg" as const,
+    url: "blob:clean",
+    width: 80,
+    height: 40,
+    cleaned: true,
+    alt: { url: "blob:orig", width: 100, height: 60 },
+    cleanup: { bgRemoved: true, trimmed: true },
+  };
+  it("swaps between the cleaned and the original image", () => {
+    const s = designReducer(base(), { type: "setLogo", logo });
+    const raw = designReducer(s, { type: "setLogoCleanup", on: false });
+    expect(raw.logo).toMatchObject({ url: "blob:orig", width: 100, height: 60, cleaned: false, alt: { url: "blob:clean" } });
+    expect(designReducer(raw, { type: "setLogoCleanup", on: false })).toBe(raw);
+    expect(designReducer(raw, { type: "setLogoCleanup", on: true }).logo).toMatchObject({ url: "blob:clean", cleaned: true });
+  });
+  it("accepts the ink analysis of either version", () => {
+    const s = designReducer(base(), { type: "setLogo", logo });
+    const inks = [{ hex: "#cf1f27", coverage: 1 }];
+    expect(designReducer(s, { type: "setLogoInks", url: "blob:orig", inks }).logo?.inks).toEqual(inks);
+    expect(designReducer(s, { type: "setLogoInks", url: "blob:other", inks })).toBe(s);
+  });
+  it("does nothing without an alternative", () => {
+    const s = designReducer(base(), { type: "setLogo", logo: { ...logo, alt: undefined, cleaned: false } });
+    expect(designReducer(s, { type: "setLogoCleanup", on: true })).toBe(s);
   });
 });
