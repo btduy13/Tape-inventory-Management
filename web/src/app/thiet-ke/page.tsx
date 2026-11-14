@@ -11,7 +11,10 @@ import { businessContact } from "@/features/lead-intake/landing/contact-info";
 import { PublicHeader } from "@/features/lead-intake/landing/PublicHeader";
 import { LP_CONTAINER } from "@/features/lead-intake/landing/ui";
 
-export const metadata: Metadata = { title: getDictionary().designer.title };
+export const metadata: Metadata = {
+  title: getDictionary().designer.title,
+  alternates: { canonical: "/thiet-ke" },
+};
 
 // Cloudflare's always-pass test key is the fallback for local dev only.
 const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
