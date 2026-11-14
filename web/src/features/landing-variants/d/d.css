@@ -1,0 +1,14 @@
+/* Variant D: hero entrance only (everything else reuses the lp- landing system in globals.css).
+   Plain global CSS, prefix vd-. transform/opacity only; reduced motion = static. */
+@keyframes vd-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.vd-in { animation: vd-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.vd-in-1 { animation-delay: 80ms; }
+.vd-in-2 { animation-delay: 160ms; }
+.vd-in-3 { animation-delay: 240ms; }
+.vd-in-4 { animation-delay: 320ms; }
+@media (prefers-reduced-motion: reduce) {
+  .vd-in { animation: none; }
+}

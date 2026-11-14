@@ -1,0 +1,51 @@
+/* Variant F "light studio": neutral studio backdrop, real 3D product, one typeface, ink buttons.
+   Plain global CSS, prefix vf-. Motion: one hero entrance sequence (transform/opacity only);
+   scroll reveals reuse the landing's [data-lp-reveal] system. Reduced motion = static. */
+.vf-root {
+  --vf-bg: #f3f4f6;
+  --vf-surface: #ffffff;
+  --vf-ink: #14161b;
+  --vf-muted: #585f6c;
+  --vf-faint: #9aa1ad;
+  --vf-line: #dde1e7;
+  --vf-accent: #cf1f27;
+  background: var(--vf-bg);
+  color: var(--vf-ink);
+  font-family: var(--font-vf), ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* studio backdrop: light falls from the top centre, the floor fades to grey */
+.vf-studio {
+  background:
+    radial-gradient(60% 55% at 50% 62%, #ffffff 0%, rgb(255 255 255 / 0) 70%),
+    linear-gradient(180deg, #ffffff 0%, #f3f4f6 45%, #e6e9ee 100%);
+}
+/* soft floor for product stages inside white panels */
+.vf-floor {
+  background: radial-gradient(70% 60% at 50% 70%, #ffffff 0%, #eef0f3 60%, #e3e6eb 100%);
+}
+
+.vf-display { letter-spacing: -0.035em; font-weight: 800; }
+
+@keyframes vf-up {
+  from { opacity: 0; transform: translate3d(0, 22px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes vf-stage {
+  from { opacity: 0; transform: translate3d(0, 30px, 0) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+.vf-in { animation: vf-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.vf-in-1 { animation-delay: 90ms; }
+.vf-in-2 { animation-delay: 180ms; }
+.vf-in-3 { animation-delay: 270ms; }
+.vf-stage-in { animation: vf-stage 1.3s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards; }
+
+/* product tour: the active block is full strength, the others step back */
+.vf-tour-block { transition: opacity 0.5s ease-out; }
+.vf-tour-block[data-active="false"] { opacity: 0.32; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vf-in, .vf-stage-in { animation: none; }
+  .vf-tour-block { transition: none; }
+}
