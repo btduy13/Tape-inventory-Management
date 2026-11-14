@@ -1,6 +1,7 @@
 "use client";
 // Provides one DesignStore per designer page. Wrap designer, mockup and lead form in it.
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { registerFontFamilies } from "../lib/fonts";
 import { createDesignStore, type DesignStore } from "../lib/store";
 import { DEFAULT_TAPE_SPEC, initialTapeSize, toTapeSpec, type TapeSpec } from "../lib/tape-spec";
 
@@ -8,9 +9,11 @@ type Ctx = { store: DesignStore; spec: TapeSpec };
 
 const DesignContext = createContext<Ctx | null>(null);
 
-/** `spec`: active widths + length range from the DB (getTapeSpec()); defaults when omitted. */
-export function DesignProvider({ spec, children }: { spec?: TapeSpec; children: ReactNode }) {
+/** `spec`: active widths + length range from the DB (getTapeSpec()); defaults when omitted.
+ *  `fonts`: generated CSS font-family of each self-hosted web font (app/thiet-ke/fonts.ts). */
+export function DesignProvider({ spec, fonts, children }: { spec?: TapeSpec; fonts?: Record<string, string>; children: ReactNode }) {
   const [value] = useState<Ctx>(() => {
+    registerFontFamilies(fonts);
     const s = spec
       ? toTapeSpec({
           widths: spec.widths.map((w) => ({ width_mm: w })),

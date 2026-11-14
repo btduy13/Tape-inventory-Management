@@ -25,7 +25,15 @@ describe("toDesignJson", () => {
       logo: { file: new File(["x"], "a.png"), kind: "png", url: "blob:x", width: 1, height: 1 },
     });
     // No colorMode: the logo always prints in its own colours.
-    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0, rotation: 0, autoClean: false });
+    expect(toDesignJson(s).logo).toEqual({
+      path: null,
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      rotation: 0,
+      autoClean: false,
+      mono: { color: "#cf1f27", invert: false, level: 50 }, // new logos print in one ink (the text colour)
+    });
   });
 
   it("persists canvas positions and sizes", () => {
@@ -44,7 +52,7 @@ describe("print ink flag", () => {
       logo: { file: new File(["x"], "a.png"), kind: "png", url: "blob:x", width: 1, height: 1 },
     });
     s = designReducer(s, { type: "setLogoInks", url: "blob:x", inks: inks.map((hex) => ({ hex, coverage: 0.25 })) });
-    return s;
+    return designReducer(s, { type: "setLogoMono", on: false }); // logo in its own colours
   };
 
   it("border / colour blocks use the text ink even without text", () => {
@@ -186,5 +194,19 @@ describe("buildDesignSubmission", () => {
     const empty = buildDesignSubmission(createInitialState());
     expect(empty.print_text).toBeNull();
     expect(empty.preset_id).toBeNull();
+  });
+});
+
+describe("one-ink logo ink count", () => {
+  const logo = { file: new File(["x"], "a.png"), kind: "png" as const, url: "blob:x", width: 1, height: 1 };
+  it("a one-ink logo adds no ink in the text colour, one ink in its own colour", () => {
+    let s = designReducer(sample(), { type: "setLogo", logo });
+    s = designReducer(s, { type: "setLogoInks", url: "blob:x", inks: ["#0a1466", "#007a33", "#ffcd00", "#6d2077"].map((hex) => ({ hex, coverage: 0.25 })) });
+    expect(toDesignJson(s)).toMatchObject({ inkColors: ["#d9c3a0", "#cf1f27"], inkCount: 2, inkOverLimit: false });
+    s = designReducer(s, { type: "setLogoMono", color: "#000000" });
+    const json = toDesignJson(s);
+    expect(json).toMatchObject({ inkCount: 3, inkOverLimit: false, logo: { mono: { color: "#000000" } } });
+    expect(designJsonSchema.safeParse(json).success).toBe(true);
+    expect(toDesignJson(designReducer(s, { type: "setLogoMono", on: false })).logo?.mono).toBeNull();
   });
 });

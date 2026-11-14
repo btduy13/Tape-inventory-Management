@@ -14,7 +14,8 @@ export function LogoColorSuggest() {
   const t = getDictionary().designer;
   const [s, dispatch] = useDesignState();
   const inks = s.logo?.inks;
-  if (!inks || inks.length === 0 || !s.text.trim()) return null;
+  // A one-ink logo already prints in the text colour (or the chosen ink).
+  if (s.logoMono.on || !inks || inks.length === 0 || !s.text.trim()) return null;
   const textLab = hexToLab(s.textColor);
   if (inks.some((i) => deltaE(hexToLab(i.hex), textLab) < TEXT_LOGO_MATCH_DE)) return null;
   const bgLab = hexToLab(s.backgroundColor);

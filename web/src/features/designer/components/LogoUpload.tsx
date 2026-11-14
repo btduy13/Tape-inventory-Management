@@ -1,5 +1,6 @@
 "use client";
-// Logo section: drop zone + ink count; the logo always prints in its own colours.
+// Logo section: drop zone, auto clean-up, print mode (one ink by default, or the logo's own
+// colours: LogoMonoControls) and ink count.
 // Size / rotation / position sliders sit in a disclosure
 // (dragging and the rotate handle on the canvas are the main way).
 import { getDictionary } from "@/i18n";
@@ -8,6 +9,7 @@ import { useDesignState } from "./hooks";
 import { InkCounter } from "./InkCounter";
 import { LogoColorSuggest } from "./LogoColorSuggest";
 import { LogoDropzone } from "./LogoDropzone";
+import { LogoMonoControls } from "./LogoMonoControls";
 import { RangeField } from "./RangeField";
 import { btnGhost, focusRing, groupLabel, hint } from "./ui";
 
@@ -48,7 +50,7 @@ export function LogoUpload() {
               </span>
             </label>
           )}
-          <p className={hint}>{t.logoOriginalNote}</p>
+          <LogoMonoControls />
           <InkCounter />
           <LogoColorSuggest />
           <details className="group rounded-xl border border-slate-200">

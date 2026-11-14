@@ -10,6 +10,7 @@ import { DesignLeadForm, QuoteChannels } from "@/features/lead-intake";
 import { businessContact } from "@/features/lead-intake/landing/contact-info";
 import { PublicHeader } from "@/features/lead-intake/landing/PublicHeader";
 import { LP_CONTAINER } from "@/features/lead-intake/landing/ui";
+import { designerFontClasses, designerFontFamilies } from "./fonts";
 
 export const metadata: Metadata = {
   title: getDictionary().designer.title,
@@ -29,7 +30,7 @@ export default async function DesignPage() {
   // defaults from DEFAULT_CONTACT.
   const contact = businessContact();
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-vt-paper text-slate-900">
+    <div className={`flex min-h-full flex-1 flex-col bg-vt-paper text-slate-900 ${designerFontClasses}`}>
       <PublicHeader />
       <main className={`${LP_CONTAINER} flex min-w-0 flex-1 flex-col gap-5 pt-5 sm:pt-8 lg:pb-12`}>
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -51,7 +52,7 @@ export default async function DesignPage() {
             </a>
           )}
         </div>
-        <DesignProvider spec={spec}>
+        <DesignProvider spec={spec} fonts={designerFontFamilies}>
           <DesignerPanel
             contact={{ phone: contact.phone, phoneHref: contact.phoneHref }}
             quote={

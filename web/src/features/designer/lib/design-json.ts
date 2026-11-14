@@ -40,6 +40,12 @@ export const designJsonSchema = z
         offsetY: z.number().min(-MAX_LOGO_OFFSET).max(MAX_LOGO_OFFSET),
         rotation: z.number().min(-MAX_LOGO_ROTATION).max(MAX_LOGO_ROTATION).optional(),
         autoClean: z.boolean().optional(),
+        // One-ink logo: ink colour, inverted or not, boldness 0..100.
+        mono: z
+          .object({ color: hex, invert: z.boolean(), level: z.number().min(0).max(100) })
+          .strict()
+          .nullable()
+          .optional(),
         // Legacy: the logo always prints in its own colours now. Still accepted, never written.
         colorMode: z.enum(LEGACY_LOGO_COLOR_MODES).optional(),
       })
@@ -98,6 +104,9 @@ export function toDesignJson(state: DesignState): DesignJson {
           offsetY: r4(state.logoOffsetY),
           rotation: state.logoRotation,
           autoClean: !!state.logo.cleaned,
+          mono: state.logoMono.on
+            ? { color: state.logoMono.color ?? state.textColor, invert: state.logoMono.invert, level: state.logoMono.level }
+            : null,
         }
       : null,
     repeatGapPx: state.repeatGapPx,

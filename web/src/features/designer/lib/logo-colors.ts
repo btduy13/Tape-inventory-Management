@@ -270,6 +270,8 @@ export type InkInput = PaletteInput & {
   /** Border lines / colour blocks print in the text ink even without text. */
   pattern?: string;
   border?: { style: string };
+  /** One-ink logo: the logo prints in this single ink instead of its own colours. */
+  logoMono?: { on: boolean; color: string | null };
   /** null: no logo. `inks` null: logo not analysed (unknown). */
   logo: { inks?: LogoInk[] | null } | null;
 };
@@ -312,7 +314,8 @@ export function printInks(s: InkInput): InkSummary {
   let logoPending = false;
   // Colour blocks with text: every logo is printed as a knockout (tape colour), no logo inks.
   if (s.logo && !(blocks && hasText)) {
-    if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex));
+    if (s.logoMono?.on) logoInks = [normalizeHex(s.logoMono.color ?? s.textColor) ?? s.textColor];
+    else if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex));
     else {
       logoUnknown = true;
       logoPending = s.logo.inks === undefined;

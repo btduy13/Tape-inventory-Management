@@ -16,7 +16,9 @@ import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
 import { layoutForState } from "./stage-layout";
 import { useStageInteraction } from "./use-stage-interaction";
-import { tintCanvas, useLogoCanvas } from "./use-logo-canvas";
+import { usePrintLogo } from "./use-logo-canvas";
+import { useFontReady } from "./use-font-ready";
+import { fontCss, fontWeight } from "../lib/fonts";
 
 export default function KonvaTapeStage() {
   const t = getDictionary().designer;
@@ -29,15 +31,14 @@ export default function KonvaTapeStage() {
   const [displayWidth, setDisplayWidth] = useState(0);
 
   const strip = stripSize(s.preset.width_mm);
-  const logoCanvas = useLogoCanvas(s.logo);
+  // The logo as it prints (one-ink by default) and its knockout for colour blocks.
+  const { logo: logoCanvas, knockout } = usePrintLogo(s);
   const text = textLines(s.text).join("\n");
-  const layout = useMemo(() => layoutForState(s, logoCanvas !== null), [s, logoCanvas]);
-  const ui = useStageInteraction(store, layout, logoCanvas !== null);
-  const hasFill = layout.tiles.some((tile) => tile.fill);
-  const knockout = useMemo(
-    () => (hasFill && logoCanvas ? tintCanvas(logoCanvas, s.backgroundColor) : null),
-    [hasFill, logoCanvas, s.backgroundColor],
-  );
+  // Re-measure once the chosen web font has loaded (canvas text does not reflow by itself).
+  const fontReady = useFontReady(s.fontFamily);
+  // Logo aspect comes from the printed bitmap (a one-ink logo is cropped to its ink).
+  const layout = useMemo(() => layoutForState(s, logoCanvas), [s, logoCanvas, fontReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ui = useStageInteraction(store, layout, logoCanvas);
   const border = useMemo(
     () => borderShapes({ width: strip.width, height: strip.height }, s.border.style, layout.borderPx),
     [strip.width, strip.height, s.border.style, layout.borderPx],
@@ -154,8 +155,8 @@ export default function KonvaTapeStage() {
                       text={text}
                       x={tile.text.x}
                       y={tile.text.y}
-                      fontFamily={s.fontFamily}
-                      fontStyle="bold"
+                      fontFamily={fontCss(s.fontFamily)}
+                      fontStyle={String(fontWeight(s.fontFamily))}
                       fontSize={layout.fontSize}
                       lineHeight={layout.textHeightRatio === 1 ? 1 : TEXT_LINE_HEIGHT}
                       align="center"

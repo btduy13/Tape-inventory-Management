@@ -4,6 +4,7 @@ import { getDictionary } from "@/i18n";
 import { DESIGN_TEMPLATES } from "../lib/templates";
 import { useDesignState } from "./hooks";
 import { focusRing, groupLabel, hint } from "./ui";
+import { fontCss, fontWeight } from "../lib/fonts";
 
 export function TemplatePicker() {
   const t = getDictionary().designer;
@@ -23,7 +24,7 @@ export function TemplatePicker() {
             <svg viewBox="0 0 120 22" className="block h-auto w-full" aria-hidden="true">
               <rect width="120" height="22" rx="2" fill={tpl.backgroundColor} stroke="#e2e8f0" />
               <text
-                x="60" y="15" textAnchor="middle" fontSize="9" fontWeight="bold" fontFamily={tpl.fontFamily} fill={tpl.textColor}
+                x="60" y="15" textAnchor="middle" fontSize="9" fontWeight={fontWeight(tpl.fontFamily)} fontFamily={fontCss(tpl.fontFamily)} fill={tpl.textColor}
                 textLength={Math.min(110, tpl.text.length * 6)} lengthAdjust="spacingAndGlyphs"
               >
                 {tpl.text}

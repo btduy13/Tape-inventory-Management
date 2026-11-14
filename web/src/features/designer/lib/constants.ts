@@ -43,8 +43,15 @@ export const CONVERT_MAX_SIDE = 2000;
 
 export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
-/** System fonts with full Vietnamese glyph coverage (no web font download, CSP-safe). */
-export const FONT_FAMILIES = ["Arial", "Tahoma", "Verdana", "Times New Roman", "Georgia"] as const;
+/** Print fonts, all with full Vietnamese glyph coverage (ids stored in design_json). */
+export const FONT_FAMILIES = [
+  // System fonts.
+  "Arial", "Tahoma", "Verdana", "Times New Roman", "Georgia",
+  // Web fonts self-hosted on the designer page (app/thiet-ke/fonts.ts); details in lib/fonts.ts.
+  "Be Vietnam Pro", "Montserrat", "Roboto", "Merriweather", "Playfair Display",
+  "Oswald", "Anton", "Paytone One", "Bungee", "Chakra Petch", "Baloo 2",
+  "Lobster", "Pacifico", "Dancing Script", "Patrick Hand",
+] as const;
 export type FontFamily = (typeof FONT_FAMILIES)[number];
 
 /** Quick-pick swatches commonly printed on tape. */

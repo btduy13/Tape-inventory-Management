@@ -12,17 +12,17 @@ import {
 import type { Box, PatternLayout } from "../lib/pattern";
 import { maxFontSize } from "../lib/state";
 import type { DesignStore } from "../lib/store";
-import { layoutForState } from "./stage-layout";
+import { layoutForState, type LogoDims } from "./stage-layout";
 
 export type Selection = { kind: ElementKind; tile: number } | null;
 
-export function useStageInteraction(store: DesignStore, layout: PatternLayout, logoReady: boolean) {
+export function useStageInteraction(store: DesignStore, layout: PatternLayout, logo: LogoDims) {
   const [selected, setSelected] = useState<Selection>(null);
 
   const current = useCallback(() => {
     const s = store.getState();
-    return { s, layout: layoutForState(s, logoReady) };
-  }, [store, logoReady]);
+    return { s, layout: layoutForState(s, logo) };
+  }, [store, logo]);
 
   /** Move `kind` of tile `tile` to the node position, then snap the node to the clamped box. */
   const commitPosition = useCallback(

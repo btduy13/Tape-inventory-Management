@@ -31,6 +31,7 @@ const withLogo = (inks: string[]): DesignAction[] => [
   { type: "setText", text: "ACME" },
   { type: "setLogo", logo: LOGO },
   { type: "setLogoInks", url: "blob:l", inks: inks.map((hex) => ({ hex, coverage: 0.5 })) },
+  { type: "setLogoMono", on: false }, // own colours: a one-ink logo needs no suggestion
 ];
 
 describe("<LogoColorSuggest>", () => {
