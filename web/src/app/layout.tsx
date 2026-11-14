@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { getDictionary } from "@/i18n";
+import { parseVerification } from "@/lib/seo/site";
 import "./globals.css";
 
 // System font stack (full Vietnamese glyph support, no build-time network fetch).
@@ -12,6 +13,9 @@ export const metadata: Metadata = {
   description: t.landing.heroSubtitle,
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   robots: { index: true, follow: true },
+  // Search Console / Bing / Yandex / Coc Coc ownership tags, set without a code change:
+  // SEARCH_VERIFICATION="google-site-verification=...;msvalidate.01=..." (see lib/seo/site.ts).
+  verification: { other: parseVerification(process.env.SEARCH_VERIFICATION) },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
