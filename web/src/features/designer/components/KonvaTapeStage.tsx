@@ -1,14 +1,14 @@
 "use client";
 // Konva strip renderer. Client-only (loaded through TapeCanvas2D with ssr:false).
 // Logo and text are draggable / resizable (Transformer) and keyboard-movable; the pattern repeats
-// every change. Registers a StageRenderer for exports and publishes the 3D texture from the
+// every change (pattern.ts: turned tiles are rotated groups, wrap-around ghost copies are inert). Registers a StageRenderer for exports and publishes the 3D texture from the
 // content layer only, so selection handles never end up in the print.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type Konva from "konva";
 import { Group, Image as KImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import { format, getDictionary } from "@/i18n";
 import { STRIP_LENGTH_MM } from "../lib/constants";
-import { stripSize } from "../lib/pattern";
+import { stripSize, type TileTransform } from "../lib/pattern";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
 import { layoutForState } from "./stage-layout";
@@ -101,7 +101,7 @@ export default function KonvaTapeStage() {
             <Layer ref={contentRef}>
               <Rect name="bg" x={0} y={0} width={strip.width} height={strip.height} fill={s.backgroundColor} />
               {layout.tiles.map((tile, i) => (
-                <Group key={i}>
+                <Group key={i} listening={!tile.ghost} {...groupTransform(tile.transform)}>
                   {tile.logo && logoCanvas && (
                     <KImage
                       id={`logo-${i}`}
@@ -172,4 +172,18 @@ export default function KonvaTapeStage() {
       </figcaption>
     </figure>
   );
+}
+
+/** Konva group props for a turned tile: children keep unrotated coordinates (drag maths unchanged). */
+function groupTransform(tr: TileTransform | null) {
+  if (!tr) return {};
+  return {
+    x: tr.pivotX + tr.dx,
+    y: tr.pivotY + tr.dy,
+    offsetX: tr.pivotX,
+    offsetY: tr.pivotY,
+    rotation: tr.rotation,
+    scaleX: tr.scale,
+    scaleY: tr.scale,
+  };
 }

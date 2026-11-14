@@ -27,6 +27,11 @@ describe("parseDesignJson", () => {
     expect(r && "accentColor" in r).toBe(false);
   });
 
+  it("keeps the repeat pattern (staff and workshop see it) and rejects unknown ones", () => {
+    expect(parseDesignJson(raw({ ...DESIGN, pattern: "stagger" }))?.pattern).toBe("stagger");
+    expect(parseDesignJson(raw({ ...DESIGN, pattern: "spiral" }))).toBeNull();
+  });
+
   it("ignores presetId (sizes come from tape_widths)", () => {
     expect(parseDesignJson(raw(DESIGN))?.presetId).toBeNull();
     expect(parseDesignJson(raw({ ...DESIGN, presetId: null }))).not.toBeNull();

@@ -1,6 +1,6 @@
 // Lead detail: customer card and design/spec card (server components, read-only).
 import { format, getDictionary } from "@/i18n";
-import type { Design, Lead } from "@/lib/types";
+import { designPatternOf, type Design, type Lead } from "@/lib/types";
 import { Icon, Section, ToneBadge, buttonClass } from "@/features/portal-ui";
 import { INK_LIMIT, inkSummary } from "../lib/design-info";
 import { formatDateTime } from "../lib/timeline";
@@ -92,6 +92,7 @@ export function DesignPanel({ code, design, previewUrl }: { code: string; design
           </Row>
           <Row label={c.printText}>{design.print_text}</Row>
           <Row label={c.logo}>{ink.hasLogo ? c.hasLogo : c.noLogo}</Row>
+          <Row label={c.pattern}>{t.designPattern[designPatternOf(design.design_json)]}</Row>
         </dl>
       </div>
     </Section>

@@ -93,3 +93,15 @@ describe("designReducer text + limits", () => {
     expect(s.text).toBe("");
   });
 });
+
+describe("designReducer pattern", () => {
+  it("starts straight, switches pattern, rejects unknown values, resets to straight", () => {
+    const s = base();
+    expect(s.pattern).toBe("straight");
+    const flipped = designReducer(s, { type: "setPattern", pattern: "flip" });
+    expect(flipped.pattern).toBe("flip");
+    expect(designReducer(flipped, { type: "setPattern", pattern: "flip" })).toBe(flipped);
+    expect(designReducer(flipped, { type: "setPattern", pattern: "spiral" as never })).toBe(flipped);
+    expect(designReducer(flipped, { type: "reset" }).pattern).toBe("straight");
+  });
+});

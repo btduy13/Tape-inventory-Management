@@ -26,8 +26,8 @@ export function useStageInteraction(store: DesignStore, layout: PatternLayout, l
   /** Move `kind` of tile `tile` to the node position, then snap the node to the clamped box. */
   const commitPosition = useCallback(
     (node: Konva.Node, kind: ElementKind, tile: number) => {
-      const { strip, layout: cur } = current();
-      const off = offsetFromPosition(cur, strip, kind, tile, node.x(), node.y());
+      const { layout: cur } = current();
+      const off = offsetFromPosition(cur, kind, tile, node.x(), node.y());
       if (!off) return;
       store.dispatch(moveAction(kind, off.offsetX, off.offsetY));
       const box = current().layout.tiles[tile]?.[kind];
@@ -46,12 +46,12 @@ export function useStageInteraction(store: DesignStore, layout: PatternLayout, l
       const node = e.target;
       const k = node.scaleY();
       node.scale({ x: 1, y: 1 });
-      const { s, strip, layout: cur } = current();
+      const { s, layout: cur } = current();
       if (kind === "logo") {
         const height = (cur.tiles[tile]?.logo?.height ?? 0) * k;
-        store.dispatch({ type: "setLogoTransform", scale: logoScaleFromHeight(height, strip, cur.fit) });
+        store.dispatch({ type: "setLogoTransform", scale: logoScaleFromHeight(height, cur) });
       } else {
-        const px = Math.min(fontSizeFromScale(cur.fontSize, k), maxFontSize(s.preset.width_mm));
+        const px = Math.min(fontSizeFromScale(cur.fontSize, k, cur.fontScale), maxFontSize(s.preset.width_mm));
         store.dispatch({ type: "setFontSize", px });
       }
       commitPosition(node, kind, tile);

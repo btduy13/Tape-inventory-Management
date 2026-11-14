@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computePatternLayout, stripSize, type PatternInput } from "./pattern";
+import { DESIGN_PATTERNS } from "@/lib/types";
+import { computePatternLayout, DIAGONAL_ANGLE, stripSize, type PatternInput, type PatternLayout } from "./pattern";
 
 const input = (over: Partial<PatternInput> = {}): PatternInput => ({
   strip: stripSize(48),
@@ -80,5 +81,108 @@ describe("computePatternLayout", () => {
     const l = computePatternLayout(input({ textWidth: 0, logoAspect: 1 }));
     expect(l.count).toBeGreaterThan(0);
     expect(l.tiles[0].textX).toBeNull();
+  });
+});
+
+/** Axis-aligned bounds of a tile as printed (after its group transform). */
+function printedBounds(t: PatternLayout["tiles"][number]) {
+  const boxes = [t.logo, t.text].filter((b) => b !== null);
+  const pts = boxes.flatMap((b) => [
+    [b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height],
+  ]);
+  const tr = t.transform;
+  const moved = pts.map(([x, y]) => {
+    if (!tr) return [x, y];
+    const r = (tr.rotation * Math.PI) / 180;
+    const dx = (x - tr.pivotX) * tr.scale;
+    const dy = (y - tr.pivotY) * tr.scale;
+    return [tr.pivotX + tr.dx + dx * Math.cos(r) - dy * Math.sin(r), tr.pivotY + tr.dy + dx * Math.sin(r) + dy * Math.cos(r)];
+  });
+  const xs = moved.map((p) => p[0]);
+  const ys = moved.map((p) => p[1]);
+  return { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+}
+
+describe("repeat patterns", () => {
+  it("defaults to the straight pattern (old designs)", () => {
+    const l = computePatternLayout(input());
+    expect(l.pattern).toBe("straight");
+    expect(l.rows).toBe(1);
+    expect(l.tiles.every((t) => t.transform === null && !t.ghost && t.row === 0)).toBe(true);
+  });
+
+  it("flip: turns every second tile 180° and keeps an even tile count", () => {
+    for (const textWidth of [200, 330, 900]) {
+      const l = computePatternLayout(input({ pattern: "flip", textWidth }));
+      expect(l.count % 2).toBe(0);
+      expect(l.tiles.map((t) => t.transform?.rotation ?? 0)).toEqual(l.tiles.map((_, i) => (i % 2 ? 180 : 0)));
+    }
+  });
+
+  it("flip: a turned tile prints in the same place as its upright box", () => {
+    const l = computePatternLayout(input({ pattern: "flip", logoAspect: 1, textOffsetY: 0.2 }));
+    const t = l.tiles[1];
+    const b = printedBounds(t);
+    const u = printedBounds({ ...t, transform: null });
+    expect(b.left).toBeCloseTo(u.left);
+    expect(b.top).toBeCloseTo(u.top);
+    expect(b.bottom).toBeCloseTo(u.bottom);
+  });
+
+  it("twoRows: two aligned rows at half size inside the printable band", () => {
+    const base = computePatternLayout(input({ fontSize: 80 }));
+    const l = computePatternLayout(input({ pattern: "twoRows", fontSize: 80 }));
+    expect(l.rows).toBe(2);
+    expect(l.unit).toBe(96);
+    expect(l.fontSize).toBeCloseTo(40);
+    const upper = l.tiles.filter((t) => t.row === 0);
+    const lower = l.tiles.filter((t) => t.row === 1);
+    expect(upper).toHaveLength(l.count);
+    expect(lower).toHaveLength(l.count);
+    expect(lower.map((t) => t.textX)).toEqual(upper.map((t) => t.textX));
+    expect(upper[0].text!.y + upper[0].text!.height).toBeLessThanOrEqual(lower[0].text!.y);
+    expect(lower[0].text!.y + lower[0].text!.height).toBeLessThanOrEqual(l.band.bottom + 1e-6);
+    expect(l.count).toBeGreaterThanOrEqual(base.count); // half-size content repeats at least as often
+  });
+
+  it("stagger: lower row shifted half a step, wrap-around copy completes the cut tile", () => {
+    const l = computePatternLayout(input({ pattern: "stagger" }));
+    const upper = l.tiles.filter((t) => t.row === 0 && !t.ghost);
+    const lower = l.tiles.filter((t) => t.row === 1 && !t.ghost);
+    const ghosts = l.tiles.filter((t) => t.ghost);
+    expect(lower).toHaveLength(l.count);
+    expect(ghosts).toHaveLength(1);
+    expect(lower[0].textX! - upper[0].textX!).toBeCloseTo(l.period / 2);
+    // Ghost is the last lower tile moved one strip length back: seamless when the strip repeats.
+    expect(ghosts[0].textX!).toBeCloseTo(lower[l.count - 1].textX! - 1200);
+    // Non-ghost tiles come first, so tile indices of interactive tiles stay stable.
+    expect(l.tiles.findIndex((t) => t.ghost)).toBe(2 * l.count);
+  });
+
+  it("diagonal: tilts every tile and keeps it inside the band and its tile", () => {
+    for (const over of [{}, { textWidth: 1000 }, { logoAspect: 1, logoOffsetY: 0.4, textOffsetY: -0.4 }]) {
+      const l = computePatternLayout(input({ pattern: "diagonal", ...over }));
+      expect(l.tiles.length).toBeGreaterThan(0);
+      for (const [i, t] of l.tiles.entries()) {
+        expect(t.transform!.rotation).toBe(DIAGONAL_ANGLE);
+        const b = printedBounds(t);
+        expect(b.top).toBeGreaterThanOrEqual(l.band.top - 0.5);
+        expect(b.bottom).toBeLessThanOrEqual(l.band.bottom + 0.5);
+        expect(b.left).toBeGreaterThanOrEqual(i * l.period - 0.5);
+        expect(b.right).toBeLessThanOrEqual((i + 1) * l.period + 0.5);
+      }
+    }
+  });
+
+  it("every pattern keeps content inside the strip length (seamless roll texture)", () => {
+    for (const pattern of DESIGN_PATTERNS) {
+      const l = computePatternLayout(input({ pattern, logoAspect: 1.5, textWidth: 500 }));
+      expect(l.period * l.count).toBeCloseTo(1200);
+      for (const t of l.tiles.filter((x) => !x.ghost)) {
+        const b = printedBounds(t);
+        expect(b.top).toBeGreaterThanOrEqual(l.band.top - 0.5);
+        expect(b.bottom).toBeLessThanOrEqual(l.band.bottom + 0.5);
+      }
+    }
   });
 });

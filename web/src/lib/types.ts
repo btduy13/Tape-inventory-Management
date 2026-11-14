@@ -71,6 +71,17 @@ export type Lead = {
 };
 
 /** Shape of designs.design_json (owned by features/designer; version bump on breaking change). */
+/** How the print content repeats along the tape (designer pattern picker). Old designs: "straight". */
+export type DesignPattern = "straight" | "flip" | "stagger" | "twoRows" | "diagonal";
+
+export const DESIGN_PATTERNS: readonly DesignPattern[] = ["straight", "flip", "stagger", "twoRows", "diagonal"] as const;
+
+/** Pattern of a saved design; unknown / missing (designs before patterns) reads as "straight". */
+export function designPatternOf(dj: object | null | undefined): DesignPattern {
+  const p = dj && "pattern" in dj ? dj.pattern : undefined;
+  return typeof p === "string" && (DESIGN_PATTERNS as readonly string[]).includes(p) ? (p as DesignPattern) : "straight";
+}
+
 export type DesignJson = {
   version: 1;
   presetId: Uuid | null;
@@ -85,6 +96,7 @@ export type DesignJson = {
     colorMode?: "original" | "tint";  // legacy (old designs); logos now always print in original colours
   } | null;
   repeatGapPx?: number;
+  pattern?: DesignPattern;        // repeat layout; missing = "straight" (designs before patterns)
   widthMm?: number;               // chosen tape width (mm), from tape_widths (0022)
   lengthM?: number;               // customer roll length (m), within tape_spec_settings
   textOffsetX?: number;           // text position, fraction of tape width (canvas drag)

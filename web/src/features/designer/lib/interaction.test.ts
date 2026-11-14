@@ -12,16 +12,22 @@ const layout = (over = {}) =>
   });
 
 describe("offsetFromPosition", () => {
+  it("uses the row unit for drags in two-row patterns", () => {
+    const l = layout({ pattern: "stagger" });
+    const box = l.tiles[l.count].text!; // first tile of the lower row
+    const off = offsetFromPosition(l, "text", l.count, box.x + 9.6, box.y)!;
+    expect(off.offsetX).toBeCloseTo(0.1);
+  });
   it("converts a drag delta into offsets (fraction of strip height)", () => {
     const l = layout();
     const box = l.tiles[1].text!;
-    const off = offsetFromPosition(l, strip, "text", 1, box.x + 19.2, box.y - 9.6)!;
+    const off = offsetFromPosition(l, "text", 1, box.x + 19.2, box.y - 9.6)!;
     expect(off.offsetX).toBeCloseTo(0.1);
     expect(off.offsetY).toBeCloseTo(-0.05);
   });
   it("returns null for missing elements", () => {
-    expect(offsetFromPosition(layout({ logoAspect: null }), strip, "logo", 0, 0, 0)).toBeNull();
-    expect(offsetFromPosition(layout(), strip, "text", 99, 0, 0)).toBeNull();
+    expect(offsetFromPosition(layout({ logoAspect: null }), "logo", 0, 0, 0)).toBeNull();
+    expect(offsetFromPosition(layout(), "text", 99, 0, 0)).toBeNull();
   });
 });
 
@@ -45,8 +51,14 @@ describe("nudgeAction", () => {
 describe("resize helpers", () => {
   it("inverts logo height to scale", () => {
     const l = layout();
-    expect(logoScaleFromHeight(l.logoSize!.height, strip, l.fit)).toBeCloseTo(1);
-    expect(logoScaleFromHeight(192 * 0.7 * 0.5, strip, 0.5)).toBeCloseTo(1);
+    expect(logoScaleFromHeight(l.logoSize!.height, l)).toBeCloseTo(1);
+    expect(logoScaleFromHeight(192 * 0.7 * 0.5, { unit: 192, fit: 0.5 })).toBeCloseTo(1);
+  });
+  it("inverts the two-row halving (logo and font keep full-width units)", () => {
+    const l = layout({ pattern: "twoRows", logoScale: 0.5 });
+    expect(l.unit).toBe(96);
+    expect(logoScaleFromHeight(l.logoSize!.height, l)).toBeCloseTo(0.5);
+    expect(fontSizeFromScale(l.fontSize, 1, l.fontScale)).toBe(80);
   });
   it("scales font and ignores bad factors", () => {
     expect(fontSizeFromScale(80, 1.5)).toBe(120);

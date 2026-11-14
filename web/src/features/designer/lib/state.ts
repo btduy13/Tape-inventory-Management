@@ -3,6 +3,7 @@ import {
   FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_REPEAT_GAP_PX,
   MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE, MIN_REPEAT_GAP_PX, type FontFamily,
 } from "./constants";
+import { DESIGN_PATTERNS, type DesignPattern } from "@/lib/types";
 import { normalizeHex } from "./palette";
 import type { LogoInk } from "./logo-colors";
 import { DEFAULT_PRESETS, type PresetOption } from "./presets";
@@ -45,6 +46,8 @@ export type DesignState = {
   textOffsetX: number;
   textOffsetY: number;
   repeatGapPx: number;
+  /** How the content repeats along the tape (pattern.ts). */
+  pattern: DesignPattern;
 };
 
 /** Logo always prints in its own colours: there is no accent / single-ink tint role. */
@@ -67,6 +70,7 @@ export type DesignAction =
   | { type: "setTextOffset"; offsetX?: number; offsetY?: number }
   | { type: "applyTemplate"; template: DesignTemplate }
   | { type: "setRepeatGap"; px: number }
+  | { type: "setPattern"; pattern: DesignPattern }
   | { type: "reset"; preset?: PresetOption };
 
 export function createInitialState(preset: PresetOption = DEFAULT_PRESETS[0]): DesignState {
@@ -84,6 +88,7 @@ export function createInitialState(preset: PresetOption = DEFAULT_PRESETS[0]): D
     textOffsetX: 0,
     textOffsetY: 0,
     repeatGapPx: 80,
+    pattern: "straight",
   };
 }
 
@@ -189,6 +194,10 @@ export function designReducer(state: DesignState, action: DesignAction): DesignS
       return applyTemplate(state, action.template);
     case "setRepeatGap":
       return { ...state, repeatGapPx: Math.round(clamp(action.px, MIN_REPEAT_GAP_PX, MAX_REPEAT_GAP_PX)) };
+    case "setPattern":
+      return (DESIGN_PATTERNS as readonly string[]).includes(action.pattern) && action.pattern !== state.pattern
+        ? { ...state, pattern: action.pattern }
+        : state;
     case "reset":
       return createInitialState(action.preset ?? state.preset);
     default:

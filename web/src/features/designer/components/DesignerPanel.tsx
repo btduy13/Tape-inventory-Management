@@ -16,6 +16,7 @@ import { InkLimitDialog, type DesignerContact } from "./InkLimitDialog";
 import { LogoUpload } from "./LogoUpload";
 import { MobileActionBar } from "./MobileActionBar";
 import { PalettePicker } from "./PalettePicker";
+import { PatternPicker } from "./PatternPicker";
 import { PresetPicker } from "./PresetPicker";
 import { TapeCanvas2D } from "./TapeCanvas2D";
 import { TemplatePicker } from "./TemplatePicker";
@@ -146,6 +147,8 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
                 <TextTool />
                 <hr className="border-slate-100" />
                 <LogoUpload />
+                <hr className="border-slate-100" />
+                <PatternPicker />
               </div>
               {nextBtn("content")}
             </div>,

@@ -1,6 +1,6 @@
 // DesignJson (designs.design_json) builder + zod schema for server re-validation.
 import { z } from "zod";
-import type { DesignJson } from "@/lib/types";
+import { DESIGN_PATTERNS, type DesignJson, type DesignPattern } from "@/lib/types";
 import {
   FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_REPEAT_GAP_PX,
   MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE,
@@ -40,6 +40,8 @@ export const designJsonSchema = z
       .nullable()
       .optional(),
     repeatGapPx: z.number().min(0).max(MAX_REPEAT_GAP_PX).optional(),
+    // Repeat layout (pattern.ts). Missing on designs saved before patterns: means "straight".
+    pattern: z.enum(DESIGN_PATTERNS as [DesignPattern, ...DesignPattern[]]).optional(),
     // Tape size (0022). Structural bounds only: lead-intake checks the active DB list / range.
     widthMm: z.number().int().min(1).max(WIDTH_MM_MAX).optional(),
     lengthM: z.number().positive().max(LENGTH_M_MAX).optional(),
@@ -77,6 +79,7 @@ export function toDesignJson(state: DesignState): DesignJson {
         }
       : null,
     repeatGapPx: state.repeatGapPx,
+    pattern: state.pattern,
     widthMm: state.preset.width_mm,
     // NaN (unfinished input) becomes 0, which the server rejects.
     lengthM: Number.isFinite(state.preset.length_m) ? state.preset.length_m : 0,

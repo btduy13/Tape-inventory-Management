@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESIGN_PATTERNS, designPatternOf } from "@/lib/types";
 import { buildDesignSubmission, designJsonSchema, toDesignJson } from "./design-json";
 import { createInitialState, designReducer, type DesignState } from "./state";
 
@@ -116,6 +117,26 @@ describe("legacy logo colour fields (backward compatible)", () => {
   });
   it("still rejects a malformed legacy accent", () => {
     expect(designJsonSchema.safeParse({ ...ok(), accentColor: "blue" }).success).toBe(false);
+  });
+});
+
+describe("repeat pattern", () => {
+  it("saves the chosen pattern and validates every pattern", () => {
+    expect(toDesignJson(sample()).pattern).toBe("straight");
+    for (const pattern of DESIGN_PATTERNS) {
+      const json = toDesignJson(designReducer(sample(), { type: "setPattern", pattern }));
+      expect(json.pattern).toBe(pattern);
+      expect(designJsonSchema.safeParse(json).success).toBe(true);
+    }
+  });
+  it("accepts designs saved before patterns and rejects unknown ones", () => {
+    const { pattern: _omit, ...old } = toDesignJson(sample());
+    void _omit;
+    expect(designJsonSchema.safeParse(old).success).toBe(true);
+    expect(designPatternOf(old)).toBe("straight");
+    expect(designJsonSchema.safeParse({ ...old, pattern: "spiral" }).success).toBe(false);
+    expect(designPatternOf({ pattern: "spiral" })).toBe("straight");
+    expect(designPatternOf(null)).toBe("straight");
   });
 });
 

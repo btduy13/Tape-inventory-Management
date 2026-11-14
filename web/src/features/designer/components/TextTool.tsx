@@ -1,9 +1,9 @@
 "use client";
-// Print text: content, font (radio tiles previewed in each font via SVG attributes, CSP-safe),
-// size and repeat gap. Text colour lives in the colour step.
+// Print text: content, font (radio tiles previewed in each font via SVG attributes, CSP-safe)
+// and size. Text colour lives in the colour step; repeat gap lives in PatternPicker.
 import { useId } from "react";
 import { format, getDictionary } from "@/i18n";
-import { FONT_FAMILIES, MAX_REPEAT_GAP_PX, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX } from "../lib/constants";
+import { FONT_FAMILIES, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX } from "../lib/constants";
 import { maxFontSize } from "../lib/state";
 import { useDesignState } from "./hooks";
 import { RangeField } from "./RangeField";
@@ -71,14 +71,6 @@ export function TextTool() {
         max={maxFont}
         display={px}
         onChange={(v) => dispatch({ type: "setFontSize", px: Math.min(v, maxFont) })}
-      />
-      <RangeField
-        label={t.repeatGap}
-        value={s.repeatGapPx}
-        min={0}
-        max={MAX_REPEAT_GAP_PX}
-        display={px}
-        onChange={(v) => dispatch({ type: "setRepeatGap", px: v })}
       />
       {moved && (
         <button

@@ -30,5 +30,6 @@ export function layoutForState(s: DesignState, logoReady: boolean): PatternLayou
     textOffsetX: s.textOffsetX,
     textOffsetY: s.textOffsetY,
     repeatGapPx: s.repeatGapPx,
+    pattern: s.pattern,
   });
 }

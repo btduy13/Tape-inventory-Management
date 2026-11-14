@@ -1,7 +1,7 @@
 // Job detail blocks. Production specs only: WorkshopJobRow has no price or customer contact fields.
 import { Section, linkClass, surfaceClass } from "@/features/portal-ui";
 import { getDictionary } from "@/i18n";
-import type { ProductionStepLog, WorkshopJobRow } from "@/lib/types";
+import { designPatternOf, type ProductionStepLog, type WorkshopJobRow } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
 import { floorNote } from "../lib/group";
 import type { DesignUrls } from "../server/queries";
@@ -51,6 +51,7 @@ export function JobSpecs({ job, floor = false }: { job: WorkshopJobRow; floor?: 
         <Row label={t.workshop.printText}>
           {job.print_text ? <span className="text-lg font-semibold">“{job.print_text}”</span> : "—"}
         </Row>
+        <Row label={t.workshop.pattern}>{t.designPattern[designPatternOf(job.design_json)]}</Row>
         <Row label={t.workshop.dueDate}><DueBadge dueDate={job.due_date} step={job.step} size="md" /></Row>
         {!floor && (
           <>
