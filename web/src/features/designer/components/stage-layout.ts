@@ -18,9 +18,10 @@ export function measureTextWidth(text: string, fontFamily: string, sizePx: numbe
   return Math.max(...lines.map((l) => ctx.measureText(l).width));
 }
 
-/** Layout exactly as the stage renders it. `logoReady` is false until the logo bitmap decoded. */
-export function layoutForState(s: DesignState, logoReady: boolean): PatternLayout {
-  const strip = stripSize(s.preset.width_mm);
+/** Layout exactly as the stage renders it. `logoReady` is false until the logo bitmap decoded.
+ *  `lengthMm` lays the pattern out on a shorter strip (pattern thumbnails: whole tiles only). */
+export function layoutForState(s: DesignState, logoReady: boolean, lengthMm?: number): PatternLayout {
+  const strip = stripSize(s.preset.width_mm, lengthMm);
   const border = borderPx(s.border, s.preset.width_mm);
   const band = printBand(strip, border);
   const lines = textLines(s.text);

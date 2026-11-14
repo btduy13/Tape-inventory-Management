@@ -69,8 +69,11 @@ function PatternIcon({ pattern }: { pattern: DesignPattern }) {
   );
 }
 
-/** Thumbnail width (CSS px); the thumbnail shows the first half (150mm) of the strip. */
+/** Thumbnail width (CSS px). */
 const THUMB_W = 120;
+/** Thumbnails lay the pattern out on its own 150mm strip: cropping the 300mm stage strip would cut
+ *  tiles in half when long content repeats only once or twice. */
+const THUMB_LENGTH_MM = 150;
 
 /** Live mini tape of `pattern` with the current design. */
 function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; s: DesignState; logo: HTMLCanvasElement | null; knockout: HTMLCanvasElement | null }) {
@@ -80,13 +83,12 @@ function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; 
       const canvas = ref.current;
       const ctx = canvas?.getContext("2d");
       if (!canvas || !ctx) return;
-      const strip = stripSize(s.preset.width_mm);
-      const crop = strip.width / 2;
+      const strip = stripSize(s.preset.width_mm, THUMB_LENGTH_MM);
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const scale = (THUMB_W / crop) * dpr;
-      canvas.width = Math.round(crop * scale);
+      const scale = (THUMB_W / strip.width) * dpr;
+      canvas.width = Math.round(strip.width * scale);
       canvas.height = Math.round(strip.height * scale);
-      const layout = layoutForState({ ...s, pattern }, logo !== null);
+      const layout = layoutForState({ ...s, pattern }, logo !== null, THUMB_LENGTH_MM);
       drawStrip(ctx, strip, layout, {
         backgroundColor: s.backgroundColor,
         textColor: s.textColor,
@@ -95,7 +97,7 @@ function PatternThumb({ pattern, s, logo, knockout }: { pattern: DesignPattern; 
         borderStyle: s.border.style,
         logo,
         knockout,
-      }, scale, crop);
+      }, scale);
     });
     return () => cancelAnimationFrame(id);
   }, [pattern, s, logo, knockout]);
