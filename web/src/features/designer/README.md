@@ -2,7 +2,9 @@
 
 **Owner:** `designer` feature builder. Only this feature edits files in this folder.
 
-2D tape designer (Konva): preset picker, up to 3 colors, text, logo upload UI, repeating pattern on tape strip, PNG export.
+2D tape designer (Konva): preset picker, up to 3 colors, text, logo upload UI, repeat patterns + border lines on the tape strip.
+No customer download: the preview PNG is only uploaded with the quote form; previews are watermarked and
+shielded against capture (components/capture-guard.tsx).
 
 ## Routes
 

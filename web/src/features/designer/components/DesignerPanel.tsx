@@ -11,7 +11,7 @@ import { format, getDictionary } from "@/i18n";
 import { QUOTE_ANCHOR, VIEW3D_ANCHOR } from "./anchors";
 import { DesignMockupBridge } from "./DesignMockupBridge";
 import { ColorDots, DesignSummary, useDesignSummary } from "./DesignSummary";
-import { ExportButtons } from "./ExportButtons";
+import { CaptureZone, useCaptureGuard } from "./capture-guard";
 import { InkLimitDialog, type DesignerContact } from "./InkLimitDialog";
 import { LogoUpload } from "./LogoUpload";
 import { MobileActionBar } from "./MobileActionBar";
@@ -32,6 +32,8 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
   const [open, setOpen] = useState<StepId | null>("spec");
   const [pinned, setPinned] = useState(true);
   const refs = useRef<Partial<Record<StepId, HTMLElement | null>>>({});
+  // No downloads; previews hide behind a blur while the page is unfocused or a capture key is used.
+  const shielded = useCaptureGuard();
 
   const goTo = useCallback((id: StepId) => {
     setOpen(id);
@@ -106,9 +108,6 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
               <h2 id="designer-stage-title" className="shrink-0 text-sm font-semibold text-slate-900">{t.stageTitle}</h2>
               <span className={`truncate text-xs tabular-nums ${sum.lengthOk ? "text-slate-600" : "font-medium text-red-700"}`}>{sum.size}</span>
             </div>
-            <div className="-my-2 ml-auto hidden sm:block">
-              <ExportButtons />
-            </div>
             <button
               type="button"
               aria-pressed={pinned}
@@ -123,12 +122,16 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
             </button>
           </div>
           <div className="rounded-xl bg-slate-100 p-2.5 sm:p-4">
-            <TapeCanvas2D />
+            <CaptureZone hidden={shielded}>
+              <TapeCanvas2D />
+            </CaptureZone>
           </div>
         </section>
         <section id={VIEW3D_ANCHOR} className={`order-3 min-w-0 scroll-mt-4 ${barClearanceScrollMb} ${card} p-3 sm:p-4 lg:order-none`}>
           <h2 className="mb-2 text-sm font-semibold text-slate-900 sm:mb-3">{getDictionary().mockup3d.title}</h2>
-          <DesignMockupBridge showTitle={false} aspect="16 / 9" mobileAspect="1 / 1" />
+          <CaptureZone hidden={shielded}>
+            <DesignMockupBridge showTitle={false} aspect="16 / 9" mobileAspect="1 / 1" />
+          </CaptureZone>
         </section>
       </div>
 
@@ -169,9 +172,6 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
             <div className="flex flex-col gap-5">
               <p className="text-sm text-slate-600">{t.quoteHint}</p>
               <DesignSummary onEdit={goTo} />
-              <div className="sm:hidden">
-                <ExportButtons />
-              </div>
               {quote}
             </div>,
             { anchor: QUOTE_ANCHOR },

@@ -10,6 +10,7 @@ import { format, getDictionary } from "@/i18n";
 import { STRIP_LENGTH_MM } from "../lib/constants";
 import { borderShapes } from "../lib/border";
 import { stripSize, type TileTransform } from "../lib/pattern";
+import { Watermark } from "@/features/mockup3d";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
 import { layoutForState } from "./stage-layout";
@@ -187,6 +188,8 @@ export default function KonvaTapeStage() {
             </Layer>
           </Stage>
         )}
+        {/* Screen-only brand mark (HTML overlay): never in the texture or the staff preview PNG. */}
+        <Watermark />
         {empty && scale > 0 && (
           <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-xs font-medium text-slate-800 sm:text-sm">
             {t.emptyCanvas}

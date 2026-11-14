@@ -28,6 +28,8 @@ describe("<DesignerPanel>", () => {
     setup();
     expect(screen.getByTestId("canvas2d")).toBeInTheDocument();
     expect(screen.getByTestId("mockup3d")).toBeInTheDocument();
+    // Customers cannot download the design (no PNG / JSON export).
+    expect(screen.queryByRole("button", { name: /Tải ảnh PNG|Lưu bản thiết kế/ })).toBeNull();
     expect(head("spec")).toHaveAttribute("aria-expanded", "true");
     for (const id of ["content", "colors", "quote"]) {
       expect(head(id)).toHaveAttribute("aria-expanded", "false");
