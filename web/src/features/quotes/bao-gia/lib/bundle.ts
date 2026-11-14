@@ -3,6 +3,7 @@
 // orderMath.calculateQuoteBundle (bundle.parity.test.ts compares with the JS). Live totals only:
 // admin_quote_save (0032) recomputes and stores every amount.
 import { moneyValue } from "@/features/admin-orders/lib/form-money";
+import { formCalc } from "@/features/admin-orders/lib/form-totals";
 import { calculateLine, calculatePrintedTape, calculateStandardOrder, money, number, percent, vatAmount } from "@/features/admin-orders/lib/order-math";
 
 export const QUOTE_TYPES = ["bang_keo_in", "bang_keo", "truc_in"] as const;
@@ -75,6 +76,19 @@ export function buildItem(type: QuoteType, size: SizeDraft): QuoteItem {
     costTotal: r.costTotal, vat: r.vat, vatPercent: r.vatPercent, deposit: 0, shipping: r.shipping,
     commission: r.commission, profit: r.profit, netProfit: r.netProfit, axes: [],
   };
+}
+
+/** Printed tape size with "Trục mới" on (loai_truc is a form-only field of the size). */
+export const isNewAxis = (type: QuoteType, size: SizeDraft) => type === "bang_keo_in" && size.fields.loai_truc === "moi";
+
+/** "Kết quả tính toán" of the open size as the app fills it (calculateBangKeoIn / calculateBangKeo /
+ *  calculateTrucIn in quote mode): the typed axis counts only with Trục mới, and Công nợ khách adds
+ *  the saved axes of the size (total + VAT). */
+export function sizeResults(type: QuoteType, size: SizeDraft, draftAxis: Fields): Readonly<Record<string, number>> {
+  const axis = isNewAxis(type, size);
+  const calc = formCalc(type, { ...numericFields({ ...size.fields, ...(axis ? draftAxis : {}) }), loai_truc: axis ? "moi" : "cu" });
+  const saved = size.axes.map(buildAxis).reduce((s, a) => s + a.total + a.vat, 0);
+  return { ...calc, cong_no_khach: (calc.cong_no_khach ?? 0) + saved };
 }
 
 export type QuoteBundle = {

@@ -9,8 +9,8 @@ import { InlineStatus } from "@/features/portal-ui/components/States";
 import { buttonClass, inputClass } from "@/features/portal-ui/components/styles";
 import { money } from "@/features/admin-orders/lib/format";
 import { number } from "@/features/admin-orders/lib/order-math";
-import { buildItem, numericFields, quoteBundle, quoteError, type Fields, type QuoteType, type SizeDraft } from "../lib/bundle";
-import type { QuoteInput } from "../lib/schema";
+import { buildItem, isNewAxis, numericFields, quoteBundle, quoteError, sizeResults, type Fields, type QuoteType, type SizeDraft } from "../lib/bundle";
+import { AXIS_KEYS, type QuoteInput } from "../lib/schema";
 import { saveQuoteAction } from "../server/actions";
 import { quotePrintHref } from "../lib/paths";
 import { AxisPanel } from "./AxisPanel";
@@ -23,9 +23,8 @@ const HEADER: [keyof EditorHeader, string, boolean][] = [
   ["ten_hang", "Tên hàng", true], ["ten_khach_hang", "Tên khách hàng", true],
   ["sdt_khach_hang", "SĐT khách", false], ["dia_chi_khach_hang", "Địa chỉ giao", false],
 ];
-const AXIS_FIELDS = ["ten_truc", "truc_chu_vi", "truc_so_luong", "truc_gia_goc", "truc_gia_ban", "truc_vat_percent", "truc_ctv", "truc_hoa_hong"];
 const emptyAxis = (): Fields => ({ truc_gia_goc: "", truc_gia_ban: "", truc_vat_percent: "" });
-const axisFilled = (a: Fields) => AXIS_FIELDS.some((k) => (a[k] ?? "").trim() !== "");
+const axisFilled = (a: Fields) => AXIS_KEYS.some((k) => (a[k] ?? "").trim() !== "");
 const axisComplete = (typed: Fields) => {
   const a = numericFields(typed);
   return !!a.ten_truc?.trim() && number(a.truc_so_luong) > 0 && number(a.truc_gia_goc) > 0 && number(a.truc_gia_ban) > 0;
@@ -43,11 +42,14 @@ export function QuoteEditor({ type, id, header: initialHeader, sizes: initialSiz
 
   const items = useMemo(() => sizes.map((s) => buildItem(type, s)), [sizes, type]);
   const totals = useMemo(() => quoteBundle(items), [items]);
+  const open = sizes[Math.min(active, sizes.length - 1)]!; // there is always at least one size
+  const newAxis = isNewAxis(type, open);
+  const results = useMemo(() => sizeResults(type, open, axis), [type, open, axis]);
 
   const patchSize = (i: number, patch: (s: SizeDraft) => SizeDraft) => setSizes((all) => all.map((s, j) => (j === i ? patch(s) : s)));
   const addSize = () => {
-    // Copies the open size except its axes; deposit back to 0 (quotations.js:409-432).
-    setSizes((all) => [...all, { fields: { ...all[active]!.fields, tien_coc: "0" }, axes: [] }]);
+    // Copies the open size except its axes; deposit back to 0, Trục cũ (quotations.js:409-432).
+    setSizes((all) => [...all, { fields: { ...all[active]!.fields, tien_coc: "0", ...(type === "bang_keo_in" ? { loai_truc: "cu" } : {}) }, axes: [] }]);
     setActive(sizes.length);
   };
   const removeSize = (i: number) => {
@@ -61,11 +63,21 @@ export function QuoteEditor({ type, id, header: initialHeader, sizes: initialSiz
     setAxis(emptyAxis());
   };
 
+  const setAxisMode = (on: boolean) => {
+    // Trục cũ drops the typed and the saved axes of the size, as setBangKeoInAxisMode does.
+    if (!on && open.axes.length > 0 && !window.confirm(`Chuyển sang trục cũ sẽ xóa ${open.axes.length} trục đã thêm của kích thước này. Tiếp tục?`)) return;
+    patchSize(active, (s) => ({ fields: { ...s.fields, loai_truc: on ? "moi" : "cu" }, axes: on ? s.axes : [] }));
+    if (!on) {
+      setAxis(emptyAxis());
+      setAxisError(null);
+    }
+  };
+
   const save = () => {
     setError(null);
-    // A filled "Trục đang nhập" counts as an axis of the open size, like axisFromFields.
+    // A filled "Trục đang nhập" counts as an axis of the open size with Trục mới, like axisFromFields.
     let all = sizes;
-    if (type === "bang_keo_in" && axisFilled(axis)) {
+    if (newAxis && axisFilled(axis)) {
       if (!axisComplete(axis)) return setError("Mỗi trục cần đủ tên, số lượng, giá gốc và giá bán");
       all = sizes.map((s, j) => (j === active ? { ...s, axes: [...s.axes, axis] } : s));
     }
@@ -93,14 +105,15 @@ export function QuoteEditor({ type, id, header: initialHeader, sizes: initialSiz
       </Section>
       <Section title="Kích thước và giá">
         <SizeFields
-          type={type} sizes={sizes} active={active} onSelect={setActive} onAdd={addSize} onRemove={removeSize}
+          type={type} sizes={sizes} active={active} results={results} money={showMoney}
+          onSelect={setActive} onAdd={addSize} onRemove={removeSize} onAxisMode={setAxisMode}
           onChange={(key, value) => patchSize(active, (s) => ({ ...s, fields: { ...s.fields, [key]: value } }))}
         />
       </Section>
-      {type === "bang_keo_in" && (
+      {newAxis && (
         <Section title="Trục đang nhập" description="Trục in mới của kích thước đang mở">
           <AxisPanel
-            draft={axis} saved={sizes[active]?.axes ?? []} error={axisError}
+            draft={axis} saved={open.axes} error={axisError} money={showMoney}
             onDraft={(key, value) => setAxis((a) => ({ ...a, [key]: value }))}
             onAdd={addAxis}
             onEdit={(i) => {

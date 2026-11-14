@@ -1,40 +1,35 @@
 "use client";
-// Printed tape: "Trục đang nhập" + "+ Thêm trục tiếp theo", and the axis tree of the open size
-// (├─/└─ Trục i, Sửa moves it back to the inputs, Xóa) like quotations.js:457-534.
-import { buttonClass, inputClass } from "@/features/portal-ui/components/styles";
-import { money } from "@/features/admin-orders/lib/format";
+// Printed tape: "Trục đang nhập" ("Kê khai trục" + read-only "Kết quả trục") + "+ Thêm trục tiếp theo",
+// and the axis tree of the open size (├─/└─ Trục i, Sửa moves it back to the inputs, Xóa) like
+// quotations.js:457-534 and restructureQuoteForm.
+import { buttonClass } from "@/features/portal-ui/components/styles";
+import { money as vnd } from "@/features/admin-orders/lib/format";
 import { buildAxis, type Fields } from "../lib/bundle";
-import { AXIS_KEYS } from "../lib/schema";
-import { labelOf } from "./SizeFields";
-
-const LABEL: Record<string, string> = { ten_truc: "Tên trục", truc_chu_vi: "Chu vi" };
+import { AXIS_GROUPS, AXIS_RESULTS } from "../lib/layout";
+import { InputGroups, labelOf, Results } from "./SizeFields";
 
 type Props = {
   draft: Fields;
   saved: Fields[];
   error: string | null;
+  /** orders.money: may see axis cost, commission and profit. */
+  money: boolean;
   onDraft: (key: string, value: string) => void;
   onAdd: () => void;
   onEdit: (i: number) => void;
   onRemove: (i: number) => void;
 };
 
-export function AxisPanel({ draft, saved, error, onDraft, onAdd, onEdit, onRemove }: Props) {
+export function AxisPanel({ draft, saved, error, money, onDraft, onAdd, onEdit, onRemove }: Props) {
+  const d = buildAxis(draft);
+  const results = {
+    truc_thanh_tien_goc: d.costTotal ?? 0, truc_thanh_tien_ban: d.total, truc_tien_hoa_hong: d.commission ?? 0,
+    truc_loi_nhuan: d.profit ?? 0, truc_loi_nhuan_rong: d.netProfit ?? 0,
+  };
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {AXIS_KEYS.map((key) => (
-          <label key={key} className="flex flex-col gap-1.5 text-sm font-medium text-pt-text">
-            {LABEL[key] ?? labelOf(key)}
-            <input
-              className={inputClass}
-              value={draft[key] ?? ""}
-              inputMode={key === "ten_truc" || key === "truc_ctv" ? undefined : "decimal"}
-              onChange={(e) => onDraft(key, e.target.value)}
-            />
-          </label>
-        ))}
-      </div>
+      <InputGroups groups={AXIS_GROUPS} values={draft} label={labelOf} onChange={onDraft} />
+      <Results title="Kết quả trục" description="Giá trị được tính riêng cho trục này." keys={AXIS_RESULTS} values={results} money={money} />
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={onAdd} className={buttonClass("secondary", "sm")}>+ Thêm trục tiếp theo</button>
         {error && <p role="alert" className="text-sm font-medium text-pt-red-ink">{error}</p>}
@@ -52,7 +47,7 @@ export function AxisPanel({ draft, saved, error, onDraft, onAdd, onEdit, onRemov
                   <div className="min-w-0 text-sm">
                     <p className="font-semibold text-pt-text">{i === saved.length - 1 ? "└─" : "├─"} Trục {i + 1}: {r.name}</p>
                     <p className="text-pt-muted">
-                      Chu vi {r.circumference ?? "-"} · SL {r.quantity} · {money(r.unitPrice)}/trục · VAT {r.vatPercent}% = {money(r.vat)} · Tổng {money(r.total + r.vat)}
+                      Chu vi {r.circumference ?? "-"} · SL {r.quantity} · {vnd(r.unitPrice)}/trục · VAT {r.vatPercent}% = {vnd(r.vat)} · Tổng {vnd(r.total + r.vat)}
                     </p>
                   </div>
                   <span className="flex gap-2">
