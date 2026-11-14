@@ -1,5 +1,5 @@
 import "server-only";
-import nodemailer from "nodemailer";
+import nodemailer, { type SendMailOptions } from "nodemailer";
 import type { EmailMessage, EmailSender, SendResult } from "../lib/types";
 import { oneLine } from "../lib/escape";
 
@@ -17,7 +17,7 @@ export function smtpSecurity(server: string, port: number): { secure: boolean; r
 
 /** Minimal surface of the nodemailer transport we use (lets tests inject a mock). */
 export interface TransportLike {
-  sendMail(mail: nodemailer.SendMailOptions): Promise<{ messageId?: string }>;
+  sendMail(mail: SendMailOptions): Promise<{ messageId?: string }>;
 }
 
 export class SmtpSender implements EmailSender {
