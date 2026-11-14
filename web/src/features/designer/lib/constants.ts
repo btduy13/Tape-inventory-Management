@@ -11,7 +11,11 @@ export const MAX_COLORS = 3;
 /** Above this many inks the exact count means nothing to a customer: show "hơn 6" instead. */
 export const INK_DISPLAY_CAP = 6;
 
-export const MAX_TEXT_LENGTH = 60;
+export const MAX_TEXT_LENGTH = 120;
+/** Print text lines (Enter starts a new line), e.g. name / phone / address. */
+export const MAX_TEXT_LINES = 4;
+/** Line height of multi-line print text, times the font size. */
+export const TEXT_LINE_HEIGHT = 1.15;
 export const MIN_FONT_SIZE_PX = 12;
 export const MAX_FONT_SIZE_PX = 200;
 export const MIN_REPEAT_GAP_PX = 0;
@@ -24,6 +28,14 @@ export const MAX_LOGO_OFFSET = 0.5;
 export const MAX_OFFSET_X = 3;
 /** Unprinted margin at each tape edge, as a fraction of tape width. Content stays inside the band. */
 export const PRINT_MARGIN_RATIO = 0.05;
+/** Narrower tapes print only the straight pattern (too little room for the others). */
+export const MIN_PATTERN_WIDTH_MM = 48;
+/** Border lines: thinnest printable line, thickest line, and max share of the tape width. */
+export const BORDER_MIN_MM = 3;
+export const BORDER_MAX_MM = 8;
+export const BORDER_MAX_RATIO = 0.2;
+/** Logo rotation range, degrees (either way). */
+export const MAX_LOGO_ROTATION = 180;
 /** Keyboard nudge step (fraction of strip height); Shift multiplies by 5. */
 export const NUDGE_STEP = 0.02;
 /** WEBP / GIF logos are re-encoded to PNG client-side, capped to this many px per side. */

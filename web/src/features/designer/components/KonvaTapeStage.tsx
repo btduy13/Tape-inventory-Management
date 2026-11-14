@@ -1,19 +1,22 @@
 "use client";
 // Konva strip renderer. Client-only (loaded through TapeCanvas2D with ssr:false).
 // Logo and text are draggable / resizable (Transformer) and keyboard-movable; the pattern repeats
-// every change. Registers a StageRenderer for exports and publishes the 3D texture from the
+// every change (pattern.ts: turned tiles are rotated groups, wrap-around ghost copies are inert). Registers a StageRenderer for exports and publishes the 3D texture from the
 // content layer only, so selection handles never end up in the print.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type Konva from "konva";
-import { Group, Image as KImage, Layer, Rect, Stage, Text, Transformer } from "react-konva";
+import { Group, Image as KImage, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import { format, getDictionary } from "@/i18n";
-import { STRIP_LENGTH_MM } from "../lib/constants";
-import { stripSize } from "../lib/pattern";
+import { STRIP_LENGTH_MM, TEXT_LINE_HEIGHT } from "../lib/constants";
+import { borderShapes } from "../lib/border";
+import { stripSize, type TileTransform } from "../lib/pattern";
+import { textLines } from "../lib/state";
+import { Watermark } from "@/features/mockup3d";
 import { useDesignContext } from "./DesignProvider";
 import { useDesignState } from "./hooks";
 import { layoutForState } from "./stage-layout";
 import { useStageInteraction } from "./use-stage-interaction";
-import { useLogoCanvas } from "./use-logo-canvas";
+import { tintCanvas, useLogoCanvas } from "./use-logo-canvas";
 
 export default function KonvaTapeStage() {
   const t = getDictionary().designer;
@@ -27,9 +30,18 @@ export default function KonvaTapeStage() {
 
   const strip = stripSize(s.preset.width_mm);
   const logoCanvas = useLogoCanvas(s.logo);
-  const text = s.text.trim();
+  const text = textLines(s.text).join("\n");
   const layout = useMemo(() => layoutForState(s, logoCanvas !== null), [s, logoCanvas]);
   const ui = useStageInteraction(store, layout, logoCanvas !== null);
+  const hasFill = layout.tiles.some((tile) => tile.fill);
+  const knockout = useMemo(
+    () => (hasFill && logoCanvas ? tintCanvas(logoCanvas, s.backgroundColor) : null),
+    [hasFill, logoCanvas, s.backgroundColor],
+  );
+  const border = useMemo(
+    () => borderShapes({ width: strip.width, height: strip.height }, s.border.style, layout.borderPx),
+    [strip.width, strip.height, s.border.style, layout.borderPx],
+  );
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -66,7 +78,7 @@ export default function KonvaTapeStage() {
       if (layer) store.publishTexture(layer.toCanvas({ x: 0, y: 0, width: stageW, height: stageH, pixelRatio: 1 / scale }));
     });
     return () => cancelAnimationFrame(id);
-  }, [store, scale, stageW, stageH, layout, s.backgroundColor, s.textColor, logoCanvas]);
+  }, [store, scale, stageW, stageH, layout, border, s.backgroundColor, s.textColor, logoCanvas, knockout]);
 
   // Attach the Transformer to the selected node.
   const sel = ui.selected;
@@ -100,16 +112,35 @@ export default function KonvaTapeStage() {
           <Stage ref={stageRef} width={stageW} height={stageH} scaleX={scale} scaleY={scale} onMouseDown={onStageDown} onTouchStart={onStageDown}>
             <Layer ref={contentRef}>
               <Rect name="bg" x={0} y={0} width={strip.width} height={strip.height} fill={s.backgroundColor} />
+              {border.rects.map((r, i) => (
+                <Rect key={`br-${i}`} {...r} fill={s.textColor} listening={false} />
+              ))}
+              {border.bands.map((b, bi) => (
+                border.stripes.length > 0 && (
+                  <Group key={`bs-${bi}`} clipX={0} clipY={b.top} clipWidth={strip.width} clipHeight={b.bottom - b.top} listening={false}>
+                    {border.stripes.filter((p) => p[1] === b.top).map((p, i) => (
+                      <Line key={i} points={p} closed fill={s.textColor} />
+                    ))}
+                  </Group>
+                )
+              ))}
+              <Group clipX={0} clipY={layout.clip.top} clipWidth={strip.width} clipHeight={layout.clip.bottom - layout.clip.top}>
+              {layout.tiles.map((tile, i) => tile.fill && (
+                <Rect key={`fill-${i}`} name="bg" {...tile.cell} fill={s.textColor} />
+              ))}
               {layout.tiles.map((tile, i) => (
-                <Group key={i}>
-                  {tile.logo && logoCanvas && (
+                <Group key={i} listening={!tile.ghost} {...groupTransform(tile.transform)}>
+                  {tile.logo && logoCanvas && layout.logoSize && (
                     <KImage
                       id={`logo-${i}`}
-                      image={logoCanvas}
-                      x={tile.logo.x}
-                      y={tile.logo.y}
-                      width={tile.logo.width}
-                      height={tile.logo.height}
+                      image={tile.fill && knockout ? knockout : logoCanvas}
+                      x={tile.logo.x + tile.logo.width / 2}
+                      y={tile.logo.y + tile.logo.height / 2}
+                      width={layout.logoSize.width}
+                      height={layout.logoSize.height}
+                      offsetX={layout.logoSize.width / 2}
+                      offsetY={layout.logoSize.height / 2}
+                      rotation={layout.logoRotation}
                       draggable
                       onMouseDown={ui.select("logo", i)}
                       onTouchStart={ui.select("logo", i)}
@@ -126,8 +157,10 @@ export default function KonvaTapeStage() {
                       fontFamily={s.fontFamily}
                       fontStyle="bold"
                       fontSize={layout.fontSize}
-                      lineHeight={1}
-                      fill={s.textColor}
+                      lineHeight={layout.textHeightRatio === 1 ? 1 : TEXT_LINE_HEIGHT}
+                      align="center"
+                      width={tile.text.width}
+                      fill={tile.fill ? s.backgroundColor : s.textColor}
                       wrap="none"
                       draggable
                       onMouseDown={ui.select("text", i)}
@@ -138,11 +171,14 @@ export default function KonvaTapeStage() {
                   )}
                 </Group>
               ))}
+              </Group>
             </Layer>
             <Layer>
               <Transformer
                 ref={trRef}
-                rotateEnabled={false}
+                rotateEnabled={sel?.kind === "logo"}
+                rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
+                rotationSnapTolerance={4}
                 keepRatio
                 enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
                 anchorSize={14}
@@ -155,6 +191,8 @@ export default function KonvaTapeStage() {
             </Layer>
           </Stage>
         )}
+        {/* Screen-only brand mark (HTML overlay): never in the texture or the staff preview PNG. */}
+        <Watermark />
         {empty && scale > 0 && (
           <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-xs font-medium text-slate-800 sm:text-sm">
             {t.emptyCanvas}
@@ -172,4 +210,18 @@ export default function KonvaTapeStage() {
       </figcaption>
     </figure>
   );
+}
+
+/** Konva group props for a turned tile: children keep unrotated coordinates (drag maths unchanged). */
+function groupTransform(tr: TileTransform | null) {
+  if (!tr) return {};
+  return {
+    x: tr.pivotX + tr.dx,
+    y: tr.pivotY + tr.dy,
+    offsetX: tr.pivotX,
+    offsetY: tr.pivotY,
+    rotation: tr.rotation,
+    scaleX: tr.scale,
+    scaleY: tr.scale,
+  };
 }

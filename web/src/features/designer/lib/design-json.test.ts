@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESIGN_PATTERNS, designBorderOf, designPatternOf } from "@/lib/types";
 import { buildDesignSubmission, designJsonSchema, toDesignJson } from "./design-json";
 import { createInitialState, designReducer, type DesignState } from "./state";
 
@@ -24,7 +25,7 @@ describe("toDesignJson", () => {
       logo: { file: new File(["x"], "a.png"), kind: "png", url: "blob:x", width: 1, height: 1 },
     });
     // No colorMode: the logo always prints in its own colours.
-    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0 });
+    expect(toDesignJson(s).logo).toEqual({ path: null, scale: 1, offsetX: 0, offsetY: 0, rotation: 0, autoClean: false });
   });
 
   it("persists canvas positions and sizes", () => {
@@ -45,6 +46,18 @@ describe("print ink flag", () => {
     s = designReducer(s, { type: "setLogoInks", url: "blob:x", inks: inks.map((hex) => ({ hex, coverage: 0.25 })) });
     return s;
   };
+
+  it("border / colour blocks use the text ink even without text", () => {
+    const logoOnly = designReducer(withLogo(["#0a1466"]), { type: "setText", text: "" });
+    expect(toDesignJson(logoOnly).inkColors).toEqual(["#d9c3a0", "#0a1466"]);
+    const bordered = designReducer(logoOnly, { type: "setBorder", style: "solid" });
+    expect(toDesignJson(bordered).inkColors).toEqual(["#d9c3a0", "#cf1f27", "#0a1466"]);
+  });
+
+  it("colour blocks with text knock the logo out: no logo inks", () => {
+    const s = designReducer(withLogo(["#0a1466", "#007a33"]), { type: "setPattern", pattern: "blocks" });
+    expect(toDesignJson(s).inkColors).toEqual(["#d9c3a0", "#cf1f27"]);
+  });
 
   it("counts background + text + logo colours (same colour once)", () => {
     // Default tape #d9c3a0, text #cf1f27 (near the logo red, so printed with it).
@@ -80,6 +93,9 @@ describe("designJsonSchema", () => {
     expect(designJsonSchema.safeParse({ ...ok(), textColor: ok().backgroundColor }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), fontFamily: "evil" }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), text: "a\u0000b" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), text: "a\rb" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), text: "1\n2\n3\n4\n5" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok(), text: "TÔM GIỐNG\nGIA VIỆT\nĐT: 0906" }).success).toBe(true);
     expect(designJsonSchema.safeParse({ ...ok(), extra: 1 }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), presetId: "not-a-uuid" }).success).toBe(false);
     expect(designJsonSchema.safeParse({ ...ok(), version: 2 }).success).toBe(false);
@@ -116,6 +132,49 @@ describe("legacy logo colour fields (backward compatible)", () => {
   });
   it("still rejects a malformed legacy accent", () => {
     expect(designJsonSchema.safeParse({ ...ok(), accentColor: "blue" }).success).toBe(false);
+  });
+});
+
+describe("repeat pattern", () => {
+  it("saves the chosen pattern and validates every pattern", () => {
+    expect(toDesignJson(sample()).pattern).toBe("straight");
+    for (const pattern of DESIGN_PATTERNS) {
+      const json = toDesignJson(designReducer(sample(), { type: "setPattern", pattern }));
+      expect(json.pattern).toBe(pattern);
+      expect(designJsonSchema.safeParse(json).success).toBe(true);
+    }
+  });
+  it("saves border lines and logo rotation", () => {
+    let s = designReducer(sample(), { type: "setBorder", style: "stripes", widthMm: 4 });
+    s = designReducer(s, {
+      type: "setLogo",
+      logo: { file: new File(["x"], "a.png"), kind: "png", url: "blob:x", width: 1, height: 1 },
+    });
+    s = designReducer(s, { type: "setLogoTransform", rotation: 30 });
+    const json = toDesignJson(s);
+    expect(json.border).toEqual({ style: "stripes", widthMm: 4 });
+    expect(json.logo?.rotation).toBe(30);
+    expect(designJsonSchema.safeParse(json).success).toBe(true);
+    expect(toDesignJson(sample()).border).toBeNull();
+    expect(designBorderOf(json)).toEqual({ style: "stripes", widthMm: 4 });
+    expect(designBorderOf({ border: { style: "zigzag", widthMm: 4 } })).toBeNull();
+  });
+  it("rejects patterns on narrow tapes and borders too thick for the tape", () => {
+    const ok = toDesignJson(sample());
+    expect(designJsonSchema.safeParse({ ...ok, widthMm: 36, pattern: "brick" }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok, widthMm: 36, pattern: "straight" }).success).toBe(true);
+    expect(designJsonSchema.safeParse({ ...ok, widthMm: 24, border: { style: "solid", widthMm: 6 } }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok, border: { style: "solid", widthMm: 2.5 } }).success).toBe(false);
+    expect(designJsonSchema.safeParse({ ...ok, logo: { path: null, scale: 1, offsetX: 0, offsetY: 0, rotation: 200 } }).success).toBe(false);
+  });
+  it("accepts designs saved before patterns and rejects unknown ones", () => {
+    const { pattern: _omit, ...old } = toDesignJson(sample());
+    void _omit;
+    expect(designJsonSchema.safeParse(old).success).toBe(true);
+    expect(designPatternOf(old)).toBe("straight");
+    expect(designJsonSchema.safeParse({ ...old, pattern: "spiral" }).success).toBe(false);
+    expect(designPatternOf({ pattern: "spiral" })).toBe("straight");
+    expect(designPatternOf(null)).toBe("straight");
   });
 });
 

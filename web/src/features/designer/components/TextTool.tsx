@@ -1,13 +1,13 @@
 "use client";
-// Print text: content, font (radio tiles previewed in each font via SVG attributes, CSP-safe),
-// size and repeat gap. Text colour lives in the colour step.
+// Print text: content (up to MAX_TEXT_LINES lines, Enter = new line), font (radio tiles previewed in each font via SVG attributes, CSP-safe)
+// and size. Text colour lives in the colour step; repeat gap lives in PatternPicker.
 import { useId } from "react";
 import { format, getDictionary } from "@/i18n";
-import { FONT_FAMILIES, MAX_REPEAT_GAP_PX, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX } from "../lib/constants";
+import { FONT_FAMILIES, MAX_TEXT_LENGTH, MAX_TEXT_LINES, MIN_FONT_SIZE_PX } from "../lib/constants";
 import { maxFontSize } from "../lib/state";
 import { useDesignState } from "./hooks";
 import { RangeField } from "./RangeField";
-import { btnGhost, chip, chipOff, chipOn, groupLabel, input } from "./ui";
+import { btnGhost, chip, chipOff, chipOn, groupLabel, hint, input } from "./ui";
 
 const px = (v: number) => `${Math.round(v)}px`;
 
@@ -17,6 +17,7 @@ export function TextTool() {
   const [s, dispatch] = useDesignState();
   const maxFont = maxFontSize(s.preset.width_mm);
   const moved = s.textOffsetX !== 0 || s.textOffsetY !== 0;
+  const rows = Math.min(MAX_TEXT_LINES, Math.max(2, s.text.split("\n").length));
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -27,16 +28,17 @@ export function TextTool() {
             {format(t.textCounter, { count: s.text.length, max: MAX_TEXT_LENGTH })}
           </span>
         </div>
-        <input
+        <textarea
           id={`${id}-text`}
-          type="text"
           value={s.text}
+          rows={rows}
           maxLength={MAX_TEXT_LENGTH}
           placeholder={t.textPlaceholder}
           onChange={(e) => dispatch({ type: "setText", text: e.target.value })}
-          className={input}
-          aria-describedby={`${id}-counter`}
+          className={`${input.replace("h-11", "")} min-h-11 resize-none py-2 leading-6`}
+          aria-describedby={`${id}-counter ${id}-lines`}
         />
+        <p id={`${id}-lines`} className={hint}>{format(t.textLinesHint, { max: MAX_TEXT_LINES })}</p>
       </div>
       <div className="flex min-w-0 flex-col gap-2">
         <span id={`${id}-font`} className="text-sm font-medium text-slate-800">{t.font}</span>
@@ -71,14 +73,6 @@ export function TextTool() {
         max={maxFont}
         display={px}
         onChange={(v) => dispatch({ type: "setFontSize", px: Math.min(v, maxFont) })}
-      />
-      <RangeField
-        label={t.repeatGap}
-        value={s.repeatGapPx}
-        min={0}
-        max={MAX_REPEAT_GAP_PX}
-        display={px}
-        onChange={(v) => dispatch({ type: "setRepeatGap", px: v })}
       />
       {moved && (
         <button

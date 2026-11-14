@@ -1,13 +1,14 @@
 // DesignJson (designs.design_json) builder + zod schema for server re-validation.
 import { z } from "zod";
-import type { DesignJson } from "@/lib/types";
+import { DESIGN_PATTERNS, type DesignJson, type DesignPattern } from "@/lib/types";
+import { borderPx, maxBorderMm } from "./border";
 import {
-  FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_REPEAT_GAP_PX,
-  MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE,
+  BORDER_MAX_MM, BORDER_MIN_MM, FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_ROTATION, MAX_LOGO_SCALE,
+  MAX_REPEAT_GAP_PX, MAX_OFFSET_X, MAX_TEXT_LENGTH, MAX_TEXT_LINES, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE, MIN_PATTERN_WIDTH_MM,
 } from "./constants";
 import { MAX_INK_REPORT, printInks } from "./logo-colors";
 import { paletteColors } from "./palette";
-import type { DesignState } from "./state";
+import { textLines, type DesignState } from "./state";
 import { LENGTH_M_MAX, WIDTH_MM_MAX } from "./tape-spec";
 
 const hex = z.string().regex(/^#[0-9a-f]{6}$/);
@@ -24,7 +25,11 @@ export const designJsonSchema = z
     textColor: hex,
     // Legacy: old designs carried an accent (single logo ink). Still accepted, never written.
     accentColor: hex.nullable().optional(),
-    text: z.string().max(MAX_TEXT_LENGTH).refine((s) => !/[\u0000-\u001f\u007f]/.test(s)),
+    // Up to MAX_TEXT_LINES lines separated by "\n"; no other control characters.
+    text: z
+      .string()
+      .max(MAX_TEXT_LENGTH)
+      .refine((s) => !/[\u0000-\u0009\u000b-\u001f\u007f]/.test(s) && s.split("\n").length <= MAX_TEXT_LINES),
     fontFamily: z.enum(FONT_FAMILIES).optional(),
     fontSizePx: z.number().min(MIN_FONT_SIZE_PX).max(MAX_FONT_SIZE_PX).optional(),
     logo: z
@@ -33,6 +38,8 @@ export const designJsonSchema = z
         scale: z.number().min(MIN_LOGO_SCALE).max(MAX_LOGO_SCALE),
         offsetX: z.number().min(-MAX_OFFSET_X).max(MAX_OFFSET_X),
         offsetY: z.number().min(-MAX_LOGO_OFFSET).max(MAX_LOGO_OFFSET),
+        rotation: z.number().min(-MAX_LOGO_ROTATION).max(MAX_LOGO_ROTATION).optional(),
+        autoClean: z.boolean().optional(),
         // Legacy: the logo always prints in its own colours now. Still accepted, never written.
         colorMode: z.enum(LEGACY_LOGO_COLOR_MODES).optional(),
       })
@@ -40,6 +47,14 @@ export const designJsonSchema = z
       .nullable()
       .optional(),
     repeatGapPx: z.number().min(0).max(MAX_REPEAT_GAP_PX).optional(),
+    // Repeat layout (pattern.ts). Missing on designs saved before patterns: means "straight".
+    pattern: z.enum(DESIGN_PATTERNS as [DesignPattern, ...DesignPattern[]]).optional(),
+    // Edge lines in the text ink, at least BORDER_MIN_MM thick (null / missing: none).
+    border: z
+      .object({ style: z.enum(["solid", "stripes"]), widthMm: z.number().min(BORDER_MIN_MM).max(BORDER_MAX_MM) })
+      .strict()
+      .nullable()
+      .optional(),
     // Tape size (0022). Structural bounds only: lead-intake checks the active DB list / range.
     widthMm: z.number().int().min(1).max(WIDTH_MM_MAX).optional(),
     lengthM: z.number().positive().max(LENGTH_M_MAX).optional(),
@@ -52,7 +67,14 @@ export const designJsonSchema = z
     inkOverLimit: z.boolean().optional(),
   })
   .strict()
-  .refine((d) => d.textColor !== d.backgroundColor, { message: "text_equals_background" });
+  .refine((d) => d.textColor !== d.backgroundColor, { message: "text_equals_background" })
+  // Narrow tapes print only the straight pattern, and the border must fit the tape width.
+  .refine((d) => d.widthMm === undefined || d.widthMm >= MIN_PATTERN_WIDTH_MM || (d.pattern ?? "straight") === "straight", {
+    message: "pattern_needs_wider_tape",
+  })
+  .refine((d) => d.widthMm === undefined || !d.border || d.border.widthMm <= maxBorderMm(d.widthMm), {
+    message: "border_too_thick",
+  });
 
 /** Drop float noise from drag maths (4 decimals is far below print resolution). */
 const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
@@ -65,7 +87,7 @@ export function toDesignJson(state: DesignState): DesignJson {
     presetId: state.preset.id,
     backgroundColor: state.backgroundColor,
     textColor: state.textColor,
-    text: state.text.trim(),
+    text: textLines(state.text).join("\n"),
     fontFamily: state.fontFamily,
     fontSizePx: state.fontSizePx,
     logo: state.logo
@@ -74,9 +96,15 @@ export function toDesignJson(state: DesignState): DesignJson {
           scale: r4(state.logoScale),
           offsetX: r4(state.logoOffsetX),
           offsetY: r4(state.logoOffsetY),
+          rotation: state.logoRotation,
+          autoClean: !!state.logo.cleaned,
         }
       : null,
     repeatGapPx: state.repeatGapPx,
+    pattern: state.pattern,
+    border: borderPx(state.border, state.preset.width_mm) > 0 && state.border.style !== "none"
+      ? { style: state.border.style, widthMm: state.border.widthMm }
+      : null,
     widthMm: state.preset.width_mm,
     // NaN (unfinished input) becomes 0, which the server rejects.
     lengthM: Number.isFinite(state.preset.length_m) ? state.preset.length_m : 0,

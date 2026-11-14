@@ -1,7 +1,7 @@
 // Pure maths for canvas interaction (drag, resize, keyboard nudge). Units: offsets are a fraction
-// of strip height (same as DesignState), positions/sizes are logical strip px.
+// of the layout unit (strip height / rows, same as DesignState), positions/sizes are logical strip px.
 import { NUDGE_STEP } from "./constants";
-import { LOGO_HEIGHT_RATIO, type PatternLayout, type StripSize } from "./pattern";
+import { LOGO_HEIGHT_RATIO, type PatternLayout } from "./pattern";
 import type { DesignAction } from "./state";
 
 export type ElementKind = "logo" | "text";
@@ -9,7 +9,6 @@ export type ElementKind = "logo" | "text";
 /** New offsets after the element of tile `tileIndex` was moved to (x, y). */
 export function offsetFromPosition(
   layout: PatternLayout,
-  strip: StripSize,
   kind: ElementKind,
   tileIndex: number,
   x: number,
@@ -17,8 +16,8 @@ export function offsetFromPosition(
 ): { offsetX: number; offsetY: number } | null {
   const box = layout.tiles[tileIndex]?.[kind];
   const eff = layout.effective[kind];
-  if (!box || !eff || strip.height <= 0) return null;
-  return { offsetX: eff.x + (x - box.x) / strip.height, offsetY: eff.y + (y - box.y) / strip.height };
+  if (!box || !eff || layout.unit <= 0) return null;
+  return { offsetX: eff.x + (x - box.x) / layout.unit, offsetY: eff.y + (y - box.y) / layout.unit };
 }
 
 /** Action that moves `kind` to the given offsets. */
@@ -45,14 +44,16 @@ export function nudgeAction(layout: PatternLayout, kind: ElementKind, key: strin
 }
 
 /** Logo scale that renders the logo at `height` px (inverse of the pattern layout). */
-export function logoScaleFromHeight(height: number, strip: StripSize, fit: number): number {
-  const denom = strip.height * LOGO_HEIGHT_RATIO * (fit > 0 ? fit : 1);
+export function logoScaleFromHeight(height: number, layout: Pick<PatternLayout, "unit" | "fit">): number {
+  const denom = layout.unit * LOGO_HEIGHT_RATIO * (layout.fit > 0 ? layout.fit : 1);
   return denom > 0 ? height / denom : 1;
 }
 
-/** Requested font size after a resize handle scaled the rendered text by `scale`. */
-export function fontSizeFromScale(renderedFontSize: number, scale: number): number {
-  return Math.round(renderedFontSize * (Number.isFinite(scale) && scale > 0 ? scale : 1));
+/** Requested font size after a resize handle scaled the rendered text by `scale`.
+ *  `fontScale` undoes the two-row halving (pattern.ts), so the slider keeps full-width units. */
+export function fontSizeFromScale(renderedFontSize: number, scale: number, fontScale = 1): number {
+  const k = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  return Math.round((renderedFontSize * k) / (fontScale > 0 ? fontScale : 1));
 }
 
 /** Delete / Backspace removes the selected element. */

@@ -11,19 +11,20 @@ import { format, getDictionary } from "@/i18n";
 import { QUOTE_ANCHOR, VIEW3D_ANCHOR } from "./anchors";
 import { DesignMockupBridge } from "./DesignMockupBridge";
 import { ColorDots, DesignSummary, useDesignSummary } from "./DesignSummary";
-import { ExportButtons } from "./ExportButtons";
+import { CaptureZone, useCaptureGuard } from "./capture-guard";
 import { InkLimitDialog, type DesignerContact } from "./InkLimitDialog";
 import { LogoUpload } from "./LogoUpload";
 import { MobileActionBar } from "./MobileActionBar";
 import { PalettePicker } from "./PalettePicker";
+import { PatternPicker } from "./PatternPicker";
 import { PresetPicker } from "./PresetPicker";
 import { TapeCanvas2D } from "./TapeCanvas2D";
 import { TemplatePicker } from "./TemplatePicker";
 import { TextTool } from "./TextTool";
 import { barClearancePb, barClearanceScrollMb, btnPrimary, btnSecondary, card, focusRing, scrollToEl } from "./ui";
 
-type StepId = "spec" | "content" | "colors" | "quote";
-const ORDER: readonly StepId[] = ["spec", "content", "colors", "quote"];
+type StepId = "spec" | "content" | "style" | "colors" | "quote";
+const ORDER: readonly StepId[] = ["spec", "content", "style", "colors", "quote"];
 
 export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?: DesignerContact | null }) {
   const t = getDictionary().designer;
@@ -31,6 +32,8 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
   const [open, setOpen] = useState<StepId | null>("spec");
   const [pinned, setPinned] = useState(true);
   const refs = useRef<Partial<Record<StepId, HTMLElement | null>>>({});
+  // No downloads; previews hide behind a blur while the page is unfocused or a capture key is used.
+  const shielded = useCaptureGuard();
 
   const goTo = useCallback((id: StepId) => {
     setOpen(id);
@@ -105,9 +108,6 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
               <h2 id="designer-stage-title" className="shrink-0 text-sm font-semibold text-slate-900">{t.stageTitle}</h2>
               <span className={`truncate text-xs tabular-nums ${sum.lengthOk ? "text-slate-600" : "font-medium text-red-700"}`}>{sum.size}</span>
             </div>
-            <div className="-my-2 ml-auto hidden sm:block">
-              <ExportButtons />
-            </div>
             <button
               type="button"
               aria-pressed={pinned}
@@ -122,12 +122,16 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
             </button>
           </div>
           <div className="rounded-xl bg-slate-100 p-2.5 sm:p-4">
-            <TapeCanvas2D />
+            <CaptureZone hidden={shielded}>
+              <TapeCanvas2D />
+            </CaptureZone>
           </div>
         </section>
         <section id={VIEW3D_ANCHOR} className={`order-3 min-w-0 scroll-mt-4 ${barClearanceScrollMb} ${card} p-3 sm:p-4 lg:order-none`}>
           <h2 className="mb-2 text-sm font-semibold text-slate-900 sm:mb-3">{getDictionary().mockup3d.title}</h2>
-          <DesignMockupBridge showTitle={false} aspect="16 / 9" mobileAspect="1 / 1" />
+          <CaptureZone hidden={shielded}>
+            <DesignMockupBridge showTitle={false} aspect="16 / 9" mobileAspect="1 / 1" />
+          </CaptureZone>
         </section>
       </div>
 
@@ -141,18 +145,19 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
             sum.content,
             <div className="flex flex-col">
               <div className="flex flex-col gap-6">
-                <TemplatePicker />
+                <LogoUpload />
                 <hr className="border-slate-100" />
                 <TextTool />
                 <hr className="border-slate-100" />
-                <LogoUpload />
+                <TemplatePicker />
               </div>
               {nextBtn("content")}
             </div>,
           )}
+          {step("style", 3, t.stepStyle, sum.style, <div className="flex flex-col"><PatternPicker />{nextBtn("style")}</div>)}
           {step(
             "colors",
-            3,
+            4,
             t.stepColors,
             <span className="inline-flex items-center gap-2"><ColorDots colors={sum.colors} />{sum.colorsLabel}</span>,
             <div className="flex flex-col"><PalettePicker />{nextBtn("colors")}</div>,
@@ -160,15 +165,12 @@ export function DesignerPanel({ quote, contact }: { quote?: ReactNode; contact?:
           )}
           {step(
             "quote",
-            4,
+            5,
             t.stepQuote,
             null,
             <div className="flex flex-col gap-5">
               <p className="text-sm text-slate-600">{t.quoteHint}</p>
               <DesignSummary onEdit={goTo} />
-              <div className="sm:hidden">
-                <ExportButtons />
-              </div>
               {quote}
             </div>,
             { anchor: QUOTE_ANCHOR },

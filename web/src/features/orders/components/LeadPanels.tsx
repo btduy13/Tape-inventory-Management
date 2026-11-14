@@ -1,12 +1,15 @@
 // Lead detail: customer card and design/spec card (server components, read-only).
 import { format, getDictionary } from "@/i18n";
-import type { Design, Lead } from "@/lib/types";
+import { designBorderOf, designPatternOf, type Design, type Lead } from "@/lib/types";
 import { Icon, Section, ToneBadge, buttonClass } from "@/features/portal-ui";
 import { INK_LIMIT, inkSummary } from "../lib/design-info";
 import { formatDateTime } from "../lib/timeline";
 
 const t = getDictionary();
 const c = t.leadsUi;
+
+const borderLabel = (b: ReturnType<typeof designBorderOf>) =>
+  b ? `${t.designBorder[b.style]} ${b.widthMm}mm` : t.designBorder.none;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -90,8 +93,14 @@ export function DesignPanel({ code, design, previewUrl }: { code: string; design
           <Row label={c.printColors}>
             {ink.inks.length > 0 ? <span className="flex flex-wrap gap-1.5">{ink.inks.map((h) => <Swatch key={h} hex={h} />)}</span> : null}
           </Row>
-          <Row label={c.printText}>{design.print_text}</Row>
-          <Row label={c.logo}>{ink.hasLogo ? c.hasLogo : c.noLogo}</Row>
+          <Row label={c.printText}><span className="whitespace-pre-line">{design.print_text}</span></Row>
+          <Row label={c.logo}>
+            {ink.hasLogo ? c.hasLogo : c.noLogo}
+            {ink.hasLogo && design.design_json?.logo?.rotation ? ` · ${format(c.logoRotated, { deg: design.design_json.logo.rotation })}` : null}
+            {ink.hasLogo && design.design_json?.logo?.autoClean ? ` · ${c.logoAutoCleaned}` : null}
+          </Row>
+          <Row label={c.pattern}>{t.designPattern[designPatternOf(design.design_json)]}</Row>
+          <Row label={c.border}>{borderLabel(designBorderOf(design.design_json))}</Row>
         </dl>
       </div>
     </Section>

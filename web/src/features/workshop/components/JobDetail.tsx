@@ -1,13 +1,18 @@
 // Job detail blocks. Production specs only: WorkshopJobRow has no price or customer contact fields.
 import { Section, linkClass, surfaceClass } from "@/features/portal-ui";
 import { getDictionary } from "@/i18n";
-import type { ProductionStepLog, WorkshopJobRow } from "@/lib/types";
+import { designBorderOf, designPatternOf, type ProductionStepLog, type WorkshopJobRow } from "@/lib/types";
 import { wsCopy } from "../lib/copy";
 import { floorNote } from "../lib/group";
 import type { DesignUrls } from "../server/queries";
 import { ColorSwatches, DueBadge } from "./ui";
 
 const t = getDictionary();
+
+function borderText(dj: object | null | undefined): string {
+  const b = designBorderOf(dj);
+  return b ? `${t.designBorder[b.style]} ${b.widthMm}mm` : t.designBorder.none;
+}
 
 const num = (n: number | string | null) => (n === null || n === undefined ? "?" : Number(n).toLocaleString("vi-VN"));
 
@@ -49,8 +54,10 @@ export function JobSpecs({ job, floor = false }: { job: WorkshopJobRow; floor?: 
       <dl>
         <Row label={t.workshop.colors}><ColorSwatches colors={job.colors} size="md" /></Row>
         <Row label={t.workshop.printText}>
-          {job.print_text ? <span className="text-lg font-semibold">“{job.print_text}”</span> : "—"}
+          {job.print_text ? <span className="text-lg font-semibold whitespace-pre-line">“{job.print_text}”</span> : "—"}
         </Row>
+        <Row label={t.workshop.pattern}>{t.designPattern[designPatternOf(job.design_json)]}</Row>
+        <Row label={t.workshop.border}>{borderText(job.design_json)}</Row>
         <Row label={t.workshop.dueDate}><DueBadge dueDate={job.due_date} step={job.step} size="md" /></Row>
         {!floor && (
           <>

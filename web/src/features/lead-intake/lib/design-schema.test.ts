@@ -27,6 +27,13 @@ describe("parseDesignJson", () => {
     expect(r && "accentColor" in r).toBe(false);
   });
 
+  it("keeps the repeat pattern (staff and workshop see it) and rejects unknown ones", () => {
+    expect(parseDesignJson(raw({ ...DESIGN, pattern: "brick" }))?.pattern).toBe("brick");
+    expect(parseDesignJson(raw({ ...DESIGN, border: { style: "stripes", widthMm: 4 } }))?.border).toEqual({ style: "stripes", widthMm: 4 });
+    expect(parseDesignJson(raw({ ...DESIGN, border: { style: "solid", widthMm: 2 } }))).toBeNull(); // < 3mm
+    expect(parseDesignJson(raw({ ...DESIGN, pattern: "spiral" }))).toBeNull();
+  });
+
   it("ignores presetId (sizes come from tape_widths)", () => {
     expect(parseDesignJson(raw(DESIGN))?.presetId).toBeNull();
     expect(parseDesignJson(raw({ ...DESIGN, presetId: null }))).not.toBeNull();

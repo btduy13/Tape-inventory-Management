@@ -50,11 +50,14 @@ describe("sanitizeSvg", () => {
   });
 });
 
+// jsdom cannot decode images: tests inject the clean-up step.
+const noClean = async () => null;
+
 describe("loadLogoFile", () => {
   it("sanitizes SVG before creating the asset", async () => {
     const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:svg");
     const file = new File(['<svg xmlns="http://www.w3.org/2000/svg"><script>x()</script><rect width="1" height="1"/></svg>'], "logo.svg", { type: "image/svg+xml" });
-    const res = await loadLogoFile(file, async () => ({ width: 100, height: 50 }));
+    const res = await loadLogoFile(file, async () => ({ width: 100, height: 50 }), undefined, noClean);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.logo.kind).toBe("svg");
@@ -80,7 +83,7 @@ describe("loadLogoFile", () => {
     const convert = vi.fn(async () => new Blob([PNG], { type: "image/png" }));
     const sizer = async () => ({ width: 10, height: 5 });
     for (const [bytes, name, type] of [[WEBP, "a.webp", "image/webp"], [enc("GIF89a....."), "b.gif", "image/gif"]] as const) {
-      const res = await loadLogoFile(new File([bytes], name, { type }), sizer, convert);
+      const res = await loadLogoFile(new File([bytes], name, { type }), sizer, convert, noClean);
       expect(res.ok).toBe(true);
       if (!res.ok) return;
       expect(res.logo.kind).toBe("png");
@@ -98,6 +101,36 @@ describe("loadLogoFile", () => {
     };
     expect(await loadLogoFile(new File([WEBP], "a.webp", { type: "image/webp" }), undefined, fail)).toEqual({ ok: false, error: "decode" });
     expect(await loadLogoFile(new File([WEBP], "a.webp", { type: "image/png" }))).toEqual({ ok: false, error: "invalidType" });
+  });
+
+  it("shows the auto-cleaned logo and keeps the original file and image as the alternative", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:orig");
+    const clean = vi.fn(async () => ({ url: "blob:clean", width: 80, height: 40, bgRemoved: true, trimmed: true }));
+    const file = new File([PNG], "a.png", { type: "image/png" });
+    const res = await loadLogoFile(file, async () => ({ width: 100, height: 60 }), undefined, clean);
+    expect(clean).toHaveBeenCalledWith("blob:orig", 100, 60);
+    expect(res.ok && res.logo).toMatchObject({
+      file,
+      url: "blob:clean",
+      width: 80,
+      height: 40,
+      cleaned: true,
+      alt: { url: "blob:orig", width: 100, height: 60 },
+      cleanup: { bgRemoved: true, trimmed: true },
+    });
+  });
+
+  it("falls back to the original when the clean-up fails or changes nothing", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:orig");
+    const file = new File([PNG], "a.png", { type: "image/png" });
+    const boom = async () => {
+      throw new Error("x");
+    };
+    for (const clean of [noClean, boom]) {
+      const res = await loadLogoFile(file, async () => ({ width: 10, height: 10 }), undefined, clean);
+      expect(res.ok && res.logo).toMatchObject({ url: "blob:orig", cleaned: false });
+      expect(res.ok && res.logo.alt).toBeUndefined();
+    }
   });
 
   it("rejects wrong types without creating URLs", async () => {

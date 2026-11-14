@@ -28,6 +28,17 @@ describe("createDesignStore", () => {
     expect(revoke).toHaveBeenCalledWith("blob:b");
   });
 
+  it("keeps both logo versions while toggling the clean-up, revokes both on replace", () => {
+    const revoke = vi.fn();
+    const store = createDesignStore(undefined, revoke);
+    store.dispatch({ type: "setLogo", logo: { ...logo("blob:clean"), cleaned: true, alt: { url: "blob:orig", width: 10, height: 10 } } });
+    store.dispatch({ type: "setLogoCleanup", on: false });
+    store.dispatch({ type: "setLogoCleanup", on: true });
+    expect(revoke).not.toHaveBeenCalled();
+    store.dispatch({ type: "setLogo", logo: null });
+    expect(revoke.mock.calls.flat().sort()).toEqual(["blob:clean", "blob:orig"]);
+  });
+
   it("publishes texture versions", () => {
     const store = createDesignStore();
     const fn = vi.fn();

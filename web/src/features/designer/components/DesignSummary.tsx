@@ -9,7 +9,7 @@ import { useDesignState } from "./hooks";
 import { inkCountText, useInks } from "./InkCounter";
 import { focusRing } from "./ui";
 
-export type SummaryStep = "spec" | "content" | "colors";
+export type SummaryStep = "spec" | "content" | "style" | "colors";
 
 /** Plain-text pieces of the summary (also used for collapsed step headers). */
 export function useDesignSummary() {
@@ -23,6 +23,9 @@ export function useDesignSummary() {
   const text = s.text.trim();
   const parts = [text ? `“${text}”` : null, s.logo ? t.designer.contentLogo : null].filter(Boolean);
   const content = parts.length ? parts.join(" + ") : t.designer.contentNone;
+  // Print style: pattern + border lines ("Lưới so le · Sọc chéo 4mm").
+  const borderText = s.border.style === "none" ? null : `${t.designBorder[s.border.style]} ${s.border.widthMm}mm`;
+  const style = [t.designPattern[s.pattern], borderText].filter(Boolean).join(" · ");
   // Colours (tape + text + logo, max 3); over the 3-ink limit is flagged, never blocked.
   const inks = useInks();
   const colors = inks.colors;
@@ -31,7 +34,7 @@ export function useDesignSummary() {
     : colors.length === 0
       ? t.designer.colorsNone
       : format(t.designer.colorsCount, { count: colors.length });
-  return { size, lengthOk, content, hasContent: parts.length > 0, colors, colorsLabel, inksOver: inks.overLimit, inkCount: inkCountText(inks.count) };
+  return { size, lengthOk, content, style, hasContent: parts.length > 0, colors, colorsLabel, inksOver: inks.overLimit, inkCount: inkCountText(inks.count) };
 }
 
 export function ColorDots({ colors }: { colors: readonly string[] }) {
@@ -55,6 +58,7 @@ export function DesignSummary({ onEdit, className = "" }: { onEdit?: (step: Summ
   const rows: { step: SummaryStep; label: string; value: ReactNode; bad?: boolean }[] = [
     { step: "spec", label: t.summarySize, value: sum.size, bad: !sum.lengthOk },
     { step: "content", label: t.summaryContent, value: sum.content, bad: !sum.hasContent },
+    { step: "style", label: t.summaryStyle, value: sum.style },
     {
       step: "colors",
       label: t.summaryColors,
