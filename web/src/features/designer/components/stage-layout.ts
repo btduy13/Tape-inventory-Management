@@ -1,5 +1,6 @@
 "use client";
 // Text measurement + pattern layout for a design state (browser only: uses a 2D canvas context).
+import { borderPx } from "../lib/border";
 import { computePatternLayout, printBand, stripSize, type PatternLayout } from "../lib/pattern";
 import type { DesignState } from "../lib/state";
 
@@ -16,7 +17,8 @@ export function measureTextWidth(text: string, fontFamily: string, sizePx: numbe
 /** Layout exactly as the stage renders it. `logoReady` is false until the logo bitmap decoded. */
 export function layoutForState(s: DesignState, logoReady: boolean): PatternLayout {
   const strip = stripSize(s.preset.width_mm);
-  const band = printBand(strip);
+  const border = borderPx(s.border, s.preset.width_mm);
+  const band = printBand(strip, border);
   const fontSize = Math.min(s.fontSizePx, band.bottom - band.top);
   const text = s.text.trim();
   return computePatternLayout({
@@ -27,9 +29,11 @@ export function layoutForState(s: DesignState, logoReady: boolean): PatternLayou
     logoScale: s.logoScale,
     logoOffsetX: s.logoOffsetX,
     logoOffsetY: s.logoOffsetY,
+    logoRotation: s.logoRotation,
     textOffsetX: s.textOffsetX,
     textOffsetY: s.textOffsetY,
     repeatGapPx: s.repeatGapPx,
     pattern: s.pattern,
+    borderPx: border,
   });
 }

@@ -12,10 +12,11 @@ const layout = (over = {}) =>
   });
 
 describe("offsetFromPosition", () => {
-  it("uses the row unit for drags in two-row patterns", () => {
-    const l = layout({ pattern: "stagger" });
-    const box = l.tiles[l.count].text!; // first tile of the lower row
-    const off = offsetFromPosition(l, "text", l.count, box.x + 9.6, box.y)!;
+  it("uses the row unit for drags in all-over patterns", () => {
+    const l = layout({ pattern: "brick" });
+    const i = l.tiles.findIndex((t) => t.row === 1);
+    const box = l.tiles[i].text!; // first tile of a shifted row
+    const off = offsetFromPosition(l, "text", i, box.x + 9.6, box.y)!;
     expect(off.offsetX).toBeCloseTo(0.1);
   });
   it("converts a drag delta into offsets (fraction of strip height)", () => {
@@ -54,8 +55,8 @@ describe("resize helpers", () => {
     expect(logoScaleFromHeight(l.logoSize!.height, l)).toBeCloseTo(1);
     expect(logoScaleFromHeight(192 * 0.7 * 0.5, { unit: 192, fit: 0.5 })).toBeCloseTo(1);
   });
-  it("inverts the two-row halving (logo and font keep full-width units)", () => {
-    const l = layout({ pattern: "twoRows", logoScale: 0.5 });
+  it("inverts the all-over halving (logo and font keep full-width units)", () => {
+    const l = layout({ pattern: "grid", logoScale: 0.5 });
     expect(l.unit).toBe(96);
     expect(logoScaleFromHeight(l.logoSize!.height, l)).toBeCloseTo(0.5);
     expect(fontSizeFromScale(l.fontSize, 1, l.fontScale)).toBe(80);

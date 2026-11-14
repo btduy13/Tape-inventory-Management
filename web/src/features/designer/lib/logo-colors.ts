@@ -267,6 +267,9 @@ export function labToHex({ L, a, b }: Lab): string {
 
 export type InkInput = PaletteInput & {
   text: string;
+  /** Border lines / colour blocks print in the text ink even without text. */
+  pattern?: string;
+  border?: { style: string };
   /** null: no logo. `inks` null: logo not analysed (unknown). */
   logo: { inks?: LogoInk[] | null } | null;
 };
@@ -300,11 +303,15 @@ export function uniqueInks(colors: readonly string[]): string[] {
 export function printInks(s: InkInput): InkSummary {
   // Owner rule: tape colour + text colour + logo colours, at most 3; identical colours count once.
   const list: string[] = [];
-  if (s.text.trim()) list.push(s.textColor);
+  const hasText = s.text.trim().length > 0;
+  const blocks = s.pattern === "blocks";
+  const textInk = hasText || blocks || (s.border !== undefined && s.border.style !== "none");
+  if (textInk) list.push(s.textColor);
   let logoInks: string[] = [];
   let logoUnknown = false;
   let logoPending = false;
-  if (s.logo) {
+  // Colour blocks with text: every logo is printed as a knockout (tape colour), no logo inks.
+  if (s.logo && !(blocks && hasText)) {
     if (s.logo.inks) logoInks = uniqueInks(s.logo.inks.map((i) => i.hex));
     else {
       logoUnknown = true;

@@ -28,7 +28,9 @@ describe("parseDesignJson", () => {
   });
 
   it("keeps the repeat pattern (staff and workshop see it) and rejects unknown ones", () => {
-    expect(parseDesignJson(raw({ ...DESIGN, pattern: "stagger" }))?.pattern).toBe("stagger");
+    expect(parseDesignJson(raw({ ...DESIGN, pattern: "brick" }))?.pattern).toBe("brick");
+    expect(parseDesignJson(raw({ ...DESIGN, border: { style: "stripes", widthMm: 4 } }))?.border).toEqual({ style: "stripes", widthMm: 4 });
+    expect(parseDesignJson(raw({ ...DESIGN, border: { style: "solid", widthMm: 2 } }))).toBeNull(); // < 3mm
     expect(parseDesignJson(raw({ ...DESIGN, pattern: "spiral" }))).toBeNull();
   });
 

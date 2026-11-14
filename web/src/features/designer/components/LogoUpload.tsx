@@ -1,9 +1,9 @@
 "use client";
 // Logo section: drop zone + ink count; the logo always prints in its own colours.
-// Size / position sliders sit in a disclosure
-// (dragging on the canvas is the main way).
+// Size / rotation / position sliders sit in a disclosure
+// (dragging and the rotate handle on the canvas are the main way).
 import { getDictionary } from "@/i18n";
-import { MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_OFFSET_X, MIN_LOGO_SCALE } from "../lib/constants";
+import { MAX_LOGO_OFFSET, MAX_LOGO_ROTATION, MAX_LOGO_SCALE, MAX_OFFSET_X, MIN_LOGO_SCALE } from "../lib/constants";
 import { useDesignState } from "./hooks";
 import { InkCounter } from "./InkCounter";
 import { LogoDropzone } from "./LogoDropzone";
@@ -11,6 +11,7 @@ import { RangeField } from "./RangeField";
 import { btnGhost, focusRing, groupLabel, hint } from "./ui";
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+const deg = (v: number) => `${Math.round(v)}°`;
 
 export function LogoUpload() {
   const t = getDictionary().designer;
@@ -42,6 +43,14 @@ export function LogoUpload() {
                 onChange={(v) => dispatch({ type: "setLogoTransform", scale: v })}
               />
               <RangeField
+                label={t.logoRotation}
+                value={s.logoRotation}
+                min={-MAX_LOGO_ROTATION}
+                max={MAX_LOGO_ROTATION}
+                display={deg}
+                onChange={(v) => dispatch({ type: "setLogoTransform", rotation: v })}
+              />
+              <RangeField
                 label={t.logoOffsetX}
                 value={s.logoOffsetX}
                 min={-MAX_OFFSET_X}
@@ -61,7 +70,7 @@ export function LogoUpload() {
               />
               <button
                 type="button"
-                onClick={() => dispatch({ type: "setLogoTransform", scale: 1, offsetX: 0, offsetY: 0 })}
+                onClick={() => dispatch({ type: "setLogoTransform", scale: 1, offsetX: 0, offsetY: 0, rotation: 0 })}
                 className={`${btnGhost} self-start border border-slate-200`}
               >
                 {t.logoCenter}

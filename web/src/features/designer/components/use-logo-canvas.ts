@@ -1,6 +1,6 @@
 "use client";
-// Loads the logo object URL and returns a canvas for Konva. The logo always prints in its own
-// original colours (there is no single-ink tint option).
+// Loads the logo object URL and returns a canvas for Konva. The logo prints in its own original
+// colours; only the colour-blocks pattern knocks it out in the tape colour (tintCanvas).
 import { useEffect, useMemo, useState } from "react";
 import type { LogoAsset } from "../lib/state";
 
@@ -22,6 +22,20 @@ export function renderLogo(img: CanvasImageSource, w: number, h: number): HTMLCa
   canvas.width = Math.max(1, Math.round(w * k));
   canvas.height = Math.max(1, Math.round(h * k));
   canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+/** Logo silhouette in one colour (opaque pixels recoloured): the knockout used in colour blocks. */
+export function tintCanvas(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = src.width;
+  canvas.height = src.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return src;
+  ctx.drawImage(src, 0, 0);
+  ctx.globalCompositeOperation = "source-in";
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   return canvas;
 }
 

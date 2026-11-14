@@ -1,6 +1,7 @@
 "use client";
 // Selection, drag, resize (Transformer) and keyboard handling for the Konva strip.
 // Every move goes through the reducer (clamped), then the dragged node snaps to the clamped spot.
+// Logo nodes are positioned by their centre (they rotate around it); text nodes by the top-left.
 import { useCallback, useState, type KeyboardEvent } from "react";
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -8,7 +9,7 @@ import {
   deleteAction, fontSizeFromScale, logoScaleFromHeight, moveAction, nudgeAction, offsetFromPosition,
   type ElementKind,
 } from "../lib/interaction";
-import { stripSize, type PatternLayout } from "../lib/pattern";
+import type { Box, PatternLayout } from "../lib/pattern";
 import { maxFontSize } from "../lib/state";
 import type { DesignStore } from "../lib/store";
 import { layoutForState } from "./stage-layout";
@@ -20,18 +21,21 @@ export function useStageInteraction(store: DesignStore, layout: PatternLayout, l
 
   const current = useCallback(() => {
     const s = store.getState();
-    return { s, strip: stripSize(s.preset.width_mm), layout: layoutForState(s, logoReady) };
+    return { s, layout: layoutForState(s, logoReady) };
   }, [store, logoReady]);
 
   /** Move `kind` of tile `tile` to the node position, then snap the node to the clamped box. */
   const commitPosition = useCallback(
     (node: Konva.Node, kind: ElementKind, tile: number) => {
       const { layout: cur } = current();
-      const off = offsetFromPosition(cur, kind, tile, node.x(), node.y());
+      const before = cur.tiles[tile]?.[kind];
+      if (!before) return;
+      const tl = topLeft(kind, before, node.x(), node.y());
+      const off = offsetFromPosition(cur, kind, tile, tl.x, tl.y);
       if (!off) return;
       store.dispatch(moveAction(kind, off.offsetX, off.offsetY));
       const box = current().layout.tiles[tile]?.[kind];
-      if (box) node.position({ x: box.x, y: box.y });
+      if (box) node.position(nodePosition(kind, box));
     },
     [current, store],
   );
@@ -48,8 +52,8 @@ export function useStageInteraction(store: DesignStore, layout: PatternLayout, l
       node.scale({ x: 1, y: 1 });
       const { s, layout: cur } = current();
       if (kind === "logo") {
-        const height = (cur.tiles[tile]?.logo?.height ?? 0) * k;
-        store.dispatch({ type: "setLogoTransform", scale: logoScaleFromHeight(height, cur) });
+        const height = (cur.logoSize?.height ?? 0) * k;
+        store.dispatch({ type: "setLogoTransform", scale: logoScaleFromHeight(height, cur), rotation: node.rotation() });
       } else {
         const px = Math.min(fontSizeFromScale(cur.fontSize, k, cur.fontScale), maxFontSize(s.preset.width_mm));
         store.dispatch({ type: "setFontSize", px });
@@ -88,4 +92,14 @@ export function useStageInteraction(store: DesignStore, layout: PatternLayout, l
     : null;
 
   return { selected: live, select, clear, onDragMove, onTransformEnd, onKeyDown };
+}
+
+/** Top-left of the element box from its node position (logo nodes sit at the box centre). */
+function topLeft(kind: ElementKind, box: Box, x: number, y: number): { x: number; y: number } {
+  return kind === "logo" ? { x: x - box.width / 2, y: y - box.height / 2 } : { x, y };
+}
+
+/** Node position for an element box. */
+export function nodePosition(kind: ElementKind, box: Box): { x: number; y: number } {
+  return kind === "logo" ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : { x: box.x, y: box.y };
 }

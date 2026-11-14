@@ -94,7 +94,9 @@ describe("designReducer text + limits", () => {
   });
 });
 
-describe("designReducer pattern", () => {
+describe("designReducer pattern, border, logo rotation", () => {
+  const narrow = () => designReducer(base(), { type: "setWidth", widthMm: 36 });
+
   it("starts straight, switches pattern, rejects unknown values, resets to straight", () => {
     const s = base();
     expect(s.pattern).toBe("straight");
@@ -103,5 +105,34 @@ describe("designReducer pattern", () => {
     expect(designReducer(flipped, { type: "setPattern", pattern: "flip" })).toBe(flipped);
     expect(designReducer(flipped, { type: "setPattern", pattern: "spiral" as never })).toBe(flipped);
     expect(designReducer(flipped, { type: "reset" }).pattern).toBe("straight");
+  });
+
+  it("tapes under 48mm only print straight", () => {
+    const n = narrow();
+    expect(designReducer(n, { type: "setPattern", pattern: "brick" })).toBe(n);
+    const wide = designReducer(base(), { type: "setPattern", pattern: "diagonal" });
+    expect(designReducer(wide, { type: "setWidth", widthMm: 36 }).pattern).toBe("straight");
+    expect(designReducer(wide, { type: "setWidth", widthMm: 60 }).pattern).toBe("diagonal");
+  });
+
+  it("border: 3mm minimum, capped by the tape width, off when no line fits", () => {
+    let s = designReducer(base(), { type: "setBorder", style: "stripes" });
+    expect(s.border).toEqual({ style: "stripes", widthMm: 3 });
+    s = designReducer(s, { type: "setBorder", widthMm: 1 });
+    expect(s.border.widthMm).toBe(3);
+    s = designReducer(s, { type: "setBorder", widthMm: 6.3 });
+    expect(s.border.widthMm).toBe(6.5);
+    expect(designReducer(s, { type: "setWidth", widthMm: 24 }).border).toEqual({ style: "stripes", widthMm: 4.5 });
+    expect(designReducer(s, { type: "setWidth", widthMm: 12 }).border.style).toBe("none");
+    expect(designReducer(s, { type: "setBorder", style: "dotted" as never })).toBe(s);
+  });
+
+  it("logo rotation is normalised to [-180, 180] and cleared with the logo", () => {
+    let s = designReducer(base(), { type: "setLogoTransform", rotation: 270 });
+    expect(s.logoRotation).toBe(-90);
+    s = designReducer(s, { type: "setLogoTransform", rotation: -190.4 });
+    expect(s.logoRotation).toBe(170);
+    expect(designReducer(s, { type: "setLogoTransform", rotation: Number.NaN }).logoRotation).toBe(0);
+    expect(designReducer(s, { type: "setLogo", logo: null }).logoRotation).toBe(0);
   });
 });

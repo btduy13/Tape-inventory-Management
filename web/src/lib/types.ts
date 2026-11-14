@@ -72,9 +72,22 @@ export type Lead = {
 
 /** Shape of designs.design_json (owned by features/designer; version bump on breaking change). */
 /** How the print content repeats along the tape (designer pattern picker). Old designs: "straight". */
-export type DesignPattern = "straight" | "flip" | "stagger" | "twoRows" | "diagonal";
+export type DesignPattern = "straight" | "flip" | "blocks" | "brick" | "grid" | "diagonal";
 
-export const DESIGN_PATTERNS: readonly DesignPattern[] = ["straight", "flip", "stagger", "twoRows", "diagonal"] as const;
+export const DESIGN_PATTERNS: readonly DesignPattern[] = ["straight", "flip", "blocks", "brick", "grid", "diagonal"] as const;
+
+/** Top / bottom border lines, printed in the text ink. */
+export type DesignBorderStyle = "none" | "solid" | "stripes";
+
+export const DESIGN_BORDER_STYLES: readonly DesignBorderStyle[] = ["none", "solid", "stripes"] as const;
+
+/** Border lines of a saved design, or null when it has none (or an unreadable value). */
+export function designBorderOf(dj: object | null | undefined): { style: Exclude<DesignBorderStyle, "none">; widthMm: number } | null {
+  const b = dj && "border" in dj ? dj.border : null;
+  if (!b || typeof b !== "object" || !("style" in b) || !("widthMm" in b)) return null;
+  const { style, widthMm } = b as { style: unknown; widthMm: unknown };
+  return (style === "solid" || style === "stripes") && typeof widthMm === "number" ? { style, widthMm } : null;
+}
 
 /** Pattern of a saved design; unknown / missing (designs before patterns) reads as "straight". */
 export function designPatternOf(dj: object | null | undefined): DesignPattern {
@@ -93,10 +106,12 @@ export type DesignJson = {
   fontSizePx?: number;
   logo?: {
     path: string | null; scale: number; offsetX: number; offsetY: number;
+    rotation?: number;              // degrees, clockwise (missing = 0)
     colorMode?: "original" | "tint";  // legacy (old designs); logos now always print in original colours
   } | null;
   repeatGapPx?: number;
   pattern?: DesignPattern;        // repeat layout; missing = "straight" (designs before patterns)
+  border?: { style: Exclude<DesignBorderStyle, "none">; widthMm: number } | null; // edge lines, >= 3mm
   widthMm?: number;               // chosen tape width (mm), from tape_widths (0022)
   lengthM?: number;               // customer roll length (m), within tape_spec_settings
   textOffsetX?: number;           // text position, fraction of tape width (canvas drag)

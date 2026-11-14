@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { format, formatVnd, getDictionary } from "./index";
-import { DESIGN_PATTERNS, LEAD_STATUSES, PRODUCTION_STEPS, ROLES } from "@/lib/types";
+import { DESIGN_BORDER_STYLES, DESIGN_PATTERNS, LEAD_STATUSES, PRODUCTION_STEPS, ROLES } from "@/lib/types";
 
 describe("i18n", () => {
   const t = getDictionary();
@@ -13,6 +13,7 @@ describe("i18n", () => {
       expect(t.designPattern[p]).toBeTruthy();
       expect(t.designer.patternHelp[p]).toBeTruthy();
     }
+    for (const b of DESIGN_BORDER_STYLES) expect(t.designBorder[b]).toBeTruthy();
   });
 
   it("interpolates placeholders and keeps unknown ones", () => {

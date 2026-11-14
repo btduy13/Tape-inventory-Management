@@ -1,9 +1,10 @@
 // DesignJson (designs.design_json) builder + zod schema for server re-validation.
 import { z } from "zod";
 import { DESIGN_PATTERNS, type DesignJson, type DesignPattern } from "@/lib/types";
+import { borderPx, maxBorderMm } from "./border";
 import {
-  FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_SCALE, MAX_REPEAT_GAP_PX,
-  MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE,
+  BORDER_MAX_MM, BORDER_MIN_MM, FONT_FAMILIES, MAX_FONT_SIZE_PX, MAX_LOGO_OFFSET, MAX_LOGO_ROTATION, MAX_LOGO_SCALE,
+  MAX_REPEAT_GAP_PX, MAX_OFFSET_X, MAX_TEXT_LENGTH, MIN_FONT_SIZE_PX, MIN_LOGO_SCALE, MIN_PATTERN_WIDTH_MM,
 } from "./constants";
 import { MAX_INK_REPORT, printInks } from "./logo-colors";
 import { paletteColors } from "./palette";
@@ -33,6 +34,7 @@ export const designJsonSchema = z
         scale: z.number().min(MIN_LOGO_SCALE).max(MAX_LOGO_SCALE),
         offsetX: z.number().min(-MAX_OFFSET_X).max(MAX_OFFSET_X),
         offsetY: z.number().min(-MAX_LOGO_OFFSET).max(MAX_LOGO_OFFSET),
+        rotation: z.number().min(-MAX_LOGO_ROTATION).max(MAX_LOGO_ROTATION).optional(),
         // Legacy: the logo always prints in its own colours now. Still accepted, never written.
         colorMode: z.enum(LEGACY_LOGO_COLOR_MODES).optional(),
       })
@@ -42,6 +44,12 @@ export const designJsonSchema = z
     repeatGapPx: z.number().min(0).max(MAX_REPEAT_GAP_PX).optional(),
     // Repeat layout (pattern.ts). Missing on designs saved before patterns: means "straight".
     pattern: z.enum(DESIGN_PATTERNS as [DesignPattern, ...DesignPattern[]]).optional(),
+    // Edge lines in the text ink, at least BORDER_MIN_MM thick (null / missing: none).
+    border: z
+      .object({ style: z.enum(["solid", "stripes"]), widthMm: z.number().min(BORDER_MIN_MM).max(BORDER_MAX_MM) })
+      .strict()
+      .nullable()
+      .optional(),
     // Tape size (0022). Structural bounds only: lead-intake checks the active DB list / range.
     widthMm: z.number().int().min(1).max(WIDTH_MM_MAX).optional(),
     lengthM: z.number().positive().max(LENGTH_M_MAX).optional(),
@@ -54,7 +62,14 @@ export const designJsonSchema = z
     inkOverLimit: z.boolean().optional(),
   })
   .strict()
-  .refine((d) => d.textColor !== d.backgroundColor, { message: "text_equals_background" });
+  .refine((d) => d.textColor !== d.backgroundColor, { message: "text_equals_background" })
+  // Narrow tapes print only the straight pattern, and the border must fit the tape width.
+  .refine((d) => d.widthMm === undefined || d.widthMm >= MIN_PATTERN_WIDTH_MM || (d.pattern ?? "straight") === "straight", {
+    message: "pattern_needs_wider_tape",
+  })
+  .refine((d) => d.widthMm === undefined || !d.border || d.border.widthMm <= maxBorderMm(d.widthMm), {
+    message: "border_too_thick",
+  });
 
 /** Drop float noise from drag maths (4 decimals is far below print resolution). */
 const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
@@ -76,10 +91,14 @@ export function toDesignJson(state: DesignState): DesignJson {
           scale: r4(state.logoScale),
           offsetX: r4(state.logoOffsetX),
           offsetY: r4(state.logoOffsetY),
+          rotation: state.logoRotation,
         }
       : null,
     repeatGapPx: state.repeatGapPx,
     pattern: state.pattern,
+    border: borderPx(state.border, state.preset.width_mm) > 0 && state.border.style !== "none"
+      ? { style: state.border.style, widthMm: state.border.widthMm }
+      : null,
     widthMm: state.preset.width_mm,
     // NaN (unfinished input) becomes 0, which the server rejects.
     lengthM: Number.isFinite(state.preset.length_m) ? state.preset.length_m : 0,

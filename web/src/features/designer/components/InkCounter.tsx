@@ -15,8 +15,11 @@ export function inkCountText(count: number): string {
 /** Ink summary of the current design (memoised on the fields it reads). */
 export function useInks(): InkSummary {
   const [s] = useDesignState();
-  const { backgroundColor, textColor, text, logo } = s;
-  return useMemo(() => printInks({ backgroundColor, textColor, text, logo }), [backgroundColor, textColor, text, logo]);
+  const { backgroundColor, textColor, text, logo, pattern, border } = s;
+  return useMemo(
+    () => printInks({ backgroundColor, textColor, text, logo, pattern, border }),
+    [backgroundColor, textColor, text, logo, pattern, border],
+  );
 }
 
 export function InkCounter({ className = "" }: { className?: string }) {
